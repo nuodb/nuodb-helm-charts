@@ -1,0 +1,8 @@
+#!/bin/sh
+
+# expects NUOCMD_API_SERVER to be set.
+if [ -n "${NUODB_OPTIONS}" ] ; then
+    exec nuodocker start te --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
+else
+    exec nuodocker start te --db-name "${DB_NAME}" "$@"
+fi

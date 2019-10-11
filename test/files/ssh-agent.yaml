@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: ssh-agent
+  labels:
+    app: ssh-agent
+spec:
+  containers:
+  - name: ssh-agent
+    image: nuodb/ssh-agent

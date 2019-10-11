@@ -1,0 +1,16 @@
+apiVersion: "v1"
+name: database
+version: 1.6
+description: NuoDB distributed SQL database.
+keywords:
+- nuodb
+- database
+- sql
+home: https://www.nuodb.com/
+maintainers:
+- name: NuoDB
+  email: support@nuodb.com
+engine: gotpl
+icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+appVersion: 4.0.0
+tillerVersion: ">=2.10"

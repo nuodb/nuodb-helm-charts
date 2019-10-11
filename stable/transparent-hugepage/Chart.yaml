@@ -1,0 +1,17 @@
+apiVersion: "v1"
+name: transparent-hugepage
+version: 1.6
+description: Disable disables transparent_hugepage on Linux nodes.
+keywords:
+- nuodb
+- database
+- sql
+- backup
+home: https://github.com/nuodb/consulting-helm/tree/master/stable/transparent-hugepage
+maintainers:
+- name: NuoDB
+  email: support@nuodb.com
+engine: gotpl
+icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+appVersion: 4.0.0
+tillerVersion: ">=2.10"

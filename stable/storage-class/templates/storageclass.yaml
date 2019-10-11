@@ -1,0 +1,74 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: standard-storage
+{{- if eq .Values.cloud.provider "amazon" }}
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp2
+{{ include "storageClass.encryptedFlag" (merge (dict "className" "standard") . ) | indent 2 }}
+  fsType: ext4
+{{- else if eq .Values.cloud.provider "azure" }}
+provisioner: kubernetes.io/azure-disk
+parameters:
+  storageaccounttype: Standard_LRS
+  kind: Managed
+  cachingmode: ReadWrite
+{{- else if eq .Values.cloud.provider "google" }}
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-standard
+{{- end }}
+{{- include "storageClass.allowVolumeExpansion" . }}
+reclaimPolicy: Retain
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: fast-storage
+{{- if eq .Values.cloud.provider "amazon" }}
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: io1
+{{ include "storageClass.encryptedFlag" (merge (dict "className" "fast") . ) | indent 2 }}
+{{ include "storageClass.iopsPerGB" (merge (dict "className" "fast") . ) | indent 2 }}
+  fsType: ext4
+{{- else if eq .Values.cloud.provider "azure" }}
+provisioner: kubernetes.io/azure-disk
+parameters:
+  storageaccounttype: Premium_LRS
+  kind: Managed
+  cachingmode: ReadWrite
+{{- else if eq .Values.cloud.provider "google" }}
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+{{- end }}
+{{- include "storageClass.allowVolumeExpansion" . }}
+reclaimPolicy: Retain
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: manual-storage
+{{- if eq .Values.cloud.provider "amazon" }}
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: io1
+{{ include "storageClass.encryptedFlag" (merge (dict "className" "manual") . ) | indent 2 }}
+{{ include "storageClass.iopsPerGB" (merge (dict "className" "manual") . ) | indent 2 }}
+  fsType: ext4
+{{- else if eq .Values.cloud.provider "azure" }}
+provisioner: kubernetes.io/azure-disk
+parameters:
+  storageaccounttype: Premium_LRS
+  kind: Managed
+  cachingmode: ReadWrite
+{{- else if eq .Values.cloud.provider "google" }}
+provisioner: kubernetes.io/gce-pd
+parameters:
+  type: pd-ssd
+{{- end }}
+{{- include "storageClass.allowVolumeExpansion" . }}
+reclaimPolicy: Retain
+volumeBindingMode: Immediate

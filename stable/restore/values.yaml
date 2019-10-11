@@ -1,0 +1,73 @@
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry and imagePullSecrets
+##
+# global:
+#   imageRegistry: myRegistryName
+#   imagePullSecrets:
+#     - myRegistryKeySecretName
+
+cloud:
+  # supported: amazon, azure, google
+  provider:
+  # zones:
+  #   - us-east-2a
+  #   - us-east-2b
+  #   - us-east-2c
+
+busybox:
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: latest
+    pullPolicy: Always
+
+nuodb:
+  image:
+    registry: docker.io
+    repository: nuodb/nuodb-ce
+    tag: latest
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    # pullSecrets:
+    # - myRegistryKeySecretName
+    ## Specify a imagePullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+admin:
+  # nameOverride: east
+  # fullnameOverride: admin-east
+  # namespace: nuodb
+  domain: nuodb
+  # tlsCACert:
+  #   secret: nuodb-ca-cert
+  #   key: ca.cert
+  # tlsClientPEM:
+  #   secret: nuodb-client-pem
+  #   key: client.pem
+
+database:
+  # name
+  # NuoDB Database name.  must consist of lowercase alphanumeric
+  #characters '[a-z0-9]+'
+  name:
+
+restore:
+  # details of the database(s) involved in the backup
+  target: ""
+#  source: ""
+
+  # backupSet
+  # Can be:
+  # * the name of a backupset on a hotcopy-SM's backup disk;
+  # * the metaname ':latest'
+  # * a URL from which to download the backup (typically a TAR.GZ file)
+  backupSet: ""
+
+  affinity: {}
+  
+  timeout: 1800

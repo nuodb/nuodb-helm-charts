@@ -1,0 +1,41 @@
+cloud:
+  # supported: amazon, azure, google
+  provider:
+  # zones:
+  #   - us-east-2a
+  #   - us-east-2b
+  #   - us-east-2c
+
+storageClass:
+  # Persistent Volumes can be configured to be expandable. This feature
+  # when set to true, allows the users to resize the volume by editing
+  # the corresponding PVC object.
+  # Works for: GCE Persistent Disk, AWS EBS, Azure Disk, among others.
+  # Note: The default in the EBS provisioner is false.
+  # Default is true for NuoDB.
+  allowVolumeExpansion: true
+
+  standard: {}
+    # A string is expected here, i.e. "true", not true. Default is "true".
+    # Note: The default in the EBS provisioner is "false".
+    # Amazon EBS only.
+    # encrypted: "true"
+
+  fast: {}
+    # A string is expected here, i.e. "true", not true. Default is "true".
+    # Note: The default in the EBS provisioner is "false".
+    # Amazon EBS only.
+    # encrypted: "true"
+
+    # A string is expected here, i.e. "10", not 10. Default is "50".
+    # Amazon EBS only.
+    # iopsPerGB: "50"
+  manual: {}
+    # A string is expected here, i.e. "true", not true. Default is "true".
+    # Note: The default in the EBS provisioner is "false".
+    # Amazon EBS only.
+    # encrypted: "true"
+
+    # A string is expected here, i.e. "10", not 10. Default is "50".
+    # Amazon EBS only.
+    # iopsPerGB: "50"

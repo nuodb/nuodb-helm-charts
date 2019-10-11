@@ -1,0 +1,16 @@
+apiVersion: "v1"
+name: demo-ycsb
+version: 1.6
+description: Load YCSB for NuoDB
+keywords:
+- nuodb
+- database
+- sql
+home: https://github.com/nuodb/consulting-helm/tree/master/stable/demo-ycsb
+maintainers:
+- name: NuoDB
+  email: support@nuodb.com
+engine: gotpl
+icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+appVersion: 4.0.0
+tillerVersion: ">=2.10"

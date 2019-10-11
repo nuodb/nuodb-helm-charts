@@ -1,0 +1,53 @@
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry and imagePullSecrets
+##
+# global:
+#   imageRegistry: myRegistryName
+#   imagePullSecrets:
+#     - myRegistryKeySecretName
+
+cloud:
+  # supported: amazon, azure, google
+  provider:
+  # zones:
+  #   - us-east-2a
+  #   - us-east-2b
+  #   - us-east-2c
+
+busybox:
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: latest
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    # pullSecrets:
+    # - myRegistryKeySecretName
+    ## Specify a pullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+thp:
+  # nameOverride: disable-thp
+  # fullnameOverride: disable-thp
+
+  affinity: {}
+  # Recommended default pod affinity:
+  # affinity: |
+  #   nodeAffinity:
+  #     requiredDuringSchedulingIgnoredDuringExecution:
+  #       nodeSelectorTerms:
+  #       - matchExpressions:
+  #         - key: failure-domain.beta.kubernetes.io/zone
+  #           operator: In
+  #           values:
+  #           {{- range .Values.cloud.zones }}
+  #             - {{ . }}
+  #           {{- end }}
+
+  # nodeSelector: {}
+  # tolerations: []

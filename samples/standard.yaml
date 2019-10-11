@@ -1,0 +1,57 @@
+admin:
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: standard-storage
+
+database:
+  name: demo
+  rootUser: dba
+  rootPassword: secret
+  persistence:
+    enabled: true
+    size: 200Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: fast-storage
+  sm:
+    memoryOption: 8g
+    resources:
+      limits:
+        cpu: 8
+        memory: 16Gi
+      requests:
+        cpu: 4
+        memory: 8Gi
+  te:
+    memoryOption: 8g
+    resources:
+      limits:
+        cpu: 4
+        memory: 16Gi
+      requests:
+        cpu: 2
+        memory: 8Gi
+
+backup:
+  persistence:
+    enabled: true
+    size: 200Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: standard-storage
+
+influx:
+  persistence:
+    enabled: true
+    size: 20Gi
+    accessModes:
+      - ReadWriteOnce
+    storageClass: standard-storage
+  service:
+    type: LoadBalancer
+
+insights:
+  enabled: true

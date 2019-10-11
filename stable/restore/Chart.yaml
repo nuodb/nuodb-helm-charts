@@ -1,0 +1,17 @@
+apiVersion: "v1"
+name: restore
+version: 1.6
+description: On-demand restore a NuoDB SQL database.
+keywords:
+- nuodb
+- database
+- sql
+- restore
+home: hhttps://github.com/nuodb/consulting-helm/tree/master/stable/restore
+maintainers:
+- name: NuoDB
+  email: support@nuodb.com
+engine: gotpl
+icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+appVersion: 4.0.0
+tillerVersion: ">=2.10"

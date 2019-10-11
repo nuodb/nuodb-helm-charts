@@ -1,0 +1,25 @@
+** Please be patient while the chart is being deployed **
+
+Private NuoDB cluster metrics are available online in NuoDB Insights.
+The instructions below help you determine your private login URL.
+
+First, you need to determine the generated NuoDB Insights URL, 
+there are several ways to do this. The easiest being to look at
+the top of the Insights log for the `sub_id`:
+
+  $ kubectl exec -it nuodb-insights -c insights -- bash
+  # then once inside the container...
+  > grep sub_id /var/log/nuodb/nuoca.log
+  2019-04-10 21:10:18,011 NuoCA INFO Output Key: 'sub_id' set to Value: 'REDACTED_SUB_ID'
+
+Another way to get your subscription ID is as follows:
+
+  $ kubectl exec -it nuodb-insights -c insights -- nuoca check insights
+  {"insights.sub.dashboard_url": "https://insights.nuodb.com/REDACTED_SUB_ID/", "insights.sub.id": "REDACTED_SUB_ID", ...}
+
+The command above will output the `sub_id`, which becomes part of your Insights URL:
+
+  <https://insights.nuodb.com/REDACTED_SUB_ID_HERE/>
+
+Open your browser to the URL, substituting in your sub_id into the path, to show
+live performance metrics in its Grafana dashboards.

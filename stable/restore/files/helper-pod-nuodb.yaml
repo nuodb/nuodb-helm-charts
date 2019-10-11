@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: restore-checker
+spec:
+  initContainers:
+  - name: archive-clear
+    image: busybox
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: target
+      mountPath: /var/opt/nuodb/archive
+    command: ["sh", "-c", "rm -rf /var/opt/nuodb/archive/nuodb/demo/*"]
+  containers:
+  - name: restore-checker
+    image: docker.io/nuodb/nuodb-ce:latest
+    # command:
+    #   - sleep
+    #   - "360000"
+    command:
+      - "nuodocker"
+      - "--api-server"
+      - "https://domain.nuodb.svc:8888"
+      - "restore"
+      - "archive"
+      - "--origin-dir"
+      - "/var/opt/nuodb/backup/20190619T101450"
+      - "--restore-dir"
+      - "/var/opt/nuodb/archive/nuodb/demo"
+      - "--db-name"
+      - "demo"
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: source
+      mountPath: /var/opt/nuodb/backup
+    - name: target
+      mountPath: /var/opt/nuodb/archive
+  restartPolicy: Never
+  volumes:
+  - name: source
+    persistentVolumeClaim:
+      claimName: backup-pvc
+  - name: target
+    persistentVolumeClaim:
+      claimName: archive-pvc
+
+# things for init container to do:
+#
+# rm -fr /var/opt/nuodb/archive/nuodb/demo/*
+# rm -fr /var/opt/nuodb/archive/lost+found/
+
+# command to run:
+#
+#  nuodocker --api-server https://domain.nuodb.svc:8888 restore archive --origin-dir /var/opt/nuodb/backup/20190619T101450 --restore-dir /var/opt/nuodb/archive/nuodb/demo --db-name demo

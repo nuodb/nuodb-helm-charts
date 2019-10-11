@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: pvchecker
+spec:
+  containers:
+  - name: pvchecker
+    image: busybox
+    command:
+      - sleep
+      - "3600"
+    imagePullPolicy: IfNotPresent
+    volumeMounts:
+    - name: source
+      mountPath: /var/opt/nuodb/backup
+    - name: target
+      mountPath: /var/opt/nuodb/archive
+  restartPolicy: Always
+  volumes:
+  - name: source
+    persistentVolumeClaim:
+      claimName: backup-pvc
+  - name: target
+    persistentVolumeClaim:
+      claimName: archive-pvc

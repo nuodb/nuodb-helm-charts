@@ -1,0 +1,82 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: restore-{{ .Values.database.name }}
+  labels:
+    group: nuodb
+    subgroup: job
+    database: "{{ .Values.database.name }}"
+spec:
+  parallelism: 1
+  completions: 1
+  activeDeadlineSeconds: {{ .Values.restore.timeout }}
+  template:
+    spec:
+{{- if .Values.restore.affinity }}
+      affinity:
+{{ tpl .Values.restore.affinity . | trim | indent 8 }}
+{{- end }}
+      containers:
+      - name: restore
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ default "" .Values.nuodb.image.pullPolicy | quote }}
+
+        ##
+        # restore is accomplished by setting a flag and then (re)starting the SMs of the target database
+        ##
+        args:
+        - "nuocmd"
+        - "--api-server"
+        - "https://{{ template "admin.address" . }}:8888"
+        - "set"
+        - "value"
+        - "--key"
+        - "/nuodb/nuosm/database/{{ default .Values.database.name .Values.restore.target }}/restore"
+        - "--value"
+        - "{{ default ":latest" .Values.restore.backupSet }}"
+        - "--expected-value"
+        - ""
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888"}
+        volumeMounts:
+        - name: log-volume
+          mountPath: /var/log/nuodb
+        {{- if .Values.admin.tlsCACert }}
+        - name: tls-ca-cert
+          mountPath: /etc/nuodb/keys/ca.cert
+          subPath: {{ .Values.admin.tlsCACert.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls-client-pem
+          mountPath: /etc/nuodb/keys/nuocmd.pem
+          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        {{- end }}
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      volumes:
+      - name: log-volume
+        emptyDir: {}
+      {{- if .Values.admin.tlsCACert }}
+      - name: tls-ca-cert
+        secret:
+          secretName: {{ .Values.admin.tlsCACert.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsClientPEM }}
+      - name: tls-client-pem
+        secret:
+          secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+      restartPolicy: Never

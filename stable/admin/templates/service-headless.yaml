@@ -1,0 +1,28 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    description: |
+      Headless service permitting us to retrieve DNS A records that point directly to the pods backing the service.
+    "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true"
+  labels:
+    app: {{ template "admin.fullname" . }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "admin.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ .Values.admin.domain }}
+spec:
+  publishNotReadyAddresses: true
+  clusterIP: None
+  ports:
+  - { name: 8888-tcp,   port: 8888,   protocol: TCP,  targetPort: 8888  }
+  - { name: 48004-tcp,  port: 48004,  protocol: TCP,  targetPort: 48004 }
+  - { name: 48005-tcp,  port: 48005,  protocol: TCP,  targetPort: 48005 }
+  selector:
+    app: {{ template "admin.fullname" . }}
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

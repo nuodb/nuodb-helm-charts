@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    description: "Service (and load-balancer) for Admin pods."
+  labels:
+    app: {{ template "admin.fullname" . }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "admin.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ template "admin.fullname" . }}-balancer
+spec:
+  ports:
+  - { name: 8888-tcp,   port: 8888,   protocol: TCP,  targetPort: 8888  }
+  - { name: 48004-tcp,  port: 48004,  protocol: TCP,  targetPort: 48004 }
+  - { name: 48005-tcp,  port: 48005,  protocol: TCP,  targetPort: 48005 }
+  selector:
+    app: {{ template "admin.fullname" . }}
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer: {}

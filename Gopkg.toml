@@ -1,0 +1,11 @@
+[[constraint]]
+  name = "github.com/gruntwork-io/terratest"
+  version = "0.18.3"
+
+[[override]]
+  name = "github.com/russross/blackfriday"
+  version = "1.5.2"
+
+[prune]
+  go-tests = true
+  unused-packages = true

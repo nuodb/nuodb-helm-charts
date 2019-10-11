@@ -1,0 +1,134 @@
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry and imagePullSecrets
+##
+# global:
+#   imageRegistry: myRegistryName
+#   imagePullSecrets:
+#     - myRegistryKeySecretName
+
+cloud:
+  # supported: amazon, azure, google
+  provider:
+  # zones:
+  #   - us-east-2a
+  #   - us-east-2b
+  #   - us-east-2c
+
+busybox:
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: latest
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    # pullSecrets:
+    #   - myRegistryKeySecretName
+    ## Specify a imagePullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+nuodb:
+  image:
+    registry: docker.io
+    repository: nuodb/nuodb-ce
+    tag: latest
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    # pullSecrets:
+    # - myRegistryKeySecretName
+    ## Specify a imagePullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+admin:
+  # nameOverride: east
+  # fullnameOverride: admin-east
+
+  # domain is the name of the NuoDB administration domain (e.g. the cluster name)
+  domain: nuodb
+  # namespace: nuodb
+
+  # replicas
+  # Number of admin service pods. Requires 1 server available for each
+  # Admin Service
+  replicas: 1
+
+  lbPolicy: nearest
+
+  lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
+
+  persistence:
+    ## If true, use a Persistent Volume Claim, If false, use emptyDir
+    ##
+    ## n.b. use ReadWriteMany if using local ssd
+    enabled: false
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    # storageClass: "-"
+
+  ## Use a securityContext to specify additional capabilities
+  # For example, if the container needs to configure network setting, then add "NET_ADMIN"
+  # Ex: capabilities: [ "NET_ADMIN" ]
+  ##
+  securityContext:
+    capabilities: []
+
+  ## Specify one or more configMaps to import Environment Variables from
+  # Ex:  from: [ configMapRef: { name: myConfigMap } ]
+  env:
+    from: []
+
+  ## nuodb-admin resource requests and limits
+  ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  ##
+  resources: {}
+    # limits:
+    #   cpu: 10m
+    #   memory: 16Mi
+    # requests:
+    #   cpu: 10m
+    #   memory: 16Mi
+
+  # NuoDB is a licensed product for Enterprise Edition.
+  # Obtain your license from NuoDB support.
+  #
+  # You can provide the license via a configFile by using:
+  #
+  # - Helm CLI parameter
+  # - Specify in this values.yaml file
+  #
+  # To specify from the CLI:
+  #
+  # --set admin.configFiles.nuodb\\.lic=<BASE64-TEXT-HERE>
+  #
+  configFiles: {}
+    # nuodb.lic: |+
+    #   "PUT YOUR BASE64 ENCODED LICENSE CONTENT HERE"
+
+  # Recommended default admin affinity:
+  # affinity: {}
+  # nodeSelector: {}
+  # tolerations: []
+
+  # tlsCACert:
+  #   secret: nuodb-ca-cert
+  #   key: ca.cert
+  # tlsKeyStore:
+  #   secret: nuodb-server-keystore
+  #   key: server.p12
+  #   password: changeIt
+  # tlsTrustStore:
+  #   secret: nuodb-truststore
+  #   key: truststore.p12
+  #   password: changeIt
+  # tlsClientPEM:
+  #   secret: nuodb-client-pem
+  #   key: client.pem

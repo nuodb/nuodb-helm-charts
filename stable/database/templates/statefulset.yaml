@@ -1,0 +1,422 @@
+{{- if not .Values.database.enableDaemonSet }}
+{{- if .Values.database.sm.noHotCopy.enablePod }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: {{ template "database.fullname" . }}
+    group: nuodb
+    database: {{ .Values.database.name }}
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "database.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: sm-{{ template "database.fullname" . }}
+spec:
+  replicas: {{ .Values.database.sm.noHotCopy.replicas }}
+  selector:
+    matchLabels:
+      app: {{ template "database.fullname" . }}
+      component: sm
+      role: nohotcopy
+  podManagementPolicy: Parallel
+  serviceName: {{ .Values.database.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "database.fullname" . }}
+        component: sm
+        role: nohotcopy
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      terminationGracePeriodSeconds: 15
+      {{- if .Values.database.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.database.securityContext.fsGroup }}
+        runAsUser: {{ .Values.database.securityContext.runAsUser }}
+      {{- end }}
+      {{- with .Values.database.sm.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | trim | indent 8 }}
+      {{- end }}
+{{- if .Values.database.sm.affinity }}
+      affinity:
+{{ tpl .Values.database.sm.affinity . | trim | indent 8 }}
+{{- end }}
+      {{- if .Values.database.sm.tolerations }}
+      tolerations:
+{{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
+      {{- end }}
+      initContainers:
+      - name: init-disk
+        image: {{ template "init.image" . }}
+        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
+        command: ['chmod' , '770', '/var/opt/nuodb/archive', '/var/log/nuodb']
+        volumeMounts:
+        - name: archive-volume
+          mountPath: /var/opt/nuodb/archive
+        - name: log-volume
+          mountPath: /var/log/nuodb
+      containers:
+      - name: sm
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+    {{- include "database.capabilities" . | indent 8 }}
+        args: 
+          - "nuosm"
+          - "--servers-ready-timeout"
+          - "300"
+    {{- if .Values.database.isRestore -}}
+          - "--restored"
+    {{- end}}
+          - "--options"
+          - "mem {{ .Values.database.sm.memoryOption}} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
+          - "--labels"
+          - "backup disabled {{- range $opt, $val := .Values.database.sm.labels }} {{$opt}} {{$val}} {{- end}}"
+    {{- if .Values.database.options }}
+          - "--database-options"
+          - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
+    {{- end}}
+    {{- include "database.envFrom" . | indent 8 }}
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-name
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-password
+        - name: NUODB_IMPORT_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-import-credentials
+        - { name: NUODB_DOMAIN,        value: {{ .Values.admin.domain }} }
+        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
+        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
+        ports:
+        - containerPort: 48006
+          protocol: TCP
+        resources:
+{{ toYaml .Values.database.sm.resources | trim | indent 10 }}
+        volumeMounts:
+        - name: log-volume
+          mountPath: /var/log/nuodb
+        - name: nuosm
+          mountPath: /usr/local/bin/nuosm
+          subPath: nuosm
+        - mountPath: /var/opt/nuodb/archive
+          name: archive-volume
+        {{- if .Values.admin.tlsCACert }}
+        - name: tls-ca-cert
+          mountPath: /etc/nuodb/keys/ca.cert
+          subPath: {{ .Values.admin.tlsCACert.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls-client-pem
+          mountPath: /etc/nuodb/keys/nuocmd.pem
+          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        {{- end }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      volumes:
+      - name: log-volume
+        emptyDir: {}
+      - name: nuosm
+        configMap:
+          name: {{ template "database.fullname" . }}-nuosm
+          defaultMode: 0777
+      {{- if .Values.admin.tlsCACert }}
+      - name: tls-ca-cert
+        secret:
+          secretName: {{ .Values.admin.tlsCACert.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsClientPEM }}
+      - name: tls-client-pem
+        secret:
+          secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+  volumeClaimTemplates:
+  - metadata:
+      name: archive-volume
+      labels:
+        app: {{ template "database.fullname" . }}
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      accessModes:
+      {{- range .Values.database.persistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+    {{- if .Values.database.persistence.storageClass }}
+      {{- if (eq "-" .Values.database.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.database.persistence.storageClass }}
+      {{- end }}
+    {{- end }}
+{{- if .Values.database.isManualVolumeProvisioning }}
+      selector:
+        matchLabels:
+          database: {{ .Values.database.name }}
+{{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.persistence.size }}
+{{- end }}
+{{- if .Values.database.sm.hotCopy.enablePod }}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app: {{ template "database.fullname" . }}
+    group: nuodb
+    database: {{ .Values.database.name }}
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "database.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: sm-{{ template "database.fullname" . }}-hotcopy
+spec:
+  replicas: {{ .Values.database.sm.hotCopy.replicas }}
+  selector:
+    matchLabels:
+      app: {{ template "database.fullname" . }}
+      component: sm
+      role: hotcopy
+  podManagementPolicy: Parallel
+  serviceName: {{ .Values.database.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ template "database.fullname" . }}
+        component: sm
+        role: hotcopy
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      terminationGracePeriodSeconds: 15
+      {{- if .Values.database.securityContext.enabled }}
+      securityContext:
+        fsGroup: {{ .Values.database.securityContext.fsGroup }}
+        runAsUser: {{ .Values.database.securityContext.runAsUser }}
+      {{- end }}
+      {{- with .Values.database.sm.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | trim | indent 8 }}
+      {{- end }}
+{{- if .Values.database.sm.affinity }}
+      affinity:
+{{ tpl .Values.database.sm.affinity . | trim | indent 8 }}
+{{- end }}
+      {{- if .Values.database.sm.tolerations }}
+      tolerations:
+{{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
+      {{- end }}
+      initContainers:
+      - name: init-disk
+        image: {{ template "init.image" . }}
+        imagePullPolicy: {{ default "" .Values.busybox.imagepullPolicy | quote }}
+        command: ['chmod' , '770', '/var/opt/nuodb/archive', 'var/opt/nuodb/backup', '/var/log/nuodb']
+        volumeMounts:
+        - name: archive-volume
+          mountPath: /var/opt/nuodb/archive
+        - name: backup-volume
+          mountPath: /var/opt/nuodb/backup
+        - name: log-volume
+          mountPath: /var/log/nuodb
+      containers:
+      - name: sm
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+    {{- include "database.capabilities" . | indent 8 }}
+        args:
+          - "nuosm"
+          - "--servers-ready-timeout"
+          - "300"
+          - "--options"
+          - "mem {{ .Values.database.sm.memoryOption}} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
+          - "--labels"
+          - "backup enabled {{- range $opt, $val := .Values.database.sm.labels }} {{$opt}} {{$val}} {{- end}}"
+{{- if .Values.database.options}}
+          - "--database-options"
+          - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
+{{- end}}
+    {{- include "database.envFrom" . | indent 8 }}
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-name
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-password
+        - name: NUODB_IMPORT_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-import-credentials
+        - name: NUODB_BACKUP_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-backup-credentials
+        - { name: NUODB_DOMAIN,        value: {{ .Values.admin.domain }} }
+        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
+        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
+        ports:
+        - containerPort: 48006
+          protocol: TCP
+        resources:
+{{ toYaml .Values.database.sm.resources | trim | indent 10 }}
+        volumeMounts:
+        - name: log-volume
+          mountPath: /var/log/nuodb
+        - name: nuosm
+          mountPath: /usr/local/bin/nuosm
+          subPath: nuosm
+        - mountPath: /var/opt/nuodb/archive
+          name: archive-volume
+        - mountPath: /var/opt/nuodb/backup
+          name: backup-volume
+        {{- if .Values.admin.tlsCACert }}
+        - name: tls-ca-cert
+          mountPath: /etc/nuodb/keys/ca.cert
+          subPath: {{ .Values.admin.tlsCACert.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls-client-pem
+          mountPath: /etc/nuodb/keys/nuocmd.pem
+          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        {{- end }}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      volumes:
+      - name: log-volume
+        emptyDir: {}
+      - name: nuosm
+        configMap:
+          name: {{ template "database.fullname" . }}-nuosm
+          defaultMode: 0777
+      {{- if .Values.admin.tlsCACert }}
+      - name: tls-ca-cert
+        secret:
+          secretName: {{ .Values.admin.tlsCACert.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsClientPEM }}
+      - name: tls-client-pem
+        secret:
+          secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+  volumeClaimTemplates:
+  - metadata:
+      name: archive-volume
+      labels:
+        app: {{ template "database.fullname" . }}
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      accessModes:
+      {{- range .Values.database.persistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+    {{- if .Values.database.persistence.storageClass }}
+      {{- if (eq "-" .Values.database.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.database.persistence.storageClass }}
+      {{- end }}
+    {{- end }}
+{{- if .Values.database.isManualVolumeProvisioning }}
+      selector:
+        matchLabels:
+          database: {{ .Values.database.name }}
+{{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.persistence.size }}
+  - metadata:
+      name: backup-volume
+      labels:
+        app: {{ template "database.fullname" . }}
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      accessModes:
+      {{- range .Values.backup.persistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+    {{- if .Values.backup.persistence.storageClass }}
+      {{- if (eq "-" .Values.backup.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.backup.persistence.storageClass }}
+      {{- end }}
+    {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.backup.persistence.size }}
+{{- end }}
+{{- end }}

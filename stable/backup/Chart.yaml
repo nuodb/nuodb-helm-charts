@@ -1,0 +1,17 @@
+apiVersion: "v1"
+name: backup
+version: 1.6
+description: Scheduled and on-demand backup for NuoDB.
+keywords:
+- nuodb
+- database
+- sql
+- backup
+home: https://github.com/nuodb/consulting-helm/tree/master/stable/backup
+maintainers:
+- name: NuoDB
+  email: support@nuodb.com
+engine: gotpl
+icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+appVersion: 4.0.0
+tillerVersion: ">=2.10"

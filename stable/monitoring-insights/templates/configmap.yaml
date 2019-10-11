@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  annotations:
+    description: "Config map for metrics input and insights output"
+  name: insights-configmap
+  labels:
+    group: nuodb
+    subgroup: monitoring
+data:
+  nuoca.yml.template: |
+    ---
+    NUOCA_LOGFILE: /var/log/nuodb/nuoca.log
+
+    INPUT_PLUGINS:
+    - NuoAdminNuoMon:
+       description : Collection from NuoDB engines
+       nuocaCollectionName: NuoMon
+       api_server: https://{{ template "admin.address" . }}:8888
+       client_key:  /etc/nuodb/keys/nuocmd.pem
+    OUTPUT_PLUGINS:
+    - RestClient:
+        url: ${INSIGHTS_INGEST_URL}
+  nuoinsights: |
+    #!/bin/bash
+    . ${NUODB_HOME}/etc/nuodb_setup.sh
+    : ${NUOCMD_API_SERVER:=https://{{ template "admin.address" . }}:8888}
+
+    SCRIPT=$(cat <<EOF
+    from BaseHTTPServer import BaseHTTPRequestHandler,HTTPServer
+    from nuoca import NuoCA as nuoca
+    import nuodb_mgmt
+
+    PORT_NUMBER = 8080
+
+    def get_insights_dashboard():
+      conn = nuodb_mgmt.AdminConnection('${NUOCMD_API_SERVER}', '/etc/nuodb/keys/nuocmd.pem')
+      metadata = nuoca.get_insights_metadata(conn)
+      return metadata.get(nuoca.INSIGHTS_DASHBOARD_KEY,None)
+
+      #ingest_url    = metadata[nuoca.INSIGHTS_URL_KEY]
+      #subscriber_id = metadata[nuoca.INSIGHTS_ID_KEY]
+      #return ingest_url[:-6] + subscriber_id
+
+    class myHandler(BaseHTTPRequestHandler):
+      def do_GET(self):
+        new_path = get_insights_dashboard()
+        if new_path and new_path != "None":
+          self.send_response(307)
+          self.send_header('Location', new_path)
+          self.end_headers()
+        else:
+          self.send_response(404)
+        self.end_headers()
+        return
+
+    try:
+      server = HTTPServer(('', PORT_NUMBER), myHandler)
+      print 'Started httpserver on port ' , PORT_NUMBER
+
+      #Wait forever for incoming http requests
+      server.serve_forever()
+
+    except KeyboardInterrupt:
+      print '^C received, shutting down the web server'
+      server.socket.close()
+
+    EOF
+    )
+
+    export PYTHONPATH=/opt/nuodb/drivers/pynuoadmin
+    exec /opt/nuodb/etc/python/nuopython -c "${SCRIPT}"

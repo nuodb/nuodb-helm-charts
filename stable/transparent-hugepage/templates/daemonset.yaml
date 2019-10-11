@@ -1,0 +1,55 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name:  {{ template "thp.fullname" . }}
+  labels:
+    app: {{ template "thp.fullname" . }}
+    group: nuodb
+    chart: {{ template "thp.chart" . }}
+    release: {{ .Release.Name | quote }}
+spec:
+  selector:
+    matchLabels:
+      component: thp-disable
+  template:
+    metadata:
+      labels:
+        app: {{ template "thp.fullname" . }}
+        group: nuodb
+        chart: {{ template "thp.chart" . }}
+        release: {{ .Release.Name | quote }}
+        component: thp-disable
+    spec:
+      {{- with .Values.thp.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | trim | indent 8 }}
+      {{- end }}
+{{- if .Values.thp.affinity }}
+      affinity:
+{{ tpl .Values.thp.affinity . | trim | indent 8 }}
+{{- end }}
+      {{- if .Values.thp.tolerations }}
+      tolerations:
+{{ toYaml .Values.thp.tolerations | trim | indent 8 }}
+      {{- end }}
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 1
+      volumes:
+      - name: host-sys
+        hostPath:
+          path: /sys
+      initContainers:
+      - name: disable-thp
+        image: {{ template "thp.image" . }}
+        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+        volumeMounts:
+        - name: host-sys
+          mountPath: /host-sys
+        command: ["sh", "-c", "echo never >/host-sys/kernel/mm/transparent_hugepage/enabled"]
+      containers:
+      - name: busybox
+        image: {{ template "thp.image" . }}
+        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+        command: ["watch", "-n", "600", "cat", "/host-sys/kernel/mm/transparent_hugepage/enabled"]
+{{- include "thp.imagePullSecrets" . | indent 6 }}

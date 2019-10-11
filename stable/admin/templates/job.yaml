@@ -1,0 +1,81 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  labels:
+    app: job-lb-policy-{{ template "admin.fullname" . }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "admin.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
+spec:
+  parallelism: 1
+  completions: 1
+  template:
+    metadata:
+      labels:
+        app: job-lb-policy-{{ template "admin.fullname" . }}
+        group: nuodb
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "admin.chart" . }}
+        release: {{ .Release.Name | quote }}
+      name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
+    spec:
+      initContainers:
+      - name: wait
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+        command: ['/usr/local/bin/waitscript']
+        env:
+        - { name: NUOCMD_API_SERVER , value: "https://{{ template "admin.address" . }}:8888" }
+        volumeMounts:
+        {{- if .Values.admin.tlsCACert }}
+        - name: tls-ca-cert
+          mountPath: /etc/nuodb/keys/ca.cert
+          subPath: {{ .Values.admin.tlsCACert.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls-client-pem
+          mountPath: /etc/nuodb/keys/nuocmd.pem
+          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        {{- end }}
+        - name: waitscript
+          mountPath: /usr/local/bin/waitscript
+          subPath: waitscript
+      containers:
+      - name: main
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+        env:
+        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+        args: [ "nuodocker", "set", "load-balancer", "--policy-name", {{ .Values.admin.lbPolicy | quote }}, "--lb-query", {{ .Values.admin.lbQuery | quote }} ]
+        volumeMounts:
+        {{- if .Values.admin.tlsCACert }}
+        - name: tls-ca-cert
+          mountPath: /etc/nuodb/keys/ca.cert
+          subPath: {{ .Values.admin.tlsCACert.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls-client-pem
+          mountPath: /etc/nuodb/keys/nuocmd.pem
+          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        {{- end }}
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      restartPolicy: Never
+      volumes:
+      {{- if .Values.admin.tlsCACert }}
+      - name: tls-ca-cert
+        secret:
+          secretName: {{ .Values.admin.tlsCACert.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsClientPEM }}
+      - name: tls-client-pem
+        secret:
+          secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+      - name: waitscript
+        configMap:
+          name: waitscript
+          defaultMode: 0777

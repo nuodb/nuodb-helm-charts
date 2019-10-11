@@ -1,0 +1,199 @@
+apiVersion: "apps/v1"
+kind: StatefulSet
+metadata:
+  labels:
+    app: {{ template "admin.fullname" . }}
+    chart: {{ template "admin.chart" . }}
+    release: {{ .Release.Name | quote }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+  name: {{ template "admin.fullname" . }}
+spec:
+  serviceName: {{ .Values.admin.domain }}
+  podManagementPolicy: Parallel
+  replicas: {{ .Values.admin.replicas }}
+  selector:
+    matchLabels:
+      app: {{ template "admin.fullname" . }}
+      component: admin
+  template:
+    metadata:
+      name: {{ template "admin.fullname" . }}
+      labels:
+        app: {{ template "admin.fullname" . }}
+        chart: {{ template "admin.chart" . }}
+        release: {{ .Release.Name | quote }}
+        component: admin
+        domain: {{ .Values.admin.domain }}
+        group: nuodb
+    spec:
+      {{- with .Values.admin.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | trim | indent 8 }}
+      {{- end }}
+{{- if .Values.admin.affinity }}
+      affinity:
+{{ tpl .Values.admin.affinity . | trim | indent 8 }}
+{{- end }}
+      {{- if .Values.admin.tolerations }}
+      tolerations:
+{{ toYaml .Values.admin.tolerations | trim | indent 8 }}
+      {{- end }}
+      terminationGracePeriodSeconds: 15
+      initContainers:
+      - name: init-disk
+        image: {{ template "init.image" . }}
+        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+        command: ['chmod' , '770', '/var/opt/nuodb', '/var/log/nuodb']
+        volumeMounts:
+        - name: raftlog
+          mountPath: /var/opt/nuodb
+        - name: log-volume
+          mountPath: /var/log/nuodb
+      containers:
+      - name: admin
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+    {{- include "admin.capabilities" . | indent 8 }}
+        ports:
+        - { containerPort: 8888,  protocol: TCP }
+        - { containerPort: 48004, protocol: TCP }
+        - { containerPort: 48005, protocol: TCP }
+        resources:
+{{- toYaml .Values.admin.resources | trim | indent 10 }}
+    {{- include "admin.envFrom" . | indent 8 }}
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - { name: NUODB_DOMAIN_ENTRYPOINT, value: "{{ template "admin.fullname" . }}-0.{{ .Values.admin.domain }}" }
+        - { name: NUODB_ALT_ADDRESS,       value: "$(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc" }
+        - { name: NUODB_VARDIR,            value: "/var/opt/nuodb/$(POD_NAME).$(NAMESPACE)" }
+      {{- if .Values.admin.tlsKeyStore }}
+        {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+        {{- end }}
+      {{- end }}
+      {{- if .Values.admin.tlsTrustStore }}
+        {{- if .Values.admin.tlsTrustStore.password }}
+        - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
+        {{- end }}
+      {{- end }}
+        args: [ "nuoadmin", "--", "pendingReconnectTimeout=60000" ]
+        livenessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          tcpSocket:
+            port: 8888
+        readinessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          exec:
+            command: [ "nuodocker", "check", "servers" ]
+          failureThreshold: 30
+          successThreshold: 2
+          timeoutSeconds: 1
+        volumeMounts:
+        - name: log-volume
+          mountPath: /var/log/nuodb
+{{- if hasKey .Values.admin.configFiles "nuodb.lic" }}
+        - name: nuodb-license-volume
+          mountPath: /etc/nuodb/nuodb.lic
+          subPath: nuodb.lic
+{{ end }}
+        - name: raftlog
+          mountPath: /var/opt/nuodb
+        {{- if .Values.admin.tlsCACert }}
+        - name: tls-ca-cert
+          mountPath: /etc/nuodb/keys/ca.cert
+          subPath: {{ .Values.admin.tlsCACert.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsKeyStore }}
+        - name: tls-keystore
+          mountPath: /etc/nuodb/keys/nuoadmin.p12
+          subPath: {{ .Values.admin.tlsKeyStore.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsTrustStore }}
+        - name: tls-truststore
+          mountPath: /etc/nuodb/keys/nuoadmin-truststore.p12
+          subPath: {{ .Values.admin.tlsTrustStore.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls-client-pem
+          mountPath: /etc/nuodb/keys/nuocmd.pem
+          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        {{- end }}
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      volumes:
+      {{- if .Values.admin.tlsCACert }}
+      - name: tls-ca-cert
+        secret:
+          secretName: {{ .Values.admin.tlsCACert.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsKeyStore }}
+      - name: tls-keystore
+        secret:
+          secretName: {{ .Values.admin.tlsKeyStore.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsTrustStore }}
+      - name: tls-truststore
+        secret:
+          secretName: {{ .Values.admin.tlsTrustStore.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsClientPEM }}
+      - name: tls-client-pem
+        secret:
+          secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+      - name: log-volume
+        emptyDir: {}
+{{- if hasKey .Values.admin.configFiles "nuodb.lic" }}
+      - name: nuodb-license-volume
+        configMap:
+          name: nuodb-license-file
+          items:
+            - key: nuodb.lic
+              path: nuodb.lic
+{{ end }}
+{{- if not .Values.admin.persistence.enabled }}
+      - name: raftlog
+        emptyDir: {}
+{{- else }}
+  volumeClaimTemplates:
+  - metadata:
+      name: raftlog
+      labels:
+        app: {{ template "admin.fullname" . }}
+        group: nuodb
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "admin.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+    {{- if .Values.admin.persistence.storageClass }}
+      {{- if (eq "-" .Values.admin.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.admin.persistence.storageClass }}
+      {{- end }}
+    {{- end }}
+      accessModes:
+      {{- range .Values.admin.persistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.admin.persistence.size }}
+{{- end }}
