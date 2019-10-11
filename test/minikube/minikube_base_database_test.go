@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuodb/consulting-helm/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"

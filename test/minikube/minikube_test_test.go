@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuodb/consulting-helm/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
 	// NTJ - commented until we can get TestAwaitFailure() working - then uncomment; or remove if the solution does not use this package
 	// verify "github.com/stretchr/testify/assert"

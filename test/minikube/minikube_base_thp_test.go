@@ -3,7 +3,7 @@ package minikube
 import (
 	"fmt"
 
-	"github.com/nuodb/consulting-helm/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
 	"strings"
 	"testing"
