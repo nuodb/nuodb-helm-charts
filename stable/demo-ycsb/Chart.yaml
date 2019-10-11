@@ -6,7 +6,7 @@ keywords:
 - nuodb
 - database
 - sql
-home: https://github.com/nuodb/consulting-helm/tree/master/stable/demo-ycsb
+home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
 maintainers:
 - name: NuoDB
   email: support@nuodb.com

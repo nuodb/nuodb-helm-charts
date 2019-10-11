@@ -7,7 +7,7 @@ keywords:
 - database
 - sql
 - backup
-home: https://github.com/nuodb/consulting-helm/tree/master/stable/backup
+home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/backup
 maintainers:
 - name: NuoDB
   email: support@nuodb.com

@@ -7,7 +7,7 @@ keywords:
 - database
 - sql
 - backup
-home: https://github.com/nuodb/consulting-helm/tree/master/stable/transparent-hugepage
+home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/transparent-hugepage
 maintainers:
 - name: NuoDB
   email: support@nuodb.com

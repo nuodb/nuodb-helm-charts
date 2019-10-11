@@ -7,7 +7,7 @@ keywords:
 - database
 - sql
 - restore
-home: hhttps://github.com/nuodb/consulting-helm/tree/master/stable/restore
+home: hhttps://github.com/nuodb/nuodb-helm-charts/tree/master/stable/restore
 maintainers:
 - name: NuoDB
   email: support@nuodb.com

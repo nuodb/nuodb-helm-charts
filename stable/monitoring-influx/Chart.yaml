@@ -6,7 +6,7 @@ keywords:
 - nuodb
 - database
 - sql
-home: https://github.com/nuodb/consulting-helm/tree/master/stable/monitoring-influx
+home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/monitoring-influx
 maintainers:
 - name: NuoDB
   email: support@nuodb.com
