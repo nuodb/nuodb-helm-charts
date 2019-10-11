@@ -70,9 +70,9 @@ spec:
           - "nuosm"
           - "--servers-ready-timeout"
           - "300"
-    {{- if .Values.database.isRestore -}}
+    {{- if .Values.database.isRestore }}
           - "--restored"
-    {{- end}}
+    {{- end }}
           - "--options"
           - "mem {{ .Values.database.sm.memoryOption}} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
           - "--labels"
@@ -80,7 +80,7 @@ spec:
     {{- if .Values.database.options }}
           - "--database-options"
           - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
-    {{- end}}
+    {{- end }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -115,9 +115,9 @@ spec:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-import-credentials
-        - { name: NUODB_DOMAIN,        value: {{ .Values.admin.domain }} }
-        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
-        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
+        - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
+        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -314,9 +314,9 @@ spec:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-backup-credentials
-        - { name: NUODB_DOMAIN,        value: {{ .Values.admin.domain }} }
-        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
-        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
+        - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
+        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         ports:
         - containerPort: 48006
           protocol: TCP

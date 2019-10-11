@@ -70,8 +70,8 @@ spec:
             fieldRef:
               fieldPath: metadata.namespace
         - { name: DB_NAME,             value: {{ .Values.database.name | quote }} }
-        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
-        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
+        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         ports:
         - containerPort: 48006
           protocol: TCP
