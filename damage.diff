@@ -1,0 +1,128 @@
+diff --git a/stable/database/templates/daemonset.yaml b/stable/database/templates/daemonset.yaml
+index c703ebf..2c9b86e 100644
+--- a/stable/database/templates/daemonset.yaml
++++ b/stable/database/templates/daemonset.yaml
+@@ -51,17 +51,17 @@ spec:
+           - "nuosm"
+           - "--servers-ready-timeout"
+           - "300"
+-    {{- if .Values.database.isRestore -}}
++    {{- if .Values.database.isRestore }}
+           - "--restored"
+     {{end}}
+           - "--options"
+           - "mem {{ .Values.database.sm.memoryOption}} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
+           - "--labels"
+           - "backup disabled {{- range $opt, $val := .Values.database.sm.labels }} {{$opt}} {{$val}} {{- end}}"
+-{{- if .Values.database.options}}
++{{- if .Values.database.options }}
+           - "--database-options"
+           - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
+-{{- end}}
++{{- end }}
+     {{- include "database.envFrom" . | indent 8 }}
+         env:
+         - name: NODE_NAME
+@@ -97,8 +97,8 @@ spec:
+               name: {{ .Values.database.name }}.nuodb.com
+               key: database-import-credentials
+         - { name: NUODB_DOMAIN,        value: {{ .Values.admin.domain }} }
+-        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888}
+-        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
++        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
++        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
+         ports:
+         - containerPort: 48006
+@@ -253,8 +253,8 @@ spec:
+               name: {{ .Values.database.name }}.nuodb.com
+               key: database-backup-credentials
+         - { name: NUODB_DOMAIN,        value: {{ .Values.admin.domain }} }
+-        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
+-        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
++        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
++        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
+         - { name: NUODB_IMPORT_STRIP_LEVELS, value: "{{ default "1" .Values.database.import.stripLevels }}"}
+         ports:
+diff --git a/stable/database/templates/deployment.yaml b/stable/database/templates/deployment.yaml
+index 26a4a9c..6eda4cb 100644
+--- a/stable/database/templates/deployment.yaml
++++ b/stable/database/templates/deployment.yaml
+@@ -71,8 +71,8 @@ spec:
+               fieldRef:
+                 fieldPath: metadata.namespace
+           - { name: DB_NAME,             value: {{ .Values.database.name | quote }} }
+-          - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
+-          - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
++          - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
++          - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+         ports:
+         - containerPort: 48006
+           protocol: TCP
+diff --git a/stable/database/templates/deploymentconfig.yaml b/stable/database/templates/deploymentconfig.yaml
+index d574392..b4fed25 100644
+--- a/stable/database/templates/deploymentconfig.yaml
++++ b/stable/database/templates/deploymentconfig.yaml
+@@ -70,8 +70,8 @@ spec:
+             fieldRef:
+               fieldPath: metadata.namespace
+         - { name: DB_NAME,             value: {{ .Values.database.name | quote }} }
+-        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
+-        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
++        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
++        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+         ports:
+         - containerPort: 48006
+           protocol: TCP
+diff --git a/stable/database/templates/statefulset.yaml b/stable/database/templates/statefulset.yaml
+index 550fe6b..467e360 100644
+--- a/stable/database/templates/statefulset.yaml
++++ b/stable/database/templates/statefulset.yaml
+@@ -70,9 +70,9 @@ spec:
+           - "nuosm"
+           - "--servers-ready-timeout"
+           - "300"
+-    {{- if .Values.database.isRestore -}}
++    {{- if .Values.database.isRestore }}
+           - "--restored"
+-    {{- end}}
++    {{- end }}
+           - "--options"
+           - "mem {{ .Values.database.sm.memoryOption}} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
+           - "--labels"
+@@ -80,7 +80,7 @@ spec:
+     {{- if .Values.database.options }}
+           - "--database-options"
+           - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
+-    {{- end}}
++    {{- end }}
+     {{- include "database.envFrom" . | indent 8 }}
+         env:
+         - name: NODE_NAME
+@@ -115,9 +115,9 @@ spec:
+             secretKeyRef:
+               name: {{ .Values.database.name }}.nuodb.com
+               key: database-import-credentials
+-        - { name: NUODB_DOMAIN,        value: {{ .Values.admin.domain }} }
+-        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
+-        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
++        - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
++        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
++        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+         ports:
+         - containerPort: 48006
+           protocol: TCP
+@@ -314,9 +314,9 @@ spec:
+             secretKeyRef:
+               name: {{ .Values.database.name }}.nuodb.com
+               key: database-backup-credentials
+-        - { name: NUODB_DOMAIN,        value: {{ .Values.admin.domain }} }
+-        - { name: NUOCMD_API_SERVER,   value: {{ template "admin.address" . }}:8888 }
+-        - { name: PEER_ADDRESS,        value: {{ template "admin.address" . }} }
++        - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
++        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
++        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+         ports:
+         - containerPort: 48006
+           protocol: TCP
