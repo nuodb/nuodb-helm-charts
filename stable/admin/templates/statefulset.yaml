@@ -60,7 +60,7 @@ spec:
         - { containerPort: 48004, protocol: TCP }
         - { containerPort: 48005, protocol: TCP }
         resources:
-{{- toYaml .Values.admin.resources | trim | indent 10 }}
+{{ toYaml .Values.admin.resources | trim | indent 10 }}
     {{- include "admin.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
