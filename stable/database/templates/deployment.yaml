@@ -56,6 +56,10 @@ spec:
           - "mem {{ .Values.database.te.memoryOption}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
           - "--labels"
           - "{{- range $opt, $val := .Values.database.te.labels }} {{$opt}} {{$val}} {{- end}}"
+{{- range $opt, $val := .Values.database.te.otherOptions }}
+          - "--{{$opt}}"
+          - "{{$val}}"
+{{- end}}
     {{- include "database.envFrom" . | indent 8 }}
         env:
           - name: NODE_NAME
@@ -96,6 +100,11 @@ spec:
           mountPath: /etc/nuodb/keys/nuocmd.pem
           subPath: {{ .Values.admin.tlsClientPEM.key }}
         {{- end }}
+        {{- if .Values.admin.tlsKeyStore }}
+        - name: tls-keystore
+          mountPath: /etc/nuodb/keys/nuoadmin.p12
+          subPath: {{ .Values.admin.tlsKeyStore.key }}
+        {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
         - name: logdir
@@ -114,6 +123,12 @@ spec:
         - name: tls-client-pem
           secret:
             secretName: {{ .Values.admin.tlsClientPEM.secret }}
+            defaultMode: 0440
+        {{- end }}
+        {{- if .Values.admin.tlsKeyStore }}
+        - name: tls-keystore
+          secret:
+            secretName: {{ .Values.admin.tlsKeyStore.secret }}
             defaultMode: 0440
         {{- end }}
       dnsPolicy: ClusterFirst

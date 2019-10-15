@@ -266,6 +266,108 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 	assert.Check(t, okind == "te")
 }
 
+func TestDatabaseOtherOptions(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.te.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
+			"database.sm.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
+		},
+	}
+
+	basicChecks := func(args []string) {
+		assert.Check(t, ArgContains(args, "--keystore"))
+		assert.Check(t, ArgContains(args, "/etc/nuodb/keys/nuoadmin.p12"))
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/deployment.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: Deployment"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
+	})
+
+	t.Run("testDeploymentConfig", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["openshift.enabled"] = "true"
+		localOptions.SetValues["openshift.enableDeploymentConfigs"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/deploymentconfig.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: DeploymentConfig"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: StatefulSet") {
+				cnt++
+
+				var obj appsv1.StatefulSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/daemonset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: DaemonSet") {
+				cnt++
+
+				var obj appsv1.DaemonSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+
+
+}
+
 func TestDatabaseStandardVPNRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"

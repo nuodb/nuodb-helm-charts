@@ -184,6 +184,33 @@ func TestKubernetesBasicAdminThreeReplicasTLS(t *testing.T) {
 	t.Run("verifyKeystore", func(t *testing.T) {
 		verifyKeystore(t, namespaceName, admin0, "nuoadmin.p12", "changeIt", string(content))
 	})
+
+	t.Run("startDatabase", func(t *testing.T) {
+		defer testlib.Teardown("database")
+
+		startDatabase(t, namespaceName, admin0,
+			helm.Options{
+				SetValues: map[string]string{
+					"database.sm.resources.requests.cpu":    "500m",
+					"database.sm.resources.requests.memory": "1Gi",
+					"database.te.resources.requests.cpu":    "500m",
+					"database.te.resources.requests.memory": "1Gi",
+					"admin.tlsCACert.secret":       "nuodb-ca-cert",
+					"admin.tlsCACert.key":          "ca.cert",
+					"admin.tlsKeyStore.secret":     "nuodb-keystore",
+					"admin.tlsKeyStore.key":        "nuoadmin.p12",
+					"admin.tlsKeyStore.password":   "changeIt",
+					"admin.tlsTrustStore.secret":   "nuodb-truststore",
+					"admin.tlsTrustStore.key":      "nuoadmin-truststore.p12",
+					"admin.tlsTrustStore.password": "changeIt",
+					"admin.tlsClientPEM.secret":    "nuodb-client-pem",
+					"admin.tlsClientPEM.key":       "nuocmd.pem",
+					"database.te.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
+					"database.sm.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
+				},
+			},
+		)
+	})
 }
 
 const TLS_SECRET_PASSWORD_YAML_TEMPLATE = `---
