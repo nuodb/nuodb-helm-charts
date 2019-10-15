@@ -65,10 +65,49 @@ func TestResourcesAdminDefaults(t *testing.T) {
 }
 
 func TestResourcesAdminOverridden(t *testing.T) {
-	// can not override admin values with test framework, it will create an invalid YAML
-	//TestResourcesAdminOverridden command.go:121:         resources:          requests:
-	//TestResourcesAdminOverridden command.go:121:             cpu: 1
-	//TestResourcesAdminOverridden command.go:121:             memory: 1G
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.resources.requests.cpu": "1",
+			"admin.resources.requests.memory": "4G",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+	partCounter := 0
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+
+		if len(part) == 0 {
+			continue
+		}
+
+		if !strings.Contains(part, "kind: StatefulSet") {
+			continue
+		}
+
+		partCounter++
+
+		var ss appsv1.StatefulSet
+		helm.UnmarshalK8SYaml(t, part, &ss)
+
+		containers := &ss.Spec.Template.Spec.Containers
+
+		assert.Assert(t, len(*containers) >= 1)
+		assert.Check(t, (*containers)[0].Resources.Limits == nil)
+		assert.Assert(t, (*containers)[0].Resources.Requests != nil)
+
+		assert.Check(t, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0) == 1)
+		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga) == 4,
+			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
+
+	}
+
+	assert.Equal(t, partCounter, 1)
 }
 
 func TestResourcesDatabaseDefaults(t *testing.T) {
