@@ -20,6 +20,15 @@ func ArgContains(args []string, x string) bool {
 	return false
 }
 
+func EnvContains(envs []v1.EnvVar, key string, value string) bool {
+	for _, n := range envs {
+		if (n.Name == key && n.Value == value) {
+			return true
+		}
+	}
+	return false
+}
+
 func TestDatabaseSecretsDefault(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
@@ -280,9 +289,13 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		},
 	}
 
-	basicChecks := func(args []string) {
+	basicArgChecks := func(args []string) {
 		assert.Check(t, ArgContains(args, "--keystore"))
 		assert.Check(t, ArgContains(args, "/etc/nuodb/keys/nuoadmin.p12"))
+	}
+
+	basicEnvChecks := func(args []v1.EnvVar) {
+		assert.Check(t, EnvContains(args, "NUODOCKER_KEYSTORE_PASSWORD", "changeIt"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -294,7 +307,8 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		var obj appsv1.Deployment
 		helm.UnmarshalK8SYaml(t, output, &obj)
 
-		basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
+		basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
+		basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
 	})
 
 	t.Run("testDeploymentConfig", func(t *testing.T) {
@@ -311,7 +325,8 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		var obj appsv1.Deployment
 		helm.UnmarshalK8SYaml(t, output, &obj)
 
-		basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
+		basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
+		basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
 	})
 
 	t.Run("testStatefulSet", func(t *testing.T) {
@@ -332,7 +347,8 @@ func TestDatabaseOtherOptions(t *testing.T) {
 				var obj appsv1.StatefulSet
 				helm.UnmarshalK8SYaml(t, part, &obj)
 
-				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
+				basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
+				basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
 			}
 		}
 
@@ -361,14 +377,13 @@ func TestDatabaseOtherOptions(t *testing.T) {
 				var obj appsv1.DaemonSet
 				helm.UnmarshalK8SYaml(t, part, &obj)
 
-				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
+				basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
+				basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
 			}
 		}
 
 		assert.Check(t, cnt == 2)
 	})
-
-
 }
 
 func TestDatabaseStandardVPNRenders(t *testing.T) {
@@ -400,7 +415,6 @@ func TestDatabaseStandardVPNRenders(t *testing.T) {
 			assert.Check(t, k8obj.Spec.Template.Spec.Containers[0].EnvFrom[0].ConfigMapRef.Name, "test-config")
 		}
 	}
-
 }
 
 func TestDatabaseDaemonSetVPNRenders(t *testing.T) {
@@ -433,7 +447,6 @@ func TestDatabaseDaemonSetVPNRenders(t *testing.T) {
 			assert.Check(t, k8obj.Spec.Template.Spec.Containers[0].EnvFrom[0].ConfigMapRef.Name, "test-config")
 		}
 	}
-
 }
 
 func TestDatabaseDeploymentConfigVPNRenders(t *testing.T) {
@@ -590,5 +603,4 @@ func TestDatabaseLabeling(t *testing.T) {
 
 		assert.Check(t, cnt == 2)
 	})
-
 }
