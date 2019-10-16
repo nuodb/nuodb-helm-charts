@@ -122,6 +122,11 @@ spec:
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+    {{- if .Values.admin.tlsKeyStore }}
+      {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+      {{- end }}
+    {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -336,6 +341,11 @@ spec:
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+    {{- if .Values.admin.tlsKeyStore }}
+      {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+      {{- end }}
+    {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP

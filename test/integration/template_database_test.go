@@ -274,6 +274,9 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		SetValues: map[string]string{
 			"database.te.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
 			"database.sm.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
+			"admin.tlsKeyStore.secret":     "nuodb-keystore",
+			"admin.tlsKeyStore.key":        "nuoadmin.p12",
+			"admin.tlsKeyStore.password":   "changeIt",
 		},
 	}
 

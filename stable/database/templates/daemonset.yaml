@@ -104,6 +104,11 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
+    {{- if .Values.admin.tlsKeyStore }}
+      {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+      {{- end }}
+    {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -276,6 +281,11 @@ spec:
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
         - { name: NUODB_IMPORT_STRIP_LEVELS, value: "{{ default "1" .Values.database.import.stripLevels }}"}
+    {{- if .Values.admin.tlsKeyStore }}
+      {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+      {{- end }}
+    {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
