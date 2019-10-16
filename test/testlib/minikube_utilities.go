@@ -340,7 +340,7 @@ func shouldPrintToStdout() bool {
 }
 
 func GetAppLog(t *testing.T, namespace string, podName string) {
-	dirPath := filepath.Join("..", RESULT_DIR, namespace)
+	dirPath := filepath.Join("..", "..", RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName)
 
 	_ = os.MkdirAll(dirPath, 0700)

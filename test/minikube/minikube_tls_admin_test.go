@@ -93,8 +93,8 @@ func TestKubernetesBasicAdminThreeReplicasTLS(t *testing.T) {
 	helmChartPath := "../../stable/admin"
 	helmChartReleaseName := fmt.Sprintf("admin-%s", randomSuffix)
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
-	admin1 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
-	admin2 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin1 := fmt.Sprintf("%s-nuodb-1", helmChartReleaseName)
+	admin2 := fmt.Sprintf("%s-nuodb-2", helmChartReleaseName)
 
 	options := &helm.Options{
 		SetValues: map[string]string{
