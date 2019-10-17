@@ -62,6 +62,10 @@ spec:
           - "--database-options"
           - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
 {{- end }}
+{{- range $opt, $val := .Values.database.sm.otherOptions }}
+          - "--{{$opt}}"
+          - "{{$val}}"
+{{- end}}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -100,6 +104,11 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
+    {{- if .Values.admin.tlsKeyStore }}
+      {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+      {{- end }}
+    {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -123,6 +132,11 @@ spec:
           mountPath: /etc/nuodb/keys/nuocmd.pem
           subPath: {{ .Values.admin.tlsClientPEM.key }}
         {{- end }}
+        {{- if .Values.admin.tlsKeyStore }}
+        - name: tls-keystore
+          mountPath: /etc/nuodb/keys/nuoadmin.p12
+          subPath: {{ .Values.admin.tlsKeyStore.key }}
+        {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       - name: log-volume
@@ -144,6 +158,12 @@ spec:
       - name: tls-client-pem
         secret:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsKeyStore }}
+      - name: tls-keystore
+        secret:
+          secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
       {{- end }}
       dnsPolicy: ClusterFirst
@@ -213,6 +233,10 @@ spec:
           - "--database-options"
           - "{{- range $opt, $val := .Values.database.options}} {{$opt}} {{$val}} {{- end}}"
     {{- end}}
+{{- range $opt, $val := .Values.database.sm.otherOptions }}
+          - "--{{$opt}}"
+          - "{{$val}}"
+{{- end}}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -257,6 +281,11 @@ spec:
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
         - { name: NUODB_IMPORT_STRIP_LEVELS, value: "{{ default "1" .Values.database.import.stripLevels }}"}
+    {{- if .Values.admin.tlsKeyStore }}
+      {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+      {{- end }}
+    {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -282,6 +311,11 @@ spec:
           mountPath: /etc/nuodb/keys/nuocmd.pem
           subPath: {{ .Values.admin.tlsClientPEM.key }}
         {{- end }}
+        {{- if .Values.admin.tlsKeyStore }}
+        - name: tls-keystore
+          mountPath: /etc/nuodb/keys/nuoadmin.p12
+          subPath: {{ .Values.admin.tlsKeyStore.key }}
+        {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       - name: log-volume
@@ -306,6 +340,12 @@ spec:
       - name: tls-client-pem
         secret:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsKeyStore }}
+      - name: tls-keystore
+        secret:
+          secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
       {{- end }}
       dnsPolicy: ClusterFirst

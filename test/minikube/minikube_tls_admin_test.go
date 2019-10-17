@@ -179,10 +179,39 @@ func TestKubernetesBasicAdminThreeReplicasTLS(t *testing.T) {
 	defer testlib.GetAppLog(t, namespaceName, admin1)
 	defer testlib.GetAppLog(t, namespaceName, admin2)
 
-	content, err := readAll("../../keys/default.certificate")
-	assert.NilError(t, err)
 	t.Run("verifyKeystore", func(t *testing.T) {
+		content, err := readAll("../../keys/default.certificate")
+		assert.NilError(t, err)
 		verifyKeystore(t, namespaceName, admin0, "nuoadmin.p12", "changeIt", string(content))
+	})
+
+	t.Run("testDatabaseNoDirectEngineKeys", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.sm.resources.requests.cpu"] =    "500m"
+		localOptions.SetValues["database.sm.resources.requests.memory"] = "1Gi"
+		localOptions.SetValues["database.te.resources.requests.cpu"] =    "500m"
+		localOptions.SetValues["database.te.resources.requests.memory"] = "1Gi"
+
+		defer testlib.Teardown("database")
+
+		startDatabase(t, namespaceName, admin0, localOptions)
+	})
+
+	t.Run("testDatabaseDirectEngineKeys", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.sm.resources.requests.cpu"] =    "500m"
+		localOptions.SetValues["database.sm.resources.requests.memory"] = "1Gi"
+		localOptions.SetValues["database.te.resources.requests.cpu"] =    "500m"
+		localOptions.SetValues["database.te.resources.requests.memory"] = "1Gi"
+
+		localOptions.SetValues["database.te.otherOptions.keystore"] = "/etc/nuodb/keys/nuoadmin.p12"
+		localOptions.SetValues["database.sm.otherOptions.keystore"] = "/etc/nuodb/keys/nuoadmin.p12"
+
+		defer testlib.Teardown("database")
+
+		startDatabase(t, namespaceName, admin0, localOptions)
 	})
 }
 

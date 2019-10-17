@@ -169,6 +169,9 @@ The following tables list the configurable parameters for the `admin` option of 
 | `namespace` | Namespace where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
 | `tlsCACert.secret` | TLS CA certificate secret name | `nil` |
 | `tlsCACert.key` | TLS CA certificate secret key | `nil` |
+| `tlsKeyStore.secret` | TLS keystore secret name | `nil` |
+| `tlsKeyStore.key` | TLS keystore secret key | `nil` |
+| `tlsKeyStore.password` | TLS keystore secret password | `nil` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
 
@@ -226,12 +229,14 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.resources` | Labels to apply to all resources | `{}` |
 | `te.affinity` | Affinity rules for NuoDB TE | `{}` |
 | `te.nodeSelector` | Node selector rules for NuoDB TE | `{}` |
-| `te.tolerations` | Tolerations for NuoDB TE | `[]` |||
-| `sm.affinityNoHotCopyDS` | Affinity rules for non-hot-copy SMs (DaemonSet) | `{}` |||
-| `sm.affinityHotCopyDS` | Affinity rules for hot-copy enabled SMs (DaemonSet) | `{}` |||
-| `sm.nodeSelectorHotCopyDS` | Node selector rules for hot-copy enabled SMs (DaemonSet) | `{}` |||
-| `sm.nodeSelectorNoHotCopyDS` | Node selector rules for non-hot-copy SMs (DaemonSet) | `{}` |||
-| `sm.tolerationsDS` | Tolerations for SMs (DaemonSet) | `[]` |||
+| `te.tolerations` | Tolerations for NuoDB TE | `[]` |
+| `te.otherOptions` | Additional key/value Docker options | `{}` |
+| `sm.affinityNoHotCopyDS` | Affinity rules for non-hot-copy SMs (DaemonSet) | `{}` |
+| `sm.affinityHotCopyDS` | Affinity rules for hot-copy enabled SMs (DaemonSet) | `{}` |
+| `sm.nodeSelectorHotCopyDS` | Node selector rules for hot-copy enabled SMs (DaemonSet) | `{}` |
+| `sm.nodeSelectorNoHotCopyDS` | Node selector rules for non-hot-copy SMs (DaemonSet) | `{}` |
+| `sm.tolerationsDS` | Tolerations for SMs (DaemonSet) | `[]` |
+| `sm.otherOptions` | Additional key/value Docker options | `{}` |
 
 ### Running
 
