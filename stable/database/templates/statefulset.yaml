@@ -81,6 +81,10 @@ spec:
           - "--database-options"
           - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
     {{- end }}
+{{- range $opt, $val := .Values.database.sm.otherOptions }}
+          - "--{{$opt}}"
+          - "{{$val}}"
+{{- end}}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -118,6 +122,11 @@ spec:
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+    {{- if .Values.admin.tlsKeyStore }}
+      {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+      {{- end }}
+    {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -141,6 +150,11 @@ spec:
           mountPath: /etc/nuodb/keys/nuocmd.pem
           subPath: {{ .Values.admin.tlsClientPEM.key }}
         {{- end }}
+        {{- if .Values.admin.tlsKeyStore }}
+        - name: tls-keystore
+          mountPath: /etc/nuodb/keys/nuoadmin.p12
+          subPath: {{ .Values.admin.tlsKeyStore.key }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
@@ -161,6 +175,12 @@ spec:
       - name: tls-client-pem
         secret:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsKeyStore }}
+      - name: tls-keystore
+        secret:
+          secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
       {{- end }}
   volumeClaimTemplates:
@@ -275,6 +295,10 @@ spec:
           - "--database-options"
           - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
 {{- end}}
+{{- range $opt, $val := .Values.database.sm.otherOptions }}
+          - "--{{$opt}}"
+          - "{{$val}}"
+{{- end}}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -317,6 +341,11 @@ spec:
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+    {{- if .Values.admin.tlsKeyStore }}
+      {{- if .Values.admin.tlsKeyStore.password }}
+        - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+      {{- end }}
+    {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -342,6 +371,11 @@ spec:
           mountPath: /etc/nuodb/keys/nuocmd.pem
           subPath: {{ .Values.admin.tlsClientPEM.key }}
         {{- end }}
+        {{- if .Values.admin.tlsKeyStore }}
+        - name: tls-keystore
+          mountPath: /etc/nuodb/keys/nuoadmin.p12
+          subPath: {{ .Values.admin.tlsKeyStore.key }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
@@ -362,6 +396,12 @@ spec:
       - name: tls-client-pem
         secret:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsKeyStore }}
+      - name: tls-keystore
+        secret:
+          secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
       {{- end }}
   volumeClaimTemplates:

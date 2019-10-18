@@ -54,6 +54,10 @@ admin:
   # tlsCACert:
   #   secret: nuodb-ca-cert
   #   key: ca.cert
+  # tlsKeyStore:
+  #   secret: nuodb-server-keystore
+  #   key: server.p12
+  #   password: changeIt
   # tlsClientPEM:
   #   secret: nuodb-client-pem
   #   key: client.pem
@@ -152,7 +156,12 @@ database:
     # labels
     # Additional Labels given to the SMs started
     labels: {}
+
     engineOptions: {}
+
+    # named key/value pairs that need to be passed to the image, such as
+    # keystore: "/etc/nuodb/keys/nuoadmin.p12"
+    otherOptions: {}
 
     # Additional Options for DaemonSets
     # affinityNoHotCopyDS: {}
@@ -179,7 +188,12 @@ database:
     # labels
     # Additional Labels given to the TEs started
     labels: {}
+
     engineOptions: {}
+
+    # named key/value pairs that need to be passed to the image, such as
+    # keystore: "/etc/nuodb/keys/nuoadmin.p12"
+    otherOptions: {}
   
   enableDaemonSet: false
   # Set to true if you are using manually created volumes or restoring
