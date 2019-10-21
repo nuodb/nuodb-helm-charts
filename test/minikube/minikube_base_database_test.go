@@ -114,8 +114,8 @@ func startDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	// with Async actions which do not return a cleanup method, create the teardown(s) first
 	testlib.AddTeardown("database", func() {
 		helm.Delete(t, &options, helmChartReleaseName, true)
-		testlib.DeleteDatabase(t, namespaceName, "demo", adminPod)
 		testlib.AwaitNoPods(t, namespaceName, "database")
+		testlib.DeleteDatabase(t, namespaceName, "demo", adminPod)
 	})
 
 	helm.Install(t, &options, helmChartPath, helmChartReleaseName)
