@@ -103,9 +103,6 @@ func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/transparent-hugepage"
-
 	options := &helm.Options{
 		SetValues: map[string]string{},
 	}
@@ -125,7 +122,7 @@ func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 		They only verify that scheduling works as expected and that the charts work
 	*/
 
-	t.Run("scheduleDefault", func(t *testing.T) { scheduleDefault(t, helmChartPath, namespaceName) })
-	t.Run("scheduleLabel", func(t *testing.T) { scheduleLabel(t, helmChartPath, namespaceName) })
-	t.Run("scheduleLabelMismatch", func(t *testing.T) { scheduleLabelMismatch(t, helmChartPath, namespaceName) })
+	t.Run("scheduleDefault", func(t *testing.T) { scheduleDefault(t, testlib.THP_HELM_CHART_PATH, namespaceName) })
+	t.Run("scheduleLabel", func(t *testing.T) { scheduleLabel(t, testlib.THP_HELM_CHART_PATH, namespaceName) })
+	t.Run("scheduleLabelMismatch", func(t *testing.T) { scheduleLabelMismatch(t, testlib.THP_HELM_CHART_PATH, namespaceName) })
 }

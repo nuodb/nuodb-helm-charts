@@ -4,13 +4,12 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
-	"time"
-
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
 	"gotest.tools/assert"
 
@@ -18,6 +17,29 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 )
+
+const TLS_SECRET_PASSWORD_YAML_TEMPLATE = `---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+apiVersion: v1
+data:
+  %s: %s
+  password: %s
+`
+
+const TLS_SECRET_NO_PASSWORD_YAML_TEMPLATE = `---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: %s
+  namespace: %s
+apiVersion: v1
+data:
+  %s: %s
+`
 
 func verifySecretFields(t *testing.T, namespaceName string, secretName string, fields ...string) {
 	secret := testlib.GetSecret(t, namespaceName, secretName)
@@ -84,110 +106,90 @@ func verifyKeystore(t *testing.T, namespace string, podName string, keystore str
 	assert.Assert(t, strings.Compare(output, matches) != 0)
 }
 
-func TestKubernetesBasicAdminThreeReplicasTLS(t *testing.T) {
+func createSecret(t *testing.T, namespaceName string, certName string, secretName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions.Namespace = namespaceName
+
+	keyDir := filepath.Join("..", "..", "keys")
+	keyFile := filepath.Join(keyDir, certName)
+
+	secretString, err := createSecretDecl(keyFile, namespaceName, secretName, certName)
+	assert.NilError(t, err)
+
+	k8s.KubectlApplyFromString(t, kubectlOptions, secretString)
+	testlib.AddTeardown(testlib.TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromString(t, kubectlOptions, secretString) })
+
+	fields := []string{certName}
+	verifySecretFields(t, namespaceName, secretName, fields...)
+}
+
+func createSecretWithPassword(t *testing.T, namespaceName string, certName string, secretName string, password string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions.Namespace = namespaceName
+
+	keyDir := filepath.Join("..", "..", "keys")
+	keyFile := filepath.Join(keyDir, certName)
+
+	secretString, err := createSecretPassDecl(keyFile, namespaceName, secretName, certName, password)
+	assert.NilError(t, err)
+
+	k8s.KubectlApplyFromString(t, kubectlOptions, secretString)
+	testlib.AddTeardown(testlib.TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromString(t, kubectlOptions, secretString) })
+
+	fields := []string{certName, "password"}
+	verifySecretFields(t, namespaceName, secretName, fields...)
+}
+
+func TestKubernetesTLS(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/admin"
-	helmChartReleaseName := fmt.Sprintf("admin-%s", randomSuffix)
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
-	admin1 := fmt.Sprintf("%s-nuodb-1", helmChartReleaseName)
-	admin2 := fmt.Sprintf("%s-nuodb-2", helmChartReleaseName)
-
-	options := &helm.Options{
-		SetValues: map[string]string{
-			"admin.replicas":               "3",
-			"admin.tlsCACert.secret":       "nuodb-ca-cert",
-			"admin.tlsCACert.key":          "ca.cert",
-			"admin.tlsKeyStore.secret":     "nuodb-keystore",
-			"admin.tlsKeyStore.key":        "nuoadmin.p12",
-			"admin.tlsKeyStore.password":   "changeIt",
-			"admin.tlsTrustStore.secret":   "nuodb-truststore",
-			"admin.tlsTrustStore.key":      "nuoadmin-truststore.p12",
-			"admin.tlsTrustStore.password": "changeIt",
-			"admin.tlsClientPEM.secret":    "nuodb-client-pem",
-			"admin.tlsClientPEM.key":       "nuocmd.pem",
-		},
-	}
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
-
 	namespaceName := fmt.Sprintf("test-admin-tls-%s", randomSuffix)
+	kubectlOptions := k8s.NewKubectlOptions("", "")
 	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-	options.KubectlOptions.Namespace = namespaceName
 
 	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
 
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	// create the certs...
+	createSecret(t, namespaceName, testlib.CA_CERT_FILE, testlib.CA_CERT_SECRET)
+	createSecret(t, namespaceName, testlib.NUOCMD_FILE, testlib.NUOCMD_SECRET)
+	createSecretWithPassword(t, namespaceName, testlib.KEYSTORE_FILE, testlib.KEYSTORE_SECRET, testlib.SECRET_PASSWORD)
+	createSecretWithPassword(t, namespaceName, testlib.TRUSTSTORE_FILE, testlib.TRUSTSTORE_SECRET, testlib.SECRET_PASSWORD)
 
-	tlsCaCertString, err := createSecretDecl("../../keys/ca.cert",
-		namespaceName, "nuodb-ca-cert", "ca.cert")
-	assert.NilError(t, err)
-	tlsCaCertOptions := k8s.NewKubectlOptions("", "")
-	tlsCaCertOptions.Namespace = namespaceName
-	defer k8s.KubectlDeleteFromString(t, tlsCaCertOptions, tlsCaCertString)
-	k8s.KubectlApplyFromString(t, tlsCaCertOptions, tlsCaCertString)
-	tlsCaCertFields := []string{"ca.cert"}
-	verifySecretFields(t, namespaceName, "nuodb-ca-cert", tlsCaCertFields...)
+	options := helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas":               "3",
+			"admin.tlsCACert.secret":       testlib.CA_CERT_SECRET,
+			"admin.tlsCACert.key":          testlib.CA_CERT_FILE,
+			"admin.tlsKeyStore.secret":     testlib.KEYSTORE_SECRET,
+			"admin.tlsKeyStore.key":        testlib.KEYSTORE_FILE,
+			"admin.tlsKeyStore.password":   testlib.SECRET_PASSWORD,
+			"admin.tlsTrustStore.secret":   testlib.TRUSTSTORE_SECRET,
+			"admin.tlsTrustStore.key":      testlib.TRUSTSTORE_FILE,
+			"admin.tlsTrustStore.password": testlib.SECRET_PASSWORD,
+			"admin.tlsClientPEM.secret":    testlib.NUOCMD_SECRET,
+			"admin.tlsClientPEM.key":       testlib.NUOCMD_FILE,
+		},
+	}
 
-	tlsClientPemString, err := createSecretDecl("../../keys/nuocmd.pem",
-		namespaceName, "nuodb-client-pem", "nuocmd.pem")
-	assert.NilError(t, err)
-	tlsClientPemOptions := k8s.NewKubectlOptions("", "")
-	tlsClientPemOptions.Namespace = namespaceName
-	defer k8s.KubectlDeleteFromString(t, tlsClientPemOptions, tlsClientPemString)
-	k8s.KubectlApplyFromString(t, tlsClientPemOptions, tlsClientPemString)
-	tlsClientPemFields := []string{"nuocmd.pem"}
-	verifySecretFields(t, namespaceName, "nuodb-client-pem", tlsClientPemFields...)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	tlsKeyStoreString, err := createSecretPassDecl("../../keys/nuoadmin.p12",
-		namespaceName, "nuodb-keystore", "nuoadmin.p12", "changeIt")
-	assert.NilError(t, err)
-	tlsKeyStoreOptions := k8s.NewKubectlOptions("", "")
-	tlsKeyStoreOptions.Namespace = namespaceName
-	defer k8s.KubectlDeleteFromString(t, tlsKeyStoreOptions, tlsKeyStoreString)
-	k8s.KubectlApplyFromString(t, tlsKeyStoreOptions, tlsKeyStoreString)
-	tlsKeyStoreFields := []string{"nuoadmin.p12", "password"}
-	verifySecretFields(t, namespaceName, "nuodb-keystore", tlsKeyStoreFields...)
+	helmChartReleaseName, namespaceName := startAdmin(t, &options, 3, namespaceName)
 
-	tlsTrustStoreString, err := createSecretPassDecl("../../keys/nuoadmin-truststore.p12",
-		namespaceName, "nuodb-truststore", "nuoadmin-truststore.p12", "changeIt")
-	assert.NilError(t, err)
-	tlsTrustStoreOptions := k8s.NewKubectlOptions("", "")
-	tlsTrustStoreOptions.Namespace = namespaceName
-	defer k8s.KubectlDeleteFromString(t, tlsTrustStoreOptions, tlsTrustStoreString)
-	k8s.KubectlApplyFromString(t, tlsTrustStoreOptions, tlsTrustStoreString)
-	tlsTrustStoreFields := []string{"nuoadmin-truststore.p12", "password"}
-	verifySecretFields(t, namespaceName, "nuodb-truststore", tlsTrustStoreFields...)
+	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
-	// install and check admin
-
-	helm.Install(t, options, helmChartPath, helmChartReleaseName)
-
-	defer helm.Delete(t, options, helmChartReleaseName, true)
-
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, 3)
-
-	// first await could be pulling the image from the repo
-	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
-	testlib.AwaitAdminPodUp(t, namespaceName, admin1, 100*time.Second)
-	testlib.AwaitAdminPodUp(t, namespaceName, admin2, 100*time.Second)
-
-	defer testlib.GetAppLog(t, namespaceName, admin0)
-	defer testlib.GetAppLog(t, namespaceName, admin1)
-	defer testlib.GetAppLog(t, namespaceName, admin2)
 
 	t.Run("verifyKeystore", func(t *testing.T) {
 		content, err := readAll("../../keys/default.certificate")
 		assert.NilError(t, err)
-		verifyKeystore(t, namespaceName, admin0, "nuoadmin.p12", "changeIt", string(content))
+		verifyKeystore(t, namespaceName, admin0, testlib.KEYSTORE_FILE, testlib.SECRET_PASSWORD, string(content))
 	})
 
 	t.Run("testDatabaseNoDirectEngineKeys", func(t *testing.T) {
 		// make a copy
-		localOptions := *options
+		localOptions := options
 		localOptions.SetValues["database.sm.resources.requests.cpu"] =    "500m"
 		localOptions.SetValues["database.sm.resources.requests.memory"] = "1Gi"
 		localOptions.SetValues["database.te.resources.requests.cpu"] =    "500m"
@@ -195,12 +197,12 @@ func TestKubernetesBasicAdminThreeReplicasTLS(t *testing.T) {
 
 		defer testlib.Teardown("database")
 
-		startDatabase(t, namespaceName, admin0, localOptions)
+		startDatabase(t, namespaceName, admin0, &localOptions)
 	})
 
 	t.Run("testDatabaseDirectEngineKeys", func(t *testing.T) {
 		// make a copy
-		localOptions := *options
+		localOptions := options
 		localOptions.SetValues["database.sm.resources.requests.cpu"] =    "500m"
 		localOptions.SetValues["database.sm.resources.requests.memory"] = "1Gi"
 		localOptions.SetValues["database.te.resources.requests.cpu"] =    "500m"
@@ -211,29 +213,6 @@ func TestKubernetesBasicAdminThreeReplicasTLS(t *testing.T) {
 
 		defer testlib.Teardown("database")
 
-		startDatabase(t, namespaceName, admin0, localOptions)
+		startDatabase(t, namespaceName, admin0, &localOptions)
 	})
 }
-
-const TLS_SECRET_PASSWORD_YAML_TEMPLATE = `---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: %s
-  namespace: %s
-apiVersion: v1
-data:
-  %s: %s
-  password: %s
-`
-
-const TLS_SECRET_NO_PASSWORD_YAML_TEMPLATE = `---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: %s
-  namespace: %s
-apiVersion: v1
-data:
-  %s: %s
-`
