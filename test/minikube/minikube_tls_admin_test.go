@@ -5,13 +5,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"gotest.tools/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
-
-	"gotest.tools/assert"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -40,6 +39,8 @@ apiVersion: v1
 data:
   %s: %s
 `
+
+const ENGINE_CERTIFICATE_LOG_TEMPLATE = `Engine Certificate: Certificate #%d CN %s`
 
 func verifySecretFields(t *testing.T, namespaceName string, secretName string, fields ...string) {
 	secret := testlib.GetSecret(t, namespaceName, secretName)
@@ -197,7 +198,16 @@ func TestKubernetesTLS(t *testing.T) {
 
 		defer testlib.Teardown("database")
 
-		startDatabase(t, namespaceName, admin0, &localOptions)
+		databaseReleaseName := startDatabase(t, namespaceName, admin0, &localOptions)
+
+		tePodNameTemplate := fmt.Sprintf("te-%s", databaseReleaseName)
+		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+		defer testlib.GetAppLog(t, namespaceName, tePodName)
+
+		// TE certificate is signed by the admin and the DN entry is the pod name
+		// this is the 4th pod name because: #0 and #1 are trusted certs, #2 is CA, #3 is admin, #4 is engine
+		expectedLogLine := fmt.Sprintf(ENGINE_CERTIFICATE_LOG_TEMPLATE, 4, tePodName)
+		testlib.VerifyCertificateInLog(t, namespaceName, tePodName, expectedLogLine)
 	})
 
 	t.Run("testDatabaseDirectEngineKeys", func(t *testing.T) {
@@ -213,6 +223,15 @@ func TestKubernetesTLS(t *testing.T) {
 
 		defer testlib.Teardown("database")
 
-		startDatabase(t, namespaceName, admin0, &localOptions)
+		databaseReleaseName := startDatabase(t, namespaceName, admin0, &localOptions)
+
+		tePodNameTemplate := fmt.Sprintf("te-%s", databaseReleaseName)
+		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+		defer testlib.GetAppLog(t, namespaceName, tePodName)
+
+		// TE certificate is not signed by the admin and the DN entry is the generic admin name
+		// this is the 3rd pod name because: #0 and #1 are trusted certs, #2 is CA, #3 is admin (and engine)
+		expectedLogLine := fmt.Sprintf(ENGINE_CERTIFICATE_LOG_TEMPLATE, 3, "nuoadmin.nuodb.com")
+		testlib.VerifyCertificateInLog(t, namespaceName, tePodName, expectedLogLine)
 	})
 }

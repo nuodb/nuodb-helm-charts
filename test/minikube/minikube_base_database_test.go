@@ -113,10 +113,10 @@ func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
 	t.Log("tar contents: ", output)
 }
 
-func startDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) {
+func startDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	helmChartReleaseName := fmt.Sprintf("database-%s", randomSuffix)
+	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
 	tePodNameTemplate := fmt.Sprintf("te-%s", helmChartReleaseName)
 	smPodName := fmt.Sprintf("sm-%s-nuodb-demo", helmChartReleaseName)
 
@@ -143,6 +143,8 @@ func startDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	testlib.AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
 
 	testlib.AwaitDatabaseUp(t, namespaceName, adminPod, "demo")
+
+	return
 }
 
 func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
