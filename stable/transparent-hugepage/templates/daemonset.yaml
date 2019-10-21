@@ -51,5 +51,8 @@ spec:
       - name: busybox
         image: {{ template "thp.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+        volumeMounts:
+        - name: host-sys
+          mountPath: /host-sys
         command: ["watch", "-n", "600", "cat", "/host-sys/kernel/mm/transparent_hugepage/enabled"]
 {{- include "thp.imagePullSecrets" . | indent 6 }}
