@@ -3,7 +3,7 @@
 : ${TIMEOUT:=300}
 
 count = 0
-if ! nuocmd --api-server ${NUOCMD_API_SERVER} check servers --check-active --check-connect --check-leader --timeout ${TIMEOUT} ; then
+if ! nuocmd --api-server ${NUOCMD_API_SERVER} check servers --check-active --check-connected --check-leader --timeout ${TIMEOUT} ; then
     echo "ERROR: nuocmd check server failed; admin not up"
     exit 1
 fi

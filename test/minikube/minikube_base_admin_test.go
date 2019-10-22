@@ -101,6 +101,10 @@ func startAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 		testlib.AddTeardown("admin", func() { testlib.GetAppLog(t, namespaceName, adminName) })
 	}
 
+	for i := 0; i < replicaCount; i++ {
+		testlib.AwaitAdminFullyConnected(t, namespaceName, adminNames[i], replicaCount)
+	}
+
 	return
 }
 

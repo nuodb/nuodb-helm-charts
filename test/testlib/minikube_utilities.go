@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -233,6 +234,16 @@ func VerifyAdminState(t *testing.T, namespace string, podName string) {
 
 	assert.NilError(t, err, "verifyAdminState: running show domain failed")
 	assert.Assert(t, strings.Contains(output, "ACTIVE"))
+}
+
+func AwaitAdminFullyConnected(t *testing.T, namespace string, podName string, numServers int) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "servers",
+		"--check-active", "--check-connected", "--check-leader",
+		"--num-servers", strconv.Itoa(numServers),
+		"--timeout", "300")
 }
 
 func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseName string) {
