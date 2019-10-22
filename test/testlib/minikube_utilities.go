@@ -71,6 +71,10 @@ func VerifyTeardown(t *testing.T) {
 	assert.Check(t, remaining == 0, "Error - %d teardownLists were left uncleared", remaining)
 }
 
+func standardizeSpaces(s string) string {
+	return strings.Join(strings.Fields(s), " ")
+}
+
 func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
 	status corev1.ConditionStatus) bool {
 	for _, cnd := range pod.Status.Conditions {
@@ -272,7 +276,7 @@ func VerifyLicenseIsCommunity(t *testing.T, namespace string, podName string) {
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "domain")
 	assert.NilError(t, err)
-	assert.Assert(t, strings.Contains(output, "server license: Community"))
+	assert.Assert(t, strings.Contains(output, "server license: Community"), output)
 }
 
 func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, expectError bool) {
@@ -284,13 +288,23 @@ func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, 
 	assert.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify configured license"), fullLog)
 }
 
+func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {
+	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName))
+	assert.NilError(t, err)
+
+	fullLog := string(buf)
+
+	assert.Assert(t, strings.Contains(standardizeSpaces(fullLog), expectedLogLine),
+		"`%s` not found in:\n %s", expectedLogLine, fullLog)
+}
+
 func KillAdminPod(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "delete", "pod", podName)
 	assert.NilError(t, err, "killAdminPod: delete pod returned an error")
-	assert.Assert(t, strings.Contains(output, "deleted"))
+	assert.Assert(t, strings.Contains(output, "deleted"), "`deleted` not found in %s", output)
 }
 
 func KillAdminProcess(t *testing.T, namespace string, podName string) {
