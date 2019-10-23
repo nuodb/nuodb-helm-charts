@@ -19,7 +19,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- if contains $name .Release.Name -}}
 {{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 53 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
