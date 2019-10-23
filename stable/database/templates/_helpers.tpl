@@ -17,9 +17,9 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- else -}}
 {{- $name := default .Chart.Name .Values.database.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 43 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 53 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 43 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
