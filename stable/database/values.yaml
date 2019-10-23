@@ -15,6 +15,11 @@ cloud:
   #   - us-east-2b
   #   - us-east-2c
 
+  # cluster name is used to make resources unique in multi-cluster configurations.
+  # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique clusteName.
+  # The default is fine for single-cluster domains.
+  clusterName: cluster0
+
 busybox:
   image:
     registry: docker.io
@@ -142,7 +147,7 @@ database:
       enablePod: true
       replicas: 1
 
-      ## settings for the jornal backup
+      ## settings for the journal backup
       # All time values are in seconds unless the unit is included in the name.
       journalBackup:
         enabled: false

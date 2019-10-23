@@ -32,7 +32,7 @@ spec:
             - "--type"
             - "journal"
             - "--labels"
-            - "backup enabled journalBackup enabled"
+            - "backup-{{- .Values.cloud.clusterName }} enabled journalBackup-{{- .Values.cloud.clusterName }} enabled"
             - "--timeout"
             - "{{ .Values.database.sm.hotCopy.journalBackup.timeout }}"      
             - "--backup-root"

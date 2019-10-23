@@ -11,14 +11,15 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 */}}
 {{- define "database.fullname" -}}
 {{- $domain := default "domain" .Values.admin.domain -}}
+{{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
 {{- if .Values.database.fullnameOverride -}}
 {{- .Values.database.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name .Values.database.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s" .Release.Name $domain .Values.database.name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s" .Release.Name $domain .Values.database.name $name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s-s" .Release.Name $domain $cluster .Values.database.name $name | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}

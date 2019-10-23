@@ -42,7 +42,7 @@ spec:
         - "--type"
         - "full"
         - "--labels"
-        - "backup enabled"
+        - "backup-{{- .Values.cloud.clusterName }} enabled"
         - "--timeout"
         - "{{ .Values.backup.timeout }}"
         - "--backup-root"
