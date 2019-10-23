@@ -1,3 +1,4 @@
+{{- if .Values.database.sm.hotCopy.enablePod }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -11,8 +12,23 @@ spec:
   completions: 1
   template:
     spec:
+      initContainers:
+      - name: wait-for-database-running
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+        args:
+        - "nuocmd"
+        - "--api-server"
+        - "https://{{ template "admin.address" . }}:8888"
+        - "check"
+        - "database"
+        - "--db-name"
+        - "{{ .Values.database.name }}"
+        - "--check-running"
+        - "--wait-forever"
+
       containers:
-      - name: nuodb-ce
+      - name: nuodb
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
         args:
@@ -75,3 +91,4 @@ spec:
       {{- end }}
       restartPolicy: Never
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
+{{- end }}

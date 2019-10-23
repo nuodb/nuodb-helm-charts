@@ -288,9 +288,9 @@ spec:
           - "--servers-ready-timeout"
           - "300"
           - "--options"
-          - "mem {{ .Values.database.sm.memoryOption}} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
+          - "mem {{ .Values.database.sm.memoryOption}} {{- if .Values.database.sm.hotCopy.journalBackup.enabled }} journal-hot-copy enabled {{- end }} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
           - "--labels"
-          - "backup enabled {{- range $opt, $val := .Values.database.sm.labels }} {{$opt}} {{$val}} {{- end}}"
+          - "backup enabled {{- if .Values.database.sm.hotCopy.journalBackup.enabled }} journalBackup enabled {{- end }} {{- range $opt, $val := .Values.database.sm.labels }} {{$opt}} {{$val}} {{- end}}"
 {{- if .Values.database.options}}
           - "--database-options"
           - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"

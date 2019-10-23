@@ -62,6 +62,9 @@ admin:
   #   secret: nuodb-client-pem
   #   key: client.pem
 
+## backup settings
+# any value here *MUST* match the same value for the backup chart.
+# all time values are in seconds unless the unit is part of the name.
 backup:
   persistence:
     size: 20Gi
@@ -69,6 +72,9 @@ backup:
       - ReadWriteOnce
     # storageClass: "-"
     
+  timeout: 1800
+  backupDir: /var/opt/nuodb/backup
+
   coldStorage:
     credentials: ""
 
@@ -135,13 +141,29 @@ database:
     hotCopy:
       enablePod: true
       replicas: 1
+
+      ## settings for the jornal backup
+      # All time values are in seconds unless the unit is included in the name.
+      journalBackup:
+        enabled: false
+        intervalMinutes: 15
+        deadline: 90
+        timeout: 950
+        successHistory: 5
+        failureHistory: 5
+
     # Number of storage manager (SM) nodes.  Limit is 1 in CE version of NuoDB
     # These SMs do not have hotcopy enabled, to start SMs with hotcopy use
     # database.sm.HotCopy.replicas
     noHotCopy:
       enablePod: true
       replicas: 0
+
+    # NuoDB mem option - target maximum memory to be used by the cache
     memoryOption: 8g
+
+    ## resources
+    # k8s resouce min (request) and max (limit)
     resources:
       limits:
         cpu: 8
@@ -149,14 +171,18 @@ database:
       requests:
         cpu: 4
         memory: 8Gi
+
+    ## Affinity, selector, and tolerations
+    # There are expanded as YAML, and can include variable and template references
     affinity: {}
     # nodeSelector: {}
     # tolerations: []
     
-    # labels
+    ## labels
     # Additional Labels given to the SMs started
     labels: {}
 
+    # additional options to pass to the starting NuoDB process.
     engineOptions: {}
 
     # named key/value pairs that need to be passed to the image, such as

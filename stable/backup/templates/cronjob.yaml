@@ -17,7 +17,7 @@ spec:
       template:
         spec:
           containers:
-          - name: nuodb-ce
+          - name: nuodb
             image: {{ template "nuodb.image" . }}
             imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
             args:
