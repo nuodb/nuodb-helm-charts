@@ -55,9 +55,11 @@ spec:
           - "--restored"
     {{end}}
           - "--options"
-          - "mem {{ .Values.database.sm.memoryOption}} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
+          - "mem {{ .Values.database.sm.memoryOption}} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
+    {{- with .Values.database.sm.labels }}
           - "--labels"
-          - "backup disabled {{- range $opt, $val := .Values.database.sm.labels }} {{$opt}} {{$val}} {{- end}}"
+          - "{{- include "opt.key-values" . }}"
+    {{- end }}
 {{- if .Values.database.options }}
           - "--database-options"
           - "{{- range $opt, $val := .Values.database.options -}} {{$opt}} {{$val}} {{end}}"
@@ -120,6 +122,9 @@ spec:
         - name: nuosm
           mountPath: /usr/local/bin/nuosm
           subPath: nuosm
+        - name: nuobackup
+          mountPath: /usr/local/bin/nuobackup
+          subPath: nuobackup
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
         {{- if .Values.admin.tlsCACert }}
@@ -144,6 +149,10 @@ spec:
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm
+          defaultMode: 0777
+      - name: nuobackup
+        configMap:
+          name: {{ template "database.fullname" . }}-nuobackup
           defaultMode: 0777
       - name: archive-volume
         persistentVolumeClaim:
@@ -226,12 +235,12 @@ spec:
           - "--servers-ready-timeout"
           - "300"
           - "--options"
-          - "mem {{ .Values.database.sm.memoryOption}} {{- range $opt, $val := .Values.database.sm.engineOptions}} {{$opt}} {{$val}} {{- end}}"
+          - "mem {{ .Values.database.sm.memoryOption}} {{- if .Values.database.sm.hotCopy.journalBackup.enabled }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
           - "--labels"
-          - "backup enabled {{- range $opt, $val := .Values.database.sm.labels }} {{$opt}} {{$val}} {{- end}}"
-    {{- if .Values.database.options }}
+          - "backup {{ include "hotcopy.group" . }} {{- include "opt.key-values" .Values.database.sm.labels }}"
+    {{- with .Values.database.options }}
           - "--database-options"
-          - "{{- range $opt, $val := .Values.database.options}} {{$opt}} {{$val}} {{- end}}"
+          - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{end}}"
     {{- end}}
 {{- range $opt, $val := .Values.database.sm.otherOptions }}
           - "--{{$opt}}"
@@ -280,7 +289,6 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
-        - { name: NUODB_IMPORT_STRIP_LEVELS, value: "{{ default "1" .Values.database.import.stripLevels }}"}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
@@ -297,6 +305,9 @@ spec:
         - name: nuosm
           mountPath: /usr/local/bin/nuosm
           subPath: nuosm
+        - name: nuobackup
+          mountPath: /usr/local/bin/nuobackup
+          subPath: nuobackup
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
         - name: backup-volume
@@ -323,6 +334,10 @@ spec:
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm
+          defaultMode: 0777
+      - name: nuobackup
+        configMap:
+          name: {{ template "database.fullname" . }}-nuobackup
           defaultMode: 0777
       - name: archive-volume
         persistentVolumeClaim:

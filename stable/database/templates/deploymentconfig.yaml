@@ -53,8 +53,10 @@ spec:
           - "300"
           - "--options"
           - "mem {{ .Values.database.te.memoryOption}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
+      {{- with .Values.database.te.labels }}
           - "--labels"
-          - "{{- range $opt, $val := .Values.database.te.labels }} {{$opt}} {{$val}} {{- end}}"
+          - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{ end }}"
+      {{- end }}
 {{- range $opt, $val := .Values.database.te.otherOptions }}
           - "--{{$opt}}"
           - "{{$val}}"
