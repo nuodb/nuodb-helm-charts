@@ -9,7 +9,7 @@ metadata:
     subgroup: backup
     database: {{ .Values.database.name }}
 spec:
-  schedule: {{ .Values.database.sm.hotCopy.journalBackup.intervalMinutes }} * * * *
+  schedule: "*/{{ .Values.database.sm.hotCopy.journalBackup.intervalMinutes }} * * * *"
   startingDeadlineSeconds: {{ .Values.database.sm.hotCopy.journalBackup.deadlineSeconds }}
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.journalBackup.successHistory }}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.journalBackup.failureHistory }}
