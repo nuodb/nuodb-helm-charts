@@ -67,23 +67,6 @@ admin:
   #   secret: nuodb-client-pem
   #   key: client.pem
 
-## backup settings
-# any value here *MUST* match the same value for the backup chart.
-# all time values are in seconds unless the unit is part of the name.
-backup:
-  persistence:
-    size: 20Gi
-    accessModes:
-      - ReadWriteOnce
-    # storageClass: "-"
-    
-  timeout: 1800
-  backupDir: /var/opt/nuodb/backup
-
-  coldStorage:
-    credentials: ""
-
-
 database:
   ## Provide a name in place of prometheus-operator for `app:` labels
   ##
@@ -139,25 +122,61 @@ database:
     credentials: ""
     stripLevels: "1"
 
+  restore:
+    # the prefix for the shared restore-request value - default value is always valid
+    requestPrefix: ""
+
+    # the prefix for the shared latest backup value - default value is always valid
+    latestPrefix: ""
+
   sm:
-    # Number of storage manager (SM) nodes with hotcopy enabled.  Limit is 1 in CE version of NuoDB
-    # These SMs have hotcopy enabled, to start SMs without hotcopy use
+    # Settings for storage manager (SM) nodes with hotcopy enabled.
+    # Total SM Limit is 1 in CE version of NuoDB
+    # These SMs have hotcopy backup enabled. To start SMs without hotcopy use
     # database.sm.noHotCopy.replicas
+    # All time values are in seconds unless the unit is included in the name.
     hotCopy:
       enablePod: true
       replicas: 1
 
+      # Deadline for starting a job - if a job hasn't started in this time - give up
+      deadine: 1800
+
+      # timeout for completing a job - if a job hasn't completed in this time - stop waiting for it
+      timeout: 1800
+
+      successHistory: 5
+      failureHistory: 5
+
+      backupDir: /var/opt/nuodb/backup
+
+      ## Schedule for the running the full backup cron job
+      # Eg: At 22:35 on every day-of-month if it's on Sunday
+      fullSchedule: 35 22 */1 * 6
+
+      ## Schedule for the running the incremental backup cron job
+      # Eg: At 22:35 on every day-of-month if it's on every day-of-week from Monday through Saturday
+      incrementalSchedule: 35 22 */1 * 0-5
+
+
+      persistence:
+        size: 20Gi
+        accessModes:
+          - ReadWriteOnce
+        # storageClass: "-"
+        
+      coldStorage:
+        credentials: ""
+
       ## settings for the journal backup
-      # All time values are in seconds unless the unit is included in the name.
       journalBackup:
         enabled: false
         intervalMinutes: 15
         deadline: 90
         timeout: 950
-        successHistory: 5
-        failureHistory: 5
 
-    # Number of storage manager (SM) nodes.  Limit is 1 in CE version of NuoDB
+    # Number of storage manager (SM) nodes that do not have hotcopy backup enabled.
+    # SM Limit is 1 in CE version of NuoDB
     # These SMs do not have hotcopy enabled, to start SMs with hotcopy use
     # database.sm.HotCopy.replicas
     noHotCopy:

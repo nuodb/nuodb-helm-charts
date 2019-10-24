@@ -56,6 +56,13 @@ database:
   #characters '[a-z0-9]+'
   name:
 
+  restore:
+    # the prefix for the shared restore-request value - default value is always valid
+    requestPrefix: ""
+
+    # the prefix for the shared latest backup value - default value is always valid
+    latestPrefix: ""
+
 restore:
   # details of the database(s) involved in the backup
   target: ""
@@ -71,3 +78,4 @@ restore:
   affinity: {}
   
   timeout: 1800
+

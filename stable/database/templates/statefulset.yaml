@@ -445,18 +445,18 @@ spec:
         release: {{ .Release.Name | quote }}
     spec:
       accessModes:
-      {{- range .Values.backup.persistence.accessModes }}
+      {{- range .Values.database.sm.hotCopy.persistence.accessModes }}
         - {{ . }}
       {{- end }}
-    {{- if .Values.backup.persistence.storageClass }}
-      {{- if (eq "-" .Values.backup.persistence.storageClass) }}
+    {{- if .Values.database.sm.hotCopy.persistence.storageClass }}
+      {{- if (eq "-" .Values.database.sm.hotCopy.persistence.storageClass) }}
       storageClassName: ""
       {{- else }}
-      storageClassName: {{ .Values.backup.persistence.storageClass }}
+      storageClassName: {{ .Values.database.sm.hotCopy.persistence.storageClass }}
       {{- end }}
     {{- end }}
       resources:
         requests:
-          storage: {{ .Values.backup.persistence.size }}
+          storage: {{ .Values.database.sm.hotCopy.persistence.size }}
 {{- end }}
 {{- end }}

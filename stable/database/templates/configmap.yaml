@@ -38,6 +38,6 @@ metadata:
 data:
   NUODB_IMPORT_URL: {{ .Values.database.import.url }}
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.import.stripLevels | quote }}
-  NUODB_RESTORE_REQUEST_PREFIX: {{ default "/nuodb/nuosm/database" .Values.backup.requestPrefix }}
-  NUODB_LATEST_BACKUP_PREFIX: {{ default "nuodb-backup/last_created" .Values.backup.latestPrefix }}
+  NUODB_RESTORE_REQUEST_PREFIX: {{ default "/nuodb/nuosm/database" .Values.database.restore.requestPrefix }}
+  NUODB_LATEST_BACKUP_PREFIX: {{ default "nuodb-backup/last_created" .Values.database.restore.latestPrefix }}
 
