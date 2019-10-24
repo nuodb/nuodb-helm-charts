@@ -148,9 +148,9 @@ func startDatabase(t *testing.T, namespaceName string, adminPod string, options 
 }
 
 func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
-	randomSuffix := strings.ToLower(random.UniqueId())
-
 	// NTJ- currently database chart automatically starts the hotcopy Job
+	// randomSuffix := strings.ToLower(random.UniqueId())
+
 	// bakName := fmt.Sprintf("backup-full-%s", randomSuffix)
 
 	// kubectlOptions := k8s.NewKubectlOptions("", "")
