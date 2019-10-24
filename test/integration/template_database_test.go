@@ -561,7 +561,7 @@ func TestDatabaseLabeling(t *testing.T) {
 				if isStatefulSetHotCopyEnabled(&obj) {
 					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup-cluster0 enabled"))
 				} else {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backupƒPull disabled"))
+					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
 			}
 		}
@@ -594,7 +594,7 @@ func TestDatabaseLabeling(t *testing.T) {
 				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 				if isDaemonSetHotCopyEnabled(&obj) {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup enabled"))
+					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup-cluster0 enabled"))
 				} else {
 					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
