@@ -20,7 +20,7 @@ const LABEL_CLOUD = "minikube"
 const LABEL_REGION = "local"
 const LABEL_ZONE = "local-b"
 
-func populateCreateDBData(t *testing.T,namespaceName string, adminPod string) {
+func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 	// populate some data
 	opts := k8s.NewKubectlOptions("", "")
 	opts.Namespace = namespaceName
@@ -150,17 +150,18 @@ func startDatabase(t *testing.T, namespaceName string, adminPod string, options 
 func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	bakName := fmt.Sprintf("backup-full-%s", randomSuffix)
+	// NTJ- currently database chart automatically starts the hotcopy Job
+	// bakName := fmt.Sprintf("backup-full-%s", randomSuffix)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
+	// kubectlOptions := k8s.NewKubectlOptions("", "")
+	// options.KubectlOptions = kubectlOptions
+	// options.KubectlOptions.Namespace = namespaceName
 
-	testlib.AddTeardown(testlib.TEARDOWN_BACKUP, func() { helm.Delete(t, options, bakName, true) })
-	helm.Install(t, options, testlib.BACKUP_HELM_CHART_PATH, bakName)
+	//testlib.AddTeardown(testlib.TEARDOWN_BACKUP, func() { helm.Delete(t, options, bakName, true) })
+	//helm.Install(t, options, testlib.BACKUP_HELM_CHART_PATH, bakName)
 
 	// wait for the backup to both start _and_ complete successfully
-	backupJob := fmt.Sprintf("backup-%s-job-full", databaseName)
+	backupJob := fmt.Sprintf("hotcopy-%s-job-initial", databaseName)
 	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 	// verify that the backup has been documented by the Admin layer

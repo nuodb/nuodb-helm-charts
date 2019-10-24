@@ -2,7 +2,7 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: backup-{{ .Values.database.name }}-job-initial
+  name: hotcopy-{{ .Values.database.name }}-job-initial
   labels:
     group: nuodb
     subgroup: backup
