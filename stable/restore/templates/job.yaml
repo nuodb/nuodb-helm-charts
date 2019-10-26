@@ -22,20 +22,10 @@ spec:
         imagePullPolicy: {{ default "" .Values.nuodb.image.pullPolicy | quote }}
 
         ##
-        # restore is accomplished by setting a flag and then (re)starting the SMs of the target database
+        # call the nuorestore script
         ##
         args:
-        - "nuocmd"
-        - "--api-server"
-        - "https://{{ template "admin.address" . }}:8888"
-        - "set"
-        - "value"
-        - "--key"
-        - "/nuodb/nuosm/database/{{ default .Values.database.name .Values.restore.target }}/restore"
-        - "--value"
-        - "{{ default ":latest" .Values.restore.backupSet }}"
-        - "--expected-value"
-        - ""
+        - "nuorestore"
         env:
         - name: NODE_NAME
           valueFrom:
@@ -49,7 +39,13 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-name
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888"}
+        - { name: NUODB_RESTORE_URL,   value: {{ default ":latest" .Values.restore.backupSet }} }
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb

@@ -1,0 +1,11 @@
+#!/bin/sh
+#
+# simple script to perform a NuoDB restore
+
+# set the persistent flag for the backup
+nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore \
+    --value $NUODB_RESTORE_URL \
+    --expected-value ''
+
+# initiate the restore
+nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $DB_NAME
