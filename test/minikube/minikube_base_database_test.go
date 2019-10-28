@@ -20,7 +20,7 @@ const LABEL_CLOUD = "minikube"
 const LABEL_REGION = "local"
 const LABEL_ZONE = "local-b"
 
-func populateCreateDBData(t *testing.T,namespaceName string, adminPod string) {
+func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 	// populate some data
 	opts := k8s.NewKubectlOptions("", "")
 	opts.Namespace = namespaceName
@@ -113,40 +113,6 @@ func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
 	t.Log("tar contents: ", output)
 }
 
-func startDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) (helmChartReleaseName string) {
-	randomSuffix := strings.ToLower(random.UniqueId())
-
-	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
-	tePodNameTemplate := fmt.Sprintf("te-%s", helmChartReleaseName)
-	smPodName := fmt.Sprintf("sm-%s-nuodb-demo", helmChartReleaseName)
-
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
-
-	// with Async actions which do not return a cleanup method, create the teardown(s) first
-	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() {
-		helm.Delete(t, options, helmChartReleaseName, true)
-		testlib.AwaitNoPods(t, namespaceName, "database")
-		testlib.DeleteDatabase(t, namespaceName, "demo", adminPod)
-	})
-
-	helm.Install(t, options, testlib.DATABASE_HELM_CHART_PATH, helmChartReleaseName)
-
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, 1)
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, smPodName, 1)
-
-	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-	testlib.AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
-
-	smPodName0 := testlib.GetPodName(t, namespaceName, smPodName)
-	testlib.AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
-
-	testlib.AwaitDatabaseUp(t, namespaceName, adminPod, "demo")
-
-	return
-}
-
 func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -202,14 +168,14 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &options, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-		startDatabase(t, namespaceName, admin0, &helm.Options{
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{"database.sm.resources.requests.cpu": "500m",
 				"database.sm.resources.requests.memory": "1Gi",
 				"database.te.resources.requests.cpu":    "500m",
@@ -232,7 +198,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-		startDatabase(t, namespaceName, admin0,
+		testlib.StartDatabase(t, namespaceName, admin0,
 			&helm.Options{
 				SetValues: map[string]string{"database.sm.resources.requests.cpu": "500m",
 					"database.sm.resources.requests.memory": "1Gi",
@@ -265,7 +231,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &adminOptions, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
@@ -282,7 +248,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 			},
 		}
 
-		startDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		populateCreateDBData(t, namespaceName, admin0)
 
@@ -306,7 +272,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 			},
 		}
 
-		startDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		populateCreateDBData(t, namespaceName, admin0)
 
@@ -322,7 +288,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &adminOptions, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
@@ -340,7 +306,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			},
 		}
 
-		startDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		opts := k8s.NewKubectlOptions("", "")
 		opts.Namespace = namespaceName
@@ -406,7 +372,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &adminOptions, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
@@ -415,7 +381,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
-		startDatabase(t, namespaceName, admin0, &helm.Options{
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{
 				"database.import.url":                   testlib.IMPORT_ARCHIVE_URL,
 				"database.sm.resources.requests.cpu":    "500m",
@@ -436,7 +402,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
-		startDatabase(t, namespaceName, admin0,
+		testlib.StartDatabase(t, namespaceName, admin0,
 			&helm.Options{
 				SetValues: map[string]string{
 					"database.import.url":                   testlib.IMPORT_ARCHIVE_URL,

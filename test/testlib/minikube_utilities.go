@@ -140,6 +140,23 @@ func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName strin
 	}, 30*time.Second)
 }
 
+func AwaitNrReplicasReady(t *testing.T, namespace string, expectedName string, nrReplicas int) {
+	Await(t, func() bool {
+		var cnt int
+		for _, pod := range findAllPodsInSchema(t, namespace) {
+			if strings.Contains(pod.Name, expectedName) {
+				if arePodConditionsMet(&pod, corev1.PodReady, corev1.ConditionTrue) {
+					cnt++
+				}
+			}
+		}
+
+		t.Logf("%d pods READY for name '%s'\n", cnt, expectedName)
+
+		return cnt == nrReplicas
+	}, 30*time.Second)
+}
+
 func AwaitNoPods(t *testing.T, namespace string, expectedName string) {
 	Await(t, func() bool {
 		var cnt int
@@ -458,4 +475,35 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 	assert.NilError(t, err, "runSQL: error trying to run ", sql)
 
 	return result, err
+}
+
+func executeCommandsInPod(t *testing.T, podName string, namespaceName string, commands []string) {
+	tmpfile, err := ioutil.TempFile("", "script")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	if _, err := tmpfile.WriteString("set -ev" + "\n"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, item := range commands {
+		if _, err := tmpfile.WriteString(item + "\n"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := tmpfile.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+
+	// Transfer the TEMP script to POD and execute it
+	k8s.RunKubectl(t, options, "cp", tmpfile.Name(), podName+":/tmp")
+	k8s.RunKubectl(t, options, "exec", podName, "--", "chmod", "a+x", "/tmp/"+filepath.Base(tmpfile.Name()))
+	err = k8s.RunKubectlE(t, options, "exec", podName, "--", "sh", "/tmp/"+filepath.Base(tmpfile.Name()))
+	assert.NilError(t, err, "executeCommandsInPod: Script returned error.")
 }

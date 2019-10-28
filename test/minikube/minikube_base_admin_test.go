@@ -2,8 +2,6 @@ package minikube
 
 import (
 	"fmt"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -51,63 +49,6 @@ func verifyAdminService(t *testing.T, namespaceName string, podName string) {
 	testlib.PingService(t, namespaceName, serviceName, podName)
 }
 
-func getFunctionCallerName() string {
-	pc, _, _, _ := runtime.Caller(2)
-	nameFull := runtime.FuncForPC(pc).Name()    // main.foo
-	nameEnd := filepath.Ext(nameFull)           // .foo
-	name := strings.TrimPrefix(nameEnd, ".")    // foo
-
-	return name
-}
-
-func startAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (helmChartReleaseName string, namespaceName string) {
-	randomSuffix := strings.ToLower(random.UniqueId())
-
-	// Path to the helm chart we will test
-	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
-	helmChartReleaseName = fmt.Sprintf("admin-%s", randomSuffix)
-
-	adminNames := make([]string, replicaCount)
-
-	for i := 0; i < replicaCount; i++ {
-		adminNames[i] = fmt.Sprintf("%s-nuodb-%d", helmChartReleaseName, i)
-	}
-
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
-
-	if namespace == "" {
-		callerName := getFunctionCallerName()
-		namespaceName = fmt.Sprintf("%s-%s", strings.ToLower(callerName), randomSuffix)
-		k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-		testlib.AddTeardown(testlib.TEARDOWN_ADMIN, func() { k8s.DeleteNamespace(t, kubectlOptions, namespaceName) })
-	} else {
-		namespaceName = namespace
-	}
-
-	options.KubectlOptions.Namespace = namespaceName
-
-	helm.Install(t, options, helmChartPath, helmChartReleaseName)
-
-	testlib.AddTeardown("admin", func() { helm.Delete(t, options, helmChartReleaseName, true) })
-
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, replicaCount)
-
-	for i := 0; i < replicaCount; i++ {
-		adminName := adminNames[i] // array will be out of scope for defer
-
-		// first await could be pulling the image from the repo
-		testlib.AwaitAdminPodUp(t, namespaceName, adminName, 300*time.Second)
-		testlib.AddTeardown("admin", func() { testlib.GetAppLog(t, namespaceName, adminName) })
-	}
-
-	for i := 0; i < replicaCount; i++ {
-		testlib.AwaitAdminFullyConnected(t, namespaceName, adminNames[i], replicaCount)
-	}
-
-	return
-}
-
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
@@ -115,7 +56,7 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &options, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 	lbName := fmt.Sprintf("%s-nuodb-balancer", helmChartReleaseName)
@@ -140,7 +81,7 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &options, 3, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 	lbName := fmt.Sprintf("%s-nuodb-balancer", helmChartReleaseName)
@@ -166,7 +107,7 @@ func TestKubernetesUpgradeAdmin(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &options, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 	lbName := fmt.Sprintf("%s-nuodb-balancer", helmChartReleaseName)
@@ -206,7 +147,7 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, options, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
