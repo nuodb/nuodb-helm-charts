@@ -5,7 +5,7 @@
 
 : ${PLATFORM:="google"}
 : ${CLUSTER_NAME:="helmtest"}
-: ${ZONE:="us-central1-a"}
+: ${ZONE:="us-central1"}
 : ${TILLER_NAMESPACE:="nuodb"}
 
 export PLATFORM

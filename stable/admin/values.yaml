@@ -122,13 +122,13 @@ admin:
   #   secret: nuodb-ca-cert
   #   key: ca.cert
   # tlsKeyStore:
-  #   secret: nuodb-server-keystore
-  #   key: server.p12
+  #   secret: nuodb-keystore
+  #   key: nuoadmin.p12
   #   password: changeIt
   # tlsTrustStore:
   #   secret: nuodb-truststore
-  #   key: truststore.p12
+  #   key: nuoadmin-truststore.p12
   #   password: changeIt
   # tlsClientPEM:
   #   secret: nuodb-client-pem
-  #   key: client.pem
+  #   key: nuocmd.pem
