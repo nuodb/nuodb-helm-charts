@@ -13,6 +13,7 @@ popd >/dev/null
 . ${SELF_ROOT}/test/scripts/profile.sh
 
 if [ "${PLATFORM}" == "google" ]; then
+    gcloud auth login
     gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${ZONE} --project cit-team
     kubectl config set-context $(kubectl config current-context) --namespace=${TILLER_NAMESPACE}
     kubectl config view | grep -A10 "name: $(kubectl config current-context)" | awk '$1=="access-token:"{print $2}'
