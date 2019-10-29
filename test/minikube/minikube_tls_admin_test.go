@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"path/filepath"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"gotest.tools/assert"
@@ -53,8 +54,9 @@ func TestKubernetesTLS(t *testing.T) {
 	tlsCommands := []string{
 		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
 		"setup-keys.sh",
+		"nuocmd show certificate --keystore " + testlib.KEYSTORE_FILE + " --store-password \"$DEFAULT_PASSWORD\" > nuoadmin.cert",
 	}
-	testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands, "")
+	_, keysLocation := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands, "")
 
 	options := helm.Options{
 		SetValues: map[string]string{
@@ -79,7 +81,7 @@ func TestKubernetesTLS(t *testing.T) {
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
 	t.Run("verifyKeystore", func(t *testing.T) {
-		content, err := testlib.ReadAll("../../keys/default.certificate")
+		content, err := testlib.ReadAll(filepath.Join(keysLocation, "nuoadmin.cert"))
 		assert.NilError(t, err)
 		verifyKeystore(t, namespaceName, admin0, testlib.KEYSTORE_FILE, testlib.SECRET_PASSWORD, string(content))
 	})
