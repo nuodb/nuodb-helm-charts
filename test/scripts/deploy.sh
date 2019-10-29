@@ -146,7 +146,7 @@ helm install ${REPO_NAME}/database --name database \
 sleep 300
 
 check-pod "sm-database-cashews-demo-0" "1/1"
-check-pod "sm-database-cashews-demo-backup-0" "1/1"
+check-pod "sm-database-cashews-demo-hotcopy-0" "1/1"
 check-pod "te-database-cashews-demo" "1/1"
 
 CHARTS=( backup demo-ycsb )
