@@ -100,15 +100,13 @@ func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName s
 	assert.NilError(t, err)
 
 	k8s.RunKubectl(t, options, "cp", podName+":"+CERTIFICATES_GENERATION_PATH, realTargetDirectory)
-	t.Logf("Certificates are copied in: %s\n", realTargetDirectory)
-
 	verifyCertificateFiles(t, realTargetDirectory)
 
 	return realTargetDirectory
 }
 
 func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []string, image string) (string, string) {
-	podName := createTLSGeneratorPod(t, namespaceName, image, 20*time.Second)
+	podName := createTLSGeneratorPod(t, namespaceName, image, 30*time.Second)
 	GenerateCustomCertificates(t, podName, namespaceName, commands)
 	keysLocation := CopyCertificatesToControlHost(t, podName, namespaceName)
 
@@ -146,13 +144,15 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options,
 		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "10")
 	assert.NilError(t, err, "add trusted-certificate failed")
 
+	// Upgrade admin release
 	DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 	helm.Upgrade(t, upgradedOptions, ADMIN_HELM_CHART_PATH, adminReleaseName)
 
-	adminPodsPrefix := fmt.Sprintf("%s-nuodb", adminReleaseName)
-	AwaitNrReplicasReady(t, namespaceName, adminPodsPrefix, adminReplicaCount)
+	adminStatefulSet := fmt.Sprintf("%s-nuodb", adminReleaseName)
+	k8s.RunKubectl(t, kubectlOptions, "rollout", "status", "sts/"+adminStatefulSet, "--timeout", "300s")
 	AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
 
+	// Upgrade database release
 	helm.Upgrade(t, upgradedOptions, DATABASE_HELM_CHART_PATH, databaseReleaseName)
 
 	AwaitDatabaseUp(t, namespaceName, admin0, "demo")

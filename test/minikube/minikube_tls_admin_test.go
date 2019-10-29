@@ -48,11 +48,13 @@ func TestKubernetesTLS(t *testing.T) {
 	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
-	// create the certs...
-	testlib.CreateSecret(t, namespaceName, testlib.CA_CERT_FILE, testlib.CA_CERT_SECRET, "")
-	testlib.CreateSecret(t, namespaceName, testlib.NUOCMD_FILE, testlib.NUOCMD_SECRET, "")
-	testlib.CreateSecretWithPassword(t, namespaceName, testlib.KEYSTORE_FILE, testlib.KEYSTORE_SECRET, testlib.SECRET_PASSWORD, "")
-	testlib.CreateSecretWithPassword(t, namespaceName, testlib.TRUSTSTORE_FILE, testlib.TRUSTSTORE_SECRET, testlib.SECRET_PASSWORD, "")
+	
+	// create the certs and secrets...
+	tlsCommands := []string{
+		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
+		"setup-keys.sh",
+	}
+	testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands, "")
 
 	options := helm.Options{
 		SetValues: map[string]string{
@@ -77,7 +79,7 @@ func TestKubernetesTLS(t *testing.T) {
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
 	t.Run("verifyKeystore", func(t *testing.T) {
-		content, err := readAll("../../keys/default.certificate")
+		content, err := testlib.ReadAll("../../keys/default.certificate")
 		assert.NilError(t, err)
 		verifyKeystore(t, namespaceName, admin0, testlib.KEYSTORE_FILE, testlib.SECRET_PASSWORD, string(content))
 	})

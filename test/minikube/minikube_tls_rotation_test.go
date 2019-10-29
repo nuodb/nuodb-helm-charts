@@ -5,13 +5,39 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"encoding/json"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"gotest.tools/assert"
 )
+
+func unmarshalCertificateInfo(t *testing.T, certificateInfoJSON string) map[string]interface{} {
+	var results map[string]interface{}
+	json.Unmarshal([]byte(certificateInfoJSON), &results)
+	return results
+}
+
+func verifyAdminCeritificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
+	certificateInfo := unmarshalCertificateInfo(t, certificateInfoJSON)
+	for _, value := range certificateInfo["serverCertificates"].(map[string]interface{}) {
+		certSubjectName := value.(map[string]interface{})["subjectName"].(string)
+		assert.Assert(t, strings.Contains(certSubjectName, expectedDN),
+		"`%s` not found in:\n %s", expectedDN, certSubjectName)
+	}
+}
+
+func verifyEngineCeritificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
+	certificateInfo := unmarshalCertificateInfo(t, certificateInfoJSON)
+	for _, value := range certificateInfo["processCertificates"].(map[string]interface{}) {
+		certIssuerName := value.(map[string]interface{})["issuerName"].(string)
+		assert.Assert(t, strings.Contains(certIssuerName, expectedDN),
+		"`%s` not found in:\n %s", expectedDN, certIssuerName)
+	}
+}
 
 func TestKubernetesTLSRotation(t *testing.T) {
 	testlib.AwaitTillerUp(t)
@@ -26,15 +52,16 @@ func TestKubernetesTLSRotation(t *testing.T) {
 
 	kubectlOptions.Namespace = namespaceName
 
-	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
-
 	initialTLSCommands := []string{
 		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
 		"setup-keys.sh",
 	}
 
+	// As nuodocker/nuoadmin wrapper is using peer insead of initialMembership, 
+	//   we need to use persistance for admin Raft logs during the rolling upgrade.
 	options := helm.Options{
 		SetValues: map[string]string{
+			"admin.persistence.enabled":             "true",
 			"admin.replicas":                        "3",
 			"admin.tlsCACert.secret":                testlib.CA_CERT_SECRET,
 			"admin.tlsCACert.key":                   testlib.CA_CERT_FILE,
@@ -53,13 +80,13 @@ func TestKubernetesTLSRotation(t *testing.T) {
 		},
 	}
 
-	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	expectedCaDN := "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=123456"
+	expectedAdminDN := "CN=nuoadmin.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
 
 	newTLSCommands := []string{
 		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
-		"nuocmd create keypair --keystore ca.p12 --store-password \"$DEFAULT_PASSWORD\" --dname \"CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=123456\" --validity 36500 --ca",
-		"nuocmd create keypair --keystore " + testlib.KEYSTORE_FILE + " --store-password \"$DEFAULT_PASSWORD\" --dname \"CN=nuoadmin.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890\"",
+		"nuocmd create keypair --keystore ca.p12 --store-password \"$DEFAULT_PASSWORD\" --dname \"" + expectedCaDN + "\" --validity 36500 --ca",
+		"nuocmd create keypair --keystore " + testlib.KEYSTORE_FILE + " --store-password \"$DEFAULT_PASSWORD\" --dname \"" + expectedAdminDN + "\"",
 		"nuocmd sign certificate --keystore " + testlib.KEYSTORE_FILE + " --store-password \"$DEFAULT_PASSWORD\" --ca-keystore ca.p12 --ca-store-password \"$DEFAULT_PASSWORD\" --validity 36500 --ca --update",
 		"nuocmd show certificate --keystore ca.p12 --store-password \"$DEFAULT_PASSWORD\" --cert-only > " + testlib.CA_CERT_FILE_NEW,
 		"cp " + filepath.Join(testlib.CERTIFICATES_BACKUP_PATH, testlib.TRUSTSTORE_FILE) + " " + testlib.CERTIFICATES_GENERATION_PATH,
@@ -76,9 +103,21 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	upgradedOptions.SetValues["admin.tlsCACert.secret"] = testlib.CA_CERT_SECRET_NEW
 	upgradedOptions.SetValues["admin.tlsKeyStore.secret"] = testlib.KEYSTORE_SECRET_NEW
 
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
 	adminReleaseName, _ := testlib.RotateTLSCertificates(t, &options, &upgradedOptions, kubectlOptions, initialTLSCommands, newTLSCommands)
 	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
 
-	output, _ := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
-	fmt.Println(output)
+	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
+	assert.NilError(t, err)
+	
+	t.Run("verifyAdminCeritificates", func(t *testing.T) {
+		verifyAdminCeritificates(t, certificateInfo, expectedAdminDN)
+	})
+
+	t.Run("verifyEngineCeritificates", func(t *testing.T) {
+		verifyEngineCeritificates(t, certificateInfo, expectedAdminDN)
+	})
 }
