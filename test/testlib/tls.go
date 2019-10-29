@@ -141,7 +141,7 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options,
 
 	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(newTLSKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")
 	err = k8s.RunKubectlE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "add", "trusted-certificate",
-		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "10")
+		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "60")
 	assert.NilError(t, err, "add trusted-certificate failed")
 
 	// Upgrade admin release
