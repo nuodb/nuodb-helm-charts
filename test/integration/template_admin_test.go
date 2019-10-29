@@ -97,6 +97,7 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 		SetValues: map[string]string{
 			"admin.securityContext.capabilities": "[ NET_ADMIN ]",
 			"admin.envFrom[0].configMapRef.name": "test-config",
+			"admin.options.leaderAssignmentTimeout": "30000",
 		},
 	}
 
@@ -119,6 +120,10 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 		adminContainer := object.Spec.Template.Spec.Containers[0]
 		assert.Check(t, adminContainer.SecurityContext.Capabilities.Add[0] == "NET_ADMIN")
 		assert.Check(t, adminContainer.EnvFrom[0].ConfigMapRef.LocalObjectReference.Name == "test-config")
+		assert.Check(t, adminContainer.Args[0] == "nuoadmin")
+		assert.Check(t, adminContainer.Args[1] == "--")
+		assert.Check(t, adminContainer.Args[2] == "pendingReconnectTimeout=60000")
+		assert.Check(t, adminContainer.Args[3] == "leaderAssignmentTimeout=30000")
 	}
 }
 

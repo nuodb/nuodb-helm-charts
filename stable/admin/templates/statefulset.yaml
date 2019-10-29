@@ -88,7 +88,13 @@ spec:
         - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
         {{- end }}
       {{- end }}
-        args: [ "nuoadmin", "--", "pendingReconnectTimeout=60000" ]
+        args:
+          - "nuoadmin"
+          - "--"
+          - "pendingReconnectTimeout=60000"
+          {{- range $opt, $val := .Values.admin.options}}
+          - "{{$opt}}={{$val}}" 
+          {{- end}}
         livenessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
