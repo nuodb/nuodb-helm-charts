@@ -211,6 +211,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
+| `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
+| `configFiles.*` | See below. | `{}` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
@@ -237,6 +239,18 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.nodeSelectorNoHotCopyDS` | Node selector rules for non-hot-copy SMs (DaemonSet) | `{}` |
 | `sm.tolerationsDS` | Tolerations for SMs (DaemonSet) | `[]` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
+
+#### database.configFiles.*
+
+The purpose of this section is to specify replacement NuoDB configuration files.
+
+Any file located in `database.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
+
+The following tables list the configurable parameters for the `database.configFiles` option of the database chart and their default values.
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `nuodb.config` | NuoDB config file. | `nil` |
 
 ### Running
 
