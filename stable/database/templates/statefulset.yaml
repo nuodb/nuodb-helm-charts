@@ -133,8 +133,8 @@ spec:
         resources:
 {{ toYaml .Values.database.sm.resources | trim | indent 10 }}
         volumeMounts:
-        {{- if .Values.database.configFiles }}
-        {{- range $key, $val := .Values.database.configFiles }}
+        {{- with .Values.database.configFiles }}
+        {{- range $key, $val := . }}
         - name: configurations
           mountPath: {{ $.Values.database.configFilesPath }}{{ $key }}
           subPath: {{ $key }}
@@ -364,8 +364,8 @@ spec:
         resources:
 {{ toYaml .Values.database.sm.resources | trim | indent 10 }}
         volumeMounts:
-        {{- if .Values.database.configFiles }}
-        {{- range $key, $val := .Values.database.configFiles }}
+        {{- with .Values.database.configFiles }}
+        {{- range $key, $val := . }}
         - name: configurations
           mountPath: {{ $.Values.database.configFilesPath }}{{ $key }}
           subPath: {{ $key }}
