@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"regexp"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -74,6 +75,17 @@ func VerifyTeardown(t *testing.T) {
 
 func standardizeSpaces(s string) string {
 	return strings.Join(strings.Fields(s), " ")
+}
+
+func RemoveEmptyLines(s string) string {
+	regex, err := regexp.Compile("(\r|\r\n|\n){2,}")
+    if err != nil {
+        return s
+    }
+    s = regex.ReplaceAllString(s, "\n")
+	s = strings.TrimRight(s, "\n")
+	
+	return s
 }
 
 func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
@@ -477,25 +489,25 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 	return result, err
 }
 
-func executeCommandsInPod(t *testing.T, podName string, namespaceName string, commands []string) {
+func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, commands []string) {
 	tmpfile, err := ioutil.TempFile("", "script")
 	if err != nil {
-		t.Fatal(err)
+		assert.NilError(t, err)
 	}
 
 	defer os.Remove(tmpfile.Name()) // clean up
 
 	if _, err := tmpfile.WriteString("set -ev" + "\n"); err != nil {
-		t.Fatal(err)
+		assert.NilError(t, err)
 	}
 
 	for _, item := range commands {
 		if _, err := tmpfile.WriteString(item + "\n"); err != nil {
-			t.Fatal(err)
+			assert.NilError(t, err)
 		}
 	}
 	if err := tmpfile.Close(); err != nil {
-		t.Fatal(err)
+		assert.NilError(t, err)
 	}
 
 	options := k8s.NewKubectlOptions("", "")

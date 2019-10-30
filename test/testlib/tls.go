@@ -51,7 +51,6 @@ func createTLSGeneratorPod(t *testing.T, namespaceName string, image string, tim
 }
 
 func verifyCertificateFiles(t *testing.T, directory string) {
-
 	expectedFiles := []string{
 		KEYSTORE_FILE,
 		TRUSTSTORE_FILE,
@@ -68,11 +67,8 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 		t.Logf("Found generated certificate file: %s", file.Name())
 	}
 	for _, expectedFile := range expectedFiles {
-		if !set[expectedFile] {
-			t.Fatalf("Unable to find certificate file %s in path %s", expectedFile, directory)
-		}
+		assert.Assert(t, set[expectedFile] == true, "Unable to find certificate file %s in path %s", expectedFile, directory)
 	}
-
 }
 
 func GenerateCustomCertificates(t *testing.T, podName string, namespaceName string, commands []string) {
@@ -84,7 +80,7 @@ func GenerateCustomCertificates(t *testing.T, podName string, namespaceName stri
 	}
 	finalCommands := append(prependCommands, commands...)
 	// Execute certificate generation commands
-	executeCommandsInPod(t, podName, namespaceName, finalCommands)
+	ExecuteCommandsInPod(t, podName, namespaceName, finalCommands)
 }
 
 func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName string) string {

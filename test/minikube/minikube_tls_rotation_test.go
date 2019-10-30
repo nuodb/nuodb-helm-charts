@@ -58,7 +58,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	}
 
 	// As nuodocker/nuoadmin wrapper is using peer insead of initialMembership, 
-	//   we need to use persistance for admin Raft logs during the rolling upgrade.
+	//   we need to use persistence for admin Raft logs during the rolling upgrade.
 	options := helm.Options{
 		SetValues: map[string]string{
 			"admin.persistence.enabled":             "true",
@@ -74,9 +74,9 @@ func TestKubernetesTLSRotation(t *testing.T) {
 			"admin.tlsClientPEM.secret":             testlib.NUOCMD_SECRET,
 			"admin.tlsClientPEM.key":                testlib.NUOCMD_FILE,
 			"database.sm.resources.requests.cpu":    "500m",
-			"database.sm.resources.requests.memory": "500m",
+			"database.sm.resources.requests.memory": "500Mi",
 			"database.te.resources.requests.cpu":    "500m",
-			"database.te.resources.requests.memory": "500m",
+			"database.te.resources.requests.memory": "500Mi",
 		},
 	}
 

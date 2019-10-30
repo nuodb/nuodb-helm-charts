@@ -29,12 +29,14 @@ func verifyKeystore(t *testing.T, namespace string, podName string, keystore str
 	options.Namespace = namespace
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "certificate", "--keystore", keystore, "--store-password", password)
+	output = testlib.RemoveEmptyLines(output)
+	matches = testlib.RemoveEmptyLines(matches)
 
-	t.Log(output)
-	t.Log(matches)
+	t.Log("<" + output + ">")
+	t.Log("<" + matches + ">")
 
 	assert.NilError(t, err)
-	assert.Assert(t, strings.Compare(output, matches) != 0)
+	assert.Assert(t, strings.Compare(output, matches) == 0)
 }
 
 func TestKubernetesTLS(t *testing.T) {
