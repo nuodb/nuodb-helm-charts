@@ -101,6 +101,9 @@ admin:
     #   cpu: 10m
     #   memory: 16Mi
 
+  # Custom NuoDB configuration files path
+  configFilesPath: /etc/nuodb/
+
   # NuoDB is a licensed product for Enterprise Edition.
   # Obtain your license from NuoDB support.
   #
@@ -114,7 +117,7 @@ admin:
   # --set admin.configFiles.nuodb\\.lic=<BASE64-TEXT-HERE>
   #
   configFiles: {}
-    # nuodb.lic: |+
+    # nuodb.lic: |-
     #   "PUT YOUR BASE64 ENCODED LICENSE CONTENT HERE"
 
   # Recommended default admin affinity:

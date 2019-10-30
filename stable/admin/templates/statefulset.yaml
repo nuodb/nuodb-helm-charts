@@ -111,11 +111,13 @@ spec:
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb
-{{- if hasKey .Values.admin.configFiles "nuodb.lic" }}
-        - name: nuodb-license-volume
-          mountPath: /etc/nuodb/nuodb.lic
-          subPath: nuodb.lic
-{{ end }}
+        {{- if .Values.admin.configFiles }}
+        {{- range $key, $val := .Values.admin.configFiles }}
+        - name: configurations
+          mountPath: {{ $.Values.admin.configFilesPath }}{{ $key }}
+          subPath: {{ $key }}
+        {{- end -}}
+        {{- end }}
         - name: raftlog
           mountPath: /var/opt/nuodb
         {{- if .Values.admin.tlsCACert }}
@@ -166,14 +168,11 @@ spec:
       {{- end }}
       - name: log-volume
         emptyDir: {}
-{{- if hasKey .Values.admin.configFiles "nuodb.lic" }}
-      - name: nuodb-license-volume
+      {{- if .Values.admin.configFiles }}
+      - name: configurations
         configMap:
-          name: nuodb-license-file
-          items:
-            - key: nuodb.lic
-              path: nuodb.lic
-{{ end }}
+          name: {{ template "admin.fullname" . }}-configuration
+      {{- end }}
 {{- if not .Values.admin.persistence.enabled }}
       - name: raftlog
         emptyDir: {}

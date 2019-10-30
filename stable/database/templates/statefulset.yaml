@@ -133,6 +133,13 @@ spec:
         resources:
 {{ toYaml .Values.database.sm.resources | trim | indent 10 }}
         volumeMounts:
+        {{- if .Values.database.configFiles }}
+        {{- range $key, $val := .Values.database.configFiles }}
+        - name: configurations
+          mountPath: {{ $.Values.database.configFilesPath }}{{ $key }}
+          subPath: {{ $key }}
+        {{- end -}}
+        {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
         - name: nuosm
@@ -159,6 +166,11 @@ spec:
         terminationMessagePolicy: File
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- if .Values.database.configFiles }}
+      - name: configurations
+        configMap:
+          name: {{ template "database.fullname" . }}-configuration
+      {{- end }}
       - name: log-volume
         emptyDir: {}
       - name: nuosm
@@ -352,6 +364,13 @@ spec:
         resources:
 {{ toYaml .Values.database.sm.resources | trim | indent 10 }}
         volumeMounts:
+        {{- if .Values.database.configFiles }}
+        {{- range $key, $val := .Values.database.configFiles }}
+        - name: configurations
+          mountPath: {{ $.Values.database.configFilesPath }}{{ $key }}
+          subPath: {{ $key }}
+        {{- end -}}
+        {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
         - name: nuosm
@@ -380,6 +399,11 @@ spec:
         terminationMessagePolicy: File
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- if .Values.database.configFiles }}
+      - name: configurations
+        configMap:
+          name: {{ template "database.fullname" . }}-configuration
+      {{- end }}
       - name: log-volume
         emptyDir: {}
       - name: nuosm
