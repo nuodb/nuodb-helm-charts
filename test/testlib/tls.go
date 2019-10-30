@@ -5,10 +5,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
+	"strconv"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -115,43 +115,28 @@ func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []str
 }
 
 func RotateTLSCertificates(t *testing.T, options *helm.Options,
-	upgradedOptions *helm.Options, kubectlOptions *k8s.KubectlOptions,
-	initialTLSCommands []string, newTLSCommands []string) (string, string) {
+	kubectlOptions *k8s.KubectlOptions, adminReleaseName string, databaseReleaseName string, tlsKeysLocation string) {
 
-	namespaceName := kubectlOptions.Namespace
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
 	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
-
-	// create initial certs...
-	certGeneratorPodName, _ := GenerateTLSConfiguration(t, namespaceName, initialTLSCommands, "")
-
-	adminReleaseName, namespaceName := StartAdmin(t, options, adminReplicaCount, namespaceName)
+	namespaceName := kubectlOptions.Namespace
 	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
-	databaseReleaseName := StartDatabase(t, namespaceName, admin0, options)
 
-	// create the new certs...
-	GenerateCustomCertificates(t, certGeneratorPodName, namespaceName, newTLSCommands)
-	newTLSKeysLocation := CopyCertificatesToControlHost(t, certGeneratorPodName, namespaceName)
-	CreateSecret(t, namespaceName, CA_CERT_FILE, CA_CERT_SECRET_NEW, newTLSKeysLocation)
-	CreateSecretWithPassword(t, namespaceName, KEYSTORE_FILE, KEYSTORE_SECRET_NEW, SECRET_PASSWORD, newTLSKeysLocation)
-
-	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(newTLSKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")
+	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(tlsKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")
 	err = k8s.RunKubectlE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "add", "trusted-certificate",
 		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "60")
 	assert.NilError(t, err, "add trusted-certificate failed")
 
 	// Upgrade admin release
 	DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
-	helm.Upgrade(t, upgradedOptions, ADMIN_HELM_CHART_PATH, adminReleaseName)
+	helm.Upgrade(t, options, ADMIN_HELM_CHART_PATH, adminReleaseName)
 
 	adminStatefulSet := fmt.Sprintf("%s-nuodb", adminReleaseName)
 	k8s.RunKubectl(t, kubectlOptions, "rollout", "status", "sts/"+adminStatefulSet, "--timeout", "300s")
 	AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
 
 	// Upgrade database release
-	helm.Upgrade(t, upgradedOptions, DATABASE_HELM_CHART_PATH, databaseReleaseName)
+	helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, databaseReleaseName)
 
 	AwaitDatabaseUp(t, namespaceName, admin0, "demo")
-
-	return adminReleaseName, databaseReleaseName
 }
