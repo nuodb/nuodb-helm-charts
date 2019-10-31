@@ -111,8 +111,8 @@ spec:
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb
-        {{- if .Values.admin.configFiles }}
-        {{- range $key, $val := .Values.admin.configFiles }}
+        {{- with .Values.admin.configFiles }}
+        {{- range $key, $val := . }}
         - name: configurations
           mountPath: {{ $.Values.admin.configFilesPath }}{{ $key }}
           subPath: {{ $key }}

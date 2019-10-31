@@ -175,7 +175,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |
 | `tolerations` | Tolerations for NuoDB Admin | `[]` |
-| `configFiles.nuodb.lic` | NuoDB license file content; defaults to NuoDB CE Edition | `nil` |
+| `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
+| `configFiles.*` | See below. | `{}` |
 | `persistence.enabled` | Whether or not persistent storage is enabled for admin RAFT state | `false` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteMany` |
 | `persistence.size` | Amount of disk space allocated for admin RAFT state | `10Gi` |
@@ -200,6 +201,18 @@ For example, when using GlusterFS storage class, you would supply the following 
   --set admin.persistence.storageClass=glusterfs
   ...
 ```
+
+#### admin.configFiles.*
+
+The purpose of this section is to specify replacement NuoDB configuration files.
+
+Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
+
+The following tables list the configurable parameters for the `admin` option of the admin chart and their default values.
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `nuodb.lic` | NuoDB license file content; defaults to NuoDB CE Edition | `nil` |
 
 ### Running
 
