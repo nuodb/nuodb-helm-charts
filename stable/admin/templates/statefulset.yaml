@@ -88,7 +88,13 @@ spec:
         - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
         {{- end }}
       {{- end }}
-        args: [ "nuoadmin", "--", "pendingReconnectTimeout=60000" ]
+        args:
+          - "nuoadmin"
+          - "--"
+          - "pendingReconnectTimeout=60000"
+          {{- range $opt, $val := .Values.admin.options}}
+          - "{{$opt}}={{$val}}" 
+          {{- end}}
         livenessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -105,11 +111,13 @@ spec:
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb
-{{- if hasKey .Values.admin.configFiles "nuodb.lic" }}
-        - name: nuodb-license-volume
-          mountPath: /etc/nuodb/nuodb.lic
-          subPath: nuodb.lic
-{{ end }}
+        {{- with .Values.admin.configFiles }}
+        {{- range $key, $val := . }}
+        - name: configurations
+          mountPath: {{ $.Values.admin.configFilesPath }}{{ $key }}
+          subPath: {{ $key }}
+        {{- end -}}
+        {{- end }}
         - name: raftlog
           mountPath: /var/opt/nuodb
         {{- if .Values.admin.tlsCACert }}
@@ -160,14 +168,11 @@ spec:
       {{- end }}
       - name: log-volume
         emptyDir: {}
-{{- if hasKey .Values.admin.configFiles "nuodb.lic" }}
-      - name: nuodb-license-volume
+      {{- if .Values.admin.configFiles }}
+      - name: configurations
         configMap:
-          name: nuodb-license-file
-          items:
-            - key: nuodb.lic
-              path: nuodb.lic
-{{ end }}
+          name: {{ template "admin.fullname" . }}-configuration
+      {{- end }}
 {{- if not .Values.admin.persistence.enabled }}
       - name: raftlog
         emptyDir: {}

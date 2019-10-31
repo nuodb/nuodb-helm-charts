@@ -89,6 +89,13 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
+        {{- with .Values.database.configFiles }}
+        {{- range $key, $val := . }}
+        - name: configurations
+          mountPath: {{ $.Values.database.configFilesPath }}{{ $key }}
+          subPath: {{ $key }}
+        {{- end -}}
+        {{- end }}
         - name: logdir
           mountPath: /var/log/nuodb
         - name: nuote
@@ -111,6 +118,11 @@ spec:
         {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+        {{- if .Values.database.configFiles }}
+        - name: configurations
+          configMap:
+            name: {{ template "database.fullname" . }}-configuration
+        {{- end }}
         - name: logdir
           emptyDir: {}
         - name: nuote

@@ -161,10 +161,6 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 		testlib.VerifyLicenseFile(t, namespaceName, admin0, licenseString)
 	})
 
-	t.Run("verifyCustomFileDoesNotGetMounted", func(t *testing.T) {
-		testlib.VerifyCustomFileDoesNotGetMounted(t, namespaceName, admin0, customFile)
-	})
-
 }
 
 func TestKubernetesBasicNameOverride(t *testing.T) {

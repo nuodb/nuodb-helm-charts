@@ -82,9 +82,13 @@ admin:
     capabilities: []
 
   ## Specify one or more configMaps to import Environment Variables from
-  # Ex:  from: [ configMapRef: { name: myConfigMap } ]
-  env:
-    from: []
+  # Ex:  envFrom: [ configMapRef: { name: myConfigMap } ]
+  envFrom: []
+  
+  ## Admin options
+  # These are applied using the nuoadmin startup command
+  # Add these values as appropriate for this domain
+  options: {}
 
   ## nuodb-admin resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -96,6 +100,9 @@ admin:
     # requests:
     #   cpu: 10m
     #   memory: 16Mi
+
+  # Custom NuoDB configuration files path
+  configFilesPath: /etc/nuodb/
 
   # NuoDB is a licensed product for Enterprise Edition.
   # Obtain your license from NuoDB support.
@@ -110,7 +117,7 @@ admin:
   # --set admin.configFiles.nuodb\\.lic=<BASE64-TEXT-HERE>
   #
   configFiles: {}
-    # nuodb.lic: |+
+    # nuodb.lic: |-
     #   "PUT YOUR BASE64 ENCODED LICENSE CONTENT HERE"
 
   # Recommended default admin affinity:
