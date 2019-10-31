@@ -34,7 +34,7 @@ func TestAdminDefaultLicense(t *testing.T) {
 			continue
 		}
 
-		if strings.Contains(part, "nuodb-license-file") {
+		if strings.Contains(part, "nuodb-admin-configuration") {
 			found = true
 
 			var object v1.ConfigMap
@@ -45,7 +45,7 @@ func TestAdminDefaultLicense(t *testing.T) {
 
 	}
 
-	assert.Assert(t, found, "no matching config map was found")
+	assert.Assert(t, !found, "no matching config map was found")
 }
 
 func TestAdminLicenseCanBeSet(t *testing.T) {
@@ -72,7 +72,7 @@ func TestAdminLicenseCanBeSet(t *testing.T) {
 			continue
 		}
 
-		if strings.Contains(part, "nuodb-license-file") {
+		if strings.Contains(part, "nuodb-admin-configuration") {
 			found = true
 
 			var object v1.ConfigMap
@@ -95,8 +95,8 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.securityContext.capabilities": "[ NET_ADMIN ]",
-			"admin.envFrom[0].configMapRef.name": "test-config",
+			"admin.securityContext.capabilities":    "[ NET_ADMIN ]",
+			"admin.envFrom[0].configMapRef.name":    "test-config",
 			"admin.options.leaderAssignmentTimeout": "30000",
 		},
 	}

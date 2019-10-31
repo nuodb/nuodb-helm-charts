@@ -1,17 +1,3 @@
-kind: ConfigMap
-apiVersion: v1
-metadata:
-  labels:
-    app: {{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
-  name: nuodb-license-file
-data:
-{{- if .Values.admin.configFiles }}
-{{ toYaml .Values.admin.configFiles | indent 2 }}
-{{ end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -25,3 +11,21 @@ metadata:
   name: waitscript
 data:
 {{ (.Files.Glob "files/waitscript").AsConfig | indent 2 }}
+---
+{{- if .Values.admin.configFiles }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "admin.fullname" . }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "admin.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ template "admin.fullname" . }}-configuration
+data:
+{{- range $key, $val := .Values.admin.configFiles }}
+  {{ $key }}: |-
+{{ $val | indent 4}}
+{{- end }}
+{{- end -}}

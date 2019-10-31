@@ -53,9 +53,9 @@ func verifyAdminService(t *testing.T, namespaceName string, podName string) {
 
 func getFunctionCallerName() string {
 	pc, _, _, _ := runtime.Caller(2)
-	nameFull := runtime.FuncForPC(pc).Name()    // main.foo
-	nameEnd := filepath.Ext(nameFull)           // .foo
-	name := strings.TrimPrefix(nameEnd, ".")    // foo
+	nameFull := runtime.FuncForPC(pc).Name() // main.foo
+	nameEnd := filepath.Ext(nameFull)        // .foo
+	name := strings.TrimPrefix(nameEnd, ".") // foo
 
 	return name
 }
@@ -218,10 +218,6 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 	})
 	t.Run("verifyLicenseFile", func(t *testing.T) {
 		testlib.VerifyLicenseFile(t, namespaceName, admin0, licenseString)
-	})
-
-	t.Run("verifyCustomFileDoesNotGetMounted", func(t *testing.T) {
-		testlib.VerifyCustomFileDoesNotGetMounted(t, namespaceName, admin0, customFile)
 	})
 
 }

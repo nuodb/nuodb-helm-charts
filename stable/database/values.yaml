@@ -122,6 +122,14 @@ database:
     ping-timeout: 60
     max-lost-archives: 0
 
+  # Custom NuoDB configuration files path
+  configFilesPath: /etc/nuodb/
+
+  # Custom NuoDB configuration files used to override default NuoDB settings
+  configFiles: {}
+    # nuodb.config: |-
+    #   verbose error,flush,warn
+
   # ensure all values here are strings - so quote any purely numeric values
   import:
     url: ""

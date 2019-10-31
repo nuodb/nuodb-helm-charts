@@ -40,4 +40,21 @@ data:
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.import.stripLevels | quote }}
   NUODB_RESTORE_REQUEST_PREFIX: {{ default "/nuodb/nuosm/database" .Values.backup.requestPrefix }}
   NUODB_LATEST_BACKUP_PREFIX: {{ default "nuodb-backup/last_created" .Values.backup.latestPrefix }}
-
+---
+{{- if .Values.database.configFiles }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "database.fullname" . }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "database.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ template "database.fullname" . }}-configuration
+data:
+{{- range $key, $val := .Values.database.configFiles }}
+  {{ $key }}: |-
+{{ $val | indent 4}}
+{{- end }}
+{{- end -}}
