@@ -22,15 +22,21 @@ env:
     - KUBECONFIG=$HOME/.kube/config
     - NUODB_PRINT_TO_STDOUT=true
 
+cache:
+  directories:
+    - $GOPATH/pkg/dep
+
 before_install:
   - sudo apt-get update
   - sudo apt-get install socat
-  - curl https://raw.githubusercontent.com/golang/dep/v${DEP_VERSION}/install.sh | sh
-  - dep ensure -v
   - chmod +x scripts/ci/install_deps.sh
   - scripts/ci/install_deps.sh
   - docker pull nuodb/nuodb-ce:latest
   - helm version
+
+install:
+  - go get -u github.com/golang/dep/cmd/dep
+  - dep ensure -v
 
 script:
   - test/test_suite.sh
