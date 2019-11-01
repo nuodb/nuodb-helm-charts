@@ -150,12 +150,32 @@ func TestDatabaseDeploymentConfigRenders(t *testing.T) {
 	assert.Check(t, strings.Contains(output, "kind: DeploymentConfig"))
 }
 
-func TestDatabaseServiceRenders(t *testing.T) {
+func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
 
 	options := &helm.Options{
 		SetValues: map[string]string{},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-headless.yaml"})
+
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+
+	value, exists := object.Spec.Selector["component"]
+
+	assert.Assert(t, exists)
+	assert.Assert(t, value == "te")
+}
+
+func TestDatabaseServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{"database.te.loadBalancerService.enabled": "false"},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
@@ -168,9 +188,10 @@ func TestDatabaseServiceRenders(t *testing.T) {
 
 	assert.Assert(t, exists)
 	assert.Assert(t, value == "te")
+	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
 }
 
-func TestDatabaseServiceDaemonSet(t *testing.T) {
+func TestDatabaseHeadlessServiceDaemonSet(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
 
@@ -179,7 +200,7 @@ func TestDatabaseServiceDaemonSet(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-headless.yaml"})
 
 	assert.Check(t, strings.Contains(output, "kind: Service"))
 }
