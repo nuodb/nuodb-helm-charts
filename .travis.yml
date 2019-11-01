@@ -21,6 +21,9 @@ env:
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
     - NUODB_PRINT_TO_STDOUT=true
+  - TEST_SUITE="basic"
+  - TEST_SUITE="minikube-short"
+  - TEST_SUITE="minikube-long"
 
 cache:
   directories:
@@ -39,6 +42,7 @@ install:
   - dep ensure -v
 
 script:
-  - test/test_suite.sh
-  - go test -timeout 10m -v ./test/integration
-  - 'if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" = "master" ]; then go test -timeout 60m -v ./test/minikube -tags=long; else; go test -timeout 60m -v ./test/minikube; fi'
+  - 'if [ "TEST_SUITE" != "basic"  ]; then test/test_suite.sh; fi'
+  - 'if [ "TEST_SUITE" != "basic"  ]; then go test -timeout 10m -v ./test/integration; fi'
+  - 'if [ "TEST_SUITE" != "minikube-short"  ]; then go test -timeout 60m -v ./test/minikube -tags=short; fi'
+  - 'if [ "TEST_SUITE" != "minikube-long"  ]; then go test -timeout 60m -v ./test/minikube -tags=long; fi'
