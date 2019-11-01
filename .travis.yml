@@ -42,7 +42,7 @@ install:
   - dep ensure -v
 
 script:
-  - 'if [ "TEST_SUITE" != "basic"  ]; then test/test_suite.sh; fi'
-  - 'if [ "TEST_SUITE" != "basic"  ]; then go test -timeout 10m -v ./test/integration; fi'
-  - 'if [ "TEST_SUITE" != "minikube-short"  ]; then go test -timeout 60m -v ./test/minikube -tags=short; fi'
-  - 'if [ "TEST_SUITE" != "minikube-long"  ]; then go test -timeout 60m -v ./test/minikube -tags=long; fi'
+  - 'if [ "$TEST_SUITE" != "basic"  ]; then test/test_suite.sh; fi'
+  - 'if [ "$TEST_SUITE" != "basic"  ]; then go test -timeout 10m -v ./test/integration; fi'
+  - 'if [ "$TEST_SUITE" != "minikube-short"  ]; then go test -timeout 60m -v ./test/minikube -tags=short; fi'
+  - 'if [ "$TEST_SUITE" != "minikube-long"  ]; then go test -timeout 60m -v ./test/minikube -tags=long; fi'
