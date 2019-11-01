@@ -325,7 +325,7 @@ func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, 
 
 	fullLog := string(buf)
 
-	assert.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify configured license"), fullLog)
+	assert.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify license"), fullLog)
 }
 
 func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {
