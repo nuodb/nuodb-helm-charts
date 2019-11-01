@@ -29,7 +29,6 @@ before_install:
   - dep ensure -v
   - chmod +x scripts/ci/install_deps.sh
   - scripts/ci/install_deps.sh
-  - scripts/ci/generate_keys.sh
   - docker pull nuodb/nuodb-ce:latest
   - helm version
 

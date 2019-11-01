@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"regexp"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -76,6 +77,17 @@ func standardizeSpaces(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
+func RemoveEmptyLines(s string) string {
+	regex, err := regexp.Compile("(\r|\r\n|\n){2,}")
+    if err != nil {
+        return s
+    }
+    s = regex.ReplaceAllString(s, "\n")
+	s = strings.TrimRight(s, "\n")
+	
+	return s
+}
+
 func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
 	status corev1.ConditionStatus) bool {
 	for _, cnd := range pod.Status.Conditions {
@@ -135,6 +147,23 @@ func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName strin
 		}
 
 		t.Logf("%d pods SCHEDULED for name '%s'\n", cnt, expectedName)
+
+		return cnt == nrReplicas
+	}, 30*time.Second)
+}
+
+func AwaitNrReplicasReady(t *testing.T, namespace string, expectedName string, nrReplicas int) {
+	Await(t, func() bool {
+		var cnt int
+		for _, pod := range findAllPodsInSchema(t, namespace) {
+			if strings.Contains(pod.Name, expectedName) {
+				if arePodConditionsMet(&pod, corev1.PodReady, corev1.ConditionTrue) {
+					cnt++
+				}
+			}
+		}
+
+		t.Logf("%d pods READY for name '%s'\n", cnt, expectedName)
 
 		return cnt == nrReplicas
 	}, 30*time.Second)
@@ -458,4 +487,35 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 	assert.NilError(t, err, "runSQL: error trying to run ", sql)
 
 	return result, err
+}
+
+func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, commands []string) {
+	tmpfile, err := ioutil.TempFile("", "script")
+	if err != nil {
+		assert.NilError(t, err)
+	}
+
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	if _, err := tmpfile.WriteString("set -ev" + "\n"); err != nil {
+		assert.NilError(t, err)
+	}
+
+	for _, item := range commands {
+		if _, err := tmpfile.WriteString(item + "\n"); err != nil {
+			assert.NilError(t, err)
+		}
+	}
+	if err := tmpfile.Close(); err != nil {
+		assert.NilError(t, err)
+	}
+
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+
+	// Transfer the TEMP script to POD and execute it
+	k8s.RunKubectl(t, options, "cp", tmpfile.Name(), podName+":/tmp")
+	k8s.RunKubectl(t, options, "exec", podName, "--", "chmod", "a+x", "/tmp/"+filepath.Base(tmpfile.Name()))
+	err = k8s.RunKubectlE(t, options, "exec", podName, "--", "sh", "/tmp/"+filepath.Base(tmpfile.Name()))
+	assert.NilError(t, err, "executeCommandsInPod: Script returned error.")
 }
