@@ -1,3 +1,5 @@
+// +build long
+
 package minikube
 
 import (
@@ -15,14 +17,6 @@ import (
 )
 
 const ENGINE_CERTIFICATE_LOG_TEMPLATE = `Engine Certificate: Certificate #%d CN %s`
-
-func verifySecretFields(t *testing.T, namespaceName string, secretName string, fields ...string) {
-	secret := testlib.GetSecret(t, namespaceName, secretName)
-	for _, field := range fields {
-		_, ok := secret.Data[field]
-		assert.Check(t, ok)
-	}
-}
 
 func verifyKeystore(t *testing.T, namespace string, podName string, keystore string, password string, matches string) {
 	options := k8s.NewKubectlOptions("", "")
