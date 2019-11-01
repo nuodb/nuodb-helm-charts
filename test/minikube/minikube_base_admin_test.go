@@ -52,7 +52,12 @@ func verifyAdminService(t *testing.T, namespaceName string, podName string) {
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
-	options := helm.Options{}
+	options := helm.Options{
+		SetValues: map[string]string{
+			"admin.loadBalancerService.enabled": "true",
+			"admin.loadBalancerService.internalIP": "false",
+		},
+	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -76,7 +81,11 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
 	options := helm.Options{
-		SetValues: map[string]string{"admin.replicas": "3"},
+		SetValues: map[string]string{
+			"admin.replicas": "3",
+			"admin.loadBalancerService.enabled": "true",
+			"admin.loadBalancerService.internalIP": "false",
+		},
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -120,7 +129,11 @@ func TestKubernetesUpgradeAdmin(t *testing.T) {
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
 	upgradedOptions := &helm.Options{
-		SetValues: map[string]string{"nuodb.image.tag": "4.0.1"},
+		SetValues: map[string]string{
+			"nuodb.image.tag": "4.0.1",
+			"admin.loadBalancerService.enabled": "true",
+			"admin.loadBalancerService.internalIP": "false",
+		},
 	}
 
 	helm.Upgrade(t, upgradedOptions, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
