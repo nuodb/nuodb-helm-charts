@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if [[ ! -v REQUIRES_MINIKUBE ]]; then
+if [[ -z "$REQUIRES_MINIKUBE" ]]; then
     echo "skipping installation step"
     exit 0
 fi
