@@ -41,5 +41,4 @@ install:
 script:
   - test/test_suite.sh
   - go test -timeout 10m -v ./test/integration
-  - go test -timeout 60m -v ./test/minikube
-  - 'if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" = "master" ]; then go test -timeout 60m -v ./test/minikube -tags=long; fi'
+  - 'if [ "$TRAVIS_PULL_REQUEST" != "false" -o "$TRAVIS_BRANCH" = "master" ]; then go test -timeout 60m -v ./test/minikube -tags=long; else; go test -timeout 60m -v ./test/minikube; fi'
