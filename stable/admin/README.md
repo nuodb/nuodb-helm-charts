@@ -204,7 +204,12 @@ For example, when using GlusterFS storage class, you would supply the following 
 
 #### admin.configFiles.*
 
-The purpose of this section is to specify replacement NuoDB configuration files.
+The purpose of this section is to detail how to provide alternate configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
+
+There are two sets of configuration files documented:
+
+- [Admin Configuration for a Particular Host][1]
+- [Database Configuration for a Particular Host][2]
 
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
@@ -212,7 +217,10 @@ The following tables list the configurable parameters for the `admin` option of 
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
-| `nuodb.lic` | NuoDB license file content; defaults to NuoDB CE Edition | `nil` |
+| `nuodb.lic` | [NuoDB license file content; defaults to NuoDB CE Edition][3] | `nil` |
+| `nuoadmin.conf` | [NuoDB Admin host properties][4] | `nil` |
+| `nuodb-types.config`| [Type mappings for the NuoDB Migrator tool][5] | `nil` |
+| `nuoadmin.logback.xml` | Logging configuration. NuoDB recommends using the default settings. | `nil` |
 
 ### Running
 
@@ -296,3 +304,9 @@ kubectl delete -f admin/${cloud_provider}-storage.yaml
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
+
+[1]: #adminconfigfiles
+[2]: /stable/database/README.md#databaseconfigfiles
+[3]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Obtaining-and-Installing-NuoDB-Licenses.htm
+[4]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Host-Properties.htm
+[5]: http://doc.nuodb.com/Latest/Content/Data-Type-Mappings.htm
