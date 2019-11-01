@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+if [[ ! -v REQUIRES_MINIKUBE ]]; then
+    echo "skipping installation step"
+    exit 0
+fi
+
 # Download kubectl, which is a requirement for using minikube.
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${KUBERNETES_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 # Download minikube.
@@ -16,3 +21,9 @@ kubectl cluster-info
 wget http://storage.googleapis.com/kubernetes-helm/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 helm init
+
+# get the image to speed up tests
+docker pull nuodb/nuodb-ce:latest
+
+# print some info
+helm version

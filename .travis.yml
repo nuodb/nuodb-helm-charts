@@ -11,8 +11,8 @@ go:
 env:
   jobs:
     - TEST_SUITE=basic
-    - TEST_SUITE=minikube-short
-    - TEST_SUITE=minikube-long
+    - TEST_SUITE=minikube-short REQUIRES_MINIKUBE=true
+    - TEST_SUITE=minikube-long REQUIRES_MINIKUBE=true
   global:
     - HELM_VERSION="v2.14.3"
     - DEP_VERSION=0.5.4
@@ -35,15 +35,11 @@ before_install:
   - sudo apt-get install socat
   - chmod +x scripts/ci/install_deps.sh
   - scripts/ci/install_deps.sh
-  - docker pull nuodb/nuodb-ce:latest
-  - helm version
 
 install:
   - go get -u github.com/golang/dep/cmd/dep
   - dep ensure -v
 
 script:
-  - 'if [ "$TEST_SUITE" != "basic"  ]; then test/test_suite.sh; fi'
-  - 'if [ "$TEST_SUITE" != "basic"  ]; then go test -timeout 10m -v ./test/integration; fi'
-  - 'if [ "$TEST_SUITE" != "minikube-short"  ]; then go test -timeout 60m -v ./test/minikube -tags=short; fi'
-  - 'if [ "$TEST_SUITE" != "minikube-long"  ]; then go test -timeout 60m -v ./test/minikube -tags=long; fi'
+  - chmod +x scripts/ci/determine_and_run_tests.sh
+  - scripts/ci/determine_and_run_tests.sh
