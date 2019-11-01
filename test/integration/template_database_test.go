@@ -175,7 +175,11 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	helmChartPath := "../../stable/database"
 
 	options := &helm.Options{
-		SetValues: map[string]string{"database.te.loadBalancerService.enabled": "false"},
+		SetValues: map[string]string{
+			"cloud.provider": "amazon",
+			"database.te.loadBalancerService.enabled": "true",
+			"database.te.loadBalancerService.internalIP": "true",
+		},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
@@ -189,6 +193,8 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	assert.Assert(t, exists)
 	assert.Assert(t, value == "te")
 	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "aws-load-balancer-internal"))
 }
 
 func TestDatabaseHeadlessServiceDaemonSet(t *testing.T) {
