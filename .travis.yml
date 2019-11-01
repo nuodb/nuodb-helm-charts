@@ -9,6 +9,10 @@ go:
   - 1.12.x
 
 env:
+  jobs:
+    - TEST_SUITE=basic
+    - TEST_SUITE=minikube-short
+    - TEST_SUITE=minikube-long
   global:
     - HELM_VERSION="v2.14.3"
     - DEP_VERSION=0.5.4
@@ -21,9 +25,6 @@ env:
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
     - NUODB_PRINT_TO_STDOUT=true
-  - TEST_SUITE="basic"
-  - TEST_SUITE="minikube-short"
-  - TEST_SUITE="minikube-long"
 
 cache:
   directories:
