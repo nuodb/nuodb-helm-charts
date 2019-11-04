@@ -1,3 +1,21 @@
 #!/bin/sh
 
-nuocmd show domain | grep `hostname` | sed 's/.*start_id = //;s/].*//' | awk '{print "check process --check-running --start-id " $1'} | xargs nuocmd
+function die() {
+  retval=$1
+  shift
+  echo "$@"
+  exit $retval
+}
+
+
+processes=`nuocmd show domain --process-format "{address} {start_id}" | grep \`hostname\` | awk '{print $2}'`
+
+if [ -z "$processes" ]
+then
+  die -1 "No process found"
+fi
+
+for start_id in $processes
+do
+  nuocmd check process --check-running --start-id $start_id || die -1 "Process reported not ready"
+done
