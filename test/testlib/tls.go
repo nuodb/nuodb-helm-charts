@@ -13,6 +13,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/otiai10/copy"
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -96,9 +97,23 @@ func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName s
 	assert.NilError(t, err)
 
 	k8s.RunKubectl(t, options, "cp", podName+":"+CERTIFICATES_GENERATION_PATH, realTargetDirectory)
+	t.Logf("Certificate files location: %s", realTargetDirectory)
+	AddTeardown(TEARDOWN_SECRETS, func() { BackupCerificateFilesOnTestFailure(t, namespaceName, realTargetDirectory) })
 	verifyCertificateFiles(t, realTargetDirectory)
 
 	return realTargetDirectory
+}
+
+func BackupCerificateFilesOnTestFailure(t *testing.T, namespaceName string, srcDirectory string) {
+	targetDirPath := filepath.Join(RESULT_DIR, namespaceName, filepath.Base(srcDirectory))
+	_ = os.MkdirAll(targetDirPath, 0700)
+	if t.Failed() {
+		err := copy.Copy(srcDirectory, targetDirPath)
+		if err != nil {
+			t.Logf("Unable to backup certificates in %s", srcDirectory)
+		}
+		t.Logf("Certificate files copied from %s to %s", srcDirectory, targetDirPath)
+	}
 }
 
 func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []string, image string) (string, string) {
