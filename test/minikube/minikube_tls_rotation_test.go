@@ -91,7 +91,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 			"admin.tlsClientPEM.key":                testlib.NUOCMD_FILE,
 			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 		},
 	}
