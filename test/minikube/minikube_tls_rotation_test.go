@@ -1,3 +1,5 @@
+// +build long
+
 package minikube
 
 import (
