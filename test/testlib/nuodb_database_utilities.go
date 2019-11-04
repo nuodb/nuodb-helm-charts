@@ -2,6 +2,7 @@ package testlib
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -32,8 +33,25 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 
 	helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
 
-	AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, 1)
-	AwaitNrReplicasScheduled(t, namespaceName, smPodName, 1)
+	nrTePods, err := strconv.Atoi(options.SetValues["database.te.replicas"])
+	if err != nil {
+		nrTePods = 1
+	}
+
+	nrSmHotCopyPods, err := strconv.Atoi(options.SetValues["database.sm.hotCopy.replicas"])
+	if err != nil {
+		nrSmHotCopyPods = 1
+	}
+
+	nrSmNoHotCopyPods, err := strconv.Atoi(options.SetValues["database.sm.noHotCopy.replicas"])
+	if err != nil {
+		nrSmNoHotCopyPods = 0
+	}
+
+	nrSmPods := nrSmNoHotCopyPods + nrSmHotCopyPods
+
+	AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, nrTePods)
+	AwaitNrReplicasScheduled(t, namespaceName, smPodName, nrSmPods)
 
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 	AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
@@ -41,7 +59,7 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
 	AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
 
-	AwaitDatabaseUp(t, namespaceName, adminPod, "demo")
+	AwaitDatabaseUp(t, namespaceName, adminPod, "demo", nrSmPods + nrTePods)
 
 	return
 }

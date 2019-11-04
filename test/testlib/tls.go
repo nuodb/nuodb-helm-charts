@@ -138,5 +138,5 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options,
 	// Upgrade database release
 	helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, databaseReleaseName)
 
-	AwaitDatabaseUp(t, namespaceName, admin0, "demo")
+	AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 }

@@ -78,7 +78,6 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	//   we need to use persistence for admin Raft logs during the rolling upgrade.
 	options := helm.Options{
 		SetValues: map[string]string{
-			"admin.persistence.enabled":             "true",
 			"admin.replicas":                        "3",
 			"admin.tlsCACert.secret":                testlib.CA_CERT_SECRET,
 			"admin.tlsCACert.key":                   testlib.CA_CERT_FILE,
@@ -90,10 +89,10 @@ func TestKubernetesTLSRotation(t *testing.T) {
 			"admin.tlsTrustStore.password":          testlib.SECRET_PASSWORD,
 			"admin.tlsClientPEM.secret":             testlib.NUOCMD_SECRET,
 			"admin.tlsClientPEM.key":                testlib.NUOCMD_FILE,
-			"database.sm.resources.requests.cpu":    "500m",
-			"database.sm.resources.requests.memory": "500Mi",
-			"database.te.resources.requests.cpu":    "500m",
-			"database.te.resources.requests.memory": "500Mi",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 		},
 	}
 
