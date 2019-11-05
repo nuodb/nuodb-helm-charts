@@ -9,7 +9,7 @@
 
 cloud:
   # supported: amazon, azure, google
-  provider: amazon
+  provider:
   # zones:
   #   - us-east-2a
   #   - us-east-2b
@@ -66,8 +66,8 @@ admin:
   ## Enable the Layer 4 Load balancer if required,
   ## and specify if it should provision an internal or external cloud IP address
   loadBalancerService: {}
-  #   enabled: false
-  #   internalIP: true
+    # enabled: true
+    # internalIP: true
 
   persistence:
     ## If true, use a Persistent Volume Claim, If false, use emptyDir

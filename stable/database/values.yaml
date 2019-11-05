@@ -131,7 +131,7 @@ database:
     #   verbose error,flush,warn
 
   # ensure all values here are strings - so quote any purely numeric values
-  import:
+  import: {}
     url: ""
     credentials: ""
     stripLevels: "1"
@@ -182,7 +182,7 @@ database:
     ## Enable the Layer 4 Load balancer if required,
     ## and specify if it should provision an internal or external cloud IP address
     loadBalancerService: {}
-      # enabled: false
+      # enabled: true
       # internalIP: true
 
     # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
