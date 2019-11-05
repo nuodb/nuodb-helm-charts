@@ -47,7 +47,6 @@ func startDomainWithTLSCertificates(t *testing.T, options *helm.Options, namespa
 	// create initial certs...
 	certGeneratorPodName, _ := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands, "")
 
-	t.Fatal()
 	adminReleaseName, namespaceName := testlib.StartAdmin(t, options, adminReplicaCount, namespaceName)
 	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
 	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
