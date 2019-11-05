@@ -63,3 +63,10 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 
 	return
 }
+
+func ShutdownDatabase(t *testing.T, namespace string, dbName string, podName string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "shutdown", "database", "--db-name", dbName)
+}

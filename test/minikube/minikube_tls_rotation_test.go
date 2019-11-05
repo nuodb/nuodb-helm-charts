@@ -78,7 +78,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	//   we need to use persistence for admin Raft logs during the rolling upgrade.
 	options := helm.Options{
 		SetValues: map[string]string{
-			"admin.replicas":                        "3",
+			"admin.replicas":                        "2",
 			"admin.tlsCACert.secret":                testlib.CA_CERT_SECRET,
 			"admin.tlsCACert.key":                   testlib.CA_CERT_FILE,
 			"admin.tlsKeyStore.secret":              testlib.KEYSTORE_SECRET,
@@ -111,14 +111,6 @@ func TestKubernetesTLSRotation(t *testing.T) {
 		"cat " + testlib.CA_CERT_FILE_NEW + " >> ca.cert",
 	}
 
-	upgradedOptions := options
-	upgradedOptions.SetValues = make(map[string]string, len(options.SetValues))
-	for k, v := range options.SetValues {
-		upgradedOptions.SetValues[k] = v
-	}
-	upgradedOptions.SetValues["admin.tlsCACert.secret"] = testlib.CA_CERT_SECRET_NEW
-	upgradedOptions.SetValues["admin.tlsKeyStore.secret"] = testlib.KEYSTORE_SECRET_NEW
-
 	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
@@ -128,10 +120,10 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	// create the new certs...
 	testlib.GenerateCustomCertificates(t, certGeneratorPodName, namespaceName, newTLSCommands)
 	newTLSKeysLocation := testlib.CopyCertificatesToControlHost(t, certGeneratorPodName, namespaceName)
-	testlib.CreateSecret(t, namespaceName, testlib.CA_CERT_FILE, testlib.CA_CERT_SECRET_NEW, newTLSKeysLocation)
-	testlib.CreateSecretWithPassword(t, namespaceName, testlib.KEYSTORE_FILE, testlib.KEYSTORE_SECRET_NEW, testlib.SECRET_PASSWORD, newTLSKeysLocation)
+	testlib.CreateSecret(t, namespaceName, testlib.CA_CERT_FILE, testlib.CA_CERT_SECRET, newTLSKeysLocation)
+	testlib.CreateSecretWithPassword(t, namespaceName, testlib.KEYSTORE_FILE, testlib.KEYSTORE_SECRET, testlib.SECRET_PASSWORD, newTLSKeysLocation)
 	
-	testlib.RotateTLSCertificates(t, &upgradedOptions, kubectlOptions, adminReleaseName, databaseReleaseName, newTLSKeysLocation)
+	testlib.RotateTLSCertificates(t, &options, kubectlOptions, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
 	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
 
 	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
