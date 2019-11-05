@@ -25,8 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-var RESULT_DIR = "results"
-
 var teardownLists = make(map[string][]func())
 
 /**
@@ -425,7 +423,7 @@ func shouldPrintToStdout() bool {
 }
 
 func GetAppLog(t *testing.T, namespace string, podName string) {
-	dirPath := filepath.Join("..", "..", RESULT_DIR, namespace)
+	dirPath := filepath.Join(RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName)
 
 	_ = os.MkdirAll(dirPath, 0700)
