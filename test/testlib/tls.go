@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/otiai10/copy"
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
 )
@@ -96,9 +98,35 @@ func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName s
 	assert.NilError(t, err)
 
 	k8s.RunKubectl(t, options, "cp", podName+":"+CERTIFICATES_GENERATION_PATH, realTargetDirectory)
+	t.Logf("Certificate files location: %s", realTargetDirectory)
+	AddTeardown(TEARDOWN_SECRETS, func() { BackupCerificateFilesOnTestFailure(t, namespaceName, realTargetDirectory) })
+	AddTeardown(TEARDOWN_SECRETS, func() { PrintCertificateFilesOnTestFailure(t, realTargetDirectory) })
 	verifyCertificateFiles(t, realTargetDirectory)
 
 	return realTargetDirectory
+}
+
+func PrintCertificateFilesOnTestFailure(t *testing.T, srcDirectory string) {
+	if t.Failed() && shouldPrintToStdout() {
+		files, _ := ioutil.ReadDir(srcDirectory)
+		t.Logf("Printing certificate files in %s.", srcDirectory)
+		for _, file := range files {
+			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(srcDirectory, file.Name())).CombinedOutput()
+			t.Logf("%s:\n%s", file.Name(), string(output))
+		}
+	}
+}
+
+func BackupCerificateFilesOnTestFailure(t *testing.T, namespaceName string, srcDirectory string) {
+	targetDirPath := filepath.Join(RESULT_DIR, namespaceName, filepath.Base(srcDirectory))
+	_ = os.MkdirAll(targetDirPath, 0700)
+	if t.Failed() {
+		err := copy.Copy(srcDirectory, targetDirPath)
+		if err != nil {
+			t.Logf("Unable to backup certificates in %s", srcDirectory)
+		}
+		t.Logf("Certificate files copied from %s to %s", srcDirectory, targetDirPath)
+	}
 }
 
 func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []string, image string) (string, string) {

@@ -125,7 +125,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
 	certGeneratorPodName, adminReleaseName, databaseReleaseName := startDomainWithTLSCertificates(t, &options, namespaceName, initialTLSCommands)
-	
+
 	// create the new certs...
 	testlib.GenerateCustomCertificates(t, certGeneratorPodName, namespaceName, newTLSCommands)
 	newTLSKeysLocation := testlib.CopyCertificatesToControlHost(t, certGeneratorPodName, namespaceName)
