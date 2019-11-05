@@ -36,3 +36,6 @@ const RESULT_DIR = "../../results"
 
 const LAST_BACKUP_PREFIX string = "nuodb-backup/last_created"
 const IMPORT_ARCHIVE_URL = "http://download.nuohub.org/ce_releases/restore.bak.tz"
+
+const MINIMAL_VIABLE_ENGINE_CPU = "500m"
+const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"

@@ -102,6 +102,9 @@ spec:
         - name: nuote
           mountPath: /usr/local/bin/nuote
           subPath: nuote
+        - name: readinessprobe
+          mountPath: /usr/local/bin/readinessprobe
+          subPath: readinessprobe
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert
           mountPath: /etc/nuodb/keys/ca.cert
@@ -118,6 +121,15 @@ spec:
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
+        readinessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 5
+          exec:
+            command: [ "readinessprobe" ]
+          failureThreshold: 54
+          # the TE becomes unready if it does not start within 5 minutes = 30s + 5s*54
+          successThreshold: 2
+          timeoutSeconds: 1
       volumes:
         {{- if .Values.database.configFiles }}
         - name: configurations
@@ -129,6 +141,10 @@ spec:
         - name: nuote
           configMap:
             name: {{ template "database.fullname" . }}-nuote
+            defaultMode: 0777
+        - name: readinessprobe
+          configMap:
+            name: {{ template "database.fullname" . }}-readinessprobe
             defaultMode: 0777
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert

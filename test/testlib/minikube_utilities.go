@@ -221,12 +221,33 @@ func AwaitAdminPodUp(t *testing.T, namespace string, adminPodName string, timeou
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
 }
 
-func AwaitAdminPodUpgraded(t *testing.T, namespace string, adminPodName string, expectedVersion string, timeout time.Duration) {
+
+func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate string, expectedVersion string, timeout time.Duration) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
 	Await(t, func() bool {
-		pod := k8s.GetPod(t, options, adminPodName)
+		podName := GetPodName(t, namespace, podNameTemplate)
+
+		pod := k8s.GetPod(t, options, podName)
+
+		for _, container := range pod.Spec.Containers {
+			t.Logf("Found container (%s) with image: %s", container.Name, container.Image)
+			if container.Image == expectedVersion {
+				return true
+			}
+		}
+
+		return false
+	}, timeout)
+}
+
+func AwaitPodHasVersion(t *testing.T, namespace string, podName string, expectedVersion string, timeout time.Duration) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	Await(t, func() bool {
+		pod := k8s.GetPod(t, options, podName)
 
 		for _, container := range pod.Spec.Containers {
 			t.Logf("Found container (%s) with image: %s", container.Name, container.Image)
@@ -273,13 +294,13 @@ func AwaitAdminFullyConnected(t *testing.T, namespace string, podName string, nu
 		"--timeout", "300")
 }
 
-func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseName string) {
+func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseName string, numProcesses int) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
 	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
 		"--db-name", databaseName, "--check-running", "--check-liveness", "20",
-		"--num-processes", "2",
+		"--num-processes", strconv.Itoa(numProcesses),
 		"--timeout", "300")
 }
 
@@ -324,6 +345,16 @@ func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, 
 	fullLog := string(buf)
 
 	assert.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify license"), fullLog)
+}
+
+func GetStringOccurenceInLog(t *testing.T, namespace string, podName string, expectedLogLine string) int {
+	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName))
+	assert.NilError(t, err)
+
+	fullLog := string(buf)
+
+	return strings.Count(fullLog, expectedLogLine)
+
 }
 
 func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {

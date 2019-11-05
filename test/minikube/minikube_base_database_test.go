@@ -178,10 +178,11 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
 		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-			SetValues: map[string]string{"database.sm.resources.requests.cpu": "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.labels.cloud":              LABEL_CLOUD,
 				"database.te.labels.region":             LABEL_REGION,
 				"database.te.labels.zone":               LABEL_ZONE,
@@ -202,10 +203,11 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 		testlib.StartDatabase(t, namespaceName, admin0,
 			&helm.Options{
-				SetValues: map[string]string{"database.sm.resources.requests.cpu": "500m",
-					"database.sm.resources.requests.memory": "1Gi",
-					"database.te.resources.requests.cpu":    "500m",
-					"database.te.resources.requests.memory": "1Gi",
+				SetValues: map[string]string{
+					"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+					"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 					"database.te.labels.cloud":              LABEL_CLOUD,
 					"database.te.labels.region":             LABEL_REGION,
 					"database.te.labels.zone":               LABEL_ZONE,
@@ -241,10 +243,10 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 			},
@@ -262,10 +264,10 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 				"database.enableDaemonSet":              "true",
@@ -299,10 +301,10 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
 				"database.name":                         "demo",
-				"database.sm.resources.requests.cpu":    "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 			},
@@ -353,7 +355,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"--db-name", "demo",
 		)
 
-		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo")
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
 		// verify that the database contains the restored data
 		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
@@ -386,10 +388,10 @@ func TestKubernetesImportDatabase(t *testing.T) {
 		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{
 				"database.import.url":                   testlib.IMPORT_ARCHIVE_URL,
-				"database.sm.resources.requests.cpu":    "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 			},
@@ -408,10 +410,10 @@ func TestKubernetesImportDatabase(t *testing.T) {
 			&helm.Options{
 				SetValues: map[string]string{
 					"database.import.url":                   testlib.IMPORT_ARCHIVE_URL,
-					"database.sm.resources.requests.cpu":    "500m",
-					"database.sm.resources.requests.memory": "1Gi",
-					"database.te.resources.requests.cpu":    "500m",
-					"database.te.resources.requests.memory": "1Gi",
+					"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+					"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 					"database.enableDaemonSet":              "true",
 					// prevent non-backup SM from scheduling
 					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",

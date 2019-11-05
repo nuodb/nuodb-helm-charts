@@ -101,7 +101,7 @@ func CreateSecret(t *testing.T, namespaceName string, certName string, secretNam
 	assert.NilError(t, err)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, secretString)
-	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromString(t, kubectlOptions, secretString) })
+	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, secretString) })
 
 	fields := []string{certName}
 	verifySecretFields(t, namespaceName, secretName, fields...)
@@ -120,7 +120,7 @@ func CreateSecretWithPassword(t *testing.T, namespaceName string, certName strin
 	assert.NilError(t, err)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, secretString)
-	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromString(t, kubectlOptions, secretString) })
+	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, secretString) })
 
 	fields := []string{certName, "password"}
 	verifySecretFields(t, namespaceName, secretName, fields...)

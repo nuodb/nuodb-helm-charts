@@ -65,10 +65,6 @@ admin:
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
 
   persistence:
-    ## If true, use a Persistent Volume Claim, If false, use emptyDir
-    ##
-    ## n.b. use ReadWriteMany if using local ssd
-    enabled: false
     size: 1Gi
     accessModes:
       - ReadWriteOnce

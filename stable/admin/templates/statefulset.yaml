@@ -173,10 +173,6 @@ spec:
         configMap:
           name: {{ template "admin.fullname" . }}-configuration
       {{- end }}
-{{- if not .Values.admin.persistence.enabled }}
-      - name: raftlog
-        emptyDir: {}
-{{- else }}
   volumeClaimTemplates:
   - metadata:
       name: raftlog
@@ -201,4 +197,3 @@ spec:
       resources:
         requests:
           storage: {{ .Values.admin.persistence.size }}
-{{- end }}

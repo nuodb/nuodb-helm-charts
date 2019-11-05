@@ -45,7 +45,7 @@ func createTLSGeneratorPod(t *testing.T, namespaceName string, image string, tim
 	kubectlOptions.Namespace = namespaceName
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, podTemplateString)
-	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromString(t, kubectlOptions, podTemplateString) })
+	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, podTemplateString) })
 
 	AwaitPodStatus(t, namespaceName, podName, corev1.PodReady, corev1.ConditionTrue, timeout)
 
@@ -143,7 +143,7 @@ func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []str
 }
 
 func RotateTLSCertificates(t *testing.T, options *helm.Options,
-	kubectlOptions *k8s.KubectlOptions, adminReleaseName string, databaseReleaseName string, tlsKeysLocation string) {
+	kubectlOptions *k8s.KubectlOptions, adminReleaseName string, databaseReleaseName string, tlsKeysLocation string, helmUpgrade bool) {
 
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
 	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
@@ -155,16 +155,24 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options,
 		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "60")
 	assert.NilError(t, err, "add trusted-certificate failed")
 
-	// Upgrade admin release
-	DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
-	helm.Upgrade(t, options, ADMIN_HELM_CHART_PATH, adminReleaseName)
+	if helmUpgrade == true {
+		// Upgrade admin release
+		DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
+		helm.Upgrade(t, options, ADMIN_HELM_CHART_PATH, adminReleaseName)
 
-	adminStatefulSet := fmt.Sprintf("%s-nuodb", adminReleaseName)
-	k8s.RunKubectl(t, kubectlOptions, "rollout", "status", "sts/"+adminStatefulSet, "--timeout", "300s")
-	AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
+		adminStatefulSet := fmt.Sprintf("%s-nuodb", adminReleaseName)
+		k8s.RunKubectl(t, kubectlOptions, "rollout", "status", "sts/"+adminStatefulSet, "--timeout", "300s")
+		AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
 
-	// Upgrade database release
-	helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, databaseReleaseName)
-
-	AwaitDatabaseUp(t, namespaceName, admin0, "demo")
+		// Upgrade database release
+		helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, databaseReleaseName)
+	} else {
+		// Rolling upgrade could take a lot of time due to readiness probes.
+		// Faster approach will be to restart all PODs. A prerequsite for this 
+		// is to have the same secrets update before hand.
+		k8s.RunKubectl(t, kubectlOptions, "delete", "pod", "--selector=domain=nuodb")
+		AwaitPodPhase(t, namespaceName, admin0, corev1.PodRunning, 60*time.Second)
+		AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
+	}
+	AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 }

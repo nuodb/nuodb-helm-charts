@@ -1,4 +1,4 @@
-// +build long
+// +build short
 
 package minikube
 
@@ -85,10 +85,10 @@ func TestKubernetesTLS(t *testing.T) {
 	t.Run("testDatabaseNoDirectEngineKeys", func(t *testing.T) {
 		// make a copy
 		localOptions := options
-		localOptions.SetValues["database.sm.resources.requests.cpu"] = "500m"
-		localOptions.SetValues["database.sm.resources.requests.memory"] = "1Gi"
-		localOptions.SetValues["database.te.resources.requests.cpu"] = "500m"
-		localOptions.SetValues["database.te.resources.requests.memory"] = "1Gi"
+		localOptions.SetValues["database.sm.resources.requests.cpu"] = testlib.MINIMAL_VIABLE_ENGINE_CPU
+		localOptions.SetValues["database.sm.resources.requests.memory"] = testlib.MINIMAL_VIABLE_ENGINE_MEMORY
+		localOptions.SetValues["database.te.resources.requests.cpu"] = testlib.MINIMAL_VIABLE_ENGINE_CPU
+		localOptions.SetValues["database.te.resources.requests.memory"] = testlib.MINIMAL_VIABLE_ENGINE_MEMORY
 
 		defer testlib.Teardown("database")
 
@@ -107,10 +107,10 @@ func TestKubernetesTLS(t *testing.T) {
 	t.Run("testDatabaseDirectEngineKeys", func(t *testing.T) {
 		// make a copy
 		localOptions := options
-		localOptions.SetValues["database.sm.resources.requests.cpu"] = "500m"
-		localOptions.SetValues["database.sm.resources.requests.memory"] = "1Gi"
-		localOptions.SetValues["database.te.resources.requests.cpu"] = "500m"
-		localOptions.SetValues["database.te.resources.requests.memory"] = "1Gi"
+		localOptions.SetValues["database.sm.resources.requests.cpu"] = testlib.MINIMAL_VIABLE_ENGINE_CPU
+		localOptions.SetValues["database.sm.resources.requests.memory"] = testlib.MINIMAL_VIABLE_ENGINE_MEMORY
+		localOptions.SetValues["database.te.resources.requests.cpu"] = testlib.MINIMAL_VIABLE_ENGINE_CPU
+		localOptions.SetValues["database.te.resources.requests.memory"] = testlib.MINIMAL_VIABLE_ENGINE_MEMORY
 
 		localOptions.SetValues["database.te.otherOptions.keystore"] = "/etc/nuodb/keys/nuoadmin.p12"
 		localOptions.SetValues["database.sm.otherOptions.keystore"] = "/etc/nuodb/keys/nuoadmin.p12"
