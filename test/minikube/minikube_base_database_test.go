@@ -36,12 +36,12 @@ func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 	)
 }
 
-func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string) {
+func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespaceName
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--", "bash", "-c",
-		"echo \"select * from system.nodes;\" | nuosql demo@localhost --user dba --password secret")
+		fmt.Sprintf("echo \"select * from system.nodes;\" | nuosql %s@localhost --user dba --password secret", databaseName))
 
 	assert.NilError(t, err, output)
 
@@ -194,7 +194,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
 		t.Run("verifyDBService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0) })
-		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0) })
+		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
 	})
 
@@ -223,8 +223,40 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
 		t.Run("verifyDBService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0) })
-		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0) })
+		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
+	})
+
+	t.Run("startDatabaseStatefulSetMultiTenant", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.name":                         "green",
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		})
+
+		t.Run("verifyNuoSQL-green", func(t *testing.T) {
+			verifyNuoSQL(t, namespaceName, admin0, "green")
+		})
+
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.name":                         "blue",
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		})
+
+		t.Run("verifyNuoSQL-blue", func(t *testing.T) {
+			verifyNuoSQL(t, namespaceName, admin0, "blue")
+		})
 	})
 }
 

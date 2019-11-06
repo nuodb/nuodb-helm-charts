@@ -501,6 +501,13 @@ func DeletePod(t *testing.T, namespace string, podName string) {
 	k8s.RunKubectl(t, options, "delete", podName)
 }
 
+func DeleteAllPodsInDomain(t *testing.T, namespace string, selector string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	k8s.RunKubectl(t, options, "delete", "pod", fmt.Sprintf("--selector=domain=%s", selector))
+}
+
 func RunSQL(t *testing.T, namespace string, podName string, databaseName string, sql string) (result string, err error) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -518,7 +525,7 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 	return result, err
 }
 
-func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, commands []string) {
+func ExecuteCommandsInPod(t *testing.T, namespaceName string, podName string, commands []string) {
 	tmpfile, err := ioutil.TempFile("", "script")
 	if err != nil {
 		assert.NilError(t, err)
@@ -548,3 +555,5 @@ func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, co
 	err = k8s.RunKubectlE(t, options, "exec", podName, "--", "sh", "/tmp/"+filepath.Base(tmpfile.Name()))
 	assert.NilError(t, err, "executeCommandsInPod: Script returned error.")
 }
+
+
