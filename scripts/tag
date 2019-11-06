@@ -3,7 +3,7 @@
 set -o errexit
 set -o pipefail
 
-# VERSION=1.3 scripts/tag
+# VERSION=1.3 scripts/ci/tag
 
 : ${VERSION:?"Specify <major.minor> version for release, e.g 1.2"}
 
@@ -50,16 +50,6 @@ branch () {
 push_branch () {
   echo "Pushing Git branch..."
   git push --set-upstream origin ${GIT_TAG}-rel
-}
-
-delete_tag() {
-  echo "Deleting Git tag..."
-  git tag -d ${GIT_TAG}
-  git push origin :refs/tags/${GIT_TAG}
-}
-
-list_tag() {
-  git tag -l
 }
 
 main
