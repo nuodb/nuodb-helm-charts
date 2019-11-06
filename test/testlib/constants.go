@@ -3,11 +3,12 @@ package testlib
 const CA_CERT_FILE = "ca.cert"
 const CA_CERT_FILE_NEW = "ca_new.cert"
 const CA_CERT_SECRET = "nuodb-ca-cert"
-const CA_CERT_SECRET_NEW = "nuodb-ca-cert-new"
 
 const KEYSTORE_FILE = "nuoadmin.p12"
 const KEYSTORE_SECRET = "nuodb-keystore"
-const KEYSTORE_SECRET_NEW = "nuodb-keystore-new"
+
+const NEW_KEYSTORE_FILE = "nuoadmin-new.p12"
+const NEW_KEYSTORE_SECRET = "nuodb-keystore-new"
 
 const TRUSTSTORE_FILE = "nuoadmin-truststore.p12"
 const TRUSTSTORE_SECRET = "nuodb-truststore"

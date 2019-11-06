@@ -2,21 +2,16 @@ package testlib
 
 import (
 	"fmt"
+	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/otiai10/copy"
+	"gotest.tools/assert"
 	"io/ioutil"
+	corev1 "k8s.io/api/core/v1"
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
 	"testing"
 	"time"
-	"strconv"
-
-	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/otiai10/copy"
-	"gotest.tools/assert"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const TLS_GENERATOR_POD_TEMPLATE = `---
@@ -37,7 +32,7 @@ func createTLSGeneratorPod(t *testing.T, namespaceName string, image string, tim
 		image = "docker.io/nuodb/nuodb-ce:latest"
 	}
 
-	podName := "tls-generator-" + strings.ToLower(random.UniqueId())
+	podName := "tls-generator"
 	podTemplateString := fmt.Sprintf(TLS_GENERATOR_POD_TEMPLATE,
 		podName, namespaceName, image)
 
@@ -47,6 +42,7 @@ func createTLSGeneratorPod(t *testing.T, namespaceName string, image string, tim
 	k8s.KubectlApplyFromString(t, kubectlOptions, podTemplateString)
 	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, podTemplateString) })
 
+	AwaitNrReplicasScheduled(t, namespaceName, podName, 1)
 	AwaitPodStatus(t, namespaceName, podName, corev1.PodReady, corev1.ConditionTrue, timeout)
 
 	return podName
@@ -73,7 +69,7 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 	}
 }
 
-func GenerateCustomCertificates(t *testing.T, podName string, namespaceName string, commands []string) {
+func GenerateCustomCertificates(t *testing.T, namespaceName string, podName string, commands []string) {
 	prependCommands := []string{
 		"[ -d " + CERTIFICATES_GENERATION_PATH + " ] && rm -rf " + CERTIFICATES_BACKUP_PATH + " && mv " + CERTIFICATES_GENERATION_PATH + " " + CERTIFICATES_BACKUP_PATH,
 		"rm -rf " + CERTIFICATES_GENERATION_PATH,
@@ -82,10 +78,10 @@ func GenerateCustomCertificates(t *testing.T, podName string, namespaceName stri
 	}
 	finalCommands := append(prependCommands, commands...)
 	// Execute certificate generation commands
-	ExecuteCommandsInPod(t, podName, namespaceName, finalCommands)
+	ExecuteCommandsInPod(t, namespaceName, podName, finalCommands)
 }
 
-func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName string) string {
+func CopyCertificatesToControlHost(t *testing.T, namespaceName string, podName string) string {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespaceName
 
@@ -99,7 +95,7 @@ func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName s
 
 	k8s.RunKubectl(t, options, "cp", podName+":"+CERTIFICATES_GENERATION_PATH, realTargetDirectory)
 	t.Logf("Certificate files location: %s", realTargetDirectory)
-	AddTeardown(TEARDOWN_SECRETS, func() { BackupCerificateFilesOnTestFailure(t, namespaceName, realTargetDirectory) })
+	AddTeardown(TEARDOWN_SECRETS, func() { BackupCertificateFilesOnTestFailure(t, namespaceName, realTargetDirectory) })
 	AddTeardown(TEARDOWN_SECRETS, func() { PrintCertificateFilesOnTestFailure(t, realTargetDirectory) })
 	verifyCertificateFiles(t, realTargetDirectory)
 
@@ -117,7 +113,7 @@ func PrintCertificateFilesOnTestFailure(t *testing.T, srcDirectory string) {
 	}
 }
 
-func BackupCerificateFilesOnTestFailure(t *testing.T, namespaceName string, srcDirectory string) {
+func BackupCertificateFilesOnTestFailure(t *testing.T, namespaceName string, srcDirectory string) {
 	targetDirPath := filepath.Join(RESULT_DIR, namespaceName, filepath.Base(srcDirectory))
 	_ = os.MkdirAll(targetDirPath, 0700)
 	if t.Failed() {
@@ -131,8 +127,8 @@ func BackupCerificateFilesOnTestFailure(t *testing.T, namespaceName string, srcD
 
 func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []string, image string) (string, string) {
 	podName := createTLSGeneratorPod(t, namespaceName, image, 30*time.Second)
-	GenerateCustomCertificates(t, podName, namespaceName, commands)
-	keysLocation := CopyCertificatesToControlHost(t, podName, namespaceName)
+	GenerateCustomCertificates(t, namespaceName, podName, commands)
+	keysLocation := CopyCertificatesToControlHost(t, namespaceName, podName)
 
 	CreateSecret(t, namespaceName, CA_CERT_FILE, CA_CERT_SECRET, keysLocation)
 	CreateSecret(t, namespaceName, NUOCMD_FILE, NUOCMD_SECRET, keysLocation)
@@ -142,37 +138,13 @@ func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []str
 	return podName, keysLocation
 }
 
-func RotateTLSCertificates(t *testing.T, options *helm.Options,
-	kubectlOptions *k8s.KubectlOptions, adminReleaseName string, databaseReleaseName string, tlsKeysLocation string, helmUpgrade bool) {
+func AddTrustedCertificate(t *testing.T, namespaceName string, podName string, tlsKeysLocation string, certFileName string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
 
-	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
-	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
-	namespaceName := kubectlOptions.Namespace
-	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
-
-	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(tlsKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")
-	err = k8s.RunKubectlE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "add", "trusted-certificate",
-		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "60")
+	k8s.RunKubectl(t, options, "cp", filepath.Join(tlsKeysLocation, certFileName), podName+":/tmp")
+	err := k8s.RunKubectlE(t, options, "exec", podName, "--", "nuocmd", "add", "trusted-certificate",
+		"--alias", "ca_prime", "--cert", "/tmp/"+certFileName, "--timeout", "60")
 	assert.NilError(t, err, "add trusted-certificate failed")
 
-	if helmUpgrade == true {
-		// Upgrade admin release
-		DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
-		helm.Upgrade(t, options, ADMIN_HELM_CHART_PATH, adminReleaseName)
-
-		adminStatefulSet := fmt.Sprintf("%s-nuodb", adminReleaseName)
-		k8s.RunKubectl(t, kubectlOptions, "rollout", "status", "sts/"+adminStatefulSet, "--timeout", "300s")
-		AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
-
-		// Upgrade database release
-		helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, databaseReleaseName)
-	} else {
-		// Rolling upgrade could take a lot of time due to readiness probes.
-		// Faster approach will be to restart all PODs. A prerequsite for this 
-		// is to have the same secrets update before hand.
-		k8s.RunKubectl(t, kubectlOptions, "delete", "pod", "--selector=domain=nuodb")
-		AwaitPodPhase(t, namespaceName, admin0, corev1.PodRunning, 60*time.Second)
-		AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
-	}
-	AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 }

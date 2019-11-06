@@ -220,7 +220,6 @@ func AwaitAdminPodUp(t *testing.T, namespace string, adminPodName string, timeou
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
 }
 
-
 func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate string, expectedVersion string, timeout time.Duration) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -345,7 +344,6 @@ func GetStringOccurenceInLog(t *testing.T, namespace string, podName string, exp
 	fullLog := string(buf)
 
 	return strings.Count(fullLog, expectedLogLine)
-
 }
 
 func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {
@@ -486,6 +484,13 @@ func DeletePod(t *testing.T, namespace string, podName string) {
 	k8s.RunKubectl(t, options, "delete", podName)
 }
 
+func DeleteAllPodsInDomain(t *testing.T, namespace string, selector string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	k8s.RunKubectl(t, options, "delete", "pod", fmt.Sprintf("--selector=domain=%s", selector))
+}
+
 func RunSQL(t *testing.T, namespace string, podName string, databaseName string, sql string) (result string, err error) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -503,7 +508,7 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 	return result, err
 }
 
-func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, commands []string) {
+func ExecuteCommandsInPod(t *testing.T, namespaceName string, podName string, commands []string) {
 	tmpfile, err := ioutil.TempFile("", "script")
 	if err != nil {
 		assert.NilError(t, err)
