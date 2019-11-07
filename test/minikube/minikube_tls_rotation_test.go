@@ -130,7 +130,7 @@ func TestKubernetesTLSCARotation(t *testing.T) {
 
 	// Rolling upgrade could take a lot of time due to readiness probes.
 	// Faster approach will be to restart all PODs. A prerequisite for this
-	// is to have the same secrets update before hand.
+	// is to have the same secrets update as before.
 	testlib.DeleteAllPodsInDomain(t, namespaceName, "nuodb")
 	testlib.AwaitPodPhase(t, namespaceName, admin0, v1.PodRunning, 60*time.Second)
 	testlib.AwaitAdminFullyConnected(t, namespaceName, admin0, 2)
