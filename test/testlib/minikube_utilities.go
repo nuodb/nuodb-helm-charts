@@ -1,19 +1,18 @@
 package testlib
 
 import (
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
-	"regexp"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -321,14 +320,6 @@ func VerifyLicenseFile(t *testing.T, namespace string, podName string, expectedL
 	assert.Equal(t, output, expectedLicense)
 }
 
-func VerifyCustomFileDoesNotGetMounted(t *testing.T, namespace string, podName string, unexpectedFile string) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespace
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "ls", "/etc/nuodb/")
-	assert.NilError(t, err)
-	assert.Assert(t, !strings.Contains(output, unexpectedFile), output)
-}
-
 func VerifyLicenseIsCommunity(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -481,12 +472,6 @@ func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *v1.Daem
 	return &object
 }
 
-func decodeBase64(t *testing.T, input []byte) string {
-	str, err := base64.StdEncoding.DecodeString(string(input))
-	assert.NilError(t, err, "decodeBase64: base64.decodeString")
-	return string(str)
-}
-
 func DeleteDatabase(t *testing.T, namespace string, dbName string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -548,3 +533,5 @@ func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, co
 	err = k8s.RunKubectlE(t, options, "exec", podName, "--", "sh", "/tmp/"+filepath.Base(tmpfile.Name()))
 	assert.NilError(t, err, "executeCommandsInPod: Script returned error.")
 }
+
+
