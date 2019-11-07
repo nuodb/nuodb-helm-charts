@@ -525,7 +525,7 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 	return result, err
 }
 
-func ExecuteCommandsInPod(t *testing.T, namespaceName string, podName string, commands []string) {
+func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, commands []string) {
 	tmpfile, err := ioutil.TempFile("", "script")
 	if err != nil {
 		assert.NilError(t, err)
