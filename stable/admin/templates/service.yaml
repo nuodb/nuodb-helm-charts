@@ -1,8 +1,18 @@
+{{- if .Values.admin.loadBalancerService.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
   annotations:
     description: "Service (and load-balancer) for Admin pods."
+    {{- if and .Values.admin.loadBalancerService.internalIP .Values.cloud.provider}}
+    {{- if eq .Values.cloud.provider "amazon" }}
+    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+    {{- else if eq .Values.cloud.provider "azure" }}
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    {{- else if eq .Values.cloud.provider "google" }}
+    cloud.google.com/load-balancer-type: "Internal"
+    {{- end}}
+    {{- end}}
   labels:
     app: {{ template "admin.fullname" . }}
     group: nuodb
@@ -21,3 +31,4 @@ spec:
   type: LoadBalancer
 status:
   loadBalancer: {}
+{{- end}}

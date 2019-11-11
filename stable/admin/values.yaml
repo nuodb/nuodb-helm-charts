@@ -61,8 +61,13 @@ admin:
   replicas: 1
 
   lbPolicy: nearest
-
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
+
+  ## Enable the Layer 4 Load balancer if required,
+  ## and specify if it should provision an internal or external cloud IP address
+  loadBalancerService: {}
+  #   enabled: false
+  #   internalIP: true
 
   persistence:
     size: 1Gi

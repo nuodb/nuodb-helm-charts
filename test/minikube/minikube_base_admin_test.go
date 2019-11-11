@@ -17,7 +17,12 @@ import (
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
-	options := helm.Options{}
+	options := helm.Options{
+		SetValues: map[string]string{
+			"admin.loadBalancerService.enabled": "true",
+			"admin.loadBalancerService.internalIP": "false",
+		},
+	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 

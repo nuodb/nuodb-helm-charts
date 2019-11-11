@@ -14,7 +14,11 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
 	options := helm.Options{
-		SetValues: map[string]string{"admin.replicas": "3"},
+		SetValues: map[string]string{
+			"admin.replicas": "3",
+			"admin.loadBalancerService.enabled": "true",
+			"admin.loadBalancerService.internalIP": "false",
+		},
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)

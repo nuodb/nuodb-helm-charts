@@ -171,6 +171,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `replicas` | Number of NuoDB Admin replicas | `1` |
 | `lbPolicy` | Load balancer policy name | `nil` |
 | `lbQuery` | Load balancer query | `nil` |
+| `loadBalancerService.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
+| `loadBalancerService.internalIP` | Whether to use an internal or external IP address for the load balancer | `nil` |
 | `resources` | Labels to apply to all resources | `{}` |
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |
@@ -182,6 +184,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `persistence.size` | Amount of disk space allocated for admin RAFT state | `10Gi` |
 | `persistence.storageClass` | Storage class for volume backing admin RAFT state | `-` |
 | `envFrom` | Import ENV vars from one or more configMaps | `[]` |
+| `options` | Set optons to be passed to nuoadmin as arguments | `{}` |
 | `securityContext.capabilities` | add capabilities to the container | `[]` |
 | `tlsCACert.secret` | TLS CA certificate secret name | `nil` |
 | `tlsCACert.key` | TLS CA certificate secret key | `nil` |

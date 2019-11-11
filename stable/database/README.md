@@ -246,6 +246,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.affinity` | Affinity rules for NuoDB SM | `{}` |
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
+| `te.loadBalancerService.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
+| `te.loadBalancerService.internalIP` | Whether to use an internal or external IP address for the load balancer | `nil` |
 | `te.replicas` | TE replicas | `1` |
 | `te.memoryOption` | TE engine memory (*future deprecation*) | `"8g"` |
 | `te.labels` | Labels given to the TEs started | `""` |

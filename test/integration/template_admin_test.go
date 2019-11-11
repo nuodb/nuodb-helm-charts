@@ -170,3 +170,44 @@ func TestAdminStatefulSetComponentLabel(t *testing.T) {
 		assert.Check(t, ok)
 	}
 }
+
+func TestAdminHeadlessServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-headless.yaml"})
+
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
+}
+
+func TestAdminServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.provider": "amazon",
+			"admin.loadBalancerService.enabled": "true",
+			"admin.loadBalancerService.internalIP": "true",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service.yaml"})
+
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+
+	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "aws-load-balancer-internal"))
+}

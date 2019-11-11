@@ -1,6 +1,18 @@
+{{- if .Values.database.te.loadBalancerService.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
+  annotations:
+    description: "Service (and load-balancer) for TE pods."
+    {{- if and .Values.database.te.loadBalancerService.internalIP .Values.cloud.provider}}
+    {{- if eq .Values.cloud.provider "amazon" }}
+    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
+    {{- else if eq .Values.cloud.provider "azure" }}
+    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+    {{- else if eq .Values.cloud.provider "google" }}
+    cloud.google.com/load-balancer-type: "Internal"
+    {{- end}}
+    {{- end}}
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
@@ -8,11 +20,15 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "database.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ .Values.database.name }}
+  name: {{ .Values.database.name }}-balancer
 spec:
-  clusterIP: None
   ports:
   - { name: 48006-tcp,  port: 48006,  protocol: TCP,  targetPort: 48006 }
   selector:
     app: {{ template "database.fullname" . }}
     component: te
+  sessionAffinity: None
+  type: LoadBalancer
+status:
+  loadBalancer: {}
+{{- end}}
