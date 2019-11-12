@@ -199,11 +199,6 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 			},
 		})
 
-		duration := time.Duration(120)*time.Second
-		time.Sleep(duration)
-
-
-
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
 		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBHeadlessService(t, namespaceName, admin0, "demo") })
 		t.Run("verifyDBService", func(t *testing.T) { verifyDBService(t, namespaceName, "demo-balancer") })
