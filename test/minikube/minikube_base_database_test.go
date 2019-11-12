@@ -194,8 +194,8 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 				"database.sm.labels.cloud":                   LABEL_CLOUD,
 				"database.sm.labels.region":                  LABEL_REGION,
 				"database.sm.labels.zone":                    LABEL_ZONE,
-				"database.te.loadBalancerService.enabled":    "true",
-				"database.te.loadBalancerService.internalIP": "false",
+				"database.te.k8sL4Service.enabled":    "true",
+				"database.te.k8sL4Service.internalIP": "false",
 			},
 		})
 
@@ -228,8 +228,8 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 					"database.sm.labels.region":                  LABEL_REGION,
 					"database.sm.labels.zone":                    LABEL_ZONE,
 					"database.enableDaemonSet":                   "true",
-					"database.te.loadBalancerService.enabled":    "true",
-					"database.te.loadBalancerService.internalIP": "false",
+					"database.te.k8sL4Service.enabled":    "true",
+					"database.te.k8sL4Service.internalIP": "false",
 					// prevent non-backup SM from scheduling
 					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
 				},

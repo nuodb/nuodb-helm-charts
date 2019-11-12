@@ -19,8 +19,8 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"admin.loadBalancerService.enabled": "true",
-			"admin.loadBalancerService.internalIP": "false",
+			"admin.k8sL4Service.enabled": "true",
+			"admin.k8sL4Service.internalIP": "false",
 		},
 	}
 

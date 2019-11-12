@@ -65,7 +65,7 @@ admin:
 
   ## Enable the Layer 4 Load balancer if required,
   ## and specify if it should provision an internal or external cloud IP address
-  loadBalancerService: {}
+  k8sL4Service: {}
   #   enabled: false
   #   internalIP: true
 

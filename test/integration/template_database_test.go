@@ -200,8 +200,8 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	options := &helm.Options{
 		SetValues: map[string]string{
 			"cloud.provider": "amazon",
-			"database.te.loadBalancerService.enabled": "true",
-			"database.te.loadBalancerService.internalIP": "true",
+			"database.te.k8sL4Service.enabled": "true",
+			"database.te.k8sL4Service.internalIP": "true",
 		},
 	}
 
