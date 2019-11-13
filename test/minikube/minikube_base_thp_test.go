@@ -58,7 +58,7 @@ func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
 	daemonName := fmt.Sprintf("%s-%s", "transparent-hugepage", randomSuffix)
 
 	options := &helm.Options{
-		ValuesFiles: []string{"thp.affinity": "../files/thp-affinity.yaml"},
+		ValuesFiles: []string{"../files/thp-affinity.yaml"},
 		SetValues:   map[string]string{"thp.fullnameOverride": daemonName},
 	}
 
@@ -82,7 +82,7 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 	daemonName := fmt.Sprintf("%s-%s", "transparent-hugepage", randomSuffix)
 
 	options := &helm.Options{
-		ValuesFiles: []string{"thp.affinity": "../files/thp-affinity.yaml"},
+		ValuesFiles: []string{"../files/thp-affinity.yaml"},
 		SetValues:   map[string]string{"thp.fullnameOverride": daemonName},
 	}
 
