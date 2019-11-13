@@ -23,7 +23,8 @@ sudo chown -R travis: /home/travis/.minikube/
 kubectl cluster-info
 
 # install helm
-helm init
+# Use default K8s service account as a workaround explained in https://github.com/helm/helm/issues/3460
+helm init --service-account default
 
 # get the image to speed up tests
 docker pull nuodb/nuodb-ce:latest
