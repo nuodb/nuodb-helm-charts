@@ -1,6 +1,8 @@
-nodeAffinity:
-  requiredDuringSchedulingIgnoredDuringExecution:
-    nodeSelectorTerms:
-      - matchExpressions:
-          - key: failure-domain.beta.kubernetes.io/zone
-            operator: Exists
+thp:
+  affinity: |
+    nodeAffinity:
+      requiredDuringSchedulingIgnoredDuringExecution:
+        nodeSelectorTerms:
+          - matchExpressions:
+              - key: failure-domain.beta.kubernetes.io/zone
+                operator: Exists
