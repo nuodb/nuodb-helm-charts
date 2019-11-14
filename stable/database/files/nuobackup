@@ -73,11 +73,12 @@ fi
 
 [ "$backup_type" = "report-latest" ] && echo "$backupset" && exit 0
 
-# call nuocmd to perform the actual backup
-nuocmd --api-server $NUOCMD_API_SERVER hotcopy database \
+# call nuodocker to perform the actual backup
+nuodocker backup database \
     --db-name ${db_name} \
     --type ${backup_type} \
-    --default-backup-dir ${backup_root}/${backupset} \
+    --backup-root ${backup_root} \
+    --backup-name ${backupset} \
     --labels backup ${backup_group} ${labels} \
     --timeout ${timeout}
 
