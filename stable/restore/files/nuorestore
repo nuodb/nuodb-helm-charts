@@ -1,11 +1,58 @@
 #!/bin/sh
 #
-# simple script to perform a NuoDB restore
+# simple script to perform a NuoDB restore.
+# Sets a flag to tell newly-starting SM(s) to perform the restore; then optionally causes the SM(s) to restart
+
+# args are:
+#   --type      - retore type: ( database | archive )
+#   --db-name   - database name to perform the restore operation on
+#   --source    - source to restore from - can be a backupset or a URL
+#   --group     - arbitrary group to select the SMs to backup. Often the datacentre or cloud name
+#   --labels    - additional arbitrary labels to select the SMs to backup
+#   --auto      - automatically start the restore operation ( true | false )
+
+: ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
+: ${NUODB_RESTORE_REQUEST_PREFIX:=/nuodb/nuosm}
+
+restore_type="database"
+db_name=$DB_NAME
+restore_url=$NUODB_RESTORE_URL
+backup_group="all"
+labels=""
+
+while [[ $# -gt 0 ]] && [[ "$1" == "-"* ]] ;
+do
+    opt="$1";
+    shift;
+    case "$opt" in
+        "--" ) break 2;;
+        "--type" )
+           restore_type="$1"; shift;;
+        "--type="* )
+           restore_type="${opt#*=}";;
+        "--db-name" )
+           db_name="$1"; shift;;
+        "--db-name="* )
+           db_name="${opt#*=}";;
+        "--source" )
+           restore_source="$1"; shift;;
+        "--source="* )
+           restore_source="${opt#*=}";;
+        "--auto" )
+           auto="$1"; shift;;
+        "--auto="* )
+           auto="${opt#*=}";;
+        *) echo >&2 "Invalid nuobackup option: $opt ($@)"; exit 1;;
+   esac
+done
+
+restore_type=$(echo $restore_type | tr '[:upper:]' '[:lower:]')
+auto=$(echo $auto | | tr '[:upper:]' '[:lower:]')
 
 # set the persistent flag for the backup
-nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore \
-    --value $NUODB_RESTORE_URL \
+nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
+    --value $restore_source \
     --expected-value ''
 
-# initiate the restore
-nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $DB_NAME
+# optionally do automatic initiation of the restore
+[ "$auto" = "true" -a "$restore_type" = "database" ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name;;

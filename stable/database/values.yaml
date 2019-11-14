@@ -52,6 +52,15 @@ nuodb:
     ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
     ##
 
+    # the prefix for the shared request value - default value is always valid
+    requestPrefix: ""
+
+    # the prefix for the shared latest backup value - default value is always valid
+    latestPrefix: ""
+
+    # the prefix for the shared latest backup ringbuffer - default value is always valid
+    latestKey: ""
+
 admin:
   # domain is the name of the NuoDB administration domain (e.g. the cluster name)
   domain: nuodb
@@ -117,17 +126,16 @@ database:
     max-lost-archives: 0
 
   # ensure all values here are strings - so quote any purely numeric values
-  import:
-    url: ""
+  autoImport:
+    source: ""
     credentials: ""
     stripLevels: "1"
 
-  restore:
-    # the prefix for the shared restore-request value - default value is always valid
-    requestPrefix: ""
-
-    # the prefix for the shared latest backup value - default value is always valid
-    latestPrefix: ""
+  # ensure all values here are strings - so quote any purely numeric values
+  autoRestore:
+    source:
+    credentials: ""
+    stripLevels: "1"
 
   sm:
     # Settings for storage manager (SM) nodes with hotcopy enabled.
@@ -150,14 +158,16 @@ database:
 
       backupDir: /var/opt/nuodb/backup
 
+      # group for selecting the SM(s) to backup - the default is the cloud.clusterName
+      backupGroup: ""
+
       ## Schedule for the running the full backup cron job
       # Eg: At 22:35 on every day-of-month if it's on Sunday
-      fullSchedule: 35 22 */1 * 6
+      fullSchedule: "35 22 * * 6"
 
       ## Schedule for the running the incremental backup cron job
       # Eg: At 22:35 on every day-of-month if it's on every day-of-week from Monday through Saturday
-      incrementalSchedule: 35 22 */1 * 0-5
-
+      incrementalSchedule: "35 22 * * 0-5"
 
       persistence:
         size: 20Gi

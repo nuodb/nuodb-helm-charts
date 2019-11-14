@@ -1,0 +1,91 @@
+#!/bin/sh
+#
+# simple script to automate backup
+#
+
+# args are:
+#   --type     - backup type: ( full | incremental | journal | get-latest )
+#   --db-name  - name of the database to backup
+#   --group    - arbitrary group to select the SMs to backup. Often the datacentre or cloud name
+#   --labels   - additional arbitrary labels to select the SMs to backup
+#   --timeout  - timeout (in seconds) to synchronously wait for the backup to complete. 0 => async backup.
+#   --backup-root - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
+
+: ${NUODB_MAX_BACKUP_HISTORY:=10}
+: ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
+
+backup_type="full"
+db_name=$DB_NAME
+backup_group="none"
+labels=""
+timeout=1800
+backup_root=$BACKUP_DIR
+
+while [[ $# -gt 0 ]] && [[ "$1" == "-"* ]] ;
+do
+    opt="$1";
+    shift;
+    case "$opt" in
+        "--" ) break 2;;
+        "--type" )
+           backup_type="$1"; shift;;
+        "--type="* )
+           backup_type="${opt#*=}";;
+        "--db-name" )
+           db_name="$1"; shift;;
+        "--db-name="* )
+           db_name="${opt#*=}";;
+        "--group" )
+           backup_group="$1"; shift;;
+        "--group="* )
+           backup_group="${opt#*=}";;
+        "--labels" )
+           labels="$1"; shift;;
+        "--labels="* )
+           labels="${opt#*=}";;
+        "--timeout" )
+           timeout="$1"; shift;;
+        "--timeout="* )
+           timeout="${opt#*=}";;
+        "--backup-root" )
+           backup_root="$1"; shift;;
+        "--backup-root="* )
+           backup_root="${opt#*=}";;
+        *) echo >&2 "Invalid nuobackup option: $opt ($@)"; exit 1;;
+   esac
+done
+
+backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
+label=$(echo $label | | tr '[:upper:]' '[:lower:]')
+
+# find the index for the latest backup info
+latest=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest )
+
+if [ "$backup_type" = "full" ]; then
+   backupset=$( date "+%Y%m%dT%H%M%S" )
+
+   # bump latest, and wrap around (simple ring-buffer)
+   next=$(( (latest + 1) % $NUODB_MAX_BACKUP_HISTORY ))
+else
+   # retrieve the latest bckupset name
+   backupset=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
+fi
+
+[ "$backup_type" = "report-latest" ] && echo "$backupset" && exit 0
+
+# call nuocmd to perform the actual backup
+nuocmd --api-server $NUOCMD_API_SERVER hotcopy database \
+    --db-name ${db_name} \
+    --type ${backup_type} \
+    --default-backup-dir ${backup_root}/${backupset} \
+    --labels backup ${backup_group} ${labels} \
+    --timeout ${timeout}
+
+retval=$?
+[ $retval = 0 ] || echo >&2 "Error running hotcopy $retval"; exit $retval
+
+if [ "$backup_type" = "full" ]; then
+   # store the new backupset as latest, and store the new latest index
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/$next --value $backupset --unconditional
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $next --expected-value $latest
+fi

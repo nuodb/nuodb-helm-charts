@@ -26,6 +26,10 @@ spec:
         ##
         args:
         - "nuorestore"
+        - "--db-name"
+        - "{{ .Values.restore.target }}"
+        - "--source"
+        - "{{ .Values.restore.source }}"
         env:
         - name: NODE_NAME
           valueFrom:

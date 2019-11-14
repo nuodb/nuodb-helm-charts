@@ -22,17 +22,13 @@ spec:
             image: {{ template "nuodb.image" . }}
             imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
             args:
-            - "nuodocker"
-            - "--api-server"
-            - "https://{{ template "admin.address" . }}:8888"
-            - "backup"
-            - "database"
-            - "--db-name"
-            - "{{ .Values.database.name }}"
+            - "nuobackup"
             - "--type"
             - "full"
-            - "--labels"
-            - "backup-{{- .Values.cloud.clusterName }} enabled"
+            - "--db-name"
+            - "{{ .Values.database.name }}"
+            - "--group"
+            - "{{ include "hotcopy.group" . }}"
             - "--timeout"
             - "{{ .Values.database.sm.hotCopy.timeout }}"      
             - "--backup-root"
@@ -56,6 +52,9 @@ spec:
             - { name: TIMEOUT,             value: "{{ .Values.database.sm.hotCopy.timeout }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             volumeMounts:
+            - name: nuobackup
+              mountPath: /usr/local/bin/nuobackup
+              subPath: nuobackup
             {{- if .Values.admin.tlsCACert }}
             - name: tls-ca-cert
               mountPath: /etc/nuodb/keys/ca.cert
@@ -67,6 +66,9 @@ spec:
               subPath: {{ .Values.admin.tlsClientPEM.key }}
             {{- end }}
           volumes:
+          - name: nuobackup
+            mountPath: /usr/local/bin/nuobackup
+            subPath: nuobackup
           {{- if .Values.admin.tlsCACert }}
           - name: tls-ca-cert
             secret:
@@ -104,17 +106,13 @@ spec:
             image: {{ template "nuodb.image" . }}
             imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
             args:
-            - "nuodocker"
-            - "--api-server"
-            - "https://{{ template "admin.address" . }}:8888"
-            - "backup"
-            - "database"
-            - "--db-name"
-            - "{{ .Values.database.name }}"
+            - "nuobackup"
             - "--type"
             - "incremental"
-            - "--labels"
-            - "backup-{{- .Values.cloud.clusterName }} enabled"
+            - "--db-name"
+            - "{{ .Values.database.name }}"
+            - "--group"
+            - "{{ include "hotcopy.group" . }}"
             - "--timeout"
             - "{{ .Values.database.sm.hotCopy.timeout }}"      
             - "--backup-root"
@@ -138,6 +136,9 @@ spec:
             - { name: TIMEOUT,             value: "{{ .Values.database.sm.hotCopy.timeout }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             volumeMounts:
+            - name: nuobackup
+              mountPath: /usr/local/bin/nuobackup
+              subPath: nuobackup
             {{- if .Values.admin.tlsCACert }}
             - name: tls-ca-cert
               mountPath: /etc/nuodb/keys/ca.cert
@@ -149,6 +150,9 @@ spec:
               subPath: {{ .Values.admin.tlsClientPEM.key }}
             {{- end }}
           volumes:
+          - name: nuobackup
+            mountPath: /usr/local/bin/nuobackup
+            subPath: nuobackup
           {{- if .Values.admin.tlsCACert }}
           - name: tls-ca-cert
             secret:
@@ -188,19 +192,15 @@ spec:
             image: {{ template "nuodb.image" . }}
             imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
             args:
-            - "nuodocker"
-            - "--api-server"
-            - "https://{{ template "admin.address" . }}:8888"
-            - "backup"
-            - "database"
-            - "--db-name"
-            - "{{ .Values.database.name }}"
+            - "nuobackup"
             - "--type"
             - "journal"
-            - "--labels"
-            - "backup-{{- .Values.cloud.clusterName }} enabled journalBackup-{{- .Values.cloud.clusterName }} enabled"
+            - "--db-name"
+            - "{{ .Values.database.name }}"
+            - "--group"
+            - "{{ include "hotcopy.group" . }}"
             - "--timeout"
-            - "{{ .Values.database.sm.hotCopy.journalBackup.timeout }}"      
+            - "{{ .Values.database.sm.hotCopy.timeout }}"      
             - "--backup-root"
             - "{{ .Values.database.sm.hotCopy.backupDir }}"
             env:
@@ -222,6 +222,9 @@ spec:
             - { name: TIMEOUT,             value: "{{ .Values.database.sm.hotCopy.journalBackup.timeout }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             volumeMounts:
+            - name: nuobackup
+              mountPath: /usr/local/bin/nuobackup
+              subPath: nuobackup
             {{- if .Values.admin.tlsCACert }}
             - name: tls-ca-cert
               mountPath: /etc/nuodb/keys/ca.cert
@@ -233,6 +236,9 @@ spec:
               subPath: {{ .Values.admin.tlsClientPEM.key }}
             {{- end }}
           volumes:
+          - name: nuobackup
+            mountPath: /usr/local/bin/nuobackup
+            subPath: nuobackup
           {{- if .Values.admin.tlsCACert }}
           - name: tls-ca-cert
             secret:

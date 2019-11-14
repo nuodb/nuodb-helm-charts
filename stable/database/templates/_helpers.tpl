@@ -144,3 +144,17 @@ envFrom:
 {{ toYaml . -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Return options as $key $value
+*/}}
+{{- define "opt.key-values" -}}
+{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}
+{{- end -}}
+
+{{/*
+Return the hotcopy group
+*/}}
+{{- define "hotcopy.group" -}}
+{{ default .Values.cloud.clusterName .Values.database.sm.hotCopy.backupGroup }}
+{{- end -}}
