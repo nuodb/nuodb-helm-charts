@@ -137,13 +137,7 @@ securityContext:
 Import ENV vars from configMaps
 */}}
 {{- define "database.envFrom" }}
-envFrom:
-  - configMapRef:
-    name: {{ .Values.database.name }}-restore
-  {{- range $map := .Values.database.envFrom.configMapRef }}
-  - configMapRef:
-    name: {{$map -}}
-  {{ end -}}
+envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range $map := .Values.database.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
 {{- end -}}
 
 {{/*
