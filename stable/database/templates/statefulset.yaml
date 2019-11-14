@@ -350,7 +350,7 @@ spec:
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
-        - { name: NUODB_BACKUP_GROUP   value: "{{ include "hotcopy.group" . }}" }
+        - { name: NUODB_BACKUP_GROUP,  value: "{{ include "hotcopy.group" . }}" }
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
