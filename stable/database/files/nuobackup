@@ -89,7 +89,7 @@ nuodocker backup database \
     --timeout ${timeout}
 
 retval=$?
-if [ $retval = 0 ]; then
+if [ $retval != 0 ]; then
    echo >&2 "Error running hotcopy $retval"
    exit $retval
 fi
