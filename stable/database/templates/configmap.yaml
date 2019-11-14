@@ -47,7 +47,7 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "database.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ template "database.fullname" . }}-restore
+  name: {{ .Values.database.name }}-restore
 data:
   NUODB_IMPORT_SOURCE: {{ .Values.database.autoImport.source }}
   NUODB_AUTO_RESTORE: {{ .Values.database.autoRestore.source }}
