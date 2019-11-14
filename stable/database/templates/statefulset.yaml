@@ -79,9 +79,9 @@ spec:
           - "--labels"
           - "{{- include "opt.key-values" . }}"
     {{- end }}
-    {{- if .Values.database.options }}
+    {{- with .Values.database.options }}
           - "--database-options"
-          - "{{- include "opt.key-values" .Values.database.options -}}"
+          - "{{- include "opt.key-values" . }}"
     {{- end }}
 {{- range $opt, $val := .Values.database.sm.otherOptions }}
           - "--{{$opt}}"
