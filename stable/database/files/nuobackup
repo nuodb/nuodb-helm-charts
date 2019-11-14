@@ -90,6 +90,9 @@ retval=$?
 
 if [ "$backup_type" = "full" ]; then
    # store the new backupset as latest, and store the new latest index
+   echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest = $next"
+   echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next = $backupset"
+
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/$next --value $backupset --unconditional
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $next --expected-value $latest
 fi
