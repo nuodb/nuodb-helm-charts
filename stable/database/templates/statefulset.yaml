@@ -87,7 +87,7 @@ spec:
           - "--{{$opt}}"
           - "{{$val}}"
 {{- end}}
-    {{- include "database.envFrom" . | indent 8 }}
+    # {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
           valueFrom:
