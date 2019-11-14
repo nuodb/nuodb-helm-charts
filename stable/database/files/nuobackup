@@ -88,6 +88,8 @@ nuodocker backup database \
 retval=$?
 [ $retval = 0 ] || echo >&2 "Error running hotcopy $retval"; exit $retval
 
+echo "backup_type=$backup_type"
+
 if [ "$backup_type" = "full" ]; then
    # store the new backupset as latest, and store the new latest index
    echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest = $next"
