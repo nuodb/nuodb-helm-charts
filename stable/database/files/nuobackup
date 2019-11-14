@@ -74,6 +74,7 @@ fi
 [ "$backup_type" = "report-latest" ] && echo "$backupset" && exit 0
 
 # call nuodocker to perform the actual backup
+echo "nuodocker..."
 nuodocker backup database \
     --db-name ${db_name} \
     --type ${backup_type} \
