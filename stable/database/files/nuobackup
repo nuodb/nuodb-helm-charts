@@ -73,6 +73,7 @@ if [ "$backup_type" = "full" ]; then
 else
    # retrieve the latest bckupset name
    backupset=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
+   echo >2& "Looked up $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} -> $backupset"
 fi
 
 if [ "$backup_type" = "report-latest" ]; then
