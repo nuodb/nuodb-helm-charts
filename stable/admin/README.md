@@ -171,8 +171,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `replicas` | Number of NuoDB Admin replicas | `1` |
 | `lbPolicy` | Load balancer policy name | `nil` |
 | `lbQuery` | Load balancer query | `nil` |
-| `k8sL4Service.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
-| `k8sL4Service.internalIP` | Whether to use an internal or external IP address for the load balancer | `nil` |
+| `externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
+| `externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `resources` | Labels to apply to all resources | `{}` |
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |

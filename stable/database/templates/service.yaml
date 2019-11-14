@@ -1,10 +1,10 @@
-{{- if .Values.database.te.k8sL4Service.enabled }}
+{{- if .Values.database.te.externalAccess.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
   annotations:
     description: "Service (and load-balancer) for TE pods."
-    {{- if and .Values.database.te.k8sL4Service.internalIP .Values.cloud.provider}}
+    {{- if and .Values.database.te.externalAccess.internalIP .Values.cloud.provider}}
     {{- if eq .Values.cloud.provider "amazon" }}
     service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
     {{- else if eq .Values.cloud.provider "azure" }}

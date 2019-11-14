@@ -196,8 +196,8 @@ func TestAdminServiceRenders(t *testing.T) {
 	options := &helm.Options{
 		SetValues: map[string]string{
 			"cloud.provider": "amazon",
-			"admin.k8sL4Service.enabled": "true",
-			"admin.k8sL4Service.internalIP": "true",
+			"admin.externalAccess.enabled": "true",
+			"admin.externalAccess.internalIP": "true",
 		},
 	}
 
