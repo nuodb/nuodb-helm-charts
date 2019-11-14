@@ -74,7 +74,7 @@ spec:
           - "--restored"
     {{- end }}
           - "--options"
-          - "mem {{ .Values.database.sm.memoryOption}} {{- include "opt.key-values" .Values.database.sm.engineOptions }}"
+          - "mem {{ .Values.database.sm.memoryOption}} {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
     {{- with .Values.database.sm.labels }}      
           - "--labels"
           - "{{- include "opt.key-values" . }}"
