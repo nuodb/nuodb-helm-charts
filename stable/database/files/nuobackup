@@ -82,7 +82,7 @@ nuodocker backup database \
     --type ${backup_type} \
     --backup-root ${backup_root} \
     --backup-name ${backupset} \
-    --labels backup ${backup_group} ${labels} \
+    --labels "backup ${backup_group} ${labels}" \
     --timeout ${timeout}
 
 retval=$?
