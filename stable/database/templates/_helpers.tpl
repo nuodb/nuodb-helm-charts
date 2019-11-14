@@ -138,10 +138,10 @@ Import ENV vars from configMaps
 */}}
 {{- define "database.envFrom" }}
 envFrom:
-- configMapRef:
+  - configMapRef:
     name: {{ .Values.database.name }}-restore
 {{- with .Values.database.envFrom }}
-{{ toYaml . -}}
+{{ toYaml . | indent 2 -}}
 {{- end -}}
 {{- end -}}
 
