@@ -70,12 +70,6 @@ func verifyDBHeadlessService(t *testing.T, namespaceName string, podName string,
 	testlib.PingService(t, namespaceName, serviceName, podName)
 }
 
-func verifyDBService(t *testing.T, namespaceName string, serviceName string) {
-
-	dBService := testlib.GetService(t, namespaceName, serviceName)
-	assert.Equal(t, dBService.Name, serviceName)
-}
-
 func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespaceName
@@ -194,14 +188,11 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 				"database.sm.labels.cloud":                   LABEL_CLOUD,
 				"database.sm.labels.region":                  LABEL_REGION,
 				"database.sm.labels.zone":                    LABEL_ZONE,
-				"database.te.k8sL4Service.enabled":    "true",
-				"database.te.k8sL4Service.internalIP": "false",
 			},
 		})
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
 		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBHeadlessService(t, namespaceName, admin0, "demo") })
-		t.Run("verifyDBService", func(t *testing.T) { verifyDBService(t, namespaceName, "demo-balancer") })
 		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
 	})
@@ -223,8 +214,6 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 					"database.sm.labels.region":                  LABEL_REGION,
 					"database.sm.labels.zone":                    LABEL_ZONE,
 					"database.enableDaemonSet":                   "true",
-					"database.te.k8sL4Service.enabled":    "true",
-					"database.te.k8sL4Service.internalIP": "false",
 					// prevent non-backup SM from scheduling
 					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
 				},
@@ -233,7 +222,6 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
 		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBHeadlessService(t, namespaceName, admin0, "demo") })
-		t.Run("verifyDBService", func(t *testing.T) { verifyDBService(t, namespaceName, "demo-balancer") })
 		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
 	})
