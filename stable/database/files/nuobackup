@@ -74,7 +74,10 @@ else
    backupset=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
 fi
 
-[ "$backup_type" = "report-latest" ] && echo "$backupset"; exit 0
+if [ "$backup_type" = "report-latest" ]; then
+   echo "$backupset"
+   exit 0
+fi
 
 # call nuodocker to perform the actual backup
 nuodocker backup database \
@@ -86,7 +89,10 @@ nuodocker backup database \
     --timeout ${timeout}
 
 retval=$?
-[ $retval = 0 ] || echo >&2 "Error running hotcopy $retval"; exit $retval
+if [ $retval = 0 ]; then
+   echo >&2 "Error running hotcopy $retval"
+   exit $retval
+fi
 
 echo "backup_type=$backup_type"
 
