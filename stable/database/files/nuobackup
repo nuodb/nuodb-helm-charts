@@ -11,7 +11,8 @@
 #   --timeout  - timeout (in seconds) to synchronously wait for the backup to complete. 0 => async backup.
 #   --backup-root - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
 
-set -x 
+# for debugging...
+[ -n "$NUODB_DEBUG" ] && set -x 
 
 : ${NUODB_MAX_BACKUP_HISTORY:=10}
 : ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
