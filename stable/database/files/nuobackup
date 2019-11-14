@@ -74,7 +74,7 @@ else
    backupset=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
 fi
 
-[ "$backup_type" = "report-latest" ] && echo "$backupset" && exit 0
+[ "$backup_type" = "report-latest" ] && echo "$backupset"; exit 0
 
 # call nuodocker to perform the actual backup
 nuodocker backup database \
