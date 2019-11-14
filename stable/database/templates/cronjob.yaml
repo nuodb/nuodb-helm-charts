@@ -67,8 +67,9 @@ spec:
             {{- end }}
           volumes:
           - name: nuobackup
-            mountPath: /usr/local/bin/nuobackup
-            subPath: nuobackup
+            configMap:
+              name: {{ template "database.fullname" . }}-nuobackup
+              defaultMode: 0777
           {{- if .Values.admin.tlsCACert }}
           - name: tls-ca-cert
             secret:
@@ -151,8 +152,9 @@ spec:
             {{- end }}
           volumes:
           - name: nuobackup
-            mountPath: /usr/local/bin/nuobackup
-            subPath: nuobackup
+            configMap:
+              name: {{ template "database.fullname" . }}-nuobackup
+              defaultMode: 0777
           {{- if .Values.admin.tlsCACert }}
           - name: tls-ca-cert
             secret:
@@ -237,8 +239,9 @@ spec:
             {{- end }}
           volumes:
           - name: nuobackup
-            mountPath: /usr/local/bin/nuobackup
-            subPath: nuobackup
+            configMap:
+              name: {{ template "database.fullname" . }}-nuobackup
+              defaultMode: 0777
           {{- if .Values.admin.tlsCACert }}
           - name: tls-ca-cert
             secret:
