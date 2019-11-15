@@ -59,7 +59,7 @@ admin:
 database:
   # name
   # NuoDB Database name.  must consist of lowercase alphanumeric
-  #characters '[a-z0-9]+'
+  # characters '[a-z0-9]+'
   name:
 
 restore:
@@ -72,6 +72,10 @@ restore:
   # * the metaname ':latest'
   # * a URL from which to download the backup (typically a TAR.GZ file)
   source: ""
+
+  # autoRestart
+  # if set to "true", running the restore chart causes the database to be restarted automatically
+  autoRestart: "true"
 
   affinity: {}
   

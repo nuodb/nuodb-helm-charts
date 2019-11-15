@@ -135,6 +135,10 @@ securityContext:
 
 {{/*
 Import ENV vars from configMaps
+**BEWARE!!**
+   The values for envFrom are formated into a single line because some parsers
+   - either in k8s or rancher - throw errors occasionally if the multi-line format is used.
+   You Have Been Warned.
 */}}
 {{- define "database.envFrom" }}
 envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range $map := .Values.database.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
