@@ -49,7 +49,7 @@ metadata:
     release: {{ .Release.Name | quote }}
   name: {{ .Values.database.name }}-restore
 data:
-  NUODB_IMPORT_SOURCE: {{ .Values.database.autoImport.source }}
+  NUODB_AUTO_IMPORT: {{ .Values.database.autoImport.source }}
   NUODB_AUTO_RESTORE: {{ .Values.database.autoRestore.source }}
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.autoImport.stripLevels | quote }}
   NUODB_RESTORE_STRIP_LEVELS: {{ default "1" .Values.database.autoRestore.stripLevels | quote }}

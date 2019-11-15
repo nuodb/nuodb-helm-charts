@@ -142,9 +142,9 @@ if [ "$myArchive" != "-1"]; then
     restore_source="$NUODB_AUTO_RESTORE"
   fi
 
-# my archive does not exist
-elif [ -n "$NUODB_IMPORT_SOURCE" ]; then
-  restore_source="$NUODB_IMPORT_SOURCE"
+# my archive does not exist - check to see if we should IMPORT it
+elif [ -n "$NUODB_AUTO_IMPORT" ]; then
+  restore_source="$NUODB_AUTO_IMPORT"
 fi
 
 # resolve ":latest"
