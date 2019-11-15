@@ -52,14 +52,14 @@ nuodb:
     ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
     ##
 
-    # the prefix for the shared request value - default value is always valid
-    requestPrefix: ""
+  # the prefix for the shared request value - default value is always valid
+  requestPrefix: ""
 
-    # the prefix for the shared latest backup value - default value is always valid
-    latestPrefix: ""
+  # the prefix for the shared latest backup value - default value is always valid
+  latestPrefix: ""
 
-    # the prefix for the shared latest backup ringbuffer - default value is always valid
-    latestKey: ""
+  # the prefix for the shared latest backup ringbuffer - default value is always valid
+  latestKey: ""
 
 admin:
   # domain is the name of the NuoDB administration domain (e.g. the cluster name)
