@@ -32,6 +32,7 @@ spec:
         - "{{ .Values.restore.source }}"
         - "--auto"
         - "{{ default "true" .Values.restore.autoRestart }}"
+    {{- include "restore.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
           valueFrom:
@@ -50,8 +51,14 @@ spec:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-name
+        - name: DATABASE_RESTORE_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-restore-credentials
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888"}
-        - { name: NUODB_RESTORE_URL,   value: {{ default ":latest" .Values.restore.backupSet }} }
+        - { name: NUODB_RESTORE_URL,   value: {{ default ":latest" .Values.restore.source }} }
+        - { name: NUODB_RESTORE_CREDENTIALS, value: {{ .Values.restore.credentials }} }
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb

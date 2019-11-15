@@ -20,6 +20,9 @@ restore_url=$NUODB_RESTORE_URL
 backup_group="all"
 labels=""
 
+restore_credentials=$NUODB_RESTORE_CREDENTIALS
+: ${restore_credentials:=DATABASE_RESTORE_CREDENTIALS}
+
 while [[ $# -gt 0 ]] && [[ "$1" == "-"* ]] ;
 do
     opt="$1";
@@ -53,6 +56,12 @@ auto=$(echo $auto | | tr '[:upper:]' '[:lower:]')
 nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
     --value $restore_source \
     --expected-value ''
+
+if [ -n "$NUODB_RESTORE_CREDENTIALS" ]; then
+    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/credentials \
+        --value $restore_credentials \
+        --unconditional
+fi
 
 # optionally do automatic initiation of the restore
 [ "$auto" = "true" -a "$restore_type" = "database" ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name;;

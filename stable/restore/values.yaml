@@ -73,10 +73,16 @@ restore:
   # * a URL from which to download the backup (typically a TAR.GZ file)
   source: ""
 
+  # credentials for the specified target - if different to the database.autoRestore.credentials
+  credentials: ""
+
   # autoRestart
   # if set to "true", running the restore chart causes the database to be restarted automatically
   autoRestart: "true"
 
+  envFrom:
+    configMapRef: []
+    
   affinity: {}
   
   timeout: 1800
