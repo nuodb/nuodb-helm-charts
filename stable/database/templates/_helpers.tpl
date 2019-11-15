@@ -122,6 +122,29 @@ imagePullSecrets:
 {{- end -}}
 {{- end -}}
 
+
+{{/*
+Resolve the os.user
+*/}}
+{{- define "os.user" -}}
+{{- if .Values.database.securityContext.enabled -}}
+  {{ .Values.database.securityContext.runAsUser }}
+{{- else -}}
+   1000
+{{- end -}}
+{{- end -}}
+
+{{/*
+Resolve the os.group
+*/}}
+{{- define "os.group" -}}
+{{- if .Values.database.securityContext.enabled -}}
+  {{ .Values.database.securityContext.fsGroup }}
+{{- else -}}
+   0
+{{- end -}}
+{{- end -}}
+
 {{/*
 Add capabilities in a securityContext
 */}}

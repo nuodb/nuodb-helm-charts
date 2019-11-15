@@ -21,7 +21,7 @@ backup_group="all"
 labels=""
 
 restore_credentials=$NUODB_RESTORE_CREDENTIALS
-: ${restore_credentials:=DATABASE_RESTORE_CREDENTIALS}
+[ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:=:}
 
 while [[ $# -gt 0 ]] && [[ "$1" == "-"* ]] ;
 do
@@ -57,8 +57,8 @@ nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PR
     --value $restore_source \
     --expected-value ''
 
-if [ -n "$NUODB_RESTORE_CREDENTIALS" ]; then
-    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/credentials \
+if [ -n "$restore_credentials" ]; then
+    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/credentials \
         --value $restore_credentials \
         --unconditional
 fi
