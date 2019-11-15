@@ -116,11 +116,16 @@ spec:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-password
-        - name: NUODB_IMPORT_CREDENTIALS
+        - name: DATABASE_IMPORT_CREDENTIALS
           valueFrom:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-import-credentials
+        - name: DATABASE_RESTORE_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-restore-credentials
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }

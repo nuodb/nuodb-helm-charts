@@ -133,5 +133,19 @@ Import ENV vars from configMaps
    You Have Been Warned.
 */}}
 {{- define "restore.envFrom" }}
-envFrom: [ configMapRef: { name: {{ .Values.restore.target }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+{{- end -}}
+
+{{/*
+Return the restore target.
+*/}}
+{{- define "restore.target" -}}
+{{- default .Values.database.name .Values.restore.target | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Return the restore source.
+*/}}
+{{- define "restore.source" -}}
+{{- default ":latest" .Values.restore.source | trimSuffix "-" -}}
 {{- end -}}

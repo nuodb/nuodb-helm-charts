@@ -82,9 +82,10 @@ admin:
     capabilities: []
 
   ## Specify one or more configMaps to import Environment Variables from
-  # Ex:  from: [ configMapRef: { name: myConfigMap } ]
-  env:
-    from: []
+  # Ex:  configMapRef: [ ]myConfigMap, myOtherConfigMap ]
+  envFrom:
+    configMapRef: []
+    secretRef: []
 
   ## nuodb-admin resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/

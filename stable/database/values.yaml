@@ -64,6 +64,7 @@ nuodb:
 admin:
   # domain is the name of the NuoDB administration domain (e.g. the cluster name)
   domain: nuodb
+    
   # namespace: nuodb
   # tlsCACert:
   #   secret: nuodb-ca-cert
@@ -104,7 +105,7 @@ database:
     capabilities: []
     enabled: false
     runAsUser: 1000
-    fsGroup: 1000
+    fsGroup: 0
 
   ## Import Environment Variables from one or more configMaps
   # Ex: configMapRef: [ myConfigMap, myOtherConfigMap ]

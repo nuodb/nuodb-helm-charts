@@ -5,7 +5,7 @@ metadata:
     app: {{ template "database.fullname" . }}
     group: nuodb
     domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
+    chart: {{ template "nuodb.chart" . }}
     release: {{ .Release.Name | quote }}
   name: {{ template "database.fullname" . }}-nuorestore
 data:

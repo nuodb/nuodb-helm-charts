@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# TODO: NTJ: chmown files to os_user and 0s_group pushed in from k8s, instead of hard-coding 1000:0
+
 [ -n "$NUOSM_LINT" ] && set -n
 
 . ${NUODB_HOME}/etc/nuodb_setup.sh
@@ -86,11 +88,10 @@ function perform_restore() {
 
   # restore request is a URL - so retrieve the backup using curl
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
-    : ${NUODB_IMPORT_STRIP_LEVELS:=1}
+    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
+    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR
 
-    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $NUODB_IMPORT_STRIP_LEVELS -C $DB_DIR"
-    curl -k --user "$NUODB_IMPORT_CREDENTIALS" $restore_source | tar xzf - --strip-components $NUODB_IMPORT_STRIP_LEVELS -C $DB_DIR
-
+    # this should be parameterised - see TODO at top of file
     chown -R 1000:0 $DB_DIR
   else
     $NUODB_BINDIR/nuoarchive restore --restore-dir $DB_DIR $NUODB_BACKUPDIR/$restore_source
@@ -129,6 +130,14 @@ myArchive=$( $NUOCMD show archives --db-name $DB_NAME --archive-format "archive-
 restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
 restore_requested="$( $NUOCMD get value --key $restore_req )"
 
+credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
+restore_credentials="$( $NUOCMD get value --key $credential_req )"
+[ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
+
+strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
+strip_levels="$( $NUOCMD get value --key $strip_req )"
+[ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
+
 # if my archive already exists
 if [ "$myArchive" != "-1"]; then
 
@@ -140,11 +149,15 @@ if [ "$myArchive" != "-1"]; then
   # else if the database is configured with a an AUTO_RESTORE, then specify that
   elif [ -n "$NUODB_AUTO_RESTORE" ]; then
     restore_source="$NUODB_AUTO_RESTORE"
+    restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
+    strip_levels=${NUODB_RESTORE_STRIP_LEVELS:-1}
   fi
 
 # my archive does not exist - check to see if we should IMPORT it
 elif [ -n "$NUODB_AUTO_IMPORT" ]; then
   restore_source="$NUODB_AUTO_IMPORT"
+  restore_credentials=${DATABASE_IMPORT_CREDENTIALS:-:}
+  strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
 fi
 
 # resolve ":latest"
@@ -175,10 +188,11 @@ if [ -n "$restore_requested" ]; then
     # and restore the data
     perform_restore
 
-    # release shared state
+    # clear/release shared state
     $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
     $NUOCMD set value --key $restore_req --value '' --expected-value $restore_requested
-    
+    $NUOCMD set value --key $credential_req --value '' --unconditional
+
     # any error is a fatal error
     [ -n $error ] && die $retval $error
   else
@@ -224,11 +238,10 @@ if [ -n "$restore_source" -a -z $restore_requested -a ! -f $DB_DIR/info.json ]; 
   # if the NUODB_IMPORT_URL has a protocol:/ prefix, then use curl to download the archive
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
    
-    : ${NUODB_IMPORT_STRIP_LEVELS:=1}
+    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
+    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR
 
-    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $NUODB_IMPORT_STRIP_LEVELS -C $DB_DIR"
-    curl -k --user "$NUODB_IMPORT_CREDENTIALS" $restore_source | tar xzf - --strip-components $NUODB_IMPORT_STRIP_LEVELS -C $DB_DIR
-
+    # this should be parameterised - see TODO at top of file
     chown -R 1000:0 $DB_DIR
 
     [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
@@ -242,7 +255,7 @@ if [ -n "$restore_source" -a -z $restore_requested -a ! -f $DB_DIR/info.json ]; 
   fi
 fi
 
-# release the first in semaphore
+# release the first-in semaphore
 $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
 
 # expects NUOCMD_API_SERVER to be set.
