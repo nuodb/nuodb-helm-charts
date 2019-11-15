@@ -63,17 +63,23 @@ label=$(echo $label | tr '[:upper:]' '[:lower:]')
 
 # find the index for the latest backup info
 latest=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest )
-if [ -z "$latest" ]; then
-   latest=0
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $latest --expected-value ''
-fi
 
 if [ "$backup_type" = "full" ]; then
+   if [ -z "$latest" ]; then
+      latest=0
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $latest --expected-value ''
+   fi
+
    backupset=$( date "+%Y%m%dT%H%M%S" )
 
    # bump latest, and wrap around (simple ring-buffer)
    next=$(( (latest + 1) % $NUODB_MAX_BACKUP_HISTORY ))
 else
+   if [ -z "$latest" ]; then
+      echo >&2 "No full backup has completed yet - try again later"
+      exit -1
+   fi
+
    # retrieve the latest bckupset name
    backupset=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
    echo "Looked up $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} -> $backupset"
