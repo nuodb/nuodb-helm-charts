@@ -41,8 +41,8 @@ function die() {
 #
 function perform_restore() {
 
-  retval=-1
-  error=""
+  retval=0
+  error=
 
   # bail out early if the restore will obviously fail
   if [ -z "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
