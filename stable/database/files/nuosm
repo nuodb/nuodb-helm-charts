@@ -26,6 +26,9 @@ export NUOCMD DB_NAME
 # function - report an error and exit
 #
 function die() {
+  # cleanup
+  $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
+
   retval=$1
   shift
   echo "$@"
@@ -118,6 +121,8 @@ first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
 $NUOCMD set value --key $first_req --value $HOSTNAME --expected-value ''
 first_in="$( $NUOCMD get value --key $first_req )"
 
+echo "First-in = $first_in"
+
 myArchive=$( $NUOCMD show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -z "$myArchive" ] && myArchive=-1
 [ -n "$NUODB_DEBUG" ] && echo "myArchive=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
@@ -168,6 +173,8 @@ if [ -n "$restore_requested" ]; then
   # if I got in first - perform the restore
   if [ "$first_in" = "$HOSTNAME" ]; then
 
+    echo "I am first-in: $first_in == $HOSTNAME"
+
     [ -z "$restore_source" ] && die -1 "There is no valid LATEST backup - restore of LATEST failed."
 
     # take ownership of the SM startup semaphore
@@ -198,7 +205,7 @@ if [ -n "$restore_requested" ]; then
       perform_restore
 
       # any error in restore is logged, but not fatal
-      [ -n "$error" ] && echo "WRANING: Error performing SEED restore: $error"
+      [ -n "$error" ] && echo "WARNING: Error performing SEED restore: $error"
     fi
   fi
 
@@ -211,9 +218,9 @@ fi
 until owner=$( $NUOCMD get value --key $startup_key/$DB_NAME ); [ "$owner" = "$HOSTNAME" -o "$NUODB_SEQUENCE_SYNC" = "false" ] ; do
 
   # find the start-id of the SM that owns the semaphore
-  owner_id=$( $NUOCMD show database --db-name $DB_NAME --num-incarnations 0 --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^sm: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
+  owner_id=$( $NUOCMD show database --db-name $DB_NAME --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^sm: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
   if [ -z "$owner_id" ]; then
-    echo "Cound not find start-id for starting SM on $owner - retrying..."
+    echo "Could not find start-id for starting SM on $owner - retrying..."
     sleep 30
     continue
   fi
