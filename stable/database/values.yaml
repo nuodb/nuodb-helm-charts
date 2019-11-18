@@ -179,6 +179,12 @@ database:
     # tolerationsDS: []
 
   te:
+    ## Enable the Layer 4 Load balancer if required,
+    ## and specify if it should provision an internal or external cloud IP address
+    externalAccess: {}
+      # enabled: false
+      # internalIP: true
+
     # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
     replicas: 1
     memoryOption: 8g
