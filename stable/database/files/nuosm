@@ -136,7 +136,7 @@ strip_levels="$( $NUOCMD get value --key $strip_req )"
 [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
 
 # if my archive already exists
-if [ "$myArchive" != "-1"]; then
+if [ "$myArchive" != "-1" ]; then
 
   # if a restore has been requested, then do that
   if [ -n "$restore_requested" ]; then
@@ -230,7 +230,7 @@ locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-a
 [ -n "$locked_archive" ] && $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
 
 # if a RESTORE_SOURCE is defined, and the archive dir is empty, then import/restore from the URL
-if [ -n "$restore_source" -a -z $restore_requested -a ! -f $DB_DIR/info.json ]; then
+if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/info.json ]; then
 
   # if the NUODB_IMPORT_URL has a protocol:/ prefix, then use curl to download the archive
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
