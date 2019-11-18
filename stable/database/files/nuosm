@@ -118,12 +118,6 @@ fi
 
 first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
 
-# work out who is the first one in
-$NUOCMD set value --key $first_req --value $HOSTNAME --expected-value ''
-first_in="$( $NUOCMD get value --key $first_req )"
-
-echo "First-in = $first_in"
-
 myArchive=$( $NUOCMD show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -z "$myArchive" ] && myArchive=-1
 [ -n "$NUODB_DEBUG" ] && echo "myArchive=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
@@ -171,6 +165,12 @@ fi
 
 if [ -n "$restore_requested" ]; then
 
+  # work out who is the first one in
+  $NUOCMD set value --key $first_req --value $HOSTNAME --expected-value ''
+  first_in="$( $NUOCMD get value --key $first_req )"
+
+  echo "First-in = $first_in"
+
   # if I got in first - perform the restore
   if [ "$first_in" = "$HOSTNAME" ]; then
 
@@ -210,28 +210,25 @@ if [ -n "$restore_requested" ]; then
     fi
   fi
 
-else
-  # if I'm the first one in, take ownership of the startup semaphore
-  [ "$first_in" = "$HOSTNAME" ] && $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --unconditional
+  # wait until it's my turn to startup
+  until owner=$( $NUOCMD get value --key $startup_key/$DB_NAME ); [ "$owner" = "$HOSTNAME" -o "$NUODB_SEQUENCE_SYNC" = "false" ] ; do
+
+    # find the start-id of the SM that owns the semaphore
+    owner_id=$( $NUOCMD show database --db-name $DB_NAME --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^sm: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
+    if [ -z "$owner_id" ]; then
+      echo "Could not find start-id for starting SM on $owner - retrying..."
+      sleep 30
+      continue
+    fi
+
+    # wait for the starting SM to be RUNNING
+    $NUOCMD check process --start-id $owner_id --check-running --wait-forever
+
+    # transfer ownership of the startup semaphore to myself
+    $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --expected-value $owner
+  done
 fi
 
-# wait until it's my turn to startup
-until owner=$( $NUOCMD get value --key $startup_key/$DB_NAME ); [ "$owner" = "$HOSTNAME" -o "$NUODB_SEQUENCE_SYNC" = "false" ] ; do
-
-  # find the start-id of the SM that owns the semaphore
-  owner_id=$( $NUOCMD show database --db-name $DB_NAME --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^sm: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
-  if [ -z "$owner_id" ]; then
-    echo "Could not find start-id for starting SM on $owner - retrying..."
-    sleep 30
-    continue
-  fi
-
-  # wait for the starting SM to be RUNNING
-  $NUOCMD check process --start-id $owner_id --check-running --wait-forever
-
-  # transfer ownership of the startup semaphore to myself
-  $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --expected-value $owner
-done
 
 # release my archive if it is locked
 locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
