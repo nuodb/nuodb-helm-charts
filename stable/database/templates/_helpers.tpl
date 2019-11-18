@@ -130,7 +130,7 @@ Resolve the os.user
 {{- if .Values.database.securityContext.enabled -}}
   {{ .Values.database.securityContext.runAsUser }}
 {{- else -}}
-   1000
+   "1000"
 {{- end -}}
 {{- end -}}
 
@@ -141,7 +141,7 @@ Resolve the os.group
 {{- if .Values.database.securityContext.enabled -}}
   {{ .Values.database.securityContext.fsGroup }}
 {{- else -}}
-   0
+   "0"
 {{- end -}}
 {{- end -}}
 

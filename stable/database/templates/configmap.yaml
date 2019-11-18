@@ -56,6 +56,6 @@ data:
   NUODB_RESTORE_REQUEST_PREFIX: {{ default "/nuodb/nuosm/database" .Values.nuodb.requestKey }}
   NUODB_BACKUP_KEY: {{ default "/nuodb/nuobackup" .Values.nuodb.latestKey }}
   NUODB_LATEST_BACKUP_PREFIX: {{ default "nuodb-backup/last_created" .Values.nuodb.latestPrefix }}
-  NUODB_OS_USER: {{ include "os.user" . }}
-  NUODB_OS_GROUP: {{ include "os.group" . }}
+  NUODB_OS_USER: {{ include "os.user" . | quote }}
+  NUODB_OS_GROUP: {{ include "os.group" . | quote }}
 
