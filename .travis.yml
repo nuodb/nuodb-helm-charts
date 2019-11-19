@@ -14,7 +14,7 @@ env:
     - TEST_SUITE=minikube-short REQUIRES_MINIKUBE=true
     - TEST_SUITE=minikube-long REQUIRES_MINIKUBE=true
   global:
-    - HELM_VERSION="v2.14.3"
+    - HELM_VERSION="v2.9.0"
     - DEP_VERSION=0.5.4
     - KUBERNETES_VERSION=1.15.0
     - MINIKUBE_VERSION=1.2.0

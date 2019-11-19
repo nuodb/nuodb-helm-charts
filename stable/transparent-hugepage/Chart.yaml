@@ -14,4 +14,4 @@ maintainers:
 engine: gotpl
 icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
 appVersion: 4.0.0
-tillerVersion: ">=2.10"
+tillerVersion: ">=2.9"

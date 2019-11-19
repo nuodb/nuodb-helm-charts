@@ -58,8 +58,8 @@ func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
 	daemonName := fmt.Sprintf("%s-%s", "transparent-hugepage", randomSuffix)
 
 	options := &helm.Options{
-		SetFiles:  map[string]string{"thp.affinity": "../files/thp-affinity.yaml"},
-		SetValues: map[string]string{"thp.fullnameOverride": daemonName},
+		ValuesFiles: []string{"../files/thp-affinity.yaml"},
+		SetValues:   map[string]string{"thp.fullnameOverride": daemonName},
 	}
 
 	kubectlOptions := k8s.NewKubectlOptions("", "")
@@ -82,8 +82,8 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 	daemonName := fmt.Sprintf("%s-%s", "transparent-hugepage", randomSuffix)
 
 	options := &helm.Options{
-		SetFiles:  map[string]string{"thp.affinity": "../files/thp-affinity.yaml"},
-		SetValues: map[string]string{"thp.fullnameOverride": daemonName},
+		ValuesFiles: []string{"../files/thp-affinity.yaml"},
+		SetValues:   map[string]string{"thp.fullnameOverride": daemonName},
 	}
 
 	kubectlOptions := k8s.NewKubectlOptions("", "")

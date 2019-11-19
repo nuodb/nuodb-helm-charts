@@ -4,7 +4,7 @@
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${KUBERNETES_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
 # Download Helm and Tiller
-wget http://storage.googleapis.com/kubernetes-helm/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
+wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
 if [[ -z "$REQUIRES_MINIKUBE" ]]; then
@@ -23,7 +23,8 @@ sudo chown -R travis: /home/travis/.minikube/
 kubectl cluster-info
 
 # install helm
-helm init
+# Use default K8s service account as a workaround explained in https://github.com/helm/helm/issues/3460
+helm init --service-account default
 
 # get the image to speed up tests
 docker pull nuodb/nuodb-ce:latest
