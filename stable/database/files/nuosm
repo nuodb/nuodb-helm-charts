@@ -75,6 +75,7 @@ function perform_restore() {
     archSpace="$(df --output=avail $DB_DIR | grep -o ' *[0-9]\+')"
     if [ $(( archSize + 1024000 > archSpace )) ]; then
       rm -rf $tarfile
+      retval=-1
       error="Insufficient space for restore after archive has been saved to TAR."
     fi
 
@@ -199,7 +200,7 @@ if [ -n "$restore_requested" ]; then
     $NUOCMD set value --key $credential_req --value '' --unconditional
 
     # any error is a fatal error
-    [ -n $error ] && die $retval $error
+    [ "$retval" = "0" ] || die $retval $error
   else
     # attempt to restore the same backup that the initial SM is restoring - to reduce SYNC time
     if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" -o -d $NUODB_BACKUPDIR/$restore_source ]; then
