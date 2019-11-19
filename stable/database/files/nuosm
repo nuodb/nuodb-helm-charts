@@ -215,7 +215,7 @@ if [ -n "$restore_requested" ]; then
   until owner=$( $NUOCMD get value --key $startup_key/$DB_NAME ); [ "$owner" = "$HOSTNAME" -o "$NUODB_SEQUENCE_SYNC" = "false" ] ; do
 
     # find the start-id of the SM that owns the semaphore
-    owner_id=$( $NUOCMD show database --db-name $DB_NAME --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^SM: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
+    owner_id=$( $NUOCMD show database --db-name $DB_NAME --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^ *SM: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
     if [ -z "$owner_id" ]; then
       echo "Could not find start-id for starting SM on $owner - retrying..."
       sleep 30
