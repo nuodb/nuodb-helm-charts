@@ -105,7 +105,7 @@ function perform_restore() {
   [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
 
   # clear the SM wait semaphore
-  $NUOCMD set value --key $startup_key/$DB_NAME --value '' --unconditional
+  #$NUOCMD set value --key $startup_key/$DB_NAME --value '' --unconditional
 }
 
 #=============================
