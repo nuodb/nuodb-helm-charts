@@ -5,10 +5,9 @@ package minikube
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
-	"encoding/json"
-	"strconv"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
@@ -18,27 +17,21 @@ import (
 	"gotest.tools/assert"
 )
 
-func unmarshalCertificateInfo(t *testing.T, certificateInfoJSON string) map[string]interface{} {
-	var results map[string]interface{}
-	json.Unmarshal([]byte(certificateInfoJSON), &results)
-	return results
-}
-
 func verifyAdminCeritificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
-	certificateInfo := unmarshalCertificateInfo(t, certificateInfoJSON)
+	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
 	for _, value := range certificateInfo["serverCertificates"].(map[string]interface{}) {
 		certSubjectName := value.(map[string]interface{})["subjectName"].(string)
 		assert.Assert(t, strings.Contains(certSubjectName, expectedDN),
-		"`%s` not found in:\n %s", expectedDN, certSubjectName)
+			"`%s` not found in:\n %s", expectedDN, certSubjectName)
 	}
 }
 
 func verifyEngineCeritificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
-	certificateInfo := unmarshalCertificateInfo(t, certificateInfoJSON)
+	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
 	for _, value := range certificateInfo["processCertificates"].(map[string]interface{}) {
 		certIssuerName := value.(map[string]interface{})["issuerName"].(string)
 		assert.Assert(t, strings.Contains(certIssuerName, expectedDN),
-		"`%s` not found in:\n %s", expectedDN, certIssuerName)
+			"`%s` not found in:\n %s", expectedDN, certIssuerName)
 	}
 }
 
@@ -74,7 +67,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 		"setup-keys.sh",
 	}
 
-	// As nuodocker/nuoadmin wrapper is using peer insead of initialMembership, 
+	// As nuodocker/nuoadmin wrapper is using peer insead of initialMembership,
 	//   we need to use persistence for admin Raft logs during the rolling upgrade.
 	options := helm.Options{
 		SetValues: map[string]string{
@@ -122,13 +115,13 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	newTLSKeysLocation := testlib.CopyCertificatesToControlHost(t, certGeneratorPodName, namespaceName)
 	testlib.CreateSecret(t, namespaceName, testlib.CA_CERT_FILE, testlib.CA_CERT_SECRET, newTLSKeysLocation)
 	testlib.CreateSecretWithPassword(t, namespaceName, testlib.KEYSTORE_FILE, testlib.KEYSTORE_SECRET, testlib.SECRET_PASSWORD, newTLSKeysLocation)
-	
+
 	testlib.RotateTLSCertificates(t, &options, kubectlOptions, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
 	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
 
 	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
 	assert.NilError(t, err)
-	
+
 	t.Run("verifyAdminCeritificates", func(t *testing.T) {
 		verifyAdminCeritificates(t, certificateInfo, expectedAdminDN)
 	})

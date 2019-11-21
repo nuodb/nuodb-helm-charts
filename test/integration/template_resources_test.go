@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"gotest.tools/assert"
 )
 
@@ -21,14 +22,6 @@ func listContains(arr []string, s string) bool {
 	}
 
 	return false
-}
-
-func isStatefulSetHotCopyEnabled(ss *appsv1.StatefulSet) bool {
-	return strings.Contains(ss.Name, "hotcopy")
-}
-
-func isDaemonSetHotCopyEnabled(ss *appsv1.DaemonSet) bool {
-	return strings.Contains(ss.Name, "hotcopy")
 }
 
 func TestResourcesAdminDefaults(t *testing.T) {
@@ -70,7 +63,7 @@ func TestResourcesAdminOverridden(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.resources.requests.cpu": "1",
+			"admin.resources.requests.cpu":    "1",
 			"admin.resources.requests.memory": "4G",
 		},
 	}
@@ -158,7 +151,7 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
 
 		// make sure the replica counts are correct
-		if (isStatefulSetHotCopyEnabled(&ss)) {
+		if testlib.IsStatefulSetHotCopyEnabled(&ss) {
 			assert.Check(t, *ss.Spec.Replicas == 1)
 			foundBackupEnabled = true
 		} else {
@@ -166,7 +159,6 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 			foundBackupDisabled = true
 		}
 	}
-
 
 	assert.Check(t, foundBackupEnabled)
 	assert.Check(t, foundBackupDisabled)
@@ -183,10 +175,10 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu": "1",
+			"database.sm.resources.requests.cpu":    "1",
 			"database.sm.resources.requests.memory": "4G",
-			"database.sm.noHotCopy.replicas": strconv.Itoa(noHotCopyReplicas),
-			"database.sm.hotCopy.replicas": strconv.Itoa(hotcopyReplicas),
+			"database.sm.noHotCopy.replicas":        strconv.Itoa(noHotCopyReplicas),
+			"database.sm.hotCopy.replicas":          strconv.Itoa(hotcopyReplicas),
 		},
 	}
 
@@ -228,7 +220,7 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
 
 		// make sure the replica counts are correct
-		if (isStatefulSetHotCopyEnabled(&ss)) {
+		if testlib.IsStatefulSetHotCopyEnabled(&ss) {
 			assert.Check(t, *ss.Spec.Replicas == int32(hotcopyReplicas))
 		} else {
 			assert.Check(t, *ss.Spec.Replicas == int32(noHotCopyReplicas))
@@ -487,7 +479,7 @@ func TestResourcesDaemonSetsDefaults(t *testing.T) {
 		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga) == 9,
 			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
 
-		if isDaemonSetHotCopyEnabled(&ss) {
+		if testlib.IsDaemonSetHotCopyEnabled(&ss) {
 			foundBackupEnabled = true
 		} else {
 			foundBackupDisabled = true
@@ -532,7 +524,7 @@ func TestDatabaseBackupDisabled(t *testing.T) {
 		var ss appsv1.StatefulSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		assert.Check(t, !isStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
+		assert.Check(t, !testlib.IsStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
 	}
 
 	assert.Equal(t, partCounter, 1)
@@ -569,7 +561,7 @@ func TestDatabaseNonBackupDisabled(t *testing.T) {
 		var ss appsv1.StatefulSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		assert.Check(t, isStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
+		assert.Check(t, testlib.IsStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
 	}
 
 	assert.Equal(t, partCounter, 1)
@@ -581,7 +573,7 @@ func TestDatabaseBackupDisabledDaemonSet(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.enableDaemonSet": "true",
+			"database.enableDaemonSet":      "true",
 			"database.sm.hotCopy.enablePod": "false",
 		},
 	}
@@ -607,7 +599,7 @@ func TestDatabaseBackupDisabledDaemonSet(t *testing.T) {
 		var ss appsv1.DaemonSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		assert.Check(t, !isDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
+		assert.Check(t, !testlib.IsDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
 	}
 
 	// with daemonSet
@@ -620,7 +612,7 @@ func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.enableDaemonSet": "true",
+			"database.enableDaemonSet":        "true",
 			"database.sm.noHotCopy.enablePod": "false",
 		},
 	}
@@ -646,7 +638,7 @@ func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
 		var ss appsv1.DaemonSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		assert.Check(t, isDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
+		assert.Check(t, testlib.IsDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
 	}
 
 	// with daemonSet

@@ -1,0 +1,7 @@
+database:
+  env:
+    - name: NUODB_ALT_ADDRESS
+      valueFrom:
+        fieldRef:
+            fieldPath: status.podIP
+    - { name: CUSTOM_ENV_VAR, value: "CUSTOM_ENV_VAR_VALUE" }

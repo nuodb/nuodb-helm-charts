@@ -1,6 +1,7 @@
 package testlib
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -76,12 +77,12 @@ func standardizeSpaces(s string) string {
 
 func RemoveEmptyLines(s string) string {
 	regex, err := regexp.Compile("(\r|\r\n|\n){2,}")
-    if err != nil {
-        return s
-    }
-    s = regex.ReplaceAllString(s, "\n")
+	if err != nil {
+		return s
+	}
+	s = regex.ReplaceAllString(s, "\n")
 	s = strings.TrimRight(s, "\n")
-	
+
 	return s
 }
 
@@ -219,7 +220,6 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 func AwaitAdminPodUp(t *testing.T, namespace string, adminPodName string, timeout time.Duration) {
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
 }
-
 
 func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate string, expectedVersion string, timeout time.Duration) {
 	options := k8s.NewKubectlOptions("", "")
@@ -534,4 +534,16 @@ func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, co
 	assert.NilError(t, err, "executeCommandsInPod: Script returned error.")
 }
 
+func UnmarshalJSONObject(t *testing.T, stringJSON string) map[string]interface{} {
+	var results map[string]interface{}
+	err := json.Unmarshal([]byte(stringJSON), &results)
+	assert.NilError(t, err)
+	return results
+}
 
+func UnmarshalJSONArray(t *testing.T, stringJSON string) []interface{} {
+	var results []interface{}
+	err := json.Unmarshal([]byte(stringJSON), &results)
+	assert.NilError(t, err)
+	return results
+}

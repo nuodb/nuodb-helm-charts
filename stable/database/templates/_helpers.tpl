@@ -150,6 +150,6 @@ Import user defined ENV vars
 */}}
 {{- define "database.env" }}
 {{- if not (empty .Values.database.env) }}
-{{ toYaml .Values.database.env }}
+{{ toYaml .Values.database.env | trim }}
 {{- end }}
 {{- end -}}

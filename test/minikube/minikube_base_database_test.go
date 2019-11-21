@@ -114,6 +114,31 @@ func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
 	t.Log("tar contents: ", output)
 }
 
+func verifyEngineAltAddress(t *testing.T, namespaceName string, admin0 string, expectedNrEngines int) {
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions.Namespace = namespaceName
+
+	podNames, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
+		"bash", "-c",
+		"nuocmd get processes | grep -o \"(address=[^/]*\"| cut -f2 -d'='")
+	assert.NilError(t, err)
+	podNamesSlice := strings.Split(strings.TrimSuffix(podNames, "\n"), "\n")
+
+	actualAltAddresses, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
+		"bash", "-c",
+		"nuocmd get processes | grep -o \"alt-address: [^}]*\" | cut -f2 -d' '")
+	assert.NilError(t, err)
+	actualAltAddressesSlice := strings.Split(strings.TrimSuffix(actualAltAddresses, "\n"), "\n")
+
+	assert.Assert(t, len(podNamesSlice) == expectedNrEngines, "Expected number of process names don't match")
+	assert.Assert(t, len(actualAltAddressesSlice) == expectedNrEngines, "Expected number of process addresses don't match")
+
+	for index, podName := range podNamesSlice {
+		pod := k8s.GetPod(t, kubectlOptions, podName)
+		assert.Assert(t, pod.Status.PodIP == actualAltAddressesSlice[index], "Expected alt-address doesn't match")
+	}
+}
+
 func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -178,16 +203,16 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":         testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory":      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":         testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory":      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.labels.cloud":                   LABEL_CLOUD,
-				"database.te.labels.region":                  LABEL_REGION,
-				"database.te.labels.zone":                    LABEL_ZONE,
-				"database.sm.labels.cloud":                   LABEL_CLOUD,
-				"database.sm.labels.region":                  LABEL_REGION,
-				"database.sm.labels.zone":                    LABEL_ZONE,
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.labels.cloud":              LABEL_CLOUD,
+				"database.te.labels.region":             LABEL_REGION,
+				"database.te.labels.zone":               LABEL_ZONE,
+				"database.sm.labels.cloud":              LABEL_CLOUD,
+				"database.sm.labels.region":             LABEL_REGION,
+				"database.sm.labels.zone":               LABEL_ZONE,
 			},
 		})
 
@@ -203,17 +228,17 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		testlib.StartDatabase(t, namespaceName, admin0,
 			&helm.Options{
 				SetValues: map[string]string{
-					"database.sm.resources.requests.cpu":         testlib.MINIMAL_VIABLE_ENGINE_CPU,
-					"database.sm.resources.requests.memory":      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-					"database.te.resources.requests.cpu":         testlib.MINIMAL_VIABLE_ENGINE_CPU,
-					"database.te.resources.requests.memory":      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-					"database.te.labels.cloud":                   LABEL_CLOUD,
-					"database.te.labels.region":                  LABEL_REGION,
-					"database.te.labels.zone":                    LABEL_ZONE,
-					"database.sm.labels.cloud":                   LABEL_CLOUD,
-					"database.sm.labels.region":                  LABEL_REGION,
-					"database.sm.labels.zone":                    LABEL_ZONE,
-					"database.enableDaemonSet":                   "true",
+					"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+					"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+					"database.te.labels.cloud":              LABEL_CLOUD,
+					"database.te.labels.region":             LABEL_REGION,
+					"database.te.labels.zone":               LABEL_ZONE,
+					"database.sm.labels.cloud":              LABEL_CLOUD,
+					"database.sm.labels.region":             LABEL_REGION,
+					"database.sm.labels.zone":               LABEL_ZONE,
+					"database.enableDaemonSet":              "true",
 					// prevent non-backup SM from scheduling
 					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
 				},
@@ -256,6 +281,36 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		t.Run("verifyNuoSQL-blue", func(t *testing.T) {
 			verifyNuoSQL(t, namespaceName, admin0, "blue")
 		})
+	})
+}
+
+func TestKubernetesAltAddress(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+
+	t.Run("startDatabaseStatefulSetWithAltAddress", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.engineOptions.alt-address": "$(NUODB_ALT_ADDRESS)",
+				"database.te.engineOptions.alt-address": "$(NUODB_ALT_ADDRESS)",
+			},
+			ValuesFiles: []string{"../files/database-env.yaml"},
+		})
+		expectedNrEngines := 2
+		t.Run("verifyEnginesAltAddress", func(t *testing.T) { verifyEngineAltAddress(t, namespaceName, admin0, expectedNrEngines) })
 	})
 }
 
