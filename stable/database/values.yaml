@@ -103,6 +103,12 @@ database:
     runAsUser: 1000
     fsGroup: 1000
 
+  ## Import Environment Variables inside containers
+  # List of EnvVar v1 core definitions
+  # ref: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.16/#envvar-v1-core
+  ##
+  env: []
+
   ## Import Environment Variables from one or more configMaps
   # Ex: from: [ configMapRef: { name: myConfigMap }, configMapRef: { name: myOtherConfigMap } ]
   ##

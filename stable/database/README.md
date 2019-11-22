@@ -229,7 +229,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `securityContext.runAsUser` | User ID for the container | `1000` |
 | `securityContext.fsGroup` | Group ID for the container | `1000` |
 | `securityContext.capabilities` | Enable capabilities for the container - disregards `securityContext.enabled` | `[]` |
-| `env.from` | Import ENV vars from configMap(s) | `[]` |
+| `env` | Import ENV vars inside containers | `[]` |
+| `envFrom` | Import ENV vars from configMap(s) | `[]` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
