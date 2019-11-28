@@ -19,7 +19,7 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "admin.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ template "admin.fullname" . }}-balancer
+  name: {{ .Values.admin.domain }}-balancer
 spec:
   ports:
   - { name: 8888-tcp,   port: 8888,   protocol: TCP,  targetPort: 8888  }

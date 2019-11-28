@@ -26,18 +26,19 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
-	headlessLbName := fmt.Sprintf("nuodb")
+	headlessServiceName := fmt.Sprintf("nuodb")
+	clusterServiceName := fmt.Sprintf("nuodb-clusterip")
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 	t.Run("verifyOrderedLicensing", func(t *testing.T) {
 		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
 		testlib.VerifyLicensingErrorsInLog(t, namespaceName, admin0, false) // no error
 	})
-	t.Run("verifyLoadBalancer", func(t *testing.T) { verifyLoadBalancer(t, namespaceName, headlessLbName) })
+	t.Run("verifyAdminHeadlessService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, headlessServiceName, true) })
+	t.Run("verifyAdminClusterService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, clusterServiceName, false) })
 	t.Run("verifyLBPolicy", func(t *testing.T) { verifyLBPolicy(t, namespaceName, admin0) })
 	t.Run("verifyPodKill", func(t *testing.T) { verifyPodKill(t, namespaceName, admin0, helmChartReleaseName, 1) })
 	t.Run("verifyProcessKill", func(t *testing.T) { verifyKillProcess(t, namespaceName, admin0, helmChartReleaseName, 1) })
-	t.Run("verifyAdminService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0) })
 }
 
 func TestKubernetesInvalidLicense(t *testing.T) {

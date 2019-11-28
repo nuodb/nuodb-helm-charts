@@ -62,12 +62,14 @@ func verifySecret(t *testing.T, namespaceName string) {
 	assert.Check(t, ok)
 }
 
-func verifyDBHeadlessService(t *testing.T, namespaceName string, podName string, serviceName string) {
+func verifyDBService(t *testing.T, namespaceName string, podName string, serviceName string, ping bool) {
 
-	dBHeadlessService := testlib.GetService(t, namespaceName, serviceName)
-	assert.Equal(t, dBHeadlessService.Name, serviceName)
+	dBService := testlib.GetService(t, namespaceName, serviceName)
+	assert.Equal(t, dBService.Name, serviceName)
 
-	testlib.PingService(t, namespaceName, serviceName, podName)
+	if ping {
+		testlib.PingService(t, namespaceName, serviceName, podName)
+	}
 }
 
 func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
@@ -197,6 +199,8 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	headlessServiceName := fmt.Sprintf("demo")
+	clusterServiceName := fmt.Sprintf("demo-clusterip")
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
@@ -217,7 +221,8 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		})
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
-		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBHeadlessService(t, namespaceName, admin0, "demo") })
+		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, headlessServiceName), true })
+		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
 		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
 	})
@@ -246,7 +251,8 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		)
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
-		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBHeadlessService(t, namespaceName, admin0, "demo") })
+		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, headlessServiceName, true) })
+		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
 		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
 	})
