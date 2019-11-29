@@ -221,7 +221,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		})
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
-		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, headlessServiceName), true })
+		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, headlessServiceName, true) })
 		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
 		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })

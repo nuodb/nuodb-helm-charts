@@ -65,6 +65,16 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{/*
+Create a default fully qualified database address for TE direct connections
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "database.address" -}}
+{{- $database := .Values.database.name -}}
+{{- $namespace := default .Release.Namespace .Values.admin.namespace -}}
+{{- printf "%s-clusterip.%s.svc:48006" $database $namespace  | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
 Return the proper Docker Image Registry Secret Names
 */}}
 {{- define "ycsb.imagePullSecrets" -}}

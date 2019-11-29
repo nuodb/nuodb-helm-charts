@@ -28,6 +28,9 @@ ycsb:
   # nameOverride: east
   # fullnameOverride: admin-east
 
+  # Use a direct TE connection
+  teDirect: false
+
   # loadName
   # YCSB workload pod name
   loadName: ycsb-load
