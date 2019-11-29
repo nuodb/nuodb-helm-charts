@@ -82,6 +82,18 @@ influx:
     ##
     # loadBalancerSourceRanges: []
 
+  ## Use a securityContext to specify additional capabilities
+  # For example, if the container needs to configure network setting, then add "NET_ADMIN"
+  # Ex: capabilities: [ "NET_ADMIN" ]
+  ##
+  securityContext:
+    capabilities: []
+
+  ## Import Environment Variables from one or more configMaps
+  # Ex: envFrom: [ configMapRef: { name: myConfigMap }, configMapRef: { name: myOtherConfigMap } ]
+  ##
+  envFrom: []
+
   image:
     registry: docker.io
     repository: influxdb

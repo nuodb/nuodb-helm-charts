@@ -164,3 +164,24 @@ imagePullSecrets:
 {{- end }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Add capabilities in a securityContext
+*/}}
+{{- define "influx.capabilities" -}}
+{{- with .Values.influx.securityContext.capabilities }}
+securityContext:
+  capabilities:
+    add: {{ . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Import ENV vars from configMaps
+*/}}
+{{- define "influx.envFrom" -}}
+{{- with .Values.influx.envFrom }}
+envFrom:
+{{ toYaml  . }}
+{{- end }}
+{{- end -}}

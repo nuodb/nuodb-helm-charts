@@ -56,8 +56,13 @@ spec:
         configMap:
           name: nuodb-dashboard-provisioning
       - name: nuodb-dashboards
-        configMap:
-          name: nuodb-dashboards
+        projected:
+          sources:
+          {{- range $path, $bytes := .Files.Glob "files/dashboards/**.json" }}
+          {{- $name :=  base ($path) | replace (ext ($path)) ""}}
+          - configMap:
+              name: nuodb-dashboards-{{ $name }}
+          {{- end }}                 
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
@@ -93,6 +98,8 @@ spec:
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
         args: [ "nuoca", "start" , "nuoca", "--collection-interval", "10" ]
+        {{- include "influx.capabilities" . | indent 8 }}
+        {{- include "influx.envFrom" . | indent 8 }}
         env:
         - { name: NUOCMD_API_SERVER , value: "https://{{ template "admin.address" . }}:8888" }
         volumeMounts:
