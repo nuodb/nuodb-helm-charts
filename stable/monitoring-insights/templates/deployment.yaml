@@ -1,0 +1,129 @@
+{{- if or (not .Values.openshift.enabled) (not .Values.openshift.enableDeploymentConfigs) }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: insights
+    group: nuodb
+    subgroup: monitoring
+  name: {{ template "insights.fullname" . }}   
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: insights
+  strategy:
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: insights
+        group: nuodb
+        subgroup: monitoring
+    spec:
+      {{- with .Values.insights.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | trim | indent 8 }}
+      {{- end }}
+      {{- if .Values.insights.affinity }}
+      affinity:
+        {{- tpl .Values.insights.affinity . | trim | indent 8 }}
+      {{- end }}
+      {{- if .Values.insights.tolerations }}
+      tolerations:
+        {{- toYaml .Values.insights.tolerations | trim | indent 8 }}
+      {{- end }}
+      initContainers:
+      - name: optin
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+        args:
+        - "/bin/sh"
+        - "-c"
+        - "[ \"{{ .Values.insights.enabled }}\" == \"true\" ] && nuoca enable insights --connect-timeout 300 || nuoca disable insights --connect-timeout 300"
+        {{- include "insights.capabilities" . | indent 8 }}
+        {{- include "insights.envFrom" . | indent 8 }}
+        env:
+        - { name: NUOCMD_API_SERVER , value: "https://{{ template "admin.address" . }}:8888" }
+        volumeMounts:
+        {{- if .Values.admin.tlsCACert }}
+        - name: tls-ca-cert
+          mountPath: /etc/nuodb/keys/ca.cert
+          subPath: {{ .Values.admin.tlsCACert.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls-client-pem
+          mountPath: /etc/nuodb/keys/nuocmd.pem
+          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        {{- end }}
+      containers:
+      - name: insights
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+        args: [ "nuoca", "start" , "nuoca", "--insights" ]
+        {{- include "insights.capabilities" . | indent 8 }}
+        {{- include "insights.envFrom" . | indent 8 }}
+        env:
+        - { name: NUOCMD_API_SERVER , value: "https://{{ template "admin.address" . }}:8888" }
+        volumeMounts:
+        - name: log-volume
+          mountPath: /var/log/nuodb
+        - name: config-insights
+          mountPath: /etc/nuodb/nuoca.yml.template
+          subPath: nuoca.yml.template
+        {{- if .Values.admin.tlsCACert }}
+        - name: tls-ca-cert
+          mountPath: /etc/nuodb/keys/ca.cert
+          subPath: {{ .Values.admin.tlsCACert.key }}
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls-client-pem
+          mountPath: /etc/nuodb/keys/nuocmd.pem
+          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        {{- end }}
+      - name: insights-server
+        image: {{ template "nuodb.image" . }}
+        imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+        args: [ "nuoinsights" ]
+        ports:
+        - { name: 8080-tcp,  containerPort: 8080,  protocol: TCP }
+        {{- include "insights.capabilities" . | indent 8 }}
+        {{- include "insights.envFrom" . | indent 8 }}
+        env:
+        - { name: NUOCMD_API_SERVER , value: "https://{{ template "admin.address" . }}:8888" }
+        volumeMounts:
+        - name: log-volume
+          mountPath: /var/log/nuodb
+        - name: nuoinsights
+          mountPath: /usr/local/bin/nuoinsights
+          subPath: nuoinsights
+      {{- include "nuodb.imagePullSecrets" . | indent 6}}
+      volumes:
+      - name: log-volume
+        emptyDir: {}
+      - name: config-insights
+        configMap:
+          name: insights-configmap
+      - name: nuoinsights
+        configMap:
+          name: insights-configmap
+          defaultMode: 0754
+      {{- if .Values.admin.tlsCACert }}
+      - name: tls-ca-cert
+        secret:
+          secretName: {{ .Values.admin.tlsCACert.secret }}
+          defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tlsClientPEM }}
+      - name: tls-client-pem
+        secret:
+          secretName: {{ .Values.admin.tlsClientPEM.secret }}
+          defaultMode: 0440
+      {{- end }}
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+{{- end }}
