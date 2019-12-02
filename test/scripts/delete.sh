@@ -21,7 +21,7 @@ popd >/dev/null
 
 . ${SELF_ROOT}/test/scripts/profile.sh
 
-RELEASES=( demo-ycsb restored-database backup database monitoring-influx monitoring-insights admin transparent-hugepage )
+RELEASES=( restored-database backup database monitoring-influx monitoring-insights admin transparent-hugepage )
 for RELEASE in "${RELEASES[@]}"
 do
     helm delete --purge ${RELEASE}
