@@ -151,7 +151,7 @@ In a nutshell the order of installation is:
 
 - **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
 - **admin** ([documentation](admin/README.md))
-- **monitoring-influx** ([documentation](monitoring-influx/README.md))
+- **monitoring-insights** ([documentation](monitoring-insights/README.md))
 - **database** ([documentation](database/README.md))
 - **backup** ([documentation](backup/README.md))
 - **restore** ([documentation](restore/README.md))

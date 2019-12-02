@@ -122,7 +122,7 @@ sleep 180
 check-pod "admin-${DOMAIN_NAME}-1" "1/1"
 check-pod "admin-${DOMAIN_NAME}-2" "1/1"
 
-CHARTS=( monitoring-influx monitoring-insights )
+CHARTS=( monitoring-insights )
 for CHART in "${CHARTS[@]}"
 do
   helm install ${REPO_NAME}/$CHART -n $CHART \

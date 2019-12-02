@@ -16,7 +16,7 @@ popd >/dev/null
 
 # =========================================================
 
-CHARTS=( admin database monitoring-influx monitoring-insights backup demo-ycsb )
+CHARTS=( admin database monitoring-insights backup demo-ycsb )
 for CHART in "${CHARTS[@]}"
 do
     helm del --purge $CHART
