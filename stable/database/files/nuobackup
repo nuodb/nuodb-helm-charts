@@ -138,5 +138,5 @@ if [ "$backup_type" = "full" ]; then
 
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/$next --value $backupset --unconditional
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $next --expected-value "$latest"
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/latest --value $backup_group --expected-value --unconditional
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/latest --value $backup_group --unconditional
 fi
