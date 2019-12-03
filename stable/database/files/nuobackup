@@ -78,7 +78,7 @@ if [ -n "$semaphore" ]; then
    gate=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $semaphore/$db_name)
 
    # reset the semaphore
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value '' --expected-value $gate
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value '' --expected-value "$gate"
 
    if [ -z "$gate" ]; then
       echo >&2 "Semaphore empty - nothing to do"
