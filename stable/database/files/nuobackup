@@ -21,6 +21,7 @@ backup_type="full"
 db_name=$DB_NAME
 backup_group="none"
 labels=""
+semaphore=""
 timeout=1800
 backup_root=$BACKUP_DIR
 
@@ -46,6 +47,10 @@ do
            labels="$1"; shift;;
         "--labels="* )
            labels="${opt#*=}";;
+        "--semaphore" )
+           semaphore="$1"; shift;;
+        "--semaphore="* )
+           semaphore="${opt#*=}";;
         "--timeout" )
            timeout="$1"; shift;;
         "--timeout="* )
@@ -60,6 +65,19 @@ done
 
 backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
 label=$(echo $label | tr '[:upper:]' '[:lower:]')
+
+# if $semaphore is not null, then check the value in Raft
+if [ -n "$semaphore" ]; then
+   gate=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $semaphore/$db_name)
+
+   # reset the semaphore
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value '' --expected-value $gate
+
+   if [ -z "$gate" ]; then
+      echo >&2 "Semaphore empty - nothing to do"
+      exit 0
+   fi
+fi
 
 # find the index for the latest backup info
 latest=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest )

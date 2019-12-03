@@ -16,6 +16,7 @@
 
 restore_type="database"
 db_name=$DB_NAME
+semaphore="/nuorestore/semaphore"
 restore_url=$NUODB_RESTORE_URL
 backup_group="all"
 labels=""
@@ -37,6 +38,10 @@ do
            db_name="$1"; shift;;
         "--db-name="* )
            db_name="${opt#*=}";;
+        "--semaphore" )
+           semaphore="$1"; shift;;
+        "--semaphore="* )
+           semaphore="${opt#*=}";;
         "--source" )
            restore_source="$1"; shift;;
         "--source="* )
@@ -64,4 +69,12 @@ if [ -n "$restore_credentials" ]; then
 fi
 
 # optionally do automatic initiation of the restore
-[ "$auto" = "true" -a "$restore_type" = "database" ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
+if [ "$auto" = "true" -a "$restore_type" = "database" ]; then
+   nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
+
+   # wait for the database to be running
+   nuocmd --api-server $NUOCMD_API_SERVER check database --db-name $db_name --check-running --wait-forever
+
+   # Set the semaphore to create a new backupset with a full backup
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
+fi
