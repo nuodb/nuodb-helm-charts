@@ -66,6 +66,13 @@ done
 backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
 label=$(echo $label | tr '[:upper:]' '[:lower:]')
 
+# If the latest backup was not made by the specified backup-group - return null
+if [ "$backup_type" = "report-latest" ]; then
+   latest=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/latest )
+   echo ""
+   exit 0
+fi
+
 # if $semaphore is not null, then check the value in Raft
 if [ -n "$semaphore" ]; then
    gate=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $semaphore/$db_name)
@@ -98,7 +105,7 @@ else
       exit -1
    fi
 
-   # retrieve the latest bckupset name
+   # retrieve the latest backupset name
    backupset=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
    echo >&2 "Looking up $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} returned: $backupset"
 fi
@@ -127,7 +134,9 @@ if [ "$backup_type" = "full" ]; then
    # store the new backupset as latest, and store the new latest index
    echo >&2 "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest = $next"
    echo >&2 "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next = $backupset"
+   echo >&2 "$NUODB_BACKUP_KEY/$db_name/latest = $backup_group"
 
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/$next --value $backupset --unconditional
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $next --expected-value "$latest"
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/latest --value $backup_group --expected-value --unconditional
 fi

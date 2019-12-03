@@ -161,10 +161,10 @@ fi
 # resolve ":latest"
 if [ "$restore_source" = ":latest" ]; then
   restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $NUODB_BACKUP_GROUP )
-  [ -n "$NUODB_DEBUG" ] && echo "restore :latest resolved to $restore_source"
+  [ -n "$NUODB_DEBUG" ] && echo "restore :latest for $NUODB_BACKUP_GROUP resolved to $restore_source"
 fi
 
-if [ -n "$restore_requested" ]; then
+if [ -n "$restore_requested" -a -n "$restore_source" ]; then
 
   # work out who is the first one in
   $NUOCMD set value --key $first_req --value $HOSTNAME --expected-value ''
@@ -177,7 +177,7 @@ if [ -n "$restore_requested" ]; then
 
     echo "I am first-in: $first_in == $HOSTNAME"
 
-    [ -z "$restore_source" ] && die -1 "There is no valid LATEST backup - restore of LATEST failed."
+    # [ -z "$restore_source" ] && die -1 "There is no valid LATEST backup - restore of LATEST failed."
 
     # take ownership of the SM startup semaphore
     $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --unconditional
