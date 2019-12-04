@@ -184,6 +184,27 @@ func TestDatabaseDeploymentConfigRenders(t *testing.T) {
 	assert.Check(t, strings.Contains(output, "kind: DeploymentConfig"))
 }
 
+func TestDatabaseClusterServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-clusterip.yaml"})
+
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "name: demo-clusterip"))
+	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
+	assert.Check(t, !strings.Contains(output, "clusterIP: None"))
+	assert.Check(t, strings.Contains(output, "component: te"))
+}
+
 func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
@@ -198,10 +219,11 @@ func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 	var object v1.Service
 	helm.UnmarshalK8SYaml(t, output, &object)
 
-	value, exists := object.Spec.Selector["component"]
-
-	assert.Assert(t, exists)
-	assert.Assert(t, value == "te")
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "name: demo"))
+	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
+	assert.Check(t, strings.Contains(output, "clusterIP: None"))
+	assert.Check(t, strings.Contains(output, "component: te"))
 }
 
 func TestDatabaseServiceRenders(t *testing.T) {
@@ -222,27 +244,11 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	var object v1.Service
 	helm.UnmarshalK8SYaml(t, output, &object)
 
-	value, exists := object.Spec.Selector["component"]
-
-	assert.Assert(t, exists)
-	assert.Assert(t, value == "te")
 	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
+	assert.Check(t, strings.Contains(output, "name: demo-balancer"))
 	assert.Check(t, strings.Contains(output, "kind: Service"))
 	assert.Check(t, strings.Contains(output, "aws-load-balancer-internal"))
-}
-
-func TestDatabaseHeadlessServiceDaemonSet(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{"database.enableDaemonSet": "true"},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-headless.yaml"})
-
-	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "component: te"))
 }
 
 func TestDatabaseStatefulSetDisabled(t *testing.T) {
