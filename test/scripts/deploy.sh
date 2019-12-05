@@ -149,7 +149,7 @@ check-pod "sm-database-cashews-demo-0" "1/1"
 check-pod "sm-database-cashews-demo-hotcopy-0" "1/1"
 check-pod "te-database-cashews-demo" "1/1"
 
-CHARTS=( backup demo-ycsb )
+CHARTS=( backup )
 for CHART in "${CHARTS[@]}"
 do
   helm install ${REPO_NAME}/$CHART -n $CHART \

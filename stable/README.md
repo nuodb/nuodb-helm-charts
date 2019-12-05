@@ -155,7 +155,6 @@ In a nutshell the order of installation is:
 - **database** ([documentation](database/README.md))
 - **backup** ([documentation](backup/README.md))
 - **restore** ([documentation](restore/README.md))
-- **demo-ycsb** ([documentation](demo-ycsb/README.md))
 - **demo-quickstart** ([documentation](demo-quickstart/README.md))
 
 See the instructions for the individual charts for deploying the applications.
