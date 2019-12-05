@@ -87,7 +87,13 @@ LBVAR_NODE_ZONE="&zone=${NODE_ZONE}"
 
 #check for nuo.properties file overrides
 if [ "$PEER_ADDRESS" != "" ] && [ "$DB_NAME" != "" ]; then
-    AGENT_DB_NAME_VALUE="-p db.url=jdbc:com.nuodb://${PEER_ADDRESS}/${DB_NAME}?schema=${db_schema}${LOADBALANCER_QUERY}${LOADBALANCER_POLICY}${LBVAR_POD_NAME}${LBVAR_NODE_NAME}${LBVAR_NODE_ZONE}"
+    AGENT_DB_NAME_VALUE="-p db.url=jdbc:com.nuodb://${PEER_ADDRESS}/${DB_NAME}?schema=${db_schema}"
+
+    if [ "$TE_DIRECT" == "true" ]; then
+        AGENT_DB_NAME_VALUE="${AGENT_DB_NAME_VALUE}&direct=true"
+    else
+        AGENT_DB_NAME_VALUE="${AGENT_DB_NAME_VALUE}${LOADBALANCER_QUERY}${LOADBALANCER_POLICY}${LBVAR_POD_NAME}${LBVAR_NODE_NAME}${LBVAR_NODE_ZONE}"
+    fi
 fi
 
 if [ "$DB_USER" != "" ]; then

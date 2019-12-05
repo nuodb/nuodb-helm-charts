@@ -62,7 +62,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        {{- if .Values.ycsb.teDirect }}
+        - { name: PEER_ADDRESS,          value: "{{ template "database.address" . }}" }
+        {{- else}}
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+        {{- end}}
         - { name: DB_SCHEMA,           value: {{ .Values.ycsb.dbSchema | quote }} }
         - { name: YCSB_WORKLOAD,       value: {{ .Values.ycsb.workload | quote }} }
         - { name: LB_POLICY,           value: {{ .Values.ycsb.lbPolicy | quote}} }
@@ -71,6 +75,7 @@ spec:
         - { name: NO_OF_ITERATIONS,    value: {{ .Values.ycsb.noOfIterations | quote }} }
         - { name: OPS_PER_ITERATION,   value: {{ .Values.ycsb.opsPerIteration | quote }} }
         - { name: MAX_DELAY,           value: {{ .Values.ycsb.maxDelay | quote }} }
+        - { name: TE_DIRECT,           value: {{ default false .Values.ycsb.teDirect | quote }} }
         volumeMounts:
         - name: cloud-profile
           mountPath: /etc/profile.d/cloud.sh
@@ -78,6 +83,12 @@ spec:
         - name: ycsb-gen
           mountPath: /driver/ycsb_gen.sh
           subPath: ycsb_gen.sh
+        - name: startup
+          mountPath: /driver/startup.sh
+          subPath: startup.sh
+        - name: create
+          mountPath: /driver/create_usertable.sh
+          subPath: create_usertable.sh
 {{- include "ycsb.imagePullSecrets" . | indent 6 }}
       volumes:
         - name: cloud-profile
@@ -87,4 +98,12 @@ spec:
         - name: ycsb-gen
           configMap:
             name: {{ template "ycsb.fullname" . }}-ycsb-gen
+            defaultMode: 0777
+        - name: startup
+          configMap:
+            name: {{ template "ycsb.fullname" . }}-startup
+            defaultMode: 0777
+        - name: create
+          configMap:
+            name: {{ template "ycsb.fullname" . }}-create
             defaultMode: 0777
