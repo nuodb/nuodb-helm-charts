@@ -122,21 +122,6 @@ sleep 180
 check-pod "admin-${DOMAIN_NAME}-1" "1/1"
 check-pod "admin-${DOMAIN_NAME}-2" "1/1"
 
-CHARTS=( monitoring-influx monitoring-insights )
-for CHART in "${CHARTS[@]}"
-do
-  helm install ${REPO_NAME}/$CHART -n $CHART \
-    ${values_option} \
-    ${values_option_overrides} \
-    ${values_overrides} \
-    --set admin.domain=${DOMAIN_NAME}
-done
-
-sleep 60 
-
-check-pod "nuodb-dashboard-display" "1/1"
-check-pod "nuodb-insights" "2/2"
-
 helm install ${REPO_NAME}/database --name database \
   ${values_option} \
   ${values_option_overrides} \

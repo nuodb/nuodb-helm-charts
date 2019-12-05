@@ -243,10 +243,6 @@ func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 
 	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", []string{"templates/daemonset.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/monitoring-influx", []string{"templates/deployment.yaml"})
-
-	helm.RenderTemplate(t, options, "../../stable/monitoring-insights", []string{"templates/pod.yaml"})
-
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/cronjob.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/job.yaml"})
 
@@ -265,10 +261,6 @@ func TestPullSecretsRenderAllGlobal(t *testing.T) {
 	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/deployment.yaml"})
 
 	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", []string{"templates/daemonset.yaml"})
-
-	helm.RenderTemplate(t, options, "../../stable/monitoring-influx", []string{"templates/deployment.yaml"})
-
-	helm.RenderTemplate(t, options, "../../stable/monitoring-insights", []string{"templates/pod.yaml"})
 
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/cronjob.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/job.yaml"})
