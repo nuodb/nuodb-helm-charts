@@ -16,11 +16,7 @@ popd >/dev/null
 
 # =========================================================
 
-<<<<<<< HEAD
 CHARTS=( admin database backup )
-=======
-CHARTS=( admin database monitoring-insights backup demo-ycsb )
->>>>>>> efabc064e9d37bea1266d4c0f4389f48c6a4133d
 for CHART in "${CHARTS[@]}"
 do
     helm del --purge $CHART

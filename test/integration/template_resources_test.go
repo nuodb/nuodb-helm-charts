@@ -243,11 +243,6 @@ func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 
 	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", []string{"templates/daemonset.yaml"})
 
-<<<<<<< HEAD
-=======
-	helm.RenderTemplate(t, options, "../../stable/monitoring-insights", []string{"templates/pod.yaml"})
-
->>>>>>> efabc064e9d37bea1266d4c0f4389f48c6a4133d
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/cronjob.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/job.yaml"})
 
@@ -267,11 +262,6 @@ func TestPullSecretsRenderAllGlobal(t *testing.T) {
 
 	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", []string{"templates/daemonset.yaml"})
 
-<<<<<<< HEAD
-=======
-	helm.RenderTemplate(t, options, "../../stable/monitoring-insights", []string{"templates/pod.yaml"})
-
->>>>>>> efabc064e9d37bea1266d4c0f4389f48c6a4133d
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/cronjob.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/job.yaml"})
 
