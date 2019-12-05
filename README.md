@@ -57,6 +57,10 @@ This chart repository supports the latest and previous minor versions of Kuberne
 
 To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.
 
+## Supported NuoDB Versions
+
+These chart repository supports NuoDB version [4.0](https://hub.docker.com/layers/nuodb/nuodb-ce/4.0/images/sha256-aaa558ef71795f15d5b3a1ef07b6be4890925dbd023c59b1f9a674ca20614763) and onwards.
+
 ## Status of the Project
 
 This project is still under active development, so you might run into [issues](https://github.com/nuodb/nuodb-helm-charts/issues). If you do, please don't be shy about letting us know, or better yet, contribute a fix or feature.
