@@ -50,7 +50,7 @@ do
            auto="$1"; shift;;
         "--auto="* )
            auto="${opt#*=}";;
-        *) echo >&2 "Invalid nuobackup option: $opt ($@)"; exit 1;;
+        *) echo >&2 "Invalid nuorestore option: $opt ($@)"; exit 1;;
    esac
 done
 
@@ -71,9 +71,6 @@ fi
 # optionally do automatic initiation of the restore
 if [ "$auto" = "true" -a "$restore_type" = "database" ]; then
    nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
-
-   # wait for the database to be running
-   nuocmd --api-server $NUOCMD_API_SERVER check database --db-name $db_name --check-running --wait-forever
 
    # Set the semaphore to create a new backupset with a full backup
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional

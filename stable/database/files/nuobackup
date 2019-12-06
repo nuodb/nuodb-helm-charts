@@ -83,6 +83,9 @@ if [ -n "$semaphore" ]; then
       echo >&2 "Semaphore empty - nothing to do"
       exit 0
    fi
+
+   # wait for the database to be RUNNING
+   nuocmd --api-server $NUOCMD_API_SERVER check database --db-name $db_name --check-running --wait-forever
 fi
 
 # find the index for the latest backup info
