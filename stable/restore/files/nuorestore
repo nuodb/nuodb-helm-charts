@@ -60,7 +60,7 @@ auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 # set the persistent flag for the backup
 nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
     --value $restore_source \
-    --expected-value ''
+    --unconditional
 
 if [ -n "$restore_credentials" ]; then
     nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/credentials \
