@@ -286,7 +286,7 @@ fi
 $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
 
 # clear the restore_request
-$NUOCMD set value --key $restore_req --value '' --expected-value $restore_requested
+$NUOCMD set value --key $restore_req --value '' --expected-value "$restore_requested"
 
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
