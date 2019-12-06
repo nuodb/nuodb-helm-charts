@@ -160,8 +160,26 @@ fi
 
 # resolve ":latest"
 if [ "$restore_source" = ":latest" ]; then
-  restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $NUODB_BACKUP_GROUP )
-  [ -n "$NUODB_DEBUG" ] && echo "restore :latest for $NUODB_BACKUP_GROUP resolved to $restore_source"
+
+  # find which backup group performed the latest backup
+  latest_group=$( nuobackup --type report-latest --db-name $DB_NAME )
+
+  # if the latest backup was not by my group, then wait to allow an SM from the latest group to start first
+  if [ "$latest_group" != "$NUODB_BACKUP_GROUP" ]; then
+    echo ":latest backup was not made by my group $NUODB_BACKUP_GROUP - waiting to allow an SM from $latest_group to start..."
+
+    # try for 30 seconds, sleeping every 2 seconds
+    for retry in {1..30..2}; do
+      sm="$($NUOCMD get value --key $first_req )"
+      [ -n "$sm" ] && break
+      sleep 2
+    done
+
+    [ -n "$sm" ] && echo "Primary restore SM=${sm}..." || echo "No Primary restore SM found - attempting restore from $NUODB_BACKUP_GROUP..."
+  fi
+
+  restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $NUODB_NUODB_BACKUP_GROUP )
+  [ -n "$NUODB_DEBUG" ] && echo "restore :latest for $NUODB_NUODB_BACKUP_GROUP resolved to $restore_source"
 fi
 
 if [ -n "$restore_requested" -a -n "$restore_source" ]; then
@@ -207,7 +225,7 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" -o -d $NUODB_BACKUPDIR/$restore_source ]; then
       perform_restore
 
-      # any error in restore is logged, but not fatal
+      # any error in a SEED restore is logged, but not fatal
       [ -n "$error" ] && echo "WARNING: Error performing SEED restore: $error"
     fi
   fi

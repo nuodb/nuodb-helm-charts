@@ -19,7 +19,7 @@
 
 backup_type="full"
 db_name=$DB_NAME
-backup_group="none"
+backup_group=""
 labels=""
 semaphore=""
 timeout=1800
@@ -66,10 +66,9 @@ done
 backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
 label=$(echo $label | tr '[:upper:]' '[:lower:]')
 
-# If the latest backup was not made by the specified backup-group - return null
-if [ "$backup_type" = "report-latest" ]; then
-   latest=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/latest )
-   echo ""
+# Return which group made the latest backup
+if [ "$backup_type" = "report-latest" -a "$backup_group" = "" ]; then
+   echo "$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/latest )"
    exit 0
 fi
 
@@ -88,17 +87,17 @@ fi
 
 # find the index for the latest backup info
 latest=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest )
+current=$latest
 
 if [ "$backup_type" = "full" ]; then
    if [ -z "$latest" ]; then
-      latest=0
-      nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $latest --expected-value ''
+      current=0
    fi
 
    backupset=$( date "+%Y%m%dT%H%M%S" )
 
    # bump latest, and wrap around (simple ring-buffer)
-   next=$(( (latest + 1) % $NUODB_MAX_BACKUP_HISTORY ))
+   next=$(( (current + 1) % $NUODB_MAX_BACKUP_HISTORY ))
 else
    if [ -z "$latest" ]; then
       echo >&2 "No full backup has completed yet - try again later"
