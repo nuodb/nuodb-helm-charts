@@ -122,7 +122,7 @@ first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
 myArchive=$( $NUOCMD show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -z "$myArchive" ] && myArchive=-1
 [ -n "$NUODB_DEBUG" ] && echo "myArchive=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
-[ -n "$NUODB_DEBUG" -a "$myArchive" = "-1" ] && $NUOCMD show archives --db-name $DB_NAME
+[ -n "$NUODB_DEBUG" -a "$myArchive" = "-1" ] && echo "$($NUOCMD show archives --db-name $DB_NAME)"
 
 # if a restore from backup has been requested, then do that now
 restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
@@ -178,8 +178,8 @@ if [ "$restore_source" = ":latest" ]; then
     [ -n "$sm" ] && echo "Primary restore SM=${sm}..." || echo "No Primary restore SM found - attempting restore from $NUODB_BACKUP_GROUP..."
   fi
 
-  restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $NUODB_NUODB_BACKUP_GROUP )
-  [ -n "$NUODB_DEBUG" ] && echo "restore :latest for $NUODB_NUODB_BACKUP_GROUP resolved to $restore_source"
+  restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $NUODB_BACKUP_GROUP )
+  [ -n "$NUODB_DEBUG" ] && echo "restore :latest for $NUODB_BACKUP_GROUP resolved to $restore_source"
 fi
 
 if [ -n "$restore_requested" -a -n "$restore_source" ]; then
