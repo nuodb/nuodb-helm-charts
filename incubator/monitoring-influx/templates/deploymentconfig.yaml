@@ -1,21 +1,20 @@
-{{- if or (not .Values.openshift.enabled) (not .Values.openshift.enableDeploymentConfigs) }}
+{{- if and (.Values.openshift.enabled) (.Values.openshift.enableDeploymentConfigs) }}
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
 metadata:
   labels:
     app: monitor
     group: nuodb
     subgoup: monitoring
-  name: nuodb-dashboard-display    
+  name: nuodb-dashboard-display
 spec:
   replicas: 1
   selector:
-    matchLabels:
-      app: monitor
-      deployment: nuodb-dashboard-display
+    app: monitor
+    deploymentconfig: nuodb-dashboard-display
   strategy:
-    type: RollingUpdate
+    type: Rolling
   template:
     metadata:
       labels:
@@ -23,7 +22,7 @@ spec:
         group: nuodb
         subgroup: monitoring
         selector: frontend
-        deployment: nuodb-dashboard-display
+        deploymentconfig: nuodb-dashboard-display
     spec:
       containers:
       - name: grafana
@@ -56,16 +55,21 @@ spec:
         configMap:
           name: nuodb-dashboard-provisioning
       - name: nuodb-dashboards
-        configMap:
-          name: nuodb-dashboards
+        projected:
+          sources:
+          {{- range $path, $bytes := .Files.Glob "files/dashboards/**.json" }}
+          {{- $name :=  base ($path) | replace (ext ($path)) ""}}
+          - configMap:
+              name: nuodb-dashboards-{{ $name }}
+          {{- end }}    
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
 ---
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
 metadata:
   labels:
     app: monitor
@@ -75,18 +79,17 @@ metadata:
 spec:
   replicas: 1
   selector:
-    matchLabels:
-      app: monitor
-      deployment: nuodb-metrics-collector
+    app: monitor
+    deploymentconfig: nuodb-metrics-collector
   strategy:
-    type: RollingUpdate
+    type: Rolling
   template:
     metadata:
       labels:
         app: monitor
         group: nuodb
         subgroup: monitoring
-        deployment: nuodb-metrics-collector
+        deploymentconfig: nuodb-metrics-collector
     spec:
       containers:
       - name: nuoca

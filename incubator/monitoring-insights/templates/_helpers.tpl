@@ -1,4 +1,22 @@
 {{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "insights.fullname" -}}
+{{- $domain := default "domain" .Values.admin.domain -}}
+{{- if .Values.insights.fullnameOverride -}}
+{{- .Values.insights.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.insights.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- printf "%s-%s" .Release.Name $domain | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s-%s" .Release.Name $domain $name | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return the proper NuoDB image name
 */}}
 {{- define "nuodb.image" -}}
@@ -58,4 +76,25 @@ imagePullSecrets:
   - name: {{ . }}
 {{- end }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Add capabilities in a securityContext
+*/}}
+{{- define "insights.capabilities" -}}
+{{- with .Values.insights.securityContext.capabilities }}
+securityContext:
+  capabilities:
+    add: {{ . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Import ENV vars from configMaps
+*/}}
+{{- define "insights.envFrom" -}}
+{{- with .Values.insights.envFrom }}
+envFrom:
+{{ toYaml  . }}
+{{- end }}
 {{- end -}}

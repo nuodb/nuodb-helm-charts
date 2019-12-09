@@ -1,20 +1,21 @@
-{{- if and (.Values.openshift.enabled) (.Values.openshift.enableDeploymentConfigs) }}
+{{- if or (not .Values.openshift.enabled) (not .Values.openshift.enableDeploymentConfigs) }}
 ---
-apiVersion: apps.openshift.io/v1
-kind: DeploymentConfig
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   labels:
     app: monitor
     group: nuodb
     subgoup: monitoring
-  name: nuodb-dashboard-display
+  name: nuodb-dashboard-display    
 spec:
   replicas: 1
   selector:
-    app: monitor
-    deploymentconfig: nuodb-dashboard-display
+    matchLabels:
+      app: monitor
+      deployment: nuodb-dashboard-display
   strategy:
-    type: Rolling
+    type: RollingUpdate
   template:
     metadata:
       labels:
@@ -22,7 +23,7 @@ spec:
         group: nuodb
         subgroup: monitoring
         selector: frontend
-        deploymentconfig: nuodb-dashboard-display
+        deployment: nuodb-dashboard-display
     spec:
       containers:
       - name: grafana
@@ -55,16 +56,21 @@ spec:
         configMap:
           name: nuodb-dashboard-provisioning
       - name: nuodb-dashboards
-        configMap:
-          name: nuodb-dashboards
+        projected:
+          sources:
+          {{- range $path, $bytes := .Files.Glob "files/dashboards/**.json" }}
+          {{- $name :=  base ($path) | replace (ext ($path)) ""}}
+          - configMap:
+              name: nuodb-dashboards-{{ $name }}
+          {{- end }}                 
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 30
 ---
-apiVersion: apps.openshift.io/v1
-kind: DeploymentConfig
+apiVersion: apps/v1
+kind: Deployment
 metadata:
   labels:
     app: monitor
@@ -74,23 +80,26 @@ metadata:
 spec:
   replicas: 1
   selector:
-    app: monitor
-    deploymentconfig: nuodb-metrics-collector
+    matchLabels:
+      app: monitor
+      deployment: nuodb-metrics-collector
   strategy:
-    type: Rolling
+    type: RollingUpdate
   template:
     metadata:
       labels:
         app: monitor
         group: nuodb
         subgroup: monitoring
-        deploymentconfig: nuodb-metrics-collector
+        deployment: nuodb-metrics-collector
     spec:
       containers:
       - name: nuoca
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
         args: [ "nuoca", "start" , "nuoca", "--collection-interval", "10" ]
+        {{- include "influx.capabilities" . | indent 8 }}
+        {{- include "influx.envFrom" . | indent 8 }}
         env:
         - { name: NUOCMD_API_SERVER , value: "https://{{ template "admin.address" . }}:8888" }
         volumeMounts:

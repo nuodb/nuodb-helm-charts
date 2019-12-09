@@ -42,10 +42,25 @@ admin:
   #   key: client.pem
 
 insights:
-  # enabled
+  # nameOverride:
+  # fullnameOverride:  
+
   # Use to control Insights Opt In.  Insights provides database monitoring.
   # Set to "true" to activate or "false" to deactivate
   enabled: true
+
+  ## Use a securityContext to specify additional capabilities
+  # For example, if the container needs to configure network setting, then add "NET_ADMIN"
+  # Ex: capabilities: [ "NET_ADMIN" ]
+  ##
+  securityContext:
+    capabilities: []
+
+  ## Import Environment Variables from one or more configMaps
+  # Ex: envFrom: [ configMapRef: { name: myConfigMap }, configMapRef: { name: myOtherConfigMap } ]
+  ##
+  envFrom: []
+
   # affinity: {}
   # nodeSelector: {}
   # tolerations: []
