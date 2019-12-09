@@ -175,11 +175,15 @@ if [ "$restore_source" = ":latest" ]; then
       sleep 2
     done
 
-    [ -n "$sm" ] && echo "Primary restore SM=${sm}..." || echo "No Primary restore SM found - attempting restore from $NUODB_BACKUP_GROUP..."
+    [ -n "$sm" ] && echo "Primary restore SM='${sm}'..." || echo "No Primary restore SM found - attempting restore from $NUODB_BACKUP_GROUP..."
   fi
+fi
 
+# resolve the latest backup for the specified backup group
+if [ "restore_source" = ":latest" -o "$restore_source" = ":group-latest" ]; then
+  [ -n "$NUODB_DEBUG" ] && echo "Resolving restore '$restore_source'..."
   restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $NUODB_BACKUP_GROUP )
-  [ -n "$NUODB_DEBUG" ] && echo "restore :latest for $NUODB_BACKUP_GROUP resolved to $restore_source"
+  [ -n "$NUODB_DEBUG" ] && echo "Latest restore for $NUODB_BACKUP_GROUP resolved to $restore_source"
 fi
 
 if [ -n "$restore_requested" -a -n "$restore_source" ]; then
@@ -276,9 +280,9 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/info.json ]
     nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
 
     #ls -l $DB_DIR
-  elif [ -d "$DB_DIR $NUODB_BACKUPDIR/$restore_source" ]; then
+  elif [ -d "$NUODB_BACKUPDIR/$restore_source" ]; then
     # NUODB_IMPORT_URL has no protocol - so just append the --restore-from-dir option
-    set -- --restore-from-dir "$NUODB_BACKUPDIR/$seed_source" "$@"
+    set -- --restore-from-dir "$NUODB_BACKUPDIR/$restore_source" "$@"
   fi
 fi
 
