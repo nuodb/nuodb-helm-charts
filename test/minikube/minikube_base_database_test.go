@@ -158,7 +158,6 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 	// verify that the backup has been documented by the Admin layer
-	backupName := fmt.Sprintf("%s/%s", testlib.LAST_BACKUP_PREFIX, databaseName)
 	backupset, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions,
 		"exec", podName, "--",
 		"nuodocker", "get", "current-backup",
