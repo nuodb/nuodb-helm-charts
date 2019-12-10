@@ -162,10 +162,10 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 	backupset, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions,
 		"exec", podName, "--",
 		"nuodocker", "get", "current-backup",
-		"--db-name", backupName,
+		"--db-name", databaseName,
 	)
 
-	assert.NilError(t, err, "Error running: nuodocker get current-backup --db-name ", backupName)
+	assert.NilError(t, err, "Error running: nuodocker get current-backup --db-name ", databaseName)
 	assert.Check(t, backupset != "")
 }
 
