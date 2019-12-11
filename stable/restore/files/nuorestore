@@ -78,5 +78,5 @@ if [ "$restore_type" = "database" ]; then
    done
 
    # optionally do automatic initiation of the restore
-   [ "$auto" = "true" -a ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
+   [ "$auto" = "true" ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
 fi
