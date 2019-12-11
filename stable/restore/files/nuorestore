@@ -69,7 +69,7 @@ if [ -n "$restore_credentials" ]; then
 fi
 
 
-if [ "$restore_type" = "database" ]
+if [ "$restore_type" = "database" ]; then
    # Set the semaphores to create a new backupset from a full backup
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
 
