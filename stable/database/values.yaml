@@ -192,7 +192,7 @@ database:
       # internalIP: true
     
     ## By default, database clusterip and headless services for direct TE connections are enabled,
-    ## but can be optionally disbaled here
+    ## but can be optionally disabled here
     dbServices: {}
       # enabled: false
 
