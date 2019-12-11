@@ -74,10 +74,18 @@ fi
 
 # if $semaphore is not null, then check the value in Raft
 if [ -n "$semaphore" ]; then
-   gate=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $semaphore/$db_name)
+   if [ "$backup_group" != "" ]; then
+      gate=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $semaphore/$db_name/$backup_group)
 
-   # reset the semaphore
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value '' --expected-value "$gate"
+      # and reset the semaphore
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$backup_group --value '' --expected-value "$gate"
+   else
+      gate=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $semaphore/$db_name)
+
+      # and reset the semaphore
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value '' --expected-value "$gate"
+   fi
+
 
    if [ -z "$gate" ]; then
       echo >&2 "Semaphore $semaphore/$db_name empty - nothing to do"
@@ -141,4 +149,13 @@ if [ "$backup_type" = "full" ]; then
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/$next --value $backupset --unconditional
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $next --expected-value "$latest"
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/latest --value $backup_group --unconditional
+
+   # update the list of known backup groups for this database
+   group_list="$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups)"
+   if [ -z $(echo "$group_list" | grep $backup_group) ]; then
+      new_list="$group_list $backup_group"
+
+      echo >&2 "$NUODB_BACKUP_KEY/$db_name/backup-groups = $new_list"
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/backup-groups --value "$new_list" --expected_value "$group_list"
+   fi
 fi

@@ -68,10 +68,15 @@ if [ -n "$restore_credentials" ]; then
         --unconditional
 fi
 
-# Set the semaphore to create a new backupset with a full backup
-nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
 
-# optionally do automatic initiation of the restore
-if [ "$auto" = "true" -a "$restore_type" = "database" ]; then
-   nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
+if [ "$restore_type" = "database" ]
+   # Set the semaphores to create a new backupset from a full backup
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
+
+   for group in $(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$group --value "true" --unconditional
+   done
+
+   # optionally do automatic initiation of the restore
+   [ "$auto" = "true" -a ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
 fi
