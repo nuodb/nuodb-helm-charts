@@ -80,7 +80,7 @@ if [ -n "$semaphore" ]; then
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value '' --expected-value "$gate"
 
    if [ -z "$gate" ]; then
-      echo >&2 "Semaphore empty - nothing to do"
+      echo >&2 "Semaphore $semaphore/$db_name empty - nothing to do"
       exit 0
    fi
 

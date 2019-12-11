@@ -95,9 +95,9 @@ metadata:
     database: {{ .Values.database.name }}
 spec:
   schedule: "?/3 * * * *"
-  startingDeadlineSeconds: {{ .Values.database.sm.hotCopy.deadline}}
-  successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory}}
-  failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
+  startingDeadlineSeconds: {{ .Values.database.sm.hotCopy.deadline }}
+  successfulJobsHistoryLimit: 10
+  failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory }}
   jobTemplate:
     spec:
       template:
