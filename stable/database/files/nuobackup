@@ -156,6 +156,6 @@ if [ "$backup_type" = "full" ]; then
       new_list="$group_list $backup_group"
 
       echo >&2 "$NUODB_BACKUP_KEY/$db_name/backup-groups = $new_list"
-      nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/backup-groups --value "$new_list" --expected_value "$group_list"
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/backup-groups --value "$new_list" --expected-value "$group_list"
    fi
 fi
