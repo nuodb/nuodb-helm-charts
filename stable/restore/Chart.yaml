@@ -1,6 +1,6 @@
 apiVersion: "v1"
 name: restore
-version: 2.0
+version: 2.1
 description: On-demand restore a NuoDB SQL database.
 keywords:
 - nuodb
@@ -14,4 +14,4 @@ maintainers:
 engine: gotpl
 icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
 appVersion: 4.0.0
-tillerVersion: ">=2.10"
+tillerVersion: ">=2.9"

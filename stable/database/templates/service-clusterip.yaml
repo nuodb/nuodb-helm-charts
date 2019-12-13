@@ -1,0 +1,25 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  annotations:
+    description: |
+      Cluster IP service permitting us to load balance within the cluster.
+  labels:
+    app: {{ template "database.fullname" . }}
+    group: nuodb
+    database: {{ .Values.database.name }}
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "database.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ .Values.database.name }}-clusterip
+spec:
+  ports:
+  - { name: 48006-tcp,  port: 48006,  protocol: TCP,  targetPort: 48006 }
+  selector:
+    app: {{ template "database.fullname" . }}
+    component: te
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}

@@ -129,6 +129,7 @@ spec:
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+{{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
@@ -140,6 +141,13 @@ spec:
         resources:
 {{ toYaml .Values.database.sm.resources | trim | indent 10 }}
         volumeMounts:
+        {{- with .Values.database.configFiles }}
+        {{- range $key, $val := . }}
+        - name: configurations
+          mountPath: {{ $.Values.database.configFilesPath }}{{ $key }}
+          subPath: {{ $key }}
+        {{- end -}}
+        {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
         - name: nuosm
@@ -148,6 +156,9 @@ spec:
         - name: nuobackup
           mountPath: /usr/local/bin/nuobackup
           subPath: nuobackup
+        - name: readinessprobe
+          mountPath: /usr/local/bin/readinessprobe
+          subPath: readinessprobe
         - mountPath: /var/opt/nuodb/archive
           name: archive-volume
         {{- if .Values.admin.tlsCACert }}
@@ -168,7 +179,21 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
+        readinessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          exec:
+            command: [ "readinessprobe" ]
+          failureThreshold: 58
+          # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
+          successThreshold: 2
+          timeoutSeconds: 1
       volumes:
+      {{- if .Values.database.configFiles }}
+      - name: configurations
+        configMap:
+          name: {{ template "database.fullname" . }}-configuration
+      {{- end }}
       - name: log-volume
         emptyDir: {}
       - name: nuosm
@@ -178,6 +203,9 @@ spec:
       - name: nuobackup
         configMap:
           name: {{ template "database.fullname" . }}-nuobackup
+      - name: readinessprobe
+        configMap:
+          name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert
@@ -356,6 +384,7 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUODB_BACKUP_GROUP,  value: "{{ include "hotcopy.group" . }}" }
+{{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
@@ -367,6 +396,13 @@ spec:
         resources:
 {{ toYaml .Values.database.sm.resources | trim | indent 10 }}
         volumeMounts:
+        {{- with .Values.database.configFiles }}
+        {{- range $key, $val := . }}
+        - name: configurations
+          mountPath: {{ $.Values.database.configFilesPath }}{{ $key }}
+          subPath: {{ $key }}
+        {{- end -}}
+        {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
         - name: nuosm
@@ -375,6 +411,9 @@ spec:
         - name: nuobackup
           mountPath: /usr/local/bin/nuobackup
           subPath: nuobackup
+        - name: readinessprobe
+          mountPath: /usr/local/bin/readinessprobe
+          subPath: readinessprobe
         - mountPath: /var/opt/nuodb/archive
           name: archive-volume
         - mountPath: /var/opt/nuodb/backup
@@ -397,7 +436,21 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
+        readinessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          exec:
+            command: [ "readinessprobe" ]
+          failureThreshold: 58
+          # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
+          successThreshold: 2
+          timeoutSeconds: 1
       volumes:
+      {{- if .Values.database.configFiles }}
+      - name: configurations
+        configMap:
+          name: {{ template "database.fullname" . }}-configuration
+      {{- end }}
       - name: log-volume
         emptyDir: {}
       - name: nuosm
@@ -407,6 +460,9 @@ spec:
       - name: nuobackup
         configMap:
           name: {{ template "database.fullname" . }}-nuobackup
+      - name: readinessprobe
+        configMap:
+          name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert

@@ -1,0 +1,16 @@
+apiVersion: "v1"
+name: monitoring-influx
+version: 2.1
+description: Monitors NuoDB using InfluxDB+Grafana.
+keywords:
+- nuodb
+- database
+- sql
+home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/monitoring-influx
+maintainers:
+- name: NuoDB
+  email: support@nuodb.com
+engine: gotpl
+icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+appVersion: 4.0.0
+tillerVersion: ">=2.9"

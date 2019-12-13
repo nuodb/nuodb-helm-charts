@@ -34,7 +34,7 @@ func TestAdminDefaultLicense(t *testing.T) {
 			continue
 		}
 
-		if strings.Contains(part, "nuodb-license-file") {
+		if strings.Contains(part, "nuodb-admin-configuration") {
 			found = true
 
 			var object v1.ConfigMap
@@ -45,7 +45,7 @@ func TestAdminDefaultLicense(t *testing.T) {
 
 	}
 
-	assert.Assert(t, found, "no matching config map was found")
+	assert.Assert(t, !found, "no matching config map was found")
 }
 
 func TestAdminLicenseCanBeSet(t *testing.T) {
@@ -72,7 +72,7 @@ func TestAdminLicenseCanBeSet(t *testing.T) {
 			continue
 		}
 
-		if strings.Contains(part, "nuodb-license-file") {
+		if strings.Contains(part, "nuodb-admin-configuration") {
 			found = true
 
 			var object v1.ConfigMap
@@ -95,8 +95,9 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.securityContext.capabilities": "[ NET_ADMIN ]",
-			"admin.envFrom[0].configMapRef.name": "test-config",
+			"admin.securityContext.capabilities":    "[ NET_ADMIN ]",
+			"admin.envFrom[0].configMapRef.name":    "test-config",
+			"admin.options.leaderAssignmentTimeout": "30000",
 		},
 	}
 
@@ -119,6 +120,10 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 		adminContainer := object.Spec.Template.Spec.Containers[0]
 		assert.Check(t, adminContainer.SecurityContext.Capabilities.Add[0] == "NET_ADMIN")
 		assert.Check(t, adminContainer.EnvFrom[0].ConfigMapRef.LocalObjectReference.Name == "test-config")
+		assert.Check(t, adminContainer.Args[0] == "nuoadmin")
+		assert.Check(t, adminContainer.Args[1] == "--")
+		assert.Check(t, adminContainer.Args[2] == "pendingReconnectTimeout=60000")
+		assert.Check(t, adminContainer.Args[3] == "leaderAssignmentTimeout=30000")
 	}
 }
 
@@ -164,4 +169,68 @@ func TestAdminStatefulSetComponentLabel(t *testing.T) {
 		_, ok = ss.Spec.Template.ObjectMeta.Labels["release"]
 		assert.Check(t, ok)
 	}
+}
+
+func TestAdminClusterServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-clusterip.yaml"})
+
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "name: nuodb-clusterip"))
+	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
+	assert.Check(t, !strings.Contains(output, "clusterIP: None"))
+}
+
+func TestAdminHeadlessServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-headless.yaml"})
+
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "name: nuodb"))
+	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
+	assert.Check(t, strings.Contains(output, "clusterIP: None"))
+}
+
+func TestAdminServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.provider": "amazon",
+			"admin.externalAccess.enabled": "true",
+			"admin.externalAccess.internalIP": "true",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service.yaml"})
+
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+	
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "name: nuodb-balancer"))
+	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
+	assert.Check(t, strings.Contains(output, "aws-load-balancer-internal"))
 }

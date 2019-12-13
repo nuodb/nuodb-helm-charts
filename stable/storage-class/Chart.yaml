@@ -1,6 +1,6 @@
 apiVersion: "v1"
 name: storage-class
-version: 2.0
+version: 2.1
 description: Storage classes for NuoDB.
 keywords:
 - nuodb
@@ -13,4 +13,4 @@ maintainers:
 engine: gotpl
 icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
 appVersion: 4.0.0
-tillerVersion: ">=2.10"
+tillerVersion: ">=2.9"

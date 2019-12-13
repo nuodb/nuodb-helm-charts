@@ -53,7 +53,7 @@ func StorageClassTemplateE(t *testing.T, options *helm.Options, expectedProvisio
 		helm.UnmarshalK8SYaml(t, part, &sc1)
 		storageClasses = append(storageClasses, sc1)
 
-		assert.Equal(t, sc1.Provisioner, expectedProvisioner)
+		assert.Check(t, sc1.Provisioner == expectedProvisioner)
 		b, err := strconv.ParseBool(options.SetValues["storageClass.allowVolumeExpansion"])
 		assert.NilError(t, err)
 		assert.Check(t, *sc1.AllowVolumeExpansion == b)
@@ -116,4 +116,23 @@ func TestStorageClassTemplateGcp(t *testing.T) {
 	expectedProvisioner := "kubernetes.io/gce-pd"
 
 	StorageClassTemplateE(t, options, expectedProvisioner)
+}
+
+func TestStorageClassTemplateLocal(t *testing.T) {
+
+	options := &helm.Options{
+	}
+
+	expectedProvisioner := "kubernetes.io/no-provisioner"
+
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/storage-class"
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/storageclass.yaml"})
+
+	var sc1 storagev1.StorageClass
+	helm.UnmarshalK8SYaml(t, output, &sc1)
+
+	assert.Check(t, sc1.Provisioner == expectedProvisioner)
 }

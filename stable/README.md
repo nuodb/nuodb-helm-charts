@@ -151,11 +151,9 @@ In a nutshell the order of installation is:
 
 - **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
 - **admin** ([documentation](admin/README.md))
-- **monitoring-influx** ([documentation](monitoring-influx/README.md))
 - **database** ([documentation](database/README.md))
 - **backup** ([documentation](backup/README.md))
 - **restore** ([documentation](restore/README.md))
-- **demo-ycsb** ([documentation](demo-ycsb/README.md))
 - **demo-quickstart** ([documentation](demo-quickstart/README.md))
 
 See the instructions for the individual charts for deploying the applications.

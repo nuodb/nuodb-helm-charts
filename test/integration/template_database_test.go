@@ -4,11 +4,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
 	"gotest.tools/assert"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 )
 
 func ArgContains(args []string, x string) bool {
@@ -23,6 +25,15 @@ func ArgContains(args []string, x string) bool {
 func EnvContains(envs []v1.EnvVar, key string, value string) bool {
 	for _, n := range envs {
 		if n.Name == key && n.Value == value {
+			return true
+		}
+	}
+	return false
+}
+
+func EnvContainsValueFrom(envs []v1.EnvVar, key string, valueFrom *v1.EnvVarSource) bool {
+	for _, n := range envs {
+		if n.Name == key && cmp.Equal(n.ValueFrom, valueFrom) {
 			return true
 		}
 	}
@@ -64,7 +75,30 @@ func TestDatabaseConfigMaps(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	helm.RenderTemplate(t, options, helmChartPath, []string{"templates/configmap.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/configmap.yaml"})
+
+	configs := make(map[string]bool)
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if strings.Contains(part, "kind: ConfigMap") {
+
+			var cm v1.ConfigMap
+			helm.UnmarshalK8SYaml(t, part, &cm)
+
+			for k := range cm.Data {
+				configs[k] = true
+			}
+		}
+	}
+
+	assert.Check(t, configs["nuosm"])
+	assert.Check(t, configs["nuote"])
+	assert.Check(t, configs["readinessprobe"])
 }
 
 func TestDatabaseDaemonSetDisabled(t *testing.T) {
@@ -150,7 +184,7 @@ func TestDatabaseDeploymentConfigRenders(t *testing.T) {
 	assert.Check(t, strings.Contains(output, "kind: DeploymentConfig"))
 }
 
-func TestDatabaseServiceRenders(t *testing.T) {
+func TestDatabaseClusterServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
 
@@ -159,29 +193,62 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-clusterip.yaml"})
 
 	var object v1.Service
 	helm.UnmarshalK8SYaml(t, output, &object)
 
-	value, exists := object.Spec.Selector["component"]
-
-	assert.Assert(t, exists)
-	assert.Assert(t, value == "te")
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "name: demo-clusterip"))
+	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
+	assert.Check(t, !strings.Contains(output, "clusterIP: None"))
+	assert.Check(t, strings.Contains(output, "component: te"))
 }
 
-func TestDatabaseServiceDaemonSet(t *testing.T) {
+func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
 
 	options := &helm.Options{
-		SetValues: map[string]string{"database.enableDaemonSet": "true"},
+		SetValues: map[string]string{},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-headless.yaml"})
+
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+
+	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "name: demo"))
+	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
+	assert.Check(t, strings.Contains(output, "clusterIP: None"))
+	assert.Check(t, strings.Contains(output, "component: te"))
+}
+
+func TestDatabaseServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.provider":                        "amazon",
+			"database.te.externalAccess.enabled":    "true",
+			"database.te.externalAccess.internalIP": "true",
+		},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service.yaml"})
 
+	var object v1.Service
+	helm.UnmarshalK8SYaml(t, output, &object)
+
+	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
+	assert.Check(t, strings.Contains(output, "name: demo-balancer"))
 	assert.Check(t, strings.Contains(output, "kind: Service"))
+	assert.Check(t, strings.Contains(output, "aws-load-balancer-internal"))
+	assert.Check(t, strings.Contains(output, "component: te"))
 }
 
 func TestDatabaseStatefulSetDisabled(t *testing.T) {
@@ -386,6 +453,109 @@ func TestDatabaseOtherOptions(t *testing.T) {
 	})
 }
 
+func TestDatabaseCustomEnv(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues:   map[string]string{},
+		ValuesFiles: []string{"../files/database-env.yaml"},
+	}
+
+	basicEnvChecks := func(args []v1.EnvVar) {
+		expectedAltAddress := v1.EnvVarSource{
+			FieldRef: &v1.ObjectFieldSelector{
+				FieldPath: "status.podIP",
+			},
+		}
+		assert.Check(t, EnvContainsValueFrom(args, "NUODB_ALT_ADDRESS", &expectedAltAddress))
+		assert.Check(t, EnvContains(args, "CUSTOM_ENV_VAR", "CUSTOM_ENV_VAR_VALUE"))
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/deployment.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: Deployment"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
+	})
+
+	t.Run("testDeploymentConfig", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["openshift.enabled"] = "true"
+		localOptions.SetValues["openshift.enableDeploymentConfigs"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/deploymentconfig.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: DeploymentConfig"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: StatefulSet") {
+				cnt++
+
+				var obj appsv1.StatefulSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/daemonset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: DaemonSet") {
+				cnt++
+
+				var obj appsv1.DaemonSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+}
+
 func TestDatabaseStandardVPNRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
@@ -558,10 +728,10 @@ func TestDatabaseLabeling(t *testing.T) {
 
 				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
-				if isStatefulSetHotCopyEnabled(&obj) {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup-cluster0 enabled"))
-				} else {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
+				if testlib.IsStatefulSetHotCopyEnabled(&obj) {
+					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster-0"))
+					// } else {
+					// 	assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
 			}
 		}
@@ -593,14 +763,131 @@ func TestDatabaseLabeling(t *testing.T) {
 
 				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
-				if isDaemonSetHotCopyEnabled(&obj) {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup-cluster0 enabled"))
-				} else {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
+				if testlib.IsDaemonSetHotCopyEnabled(&obj) {
+					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster-0"))
+					// } else {
+					// 	assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
 			}
 		}
 
 		assert.Check(t, cnt == 2)
 	})
+}
+
+func TestReadinessProbe(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	basicChecks := func(spec v1.PodSpec) {
+		container := spec.Containers[0]
+		assert.Check(t, container.ReadinessProbe != nil)
+		assert.Check(t, mountContains(container.VolumeMounts, "readinessprobe"))
+		assert.Check(t, volumesContain(spec.Volumes, "readinessprobe"))
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/deployment.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: Deployment"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		basicChecks(obj.Spec.Template.Spec)
+	})
+
+	t.Run("testDeploymentConfig", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["openshift.enabled"] = "true"
+		localOptions.SetValues["openshift.enableDeploymentConfigs"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/deploymentconfig.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: DeploymentConfig"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		basicChecks(obj.Spec.Template.Spec)
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: StatefulSet") {
+				cnt++
+
+				var obj appsv1.StatefulSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				basicChecks(obj.Spec.Template.Spec)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/daemonset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: DaemonSet") {
+				cnt++
+
+				var obj appsv1.DaemonSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				basicChecks(obj.Spec.Template.Spec)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+}
+
+func mountContains(mounts []v1.VolumeMount, expectedName string) bool {
+	for _, mount := range mounts {
+		if mount.Name == expectedName {
+			return true
+		}
+	}
+	return false
+}
+
+func volumesContain(mounts []v1.Volume, expectedName string) bool {
+	for _, mount := range mounts {
+		if mount.Name == expectedName {
+			return true
+		}
+	}
+	return false
 }

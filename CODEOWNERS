@@ -1,0 +1,7 @@
+# Code owners for NuoDB Helm Charts
+
+# In general the repository is owned by the Engineering team
+# @nuodb/engineering
+
+# More specifically by
+*   @vegichan @acabrele @niktj777

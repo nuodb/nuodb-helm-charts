@@ -1,0 +1,151 @@
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry and imagePullSecrets
+##
+# global:
+#   imageRegistry: myRegistryName
+#   imagePullSecrets:
+#     - myRegistryKeySecretName
+
+cloud:
+  # supported: amazon, azure, google
+  provider:
+  # zones:
+  #   - us-east-2a
+  #   - us-east-2b
+  #   - us-east-2c
+
+busybox:
+  image:
+    registry: docker.io
+    repository: busybox
+    tag: latest
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    # pullSecrets:
+    # - myRegistryKeySecretName
+    ## Specify a imagePullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+nuodb:
+  image:
+    registry: docker.io
+    repository: nuodb/nuodb-ce
+    tag: latest
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    # pullSecrets:
+    # - myRegistryKeySecretName
+    ## Specify a imagePullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+admin:
+  # namespace: nuodb
+  domain: nuodb
+
+  # tlsCACert:
+  #   secret: nuodb-ca-cert
+  #   key: ca.cert
+  # tlsClientPEM:
+  #   secret: nuodb-client-pem
+  #   key: client.pem
+
+influx:
+  service:
+    type: ClusterIP
+    # clusterIP: None
+
+    ## Specify the nodePort value for the LoadBalancer and NodePort service types.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#type-nodeport
+    ##
+    # nodePort:
+
+    ## Specify the externalIP value ClusterIP service type.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#external-ips
+    # externalIPs: []
+
+    ## Specify the loadBalancerIP value for LoadBalancer service types.
+    ## ref: https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer
+    ##
+    # loadBalancerIP:
+
+    ## Specify the loadBalancerSourceRanges value for LoadBalancer service types.
+    ## ref: https://kubernetes.io/docs/tasks/access-application-cluster/configure-cloud-provider-firewall/#restrict-access-for-loadbalancer-service
+    ##
+    # loadBalancerSourceRanges: []
+
+  ## Use a securityContext to specify additional capabilities
+  # For example, if the container needs to configure network setting, then add "NET_ADMIN"
+  # Ex: capabilities: [ "NET_ADMIN" ]
+  ##
+  securityContext:
+    capabilities: []
+
+  ## Import Environment Variables from one or more configMaps
+  # Ex: envFrom: [ configMapRef: { name: myConfigMap }, configMapRef: { name: myOtherConfigMap } ]
+  ##
+  envFrom: []
+
+  image:
+    registry: docker.io
+    repository: influxdb
+    tag: 1.6.0
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    # pullSecrets:
+    # - myRegistryKeySecretName
+    ## Specify a imagePullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+  persistence:
+    ## If true, use a Persistent Volume Claim, If false, use emptyDir
+    ##
+    enabled: false
+    size: 20Gi
+    accessModes:
+      - ReadWriteOnce
+    # storageClass: "-"
+
+grafana:
+  image:
+    registry: docker.io
+    repository: grafana/grafana
+    tag: master
+    ## Specify a imagePullPolicy
+    ## Defaults to 'Always' if image tag is 'latest', else set to 'IfNotPresent'
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    # pullSecrets:
+    # - myRegistryKeySecretName
+    ## Specify a imagePullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+openshift:
+  # change this to true if you want to deploy using OpenShift proprietary features
+  enabled: false
+  # generally avoid deployment configs, favor deployments, so leave this as false
+  enableDeploymentConfigs: false
+  # if openshift is enabled, then also permit routes by default
+  enableRoutes: true

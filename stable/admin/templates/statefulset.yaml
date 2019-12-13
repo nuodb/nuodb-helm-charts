@@ -97,7 +97,13 @@ spec:
         - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
         {{- end }}
       {{- end }}
-        args: [ "nuoadmin", "--", "pendingReconnectTimeout=60000" ]
+        args:
+          - "nuoadmin"
+          - "--"
+          - "pendingReconnectTimeout=60000"
+          {{- range $opt, $val := .Values.admin.options}}
+          - "{{$opt}}={{$val}}" 
+          {{- end}}
         livenessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -107,18 +113,20 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           exec:
-            command: [ "nuodocker", "check", "servers" ]
+            command: [ "nuodocker", "check", "servers", "--check-connected", "--check-active", "--check-leader" ]
           failureThreshold: 30
           successThreshold: 2
           timeoutSeconds: 1
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb
-{{- if hasKey .Values.admin.configFiles "nuodb.lic" }}
-        - name: nuodb-license-volume
-          mountPath: /etc/nuodb/nuodb.lic
-          subPath: nuodb.lic
-{{ end }}
+        {{- with .Values.admin.configFiles }}
+        {{- range $key, $val := . }}
+        - name: configurations
+          mountPath: {{ $.Values.admin.configFilesPath }}{{ $key }}
+          subPath: {{ $key }}
+        {{- end -}}
+        {{- end }}
         - name: raftlog
           mountPath: /var/opt/nuodb
         {{- if .Values.admin.tlsCACert }}
@@ -169,18 +177,11 @@ spec:
       {{- end }}
       - name: log-volume
         emptyDir: {}
-{{- if hasKey .Values.admin.configFiles "nuodb.lic" }}
-      - name: nuodb-license-volume
+      {{- if .Values.admin.configFiles }}
+      - name: configurations
         configMap:
-          name: nuodb-license-file
-          items:
-            - key: nuodb.lic
-              path: nuodb.lic
-{{ end }}
-{{- if not .Values.admin.persistence.enabled }}
-      - name: raftlog
-        emptyDir: {}
-{{- else }}
+          name: {{ template "admin.fullname" . }}-configuration
+      {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: raftlog
@@ -205,4 +206,3 @@ spec:
       resources:
         requests:
           storage: {{ .Values.admin.persistence.size }}
-{{- end }}

@@ -180,3 +180,13 @@ Return the hotcopy group
 {{- define "hotcopy.group" -}}
 {{ default .Values.cloud.clusterName .Values.database.sm.hotCopy.backupGroup }}
 {{- end -}}
+
+
+{{/*
+Import user defined ENV vars
+*/}}
+{{- define "database.env" }}
+{{- if not (empty .Values.database.env) }}
+{{ toYaml .Values.database.env | trim }}
+{{- end }}
+{{- end -}}

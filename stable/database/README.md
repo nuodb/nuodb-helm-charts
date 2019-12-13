@@ -167,6 +167,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | ----- | ----------- | ------ |
 | `domain` | NuoDB admin cluster name | `nuodb` |
 | `namespace` | Namespace where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
+| `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
+| `configFiles.*` | See below. | `{}` |
 | `tlsCACert.secret` | TLS CA certificate secret name | `nil` |
 | `tlsCACert.key` | TLS CA certificate secret key | `nil` |
 | `tlsKeyStore.secret` | TLS keystore secret name | `nil` |
@@ -181,6 +183,26 @@ For example, to enable an OpenShift integration, and enable routes:
 admin:
   domain: nuodb
 ```
+
+#### admin.configFiles.*
+
+The purpose of this section is to detail how to provide alternate configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
+
+There are two sets of configuration files documented:
+
+- [Admin Configuration for a Particular Host][1]
+- [Database Configuration for a Particular Host][2]
+
+Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
+
+The following tables list the configurable parameters for the `admin` option of the admin chart and their default values.
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `nuodb.lic` | [NuoDB license file content; defaults to NuoDB CE Edition][3] | `nil` |
+| `nuoadmin.conf` | [NuoDB Admin host properties][4] | `nil` |
+| `nuodb-types.config`| [Type mappings for the NuoDB Migrator tool][5] | `nil` |
+| `nuoadmin.logback.xml` | Logging configuration. NuoDB recommends using the default settings. | `nil` |
 
 #### backup.*
 
@@ -207,10 +229,13 @@ The following tables list the configurable parameters of the `database` chart an
 | `securityContext.runAsUser` | User ID for the container | `1000` |
 | `securityContext.fsGroup` | Group ID for the container | `1000` |
 | `securityContext.capabilities` | Enable capabilities for the container - disregards `securityContext.enabled` | `[]` |
-| `env.from` | Import ENV vars from configMap(s) | `[]` |
+| `env` | Import ENV vars inside containers | `[]` |
+| `envFrom` | Import ENV vars from configMap(s) | `[]` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
+| `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
+| `configFiles.*` | See below. | `{}` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
@@ -222,6 +247,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.affinity` | Affinity rules for NuoDB SM | `{}` |
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
+| `te.externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
+| `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `te.replicas` | TE replicas | `1` |
 | `te.memoryOption` | TE engine memory (*future deprecation*) | `"8g"` |
 | `te.labels` | Labels given to the TEs started | `""` |
@@ -237,6 +264,23 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.nodeSelectorNoHotCopyDS` | Node selector rules for non-hot-copy SMs (DaemonSet) | `{}` |
 | `sm.tolerationsDS` | Tolerations for SMs (DaemonSet) | `[]` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
+
+#### database.configFiles.*
+
+The purpose of this section is to detail how to provide alternate configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
+
+There are two sets of configuration files documented:
+
+- [Admin Configuration for a Particular Host][1]
+- [Database Configuration for a Particular Host][2]
+
+Any file located in `database.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
+
+The following tables list the configurable parameters for the `database` option of the database chart and their default values.
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `nuodb.config` | [NuoDB database options][6] | `nil` |
 
 ### Running
 
@@ -350,3 +394,10 @@ kubectl delete -f stable/database/${cloud_provider}-storage.yaml
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
+
+[1]: #adminconfigfiles
+[2]: #databaseconfigfiles
+[3]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Obtaining-and-Installing-NuoDB-Licenses.htm
+[4]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Host-Properties.htm
+[5]: http://doc.nuodb.com/Latest/Content/Data-Type-Mappings.htm
+[6]: http://doc.nuodb.com/Latest/Default.htm#Database-Options.htm

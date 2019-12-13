@@ -106,6 +106,7 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
+{{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
@@ -125,6 +126,9 @@ spec:
         - name: nuobackup
           mountPath: /usr/local/bin/nuobackup
           subPath: nuobackup
+        - name: readinessprobe
+          mountPath: /usr/local/bin/readinessprobe
+          subPath: readinessprobe
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
         {{- if .Values.admin.tlsCACert }}
@@ -143,6 +147,15 @@ spec:
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
+        readinessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          exec:
+            command: [ "readinessprobe" ]
+          failureThreshold: 58
+          # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
+          successThreshold: 2
+          timeoutSeconds: 1
       volumes:
       - name: log-volume
         emptyDir: {}
@@ -153,6 +166,9 @@ spec:
       - name: nuobackup
         configMap:
           name: {{ template "database.fullname" . }}-nuobackup
+      - name: readinessprobe
+        configMap:
+          name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
       - name: archive-volume
         persistentVolumeClaim:
@@ -289,6 +305,7 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
+{{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
@@ -308,6 +325,9 @@ spec:
         - name: nuobackup
           mountPath: /usr/local/bin/nuobackup
           subPath: nuobackup
+        - name: readinessprobe
+          mountPath: /usr/local/bin/readinessprobe
+          subPath: readinessprobe
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
         - name: backup-volume
@@ -328,6 +348,15 @@ spec:
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
+        readinessProbe:
+          initialDelaySeconds: 30
+          periodSeconds: 15
+          exec:
+            command: [ "readinessprobe" ]
+          failureThreshold: 58
+          # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
+          successThreshold: 2
+          timeoutSeconds: 1
       volumes:
       - name: log-volume
         emptyDir: {}
@@ -338,6 +367,9 @@ spec:
       - name: nuobackup
         configMap:
           name: {{ template "database.fullname" . }}-nuobackup
+      - name: readinessprobe
+        configMap:
+          name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
       - name: archive-volume
         persistentVolumeClaim:

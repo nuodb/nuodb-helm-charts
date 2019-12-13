@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"gotest.tools/assert"
 )
 
@@ -21,14 +22,6 @@ func listContains(arr []string, s string) bool {
 	}
 
 	return false
-}
-
-func isStatefulSetHotCopyEnabled(ss *appsv1.StatefulSet) bool {
-	return strings.Contains(ss.Name, "hotcopy")
-}
-
-func isDaemonSetHotCopyEnabled(ss *appsv1.DaemonSet) bool {
-	return strings.Contains(ss.Name, "hotcopy")
 }
 
 func TestResourcesAdminDefaults(t *testing.T) {
@@ -158,7 +151,7 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
 
 		// make sure the replica counts are correct
-		if isStatefulSetHotCopyEnabled(&ss) {
+		if testlib.IsStatefulSetHotCopyEnabled(&ss) {
 			assert.Check(t, *ss.Spec.Replicas == 1)
 			foundBackupEnabled = true
 		} else {
@@ -227,7 +220,7 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
 
 		// make sure the replica counts are correct
-		if isStatefulSetHotCopyEnabled(&ss) {
+		if testlib.IsStatefulSetHotCopyEnabled(&ss) {
 			assert.Check(t, *ss.Spec.Replicas == int32(hotcopyReplicas))
 		} else {
 			assert.Check(t, *ss.Spec.Replicas == int32(noHotCopyReplicas))
@@ -250,13 +243,7 @@ func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/cronjob.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/job.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/demo-ycsb", []string{"templates/replicationcontroller.yaml"})
-
 	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", []string{"templates/daemonset.yaml"})
-
-	helm.RenderTemplate(t, options, "../../stable/monitoring-influx", []string{"templates/deployment.yaml"})
-
-	helm.RenderTemplate(t, options, "../../stable/monitoring-insights", []string{"templates/pod.yaml"})
 
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/cronjob.yaml"})
 	//helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/job.yaml"})
@@ -277,13 +264,7 @@ func TestPullSecretsRenderAllGlobal(t *testing.T) {
 	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/cronjob.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/job.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/demo-ycsb", []string{"templates/replicationcontroller.yaml"})
-
 	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", []string{"templates/daemonset.yaml"})
-
-	helm.RenderTemplate(t, options, "../../stable/monitoring-influx", []string{"templates/deployment.yaml"})
-
-	helm.RenderTemplate(t, options, "../../stable/monitoring-insights", []string{"templates/pod.yaml"})
 
 	helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/cronjob.yaml"})
 	//helm.RenderTemplate(t, options, "../../stable/backup", []string{"templates/job.yaml"})
@@ -490,7 +471,7 @@ func TestResourcesDaemonSetsDefaults(t *testing.T) {
 		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga) == 9,
 			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
 
-		if isDaemonSetHotCopyEnabled(&ss) {
+		if testlib.IsDaemonSetHotCopyEnabled(&ss) {
 			foundBackupEnabled = true
 		} else {
 			foundBackupDisabled = true
@@ -535,7 +516,7 @@ func TestDatabaseBackupDisabled(t *testing.T) {
 		var ss appsv1.StatefulSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		assert.Check(t, !isStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
+		assert.Check(t, !testlib.IsStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
 	}
 
 	assert.Equal(t, partCounter, 1)
@@ -572,7 +553,7 @@ func TestDatabaseNonBackupDisabled(t *testing.T) {
 		var ss appsv1.StatefulSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		assert.Check(t, isStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
+		assert.Check(t, testlib.IsStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
 	}
 
 	assert.Equal(t, partCounter, 1)
@@ -610,7 +591,7 @@ func TestDatabaseBackupDisabledDaemonSet(t *testing.T) {
 		var ss appsv1.DaemonSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		assert.Check(t, !isDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
+		assert.Check(t, !testlib.IsDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
 	}
 
 	// with daemonSet
@@ -649,7 +630,7 @@ func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
 		var ss appsv1.DaemonSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		assert.Check(t, isDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
+		assert.Check(t, testlib.IsDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
 	}
 
 	// with daemonSet

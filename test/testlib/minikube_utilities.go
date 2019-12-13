@@ -1,13 +1,14 @@
 package testlib
 
 import (
-	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -23,8 +24,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
-
-var RESULT_DIR = "results"
 
 var teardownLists = make(map[string][]func())
 
@@ -74,6 +73,17 @@ func VerifyTeardown(t *testing.T) {
 
 func standardizeSpaces(s string) string {
 	return strings.Join(strings.Fields(s), " ")
+}
+
+func RemoveEmptyLines(s string) string {
+	regex, err := regexp.Compile("(\r|\r\n|\n){2,}")
+	if err != nil {
+		return s
+	}
+	s = regex.ReplaceAllString(s, "\n")
+	s = strings.TrimRight(s, "\n")
+
+	return s
 }
 
 func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
@@ -140,6 +150,23 @@ func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName strin
 	}, 30*time.Second)
 }
 
+func AwaitNrReplicasReady(t *testing.T, namespace string, expectedName string, nrReplicas int) {
+	Await(t, func() bool {
+		var cnt int
+		for _, pod := range findAllPodsInSchema(t, namespace) {
+			if strings.Contains(pod.Name, expectedName) {
+				if arePodConditionsMet(&pod, corev1.PodReady, corev1.ConditionTrue) {
+					cnt++
+				}
+			}
+		}
+
+		t.Logf("%d pods READY for name '%s'\n", cnt, expectedName)
+
+		return cnt == nrReplicas
+	}, 30*time.Second)
+}
+
 func AwaitNoPods(t *testing.T, namespace string, expectedName string) {
 	Await(t, func() bool {
 		var cnt int
@@ -194,12 +221,32 @@ func AwaitAdminPodUp(t *testing.T, namespace string, adminPodName string, timeou
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
 }
 
-func AwaitAdminPodUpgraded(t *testing.T, namespace string, adminPodName string, expectedVersion string, timeout time.Duration) {
+func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate string, expectedVersion string, timeout time.Duration) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
 	Await(t, func() bool {
-		pod := k8s.GetPod(t, options, adminPodName)
+		podName := GetPodName(t, namespace, podNameTemplate)
+
+		pod := k8s.GetPod(t, options, podName)
+
+		for _, container := range pod.Spec.Containers {
+			t.Logf("Found container (%s) with image: %s", container.Name, container.Image)
+			if container.Image == expectedVersion {
+				return true
+			}
+		}
+
+		return false
+	}, timeout)
+}
+
+func AwaitPodHasVersion(t *testing.T, namespace string, podName string, expectedVersion string, timeout time.Duration) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	Await(t, func() bool {
+		pod := k8s.GetPod(t, options, podName)
 
 		for _, container := range pod.Spec.Containers {
 			t.Logf("Found container (%s) with image: %s", container.Name, container.Image)
@@ -246,13 +293,13 @@ func AwaitAdminFullyConnected(t *testing.T, namespace string, podName string, nu
 		"--timeout", "300")
 }
 
-func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseName string) {
+func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseName string, numProcesses int) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
 	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
 		"--db-name", databaseName, "--check-running", "--check-liveness", "20",
-		"--num-processes", "2",
+		"--num-processes", strconv.Itoa(numProcesses),
 		"--timeout", "300")
 }
 
@@ -273,14 +320,6 @@ func VerifyLicenseFile(t *testing.T, namespace string, podName string, expectedL
 	assert.Equal(t, output, expectedLicense)
 }
 
-func VerifyCustomFileDoesNotGetMounted(t *testing.T, namespace string, podName string, unexpectedFile string) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespace
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "ls", "/etc/nuodb/")
-	assert.NilError(t, err)
-	assert.Assert(t, !strings.Contains(output, unexpectedFile), output)
-}
-
 func VerifyLicenseIsCommunity(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -296,7 +335,17 @@ func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, 
 
 	fullLog := string(buf)
 
-	assert.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify configured license"), fullLog)
+	assert.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify license"), fullLog)
+}
+
+func GetStringOccurenceInLog(t *testing.T, namespace string, podName string, expectedLogLine string) int {
+	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName))
+	assert.NilError(t, err)
+
+	fullLog := string(buf)
+
+	return strings.Count(fullLog, expectedLogLine)
+
 }
 
 func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {
@@ -365,7 +414,7 @@ func shouldPrintToStdout() bool {
 }
 
 func GetAppLog(t *testing.T, namespace string, podName string) {
-	dirPath := filepath.Join("..", "..", RESULT_DIR, namespace)
+	dirPath := filepath.Join(RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName)
 
 	_ = os.MkdirAll(dirPath, 0700)
@@ -423,12 +472,6 @@ func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *v1.Daem
 	return &object
 }
 
-func decodeBase64(t *testing.T, input []byte) string {
-	str, err := base64.StdEncoding.DecodeString(string(input))
-	assert.NilError(t, err, "decodeBase64: base64.decodeString")
-	return string(str)
-}
-
 func DeleteDatabase(t *testing.T, namespace string, dbName string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -458,4 +501,49 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 	assert.NilError(t, err, "runSQL: error trying to run ", sql)
 
 	return result, err
+}
+
+func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, commands []string) {
+	tmpfile, err := ioutil.TempFile("", "script")
+	if err != nil {
+		assert.NilError(t, err)
+	}
+
+	defer os.Remove(tmpfile.Name()) // clean up
+
+	if _, err := tmpfile.WriteString("set -ev" + "\n"); err != nil {
+		assert.NilError(t, err)
+	}
+
+	for _, item := range commands {
+		if _, err := tmpfile.WriteString(item + "\n"); err != nil {
+			assert.NilError(t, err)
+		}
+	}
+	if err := tmpfile.Close(); err != nil {
+		assert.NilError(t, err)
+	}
+
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+
+	// Transfer the TEMP script to POD and execute it
+	k8s.RunKubectl(t, options, "cp", tmpfile.Name(), podName+":/tmp")
+	k8s.RunKubectl(t, options, "exec", podName, "--", "chmod", "a+x", "/tmp/"+filepath.Base(tmpfile.Name()))
+	err = k8s.RunKubectlE(t, options, "exec", podName, "--", "sh", "/tmp/"+filepath.Base(tmpfile.Name()))
+	assert.NilError(t, err, "executeCommandsInPod: Script returned error.")
+}
+
+func UnmarshalJSONObject(t *testing.T, stringJSON string) map[string]interface{} {
+	var results map[string]interface{}
+	err := json.Unmarshal([]byte(stringJSON), &results)
+	assert.NilError(t, err)
+	return results
+}
+
+func UnmarshalJSONArray(t *testing.T, stringJSON string) []interface{} {
+	var results []interface{}
+	err := json.Unmarshal([]byte(stringJSON), &results)
+	assert.NilError(t, err)
+	return results
 }

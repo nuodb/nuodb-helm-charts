@@ -9,8 +9,12 @@ go:
   - 1.12.x
 
 env:
+  jobs:
+    - TEST_SUITE=basic
+    - TEST_SUITE=minikube-short REQUIRES_MINIKUBE=true
+    - TEST_SUITE=minikube-long REQUIRES_MINIKUBE=true
   global:
-    - HELM_VERSION="v2.14.3"
+    - HELM_VERSION="v2.9.0"
     - DEP_VERSION=0.5.4
     - KUBERNETES_VERSION=1.15.0
     - MINIKUBE_VERSION=1.2.0
@@ -22,18 +26,20 @@ env:
     - KUBECONFIG=$HOME/.kube/config
     - NUODB_PRINT_TO_STDOUT=true
 
+cache:
+  directories:
+    - $GOPATH/pkg/dep
+
 before_install:
   - sudo apt-get update
   - sudo apt-get install socat
-  - curl https://raw.githubusercontent.com/golang/dep/v${DEP_VERSION}/install.sh | sh
-  - dep ensure -v
   - chmod +x scripts/ci/install_deps.sh
   - scripts/ci/install_deps.sh
-  - scripts/ci/generate_keys.sh
-  - docker pull nuodb/nuodb-ce:latest
-  - helm version
+
+install:
+  - go get -u github.com/golang/dep/cmd/dep
+  - dep ensure -v
 
 script:
-  - test/test_suite.sh
-  - go test -timeout 10m -v ./test/integration
-  - go test -timeout 60m -v ./test/minikube
+  - chmod +x scripts/ci/determine_and_run_tests.sh
+  - scripts/ci/determine_and_run_tests.sh

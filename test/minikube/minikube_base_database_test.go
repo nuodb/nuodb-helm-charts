@@ -1,3 +1,5 @@
+// +build short
+
 package minikube
 
 import (
@@ -34,12 +36,12 @@ func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 	)
 }
 
-func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string) {
+func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespaceName
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--", "bash", "-c",
-		"echo \"select * from system.nodes;\" | nuosql demo@localhost --user dba --password secret")
+		fmt.Sprintf("echo \"select * from system.nodes;\" | nuosql %s@localhost --user dba --password secret", databaseName))
 
 	assert.NilError(t, err, output)
 
@@ -60,13 +62,14 @@ func verifySecret(t *testing.T, namespaceName string) {
 	assert.Check(t, ok)
 }
 
-func verifyDBService(t *testing.T, namespaceName string, podName string) {
-	serviceName := "demo"
+func verifyDBService(t *testing.T, namespaceName string, podName string, serviceName string, ping bool) {
 
-	adminService := testlib.GetService(t, namespaceName, serviceName)
-	assert.Equal(t, adminService.Name, serviceName)
+	dBService := testlib.GetService(t, namespaceName, serviceName)
+	assert.Equal(t, dBService.Name, serviceName)
 
-	testlib.PingService(t, namespaceName, serviceName, podName)
+	if ping {
+		testlib.PingService(t, namespaceName, serviceName, podName)
+	}
 }
 
 func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
@@ -113,38 +116,29 @@ func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
 	t.Log("tar contents: ", output)
 }
 
-func startDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) (helmChartReleaseName string) {
-	randomSuffix := strings.ToLower(random.UniqueId())
-
-	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
-	tePodNameTemplate := fmt.Sprintf("te-%s", helmChartReleaseName)
-	smPodName := fmt.Sprintf("sm-%s-nuodb-demo", helmChartReleaseName)
-
+func verifyEngineAltAddress(t *testing.T, namespaceName string, admin0 string, expectedNrEngines int) {
 	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
+	kubectlOptions.Namespace = namespaceName
 
-	// with Async actions which do not return a cleanup method, create the teardown(s) first
-	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() {
-		helm.Delete(t, options, helmChartReleaseName, true)
-		testlib.AwaitNoPods(t, namespaceName, "database")
-		testlib.DeleteDatabase(t, namespaceName, "demo", adminPod)
-	})
+	podNames, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
+		"bash", "-c",
+		"nuocmd get processes | grep -o \"(address=[^/]*\"| cut -f2 -d'='")
+	assert.NilError(t, err)
+	podNamesSlice := strings.Split(strings.TrimSuffix(podNames, "\n"), "\n")
 
-	helm.Install(t, options, testlib.DATABASE_HELM_CHART_PATH, helmChartReleaseName)
+	actualAltAddresses, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
+		"bash", "-c",
+		"nuocmd get processes | grep -o \"alt-address: [^}]*\" | cut -f2 -d' '")
+	assert.NilError(t, err)
+	actualAltAddressesSlice := strings.Split(strings.TrimSuffix(actualAltAddresses, "\n"), "\n")
 
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, 1)
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, smPodName, 1)
+	assert.Assert(t, len(podNamesSlice) == expectedNrEngines, "Expected number of process names don't match")
+	assert.Assert(t, len(actualAltAddressesSlice) == expectedNrEngines, "Expected number of process addresses don't match")
 
-	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-	testlib.AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
-
-	smPodName0 := testlib.GetPodName(t, namespaceName, smPodName)
-	testlib.AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
-
-	testlib.AwaitDatabaseUp(t, namespaceName, adminPod, "demo")
-
-	return
+	for index, podName := range podNamesSlice {
+		pod := k8s.GetPod(t, kubectlOptions, podName)
+		assert.Assert(t, pod.Status.PodIP == actualAltAddressesSlice[index], "Expected alt-address doesn't match")
+	}
 }
 
 func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
@@ -203,18 +197,21 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &options, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	headlessServiceName := fmt.Sprintf("demo")
+	clusterServiceName := fmt.Sprintf("demo-clusterip")
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-		startDatabase(t, namespaceName, admin0, &helm.Options{
-			SetValues: map[string]string{"database.sm.resources.requests.cpu": "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.labels.cloud":              LABEL_CLOUD,
 				"database.te.labels.region":             LABEL_REGION,
 				"database.te.labels.zone":               LABEL_ZONE,
@@ -225,20 +222,22 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		})
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
-		t.Run("verifyDBService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0) })
-		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0) })
+		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, headlessServiceName, true) })
+		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
+		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
 	})
 
 	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-		startDatabase(t, namespaceName, admin0,
+		testlib.StartDatabase(t, namespaceName, admin0,
 			&helm.Options{
-				SetValues: map[string]string{"database.sm.resources.requests.cpu": "500m",
-					"database.sm.resources.requests.memory": "1Gi",
-					"database.te.resources.requests.cpu":    "500m",
-					"database.te.resources.requests.memory": "1Gi",
+				SetValues: map[string]string{
+					"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+					"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 					"database.te.labels.cloud":              LABEL_CLOUD,
 					"database.te.labels.region":             LABEL_REGION,
 					"database.te.labels.zone":               LABEL_ZONE,
@@ -253,20 +252,87 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		)
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
-		t.Run("verifyDBService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0) })
-		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0) })
+		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, headlessServiceName, true) })
+		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
+		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
+	})
+
+	t.Run("startDatabaseStatefulSetMultiTenant", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.name":                         "green",
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		})
+
+		t.Run("verifyNuoSQL-green", func(t *testing.T) {
+			verifyNuoSQL(t, namespaceName, admin0, "green")
+		})
+
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.name":                         "blue",
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		})
+
+		t.Run("verifyNuoSQL-blue", func(t *testing.T) {
+			verifyNuoSQL(t, namespaceName, admin0, "blue")
+		})
+	})
+}
+
+func TestKubernetesAltAddress(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+
+	t.Run("startDatabaseStatefulSetWithAltAddress", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.engineOptions.alt-address": "$(NUODB_ALT_ADDRESS)",
+				"database.te.engineOptions.alt-address": "$(NUODB_ALT_ADDRESS)",
+			},
+			ValuesFiles: []string{"../files/database-env.yaml"},
+		})
+		expectedNrEngines := 2
+		t.Run("verifyEnginesAltAddress", func(t *testing.T) { verifyEngineAltAddress(t, namespaceName, admin0, expectedNrEngines) })
 	})
 }
 
 func TestKubernetesBackupDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
-	adminOptions := helm.Options{}
+	adminOptions := helm.Options{
+		SetValues: map[string]string{
+			"nuodb.image.tag": testlib.BACKUP_NUODB_VERSION,
+		},
+	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &adminOptions, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
@@ -274,16 +340,17 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+				"nuodb.image.tag": testlib.BACKUP_NUODB_VERSION,
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 			},
 		}
 
-		startDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		populateCreateDBData(t, namespaceName, admin0)
 
@@ -295,10 +362,11 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+				"nuodb.image.tag": testlib.BACKUP_NUODB_VERSION,
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 				"database.enableDaemonSet":              "true",
@@ -307,7 +375,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 			},
 		}
 
-		startDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		populateCreateDBData(t, namespaceName, admin0)
 
@@ -319,11 +387,15 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 func TestKubernetesRestoreDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
-	adminOptions := helm.Options{}
+	adminOptions := helm.Options{
+		SetValues: map[string]string{
+			"nuodb.image.tag": testlib.BACKUP_NUODB_VERSION,
+		},
+	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &adminOptions, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
@@ -331,17 +403,18 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
+				"nuodb.image.tag": testlib.BACKUP_NUODB_VERSION,
 				"database.name":                         "demo",
-				"database.sm.resources.requests.cpu":    "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 			},
 		}
 
-		startDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		opts := k8s.NewKubectlOptions("", "")
 		opts.Namespace = namespaceName
@@ -386,7 +459,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"--db-name", "demo",
 		)
 
-		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo")
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
 		// verify that the database contains the restored data
 		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
@@ -407,7 +480,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := startAdmin(t, &adminOptions, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 
@@ -416,13 +489,13 @@ func TestKubernetesImportDatabase(t *testing.T) {
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
-		startDatabase(t, namespaceName, admin0, &helm.Options{
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{
 				"database.import.url":                   testlib.IMPORT_ARCHIVE_URL,
-				"database.sm.resources.requests.cpu":    "500m",
-				"database.sm.resources.requests.memory": "1Gi",
-				"database.te.resources.requests.cpu":    "500m",
-				"database.te.resources.requests.memory": "1Gi",
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 			},
@@ -437,14 +510,14 @@ func TestKubernetesImportDatabase(t *testing.T) {
 	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
-		startDatabase(t, namespaceName, admin0,
+		testlib.StartDatabase(t, namespaceName, admin0,
 			&helm.Options{
 				SetValues: map[string]string{
 					"database.import.url":                   testlib.IMPORT_ARCHIVE_URL,
-					"database.sm.resources.requests.cpu":    "500m",
-					"database.sm.resources.requests.memory": "1Gi",
-					"database.te.resources.requests.cpu":    "500m",
-					"database.te.resources.requests.memory": "1Gi",
+					"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+					"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 					"database.enableDaemonSet":              "true",
 					// prevent non-backup SM from scheduling
 					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
