@@ -1,64 +1,52 @@
 #!/bin/sh
 
+[ -n "$NUOSM_LINT" ] && set -n
+
 . ${NUODB_HOME}/etc/nuodb_setup.sh
 
-# DB directory is unique if mapping multiple pods on a host to
-# same mount point. As is done with Direct Attached Storage.
-# If mapping multiple pods to same NFS mount point (across multiple
-# nodes), then NUODB_ARCHIVEDIR needs to be node or pod specific.
-#
-# e.g.:
-#    using NFS with StatefulSets use POD_NAME in NUODB_ARCHIVEDIR
-#
-# env:
-# ...
-# - { NUODB_ARCHIVEDIR, "/var/opt/nuodb/archive/$(POD_NAME)" }
-#
-# POD_NAME is used as a StatefulSet would not change POD_NAME even if
-# pod is restarted on another node. NODE_NAME will change and archive
-# would not be found if NUODB_ARCHIVEDIR based upon $(NODE_NAME).
-#
-
+NUODB_DEBUG="true"
 [ -n "$NUODB_DEBUG" ] && set -x
 
 : ${NUODB_ARCHIVEDIR:=/var/opt/nuodb/archive}
 : ${NUODB_BACKUPDIR:=/var/opt/nuodb/backup}
 : ${NUODB_DOMAIN:="nuodb"}
+: ${NUODB_SEQUENCE_SYNC:=true}
 
 : ${NUODB_IMPORT_CREDENTIALS:=:}
+
+startup_key="/nuodb/nuosm/startup"
 
 DB_DIR=${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}/${DB_NAME}
 
 NUODB_BINDIR=$NUODB_HOME/bin
-NUOCMD="$NUODB_BINDIR/nuocmd --api-server $NUOCMD_API_SERVER"
+[ -z "$NUOCMD" ] && NUOCMD="$NUODB_BINDIR/nuocmd --api-server $NUOCMD_API_SERVER"
 
 export NUOCMD DB_NAME
 
+#=======================================
+# function - report an error and exit
+#
 function die() {
+  # cleanup
+  $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
+
   retval=$1
   shift
   echo "$@"
   exit $retval
 }
 
+#=======================================
+# function - perform archive restore
+#
 function perform_restore() {
 
-  restore_url=$1
-
-  [ -n "$NUODB_DEBUG" ] && echo "restore requested: $restore_url"
-
-  # resolve ":latest"
-  if [ "$restore_url" = ":latest" ]; then
-    restore_url=$( $NUOCMD get value --key $NUODB_LATEST_BACKUP_PREFIX/$DB_NAME )
-
-    [ -n "$NUODB_DEBUG" ] && echo "restore :latest resolved to $restore_url"
-
-    [ -z "$restore_url" ] && die -1 "There is no valid LATEST backup - restore of LATEST failed."
-  fi
+  retval=0
+  error=
 
   # bail out early if the restore will obviously fail
-  if [ -z "$( echo $restore_url | grep '^[a-z]\+:/[^ ]\+')" ]; then
-    [ -d "$NUODB_BACKUPDIR/$restore_url" ] || die -1 "Backupset $restore_url cannot be found in $NUODB_BACKUPDIR"
+  if [ -z "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
+    [ -d "$NUODB_BACKUPDIR/$restore_source" ] || error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
   fi
 
   # work out available space
@@ -72,7 +60,7 @@ function perform_restore() {
     retval=$?
     if [ $retval -ne 0 ]; then
       mv $saveName $DB_DIR
-      die $retval "Error moving archive in preparation for restore"
+      error="Error moving archive in preparation for restore"
     fi
   else
     tarfile=$DB_DIR-$( date +%Y%m%dT%H%M%S ).tar.gz
@@ -81,13 +69,14 @@ function perform_restore() {
     retval=$?
     if [ $retval -ne 0 ]; then
       rm -rf $tarfile
-      die $retval "Restore: unable to save existing archive to TAR file"
+      error="Restore: unable to save existing archive to TAR file"
     fi
 
     archSpace="$(df --output=avail $DB_DIR | grep -o ' *[0-9]\+')"
     if [ $(( archSize + 1024000 > archSpace )) ]; then
       rm -rf $tarfile
-      die 1 "Insufficient space for restore after archive has been saved to TAR."
+      retval=-1
+      error="Insufficient space for restore after archive has been saved to TAR."
     fi
 
     rm -rf $DB_DIR
@@ -95,117 +84,213 @@ function perform_restore() {
 
   mkdir $DB_DIR
 
-  # disable all the archive metadata so that get-archive-history will not for other SMs
-  archive_ids=$( $NUOCMD get archives --db-name $DB_NAME | grep -o "id=[0-9]\+" | grep -o "[0-9]\+")
-  [ -z "$NUODB_DEBUG" ] && echo "archives: $archive_ids"
-
-  # delete all but my own archive
-  for archv in $archive_ids; do
-    [ "$archv" -ne "$myArchive" ] && $NUOCMD delete archive --archive-id $archv
-  done
-
   # find the backup set and backup id
   # backupset=$(ls -tl $BACKUPDIR | head -n 1)
   # backup_id=$($NUODB_BINDIR/nuoarchive restore --report...
   # currently, backup-id is not supported
 
   # restore request is a URL - so retrieve the backup using curl
-  if [ -n "$( echo $restore_url | grep '^[a-z]\+:/[^ ]\+')" ]; then
-    : ${NUODB_IMPORT_STRIP_LEVELS:=1}
+  if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
+    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
+    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR
 
-    echo "curl -k --user '**' $restore_url | tar xzf - --strip-components $NUODB_IMPORT_STRIP_LEVELS -C $DB_DIR"
-    curl -k --user "$NUODB_IMPORT_CREDENTIALS" $restore_url | tar xzf - --strip-components $NUODB_IMPORT_STRIP_LEVELS -C $DB_DIR
-
-    chown -R 1000:0 $DB_DIR
+    chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
   else
-    $NUODB_BINDIR/nuoarchive restore --restore-dir $DB_DIR $NUODB_BACKUPDIR/$restore_url
+    $NUODB_BINDIR/nuoarchive restore --restore-dir $DB_DIR $NUODB_BACKUPDIR/$restore_source
   fi
 
-  # call nuodocker to fix the archive metadata
-  nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
+  # # call nuodocker to fix the archive metadata
+  # nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
 
-  # completely delete my previous archive metadata
-  $NUOCMD delete archive --archive-id $myArchive --purge
+  # # completely delete my previous archive metadata
+  # [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
+
+  # clear the SM wait semaphore
+  #$NUOCMD set value --key $startup_key/$DB_NAME --value '' --unconditional
 }
 
-function waitfor_restore() {
-  # wait for the database to transition to RUNNING
-  $NUOCMD check database --db-name $DB_NAME --check-running --wait-forever
-  retval = $?
-  [ $retval != 0 ] && die $retval "Error waiting for database $DB_NAME"
-
-  # release my archive if it is locked
-  # locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" )
-  # [ -n "$locked_archive" ] && $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
-}
-
-myArchive=$( $NUOCMD show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" )
-[ -n "$NUODB_DEBUG" ] && echo "myArchive=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
-[ -n "$NUODB_DEBUG" -a -z "$myArchive" ] && $NUOCMD show archives --db-name $DB_NAME
-
+#=============================
+# main routine
+#=============================
 # ensure DB_DIR exists
 if [ ! -e "${DB_DIR}" ] ; then
   mkdir -p "${DB_DIR}"
 fi
 
+first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
+
+myArchive=$( $NUOCMD show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
+[ -z "$myArchive" ] && myArchive=-1
+[ -n "$NUODB_DEBUG" ] && echo "myArchive=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
+[ -n "$NUODB_DEBUG" -a "$myArchive" = "-1" ] && echo "$($NUOCMD show archives --db-name $DB_NAME)"
+
 # if a restore from backup has been requested, then do that now
 restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
 restore_requested="$( $NUOCMD get value --key $restore_req )"
 
-if [ -n "$restore_requested" ]; then
+credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
+restore_credentials="$( $NUOCMD get value --key $credential_req )"
+[ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
 
-  wait_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/wait"
+strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
+strip_levels="$( $NUOCMD get value --key $strip_req )"
+[ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
 
-  # tell everyone to wait for me - unless someone else has already set the wait
-  [ -n "$myArchive" ] && $NUOCMD set value --key $wait_req --value $HOSTNAME --expected-value ''
+# if my archive already exists
+if [ "$myArchive" != "-1" ]; then
 
-  wait_requested="$( $NUOCMD get value --key $wait_req )"
+  # if a restore has been requested, then do that
+  if [ -n "$restore_requested" ]; then
+    restore_source=$restore_requested
+    [ -n "$NUODB_DEBUG" ] && echo "restore requested: $restore_source"
 
-  if [ -z "$wait_requested" -o "$wait_requested" = "$HOSTNAME" ]; then
-    # I got in first - perform the restore
-    perform_restore $restore_requested
-
-    # release shared state
-    $NUOCMD set value --key $wait_req --value '' --expected-value $HOSTNAME
-    $NUOCMD set value --key $restore_req --value '' --expected-value $restore_requested
-  else
-    waitfor_restore
+  # else if the database is configured with a an AUTO_RESTORE, then specify that
+  elif [ -n "$NUODB_AUTO_RESTORE" ]; then
+    restore_source="$NUODB_AUTO_RESTORE"
+    restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
+    strip_levels=${NUODB_RESTORE_STRIP_LEVELS:-1}
   fi
 
-  # release my archive if it is locked
-  # locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed | sed -En "/Archive: / {N; /$HOSTNAME/ s/Archive: \[([0-9]+)\].*$/\1/; T; p}")
-  # locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" )
-  # [ -n "$locked_archive" ] && $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
+# my archive does not exist - check to see if we should IMPORT it
+elif [ -n "$NUODB_AUTO_IMPORT" ]; then
+  restore_source="$NUODB_AUTO_IMPORT"
+  restore_credentials=${DATABASE_IMPORT_CREDENTIALS:-:}
+  strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
+fi
+
+# resolve ":latest"
+if [ "$restore_source" = ":latest" ]; then
+
+  # find which backup group performed the latest backup
+  latest_group=$( nuobackup --type report-latest --db-name $DB_NAME )
+
+  # if the latest backup was not by my group, then wait to allow an SM from the latest group to start first
+  if [ "$latest_group" != "$NUODB_BACKUP_GROUP" ]; then
+    echo ":latest backup was not made by my group $NUODB_BACKUP_GROUP - waiting to allow an SM from $latest_group to start..."
+
+    # try for 30 seconds, sleeping every 2 seconds
+    for retry in {1..30..2}; do
+      sm="$($NUOCMD get value --key $first_req )"
+      [ -n "$sm" ] && break
+      sleep 2
+    done
+
+    [ -n "$sm" ] && echo "Primary restore SM='${sm}'..." || echo "No Primary restore SM found - attempting restore from $NUODB_BACKUP_GROUP..."
+  fi
+fi
+
+# resolve the latest backup for the specified backup group
+if [ "$restore_source" = ":latest" -o "$restore_source" = ":group-latest" ]; then
+  [ -n "$NUODB_DEBUG" ] && echo "Resolving restore '$restore_source'..."
+  restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $NUODB_BACKUP_GROUP )
+  [ -n "$NUODB_DEBUG" ] && echo "Latest restore for $NUODB_BACKUP_GROUP resolved to $restore_source"
+fi
+
+if [ -n "$restore_requested" -a -n "$restore_source" ]; then
+
+  # work out who is the first one in
+  $NUOCMD set value --key $first_req --value $HOSTNAME --expected-value ''
+  first_in="$( $NUOCMD get value --key $first_req )"
+
+  echo "First-in = $first_in"
+
+  # if I got in first - perform the restore
+  if [ "$first_in" = "$HOSTNAME" ]; then
+
+    echo "I am first-in: $first_in == $HOSTNAME"
+
+    # [ -z "$restore_source" ] && die -1 "There is no valid LATEST backup - restore of LATEST failed."
+
+    # take ownership of the SM startup semaphore
+    $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --unconditional
+
+    # disable all the archive metadata so that get-archive-history will not look for other SMs
+    archive_ids=$( $NUOCMD get archives --db-name $DB_NAME | grep -o "id=[0-9]\+" | grep -o "[0-9]\+")
+    [ -z "$NUODB_DEBUG" ] && echo "archives: $archive_ids"
+
+    # delete all archives but my own
+    for archv in $archive_ids; do
+      [ "$archv" -ne "$myArchive" ] && $NUOCMD delete archive --archive-id $archv
+    done
+
+    # and restore the data
+    perform_restore
+
+    # clear/release shared state
+    $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
+    $NUOCMD set value --key $restore_req --value '' --expected-value $restore_requested
+    $NUOCMD set value --key $credential_req --value '' --unconditional
+
+    # any error is a fatal error
+    [ "$retval" = "0" ] || die $retval $error
+
+  else
+    # attempt to restore the same backup that the initial SM is restoring - to reduce SYNC time
+    if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" -o -d $NUODB_BACKUPDIR/$restore_source ]; then
+      perform_restore
+
+      # any error in a SEED restore is logged, but not fatal
+      [ -n "$error" ] && echo "WARNING: Error performing SEED restore: $error"
+    fi
+  fi
+
+  # wait until it's my turn to startup
+  until owner=$( $NUOCMD get value --key $startup_key/$DB_NAME ); [ "$owner" = "$HOSTNAME" -o "$NUODB_SEQUENCE_SYNC" = "false" ] ; do
+
+    # find the start-id of the SM that owns the semaphore
+    owner_id=$( $NUOCMD show database --db-name $DB_NAME --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^ *SM: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
+    if [ -z "$owner_id" ]; then
+      echo "Could not find start-id for starting SM on $owner - retrying..."
+      sleep 30
+      continue
+    fi
+
+    # wait for the starting SM to be RUNNING
+    $NUOCMD check process --start-id $owner_id --check-running --wait-forever
+
+    # transfer ownership of the startup semaphore to myself
+    $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --expected-value $owner
+  done
+
+  # call nuodocker to fix the archive metadata
+  nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
+
+  # completely delete my previous archive metadata
+  [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
+
 fi
 
 # release my archive if it is locked
-# locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed | sed -En "/Archive: / {N; /$HOSTNAME/ s/Archive: \[([0-9]+)\].*$/\1/; T; p}")
-locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" )
+locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -n "$locked_archive" ] && $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
 
-# if an IMPORT_URL is defined, and the archive dir is empty, then import from the URL
-if [ -n "$NUODB_IMPORT_URL" -a ! -f $DB_DIR/info.json ]; then
+# if a RESTORE_SOURCE is defined, and the archive dir is empty, then import/restore from the URL
+if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/info.json ]; then
 
   # if the NUODB_IMPORT_URL has a protocol:/ prefix, then use curl to download the archive
-  if [ -n "$( echo $NUODB_IMPORT_URL | grep '^[a-z]\+:/[^ ]\+')" ]; then
+  if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
    
-    : ${NUODB_IMPORT_STRIP_LEVELS:=1}
+    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
+    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR
 
-    echo "curl -k --user '**' $NUODB_IMPORT_URL | tar xzf - --strip-components $NUODB_IMPORT_STRIP_LEVELS -C $DB_DIR"
-    curl -k --user "$NUODB_IMPORT_CREDENTIALS" $NUODB_IMPORT_URL | tar xzf - --strip-components $NUODB_IMPORT_STRIP_LEVELS -C $DB_DIR
-
-    chown -R 1000:0 $DB_DIR
+    chown -R ${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0} $DB_DIR
 
     [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
 
     nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
 
     #ls -l $DB_DIR
-  else
+  elif [ -d "$NUODB_BACKUPDIR/$restore_source" ]; then
     # NUODB_IMPORT_URL has no protocol - so just append the --restore-from-dir option
-    set -- --restore-from-dir "$NUODB_IMPORT_URL" "$@"
+    set -- --restore-from-dir "$NUODB_BACKUPDIR/$restore_source" "$@"
   fi
 fi
+
+# release the first-in semaphore
+$NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
+
+# clear the restore_request
+$NUOCMD set value --key $restore_req --value '' --expected-value "$restore_requested"
 
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then

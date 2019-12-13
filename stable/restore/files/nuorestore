@@ -1,0 +1,82 @@
+#!/bin/sh
+#
+# simple script to perform a NuoDB restore.
+# Sets a flag to tell newly-starting SM(s) to perform the restore; then optionally causes the SM(s) to restart
+
+# args are:
+#   --type      - retore type: ( database | archive )
+#   --db-name   - database name to perform the restore operation on
+#   --source    - source to restore from - can be a backupset or a URL
+#   --group     - arbitrary group to select the SMs to backup. Often the datacentre or cloud name
+#   --labels    - additional arbitrary labels to select the SMs to backup
+#   --auto      - automatically start the restore operation ( true | false )
+
+: ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
+: ${NUODB_RESTORE_REQUEST_PREFIX:=/nuodb/nuosm}
+
+restore_type="database"
+db_name=$DB_NAME
+semaphore="/nuorestore/semaphore"
+restore_url=$NUODB_RESTORE_URL
+backup_group="all"
+labels=""
+
+restore_credentials=$NUODB_RESTORE_CREDENTIALS
+[ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:=:}
+
+while [[ $# -gt 0 ]] && [[ "$1" == "-"* ]] ;
+do
+    opt="$1";
+    shift;
+    case "$opt" in
+        "--" ) break 2;;
+        "--type" )
+           restore_type="$1"; shift;;
+        "--type="* )
+           restore_type="${opt#*=}";;
+        "--db-name" )
+           db_name="$1"; shift;;
+        "--db-name="* )
+           db_name="${opt#*=}";;
+        "--semaphore" )
+           semaphore="$1"; shift;;
+        "--semaphore="* )
+           semaphore="${opt#*=}";;
+        "--source" )
+           restore_source="$1"; shift;;
+        "--source="* )
+           restore_source="${opt#*=}";;
+        "--auto" )
+           auto="$1"; shift;;
+        "--auto="* )
+           auto="${opt#*=}";;
+        *) echo >&2 "Invalid nuorestore option: $opt ($@)"; exit 1;;
+   esac
+done
+
+restore_type=$(echo $restore_type | tr '[:upper:]' '[:lower:]')
+auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
+
+# set the persistent flag for the backup
+nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
+    --value $restore_source \
+    --unconditional
+
+if [ -n "$restore_credentials" ]; then
+    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/credentials \
+        --value $restore_credentials \
+        --unconditional
+fi
+
+
+if [ "$restore_type" = "database" ]; then
+   # Set the semaphores to create a new backupset from a full backup
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
+
+   for group in $(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$group --value "true" --unconditional
+   done
+
+   # optionally do automatic initiation of the restore
+   [ "$auto" = "true" ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
+fi

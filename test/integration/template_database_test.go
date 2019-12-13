@@ -22,7 +22,7 @@ func ArgContains(args []string, x string) bool {
 
 func EnvContains(envs []v1.EnvVar, key string, value string) bool {
 	for _, n := range envs {
-		if (n.Name == key && n.Value == value) {
+		if n.Name == key && n.Value == value {
 			return true
 		}
 	}
@@ -283,9 +283,9 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		SetValues: map[string]string{
 			"database.te.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
 			"database.sm.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
-			"admin.tlsKeyStore.secret":     "nuodb-keystore",
-			"admin.tlsKeyStore.key":        "nuoadmin.p12",
-			"admin.tlsKeyStore.password":   "changeIt",
+			"admin.tlsKeyStore.secret":          "nuodb-keystore",
+			"admin.tlsKeyStore.key":             "nuoadmin.p12",
+			"admin.tlsKeyStore.password":        "changeIt",
 		},
 	}
 
@@ -494,13 +494,13 @@ func TestDatabaseLabeling(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.te.labels.cloud": "minikube",
+			"database.te.labels.cloud":  "minikube",
 			"database.te.labels.region": "local",
-			"database.te.labels.zone": "local-b",
-			"database.sm.labels.cloud": "minikube",
+			"database.te.labels.zone":   "local-b",
+			"database.sm.labels.cloud":  "minikube",
 			"database.sm.labels.region": "local",
-			"database.sm.labels.zone": "local-b",
-			},
+			"database.sm.labels.zone":   "local-b",
+		},
 	}
 
 	basicChecks := func(args []string) {
@@ -559,7 +559,7 @@ func TestDatabaseLabeling(t *testing.T) {
 				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 				if isStatefulSetHotCopyEnabled(&obj) {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup enabled"))
+					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup-cluster0 enabled"))
 				} else {
 					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
@@ -594,7 +594,7 @@ func TestDatabaseLabeling(t *testing.T) {
 				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 				if isDaemonSetHotCopyEnabled(&obj) {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup enabled"))
+					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup-cluster0 enabled"))
 				} else {
 					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}

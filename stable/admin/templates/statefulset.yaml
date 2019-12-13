@@ -50,6 +50,15 @@ spec:
           mountPath: /var/opt/nuodb
         - name: log-volume
           mountPath: /var/log/nuodb
+      - name: init-raft
+        image: {{ template "init.image" . }}
+        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+        command: ['rm' , '-rf', '/var/opt/nuodb/raftlog' ]
+        volumeMounts:
+        - name: raftlog
+          mountPath: /var/opt/nuodb
+        - name: log-volume
+          mountPath: /var/log/nuodb
       containers:
       - name: admin
         image: {{ template "nuodb.image" . }}

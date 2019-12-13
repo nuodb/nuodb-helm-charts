@@ -38,6 +38,12 @@ nuodb:
     ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
     ##
 
+    # the prefix for the shared restore-request value - default value is always valid
+    requestPrefix: ""
+
+    # the prefix for the shared latest backup value - default value is always valid
+    latestPrefix: ""
+
 admin:
   # nameOverride: east
   # fullnameOverride: admin-east
@@ -53,21 +59,31 @@ admin:
 database:
   # name
   # NuoDB Database name.  must consist of lowercase alphanumeric
-  #characters '[a-z0-9]+'
+  # characters '[a-z0-9]+'
   name:
 
 restore:
-  # details of the database(s) involved in the backup
+  # name of the existing database being restored 
   target: ""
-#  source: ""
 
-  # backupSet
+  # source
   # Can be:
   # * the name of a backupset on a hotcopy-SM's backup disk;
   # * the metaname ':latest'
   # * a URL from which to download the backup (typically a TAR.GZ file)
-  backupSet: ""
+  source: ""
 
+  # credentials for the specified target - if different to the database.autoRestore.credentials
+  credentials: ""
+
+  # autoRestart
+  # if set to "true", running the restore chart causes the database to be restarted automatically
+  autoRestart: "true"
+
+  envFrom:
+    configMapRef: []
+    
   affinity: {}
   
   timeout: 1800
+
