@@ -135,10 +135,11 @@ securityContext:
 
 {{/*
 Import ENV vars from configMaps
+**BEWARE!!**
+   The values for envFrom are formated into a single line because some parsers
+   - either in k8s or rancher - throw errors occasionally if the multi-line format is used.
+   You Have Been Warned!
 */}}
-{{- define "admin.envFrom" -}}
-{{- with .Values.admin.envFrom }}
-envFrom:
-{{ toYaml  . }}
-{{- end }}
+{{- define "admin.envFrom" }}
+envFrom: [{{- range $index, $map := .Values.admin.envFrom.configMapRef }}{{if gt $index 0}},{{end}} configMapRef: { name: {{$map}} } {{ end }}]
 {{- end -}}
