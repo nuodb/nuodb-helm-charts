@@ -190,6 +190,11 @@ database:
     externalAccess: {}
       # enabled: false
       # internalIP: true
+    
+    ## By default, database clusterip and headless services for direct TE connections are enabled,
+    ## but can be optionally disabled here
+    dbServices: {}
+      # enabled: false
 
     # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
     replicas: 1
