@@ -60,7 +60,7 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "database.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ template "database.fullname" . }}-restore
+  name: {{ .Values.database.name }}-restore
 data:
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.autoImport.stripLevels | quote }}
   NUODB_RESTORE_STRIP_LEVELS: {{ default "1" .Values.database.autoRestore.stripLevels | quote }}
