@@ -14,13 +14,13 @@ If release name contains chart name it will be used as a full name.
 {{- $domain := default "domain" .Values.admin.domain -}}
 {{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
 {{- if .Values.admin.fullnameOverride -}}
-{{- .Values.admin.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- .Values.admin.fullnameOverride | trunc 53 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name .Values.admin.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s" .Release.Name .Values.admin.domain $cluster | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s" .Release.Name .Values.admin.domain $cluster | trunc 53 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s" .Release.Name .Values.admin.domain $cluster $name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name .Values.admin.domain $cluster $name | trunc 53 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}

@@ -5,7 +5,7 @@ metadata:
   labels:
     group: nuodb
     subgroup: restore
-    database: "{{ .Values.database.name | trimSuffix "-" }}"
+    database: "{{ .Values.database.name }}"
 spec:
   parallelism: 1
   completions: 1
@@ -16,6 +16,8 @@ spec:
       affinity:
 {{ tpl .Values.restore.affinity . | trim | indent 8 }}
 {{- end }}
+      initContainers:
+      
       containers:
       - name: restore
         image: {{ template "nuodb.image" . }}

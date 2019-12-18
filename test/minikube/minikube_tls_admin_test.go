@@ -74,7 +74,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, namespaceName)
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	t.Run("verifyKeystore", func(t *testing.T) {
 		content, err := testlib.ReadAll(filepath.Join(keysLocation, "nuoadmin.cert"))

@@ -140,7 +140,7 @@ envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range
 Return the restore target.
 */}}
 {{- define "restore.target" -}}
-{{- default .Values.database.name .Values.restore.target | trimSuffix "-" -}}
+{{- default .Values.database.name .Values.restore.target -}}
 {{- end -}}
 
 {{/*

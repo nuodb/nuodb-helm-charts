@@ -21,7 +21,7 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 	headlessServiceName := fmt.Sprintf("nuodb")
 	clusterServiceName := fmt.Sprintf("nuodb-clusterip")
 

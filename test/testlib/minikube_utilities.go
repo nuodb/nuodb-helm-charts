@@ -547,3 +547,30 @@ func UnmarshalJSONArray(t *testing.T, stringJSON string) []interface{} {
 	assert.NilError(t, err)
 	return results
 }
+
+func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) {
+
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+
+	// verify the KV store can write and read in a reasonable time
+	start := time.Now()
+	output, err := k8s.RunKubectlAndGetOutputE(t, options,
+		"exec", podName, "--", "nuocmd", "set", "value", "--key", "test/minikube", "--value", "testVal", "--unconditional",
+	)
+	assert.NilError(t, err, "Could not set KV value")
+	elapsed := time.Since(start)
+
+	assert.Check(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV set took longer than 2s: %s", elapsed))
+
+	start = time.Now()
+	output, err = k8s.RunKubectlAndGetOutputE(t, options,
+		"exec", podName, "--", "nuocmd", "get", "value", "--key", "test/minikube",
+	)
+	assert.NilError(t, err, "Could not get KV value")
+	elapsed = time.Since(start)
+
+	assert.Check(t, elapsed.Seconds() < 2.0)
+
+	assert.Check(t, output == "testVal", fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
+}

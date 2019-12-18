@@ -70,6 +70,7 @@ admin:
   #   internalIP: true
 
   persistence:
+    initialize: false
     size: 1Gi
     accessModes:
       - ReadWriteOnce
@@ -83,7 +84,7 @@ admin:
     capabilities: []
 
   ## Specify one or more configMaps to import Environment Variables from
-  # Ex:  configMapRef: [ ]myConfigMap, myOtherConfigMap ]
+  # Ex:  configMapRef: [ myConfigMap, myOtherConfigMap ]
   envFrom:
     configMapRef: []
     secretRef: []

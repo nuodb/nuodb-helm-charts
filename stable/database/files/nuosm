@@ -4,8 +4,8 @@
 
 . ${NUODB_HOME}/etc/nuodb_setup.sh
 
-NUODB_DEBUG="true"
-[ -n "$NUODB_DEBUG" ] && set -x
+NUODB_DEBUG="false"
+#[ -n "$NUODB_DEBUG" ] && set -x
 
 : ${NUODB_ARCHIVEDIR:=/var/opt/nuodb/archive}
 : ${NUODB_BACKUPDIR:=/var/opt/nuodb/backup}

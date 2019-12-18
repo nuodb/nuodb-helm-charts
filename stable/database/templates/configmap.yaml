@@ -62,7 +62,6 @@ metadata:
     release: {{ .Release.Name | quote }}
   name: {{ template "database.fullname" . }}-restore
 data:
-  NUODB_IMPORT_URL: {{ .Values.database.import.url }}
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.autoImport.stripLevels | quote }}
   NUODB_RESTORE_STRIP_LEVELS: {{ default "1" .Values.database.autoRestore.stripLevels | quote }}
   NUODB_RESTORE_REQUEST_PREFIX: {{ default "/nuodb/nuosm/database" .Values.nuodb.requestKey }}

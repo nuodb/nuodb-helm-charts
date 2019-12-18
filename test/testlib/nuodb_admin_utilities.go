@@ -32,7 +32,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	adminNames := make([]string, replicaCount)
 
 	for i := 0; i < replicaCount; i++ {
-		adminNames[i] = fmt.Sprintf("%s-nuodb-%d", helmChartReleaseName, i)
+		adminNames[i] = fmt.Sprintf("%s-nuodb-cluster0-%d", helmChartReleaseName, i)
 	}
 
 	kubectlOptions := k8s.NewKubectlOptions("", "")

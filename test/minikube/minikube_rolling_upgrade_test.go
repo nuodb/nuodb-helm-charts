@@ -39,7 +39,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
@@ -71,7 +71,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	adminHelmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", adminHelmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
@@ -148,7 +148,7 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 	admin1 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 	admin2 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
 

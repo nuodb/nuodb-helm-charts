@@ -54,7 +54,8 @@ func TestDatabaseSecretsDefault(t *testing.T) {
 	var object v1.Secret
 	helm.UnmarshalK8SYaml(t, output, &object)
 
-	assert.Check(t, len(object.StringData) == 5)
+	// check for the minimum 3 secret values: database-name, database-password, database-username
+	assert.Check(t, len(object.StringData) >= 3)
 
 	_, ok := object.StringData["database-name"]
 	assert.Check(t, ok)
@@ -562,8 +563,8 @@ func TestDatabaseStandardVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.securityContext.capabilities": "[ NET_ADMIN ]",
-			"database.envFrom":                      "[ configMapRef: { name: test-config } ]",
+			"database.securityContext.capabilities[0]": "NET_ADMIN",
+			"database.envFrom.configMapRef[0]":         "test-config",
 		},
 	}
 
@@ -593,8 +594,8 @@ func TestDatabaseDaemonSetVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.securityContext.capabilities": "[ NET_ADMIN ]",
-			"database.envFrom":                      "[ configMapRef: { name: test-config } ]",
+			"database.securityContext.capabilities[0]": "NET_ADMIN",
+			"database.envFrom.configMapRef[0]":      "test-config",
 			"database.enableDaemonSet":              "true",
 		},
 	}
@@ -625,8 +626,8 @@ func TestDatabaseDeploymentConfigVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.securityContext.capabilities": "[ NET_ADMIN ]",
-			"database.envFrom":                      "[ configMapRef: { name: test-config } ]",
+			"database.securityContext.capabilities[0]": "NET_ADMIN",
+			"database.envFrom.configMapRef[0]":         "test-config",
 			"openshift.enabled":                     "true",
 			"openshift.enableDeploymentConfigs":     "true",
 		},
@@ -729,7 +730,7 @@ func TestDatabaseLabeling(t *testing.T) {
 				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 				if testlib.IsStatefulSetHotCopyEnabled(&obj) {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster-0"))
+					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
 					// } else {
 					// 	assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
@@ -764,7 +765,7 @@ func TestDatabaseLabeling(t *testing.T) {
 				basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 				if testlib.IsDaemonSetHotCopyEnabled(&obj) {
-					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster-0"))
+					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
 					// } else {
 					// 	assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
