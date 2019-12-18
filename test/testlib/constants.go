@@ -41,3 +41,5 @@ const MINIMAL_VIABLE_ENGINE_CPU = "500m"
 const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
 
 const BACKUP_NUODB_VERSION = "4.0.2"
+
+const BACKUP_SEMAPHORE = "/nuorestore/semaphore"

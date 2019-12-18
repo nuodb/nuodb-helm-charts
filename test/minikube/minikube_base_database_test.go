@@ -429,14 +429,29 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql")
 
 		// run a manual backup
+		// k8s.RunKubectl(t, opts,
+		// 	"exec", admin0, "--",
+		// 	"nuodocker", "backup", "database",
+		// 	"--db-name", "demo",
+		// 	"--type", "full",
+		// 	"--timeout", "120",
+		// 	"--backup-root", "/var/opt/nuodb/backup",
+		// )
+		// trigger a manual backup now
 		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--",
-			"nuodocker", "backup", "database",
-			"--db-name", "demo",
-			"--type", "full",
-			"--timeout", "120",
-			"--backup-root", "/var/opt/nuodb/backup",
+			"exec", admin0, "--", 
+			"nuocmd", "set", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE), "--unconditional",
 		)
+
+		// wait for backup to complete
+		testlib.Await(t, func() bool {
+			output, err := k8s.RunKubectlAndGetOutputE(t, opts,
+				"exec", admin0, "--", 
+				"nuocmd", "get", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE),
+			)
+			assert.NilError(t, err, "Error getting value from KV")
+			return output == ""
+		}, 240*time.Second)
 
 		// populate some more data
 		k8s.RunKubectl(t, opts,
