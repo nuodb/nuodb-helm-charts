@@ -101,6 +101,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: COMPONENT
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.component
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
