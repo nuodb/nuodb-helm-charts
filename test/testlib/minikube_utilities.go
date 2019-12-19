@@ -303,6 +303,15 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 		"--timeout", "300")
 }
 
+func AwaitDatabaseDown(t *testing.T, namespace string, podName string, databaseName string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
+		"--db-name", databaseName, "--num-processes", "0",
+		"--timeout", "300")
+}
+
 func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace

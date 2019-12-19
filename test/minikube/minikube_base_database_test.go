@@ -176,7 +176,8 @@ func restoreDatabase(t *testing.T, namespaceName string) {
 		SetValues: map[string]string{
 			"database.name":     "demo",
 			"restore.target":    "demo",
-			"restore.source": 	 ":group-latest",
+			"restore.source": 	 ":latest",
+			"restore.autoRestart": "true",
 		},
 	}
 	kubectlOptions := k8s.NewKubectlOptions("", "")
@@ -440,7 +441,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		// trigger a manual backup now
 		k8s.RunKubectl(t, opts,
 			"exec", admin0, "--", 
-			"nuocmd", "set", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE), "--unconditional",
+			"nuocmd", "set", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE), "--value", "true", "--unconditional",
 		)
 
 		// wait for backup to complete
@@ -474,6 +475,8 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		// 	"--db-name", "demo",
 		// )
 
+		// wait for the datbase to be restarted (shutdown followed by restart)
+		testlib.AwaitDatabaseDown(t, namespaceName, admin0, "demo")
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
 		// verify that the database contains the restored data
