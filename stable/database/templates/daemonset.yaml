@@ -166,6 +166,7 @@ spec:
       - name: nuobackup
         configMap:
           name: {{ template "database.fullname" . }}-nuobackup
+          defaultMode: 0777
       - name: readinessprobe
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
@@ -367,6 +368,7 @@ spec:
       - name: nuobackup
         configMap:
           name: {{ template "database.fullname" . }}-nuobackup
+          defaultMode: 0777
       - name: readinessprobe
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
