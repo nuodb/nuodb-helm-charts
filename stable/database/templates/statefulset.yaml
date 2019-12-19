@@ -101,10 +101,6 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: COMPONENT
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.component
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
@@ -133,6 +129,7 @@ spec:
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+        - { name: COMPONENT_NAME,      value: "sm" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -389,6 +386,7 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUODB_BACKUP_GROUP,  value: "{{ include "hotcopy.group" . }}" }
+        - { name: COMPONENT_NAME,      value: "sm" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}

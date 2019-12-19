@@ -115,7 +115,7 @@ spec:
             - "--group"
             - "{{ include "hotcopy.group" . }}"
             - "--semaphore"
-            - "/nuorestore/semaphore"
+            - "/nuobackup/semaphore"
             - "--timeout"
             - "{{ .Values.database.sm.hotCopy.timeout }}"      
             - "--backup-root"

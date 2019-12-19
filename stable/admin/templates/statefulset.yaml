@@ -84,13 +84,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - name: COMPONENT
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.component
         - { name: NUODB_DOMAIN_ENTRYPOINT, value: "{{ template "admin.fullname" . }}-0.{{ .Values.admin.domain }}" }
         - { name: NUODB_ALT_ADDRESS,       value: "$(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc" }
         - { name: NUODB_VARDIR,            value: "/var/opt/nuodb/$(POD_NAME).$(NAMESPACE)" }
+        - { name: COMPONENT_NAME,          value: "admin" }
       {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }

@@ -78,6 +78,8 @@ spec:
         - { name: DB_NAME,             value: {{ .Values.database.name | quote }} }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+        - { name: COMPONENT_NAME,      value: "te" }
+
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}

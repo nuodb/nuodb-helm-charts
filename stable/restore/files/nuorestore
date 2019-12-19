@@ -16,7 +16,7 @@
 
 restore_type="database"
 db_name=$DB_NAME
-semaphore="/nuorestore/semaphore"
+semaphore="/nuobackup/semaphore"
 restore_url=$NUODB_RESTORE_URL
 backup_group="all"
 labels=""
