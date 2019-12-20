@@ -459,7 +459,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 		// wait for the backup to complete
 		databaseName := "demo"
-		backupJob := fmt.Sprintf("post-restore-%s-cronjob-", databaseName)
+		backupJob := fmt.Sprintf("post-restore-%s-cronjob", databaseName)
 		testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 		// populate some more data
