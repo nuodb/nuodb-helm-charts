@@ -128,13 +128,15 @@ myArchive=$( $NUOCMD show archives --db-name $DB_NAME --archive-format "archive-
 restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
 restore_requested="$( $NUOCMD get value --key $restore_req )"
 
-credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
-restore_credentials="$( $NUOCMD get value --key $credential_req )"
-[ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
+if [ -n "$restore_requested" ]; then
+  credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
+  restore_credentials="$( $NUOCMD get value --key $credential_req )"
+  [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
 
-strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
-strip_levels="$( $NUOCMD get value --key $strip_req )"
-[ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
+  strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
+  strip_levels="$( $NUOCMD get value --key $strip_req )"
+  [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
+fi
 
 # if my archive already exists
 if [ "$myArchive" != "-1" ]; then
@@ -217,9 +219,10 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     perform_restore
 
     # clear/release shared state
-    $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
-    $NUOCMD set value --key $restore_req --value '' --expected-value $restore_requested
+    # $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
+    # $NUOCMD set value --key $restore_req --value '' --expected-value $restore_requested
     $NUOCMD set value --key $credential_req --value '' --unconditional
+
 
     # any error is a fatal error
     [ "$retval" = "0" ] || die $retval $error
@@ -287,10 +290,10 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/info.json ]
 fi
 
 # release the first-in semaphore
-$NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
+[ -n "$first_in" ] && $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
 
 # clear the restore_request
-$NUOCMD set value --key $restore_req --value '' --expected-value "$restore_requested"
+[ -n "$restore_requested" ] && $NUOCMD set value --key $restore_req --value '' --expected-value "$restore_requested"
 
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then

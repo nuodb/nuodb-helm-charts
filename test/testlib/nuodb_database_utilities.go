@@ -84,7 +84,7 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 240*time.Second)
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
-	AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 240*time.Second)
+	AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 300*time.Second)
 
 	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
