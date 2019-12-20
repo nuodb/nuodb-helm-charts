@@ -49,7 +49,7 @@ function perform_restore() {
 
   # resolve ":latest"
   if [ "$restore_url" = ":latest" ]; then
-    restore_url=$( $NUOCMD get value --key $NUODB_LATEST_BACKUP_PREFIX/$DB_NAME )
+    restore_url=$( $NUOCMD get value --key $NUODB_LATEST_BACKUP_PREFIX/$DB_NAME/$myArchive )
 
     [ -n "$NUODB_DEBUG" ] && echo "restore :latest resolved to $restore_url"
 
