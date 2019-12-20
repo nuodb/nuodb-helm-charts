@@ -15,7 +15,7 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	// "github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/random"
 )
 
 const LABEL_CLOUD = "minikube"
@@ -176,9 +176,9 @@ func restoreDatabase(t *testing.T, namespaceName string) {
 	restName := fmt.Sprintf("restore-demo-%s", randomSuffix)
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.name":     "demo",
-			"restore.target":    "demo",
-			"restore.source": 	 ":latest",
+			"database.name":       "demo",
+			"restore.target":      "demo",
+			"restore.source":      ":latest",
 			"restore.autoRestart": "true",
 		},
 	}
@@ -440,21 +440,27 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		// 	"--timeout", "120",
 		// 	"--backup-root", "/var/opt/nuodb/backup",
 		// )
+
 		// trigger a manual backup now
 		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--", 
+			"exec", admin0, "--",
 			"nuocmd", "set", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE), "--value", "true", "--unconditional",
 		)
 
 		// wait for backup to complete
-		testlib.Await(t, func() bool {
-			output, err := k8s.RunKubectlAndGetOutputE(t, opts,
-				"exec", admin0, "--", 
-				"nuocmd", "get", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE),
-			)
-			assert.NilError(t, err, "Error getting value from KV")
-			return output == ""
-		}, 240*time.Second)
+		// testlib.Await(t, func() bool {
+		// 	output, err := k8s.RunKubectlAndGetOutputE(t, opts,
+		// 		"exec", admin0, "--",
+		// 		"nuocmd", "get", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE),
+		// 	)
+		// 	assert.NilError(t, err, "Error getting value from KV")
+		// 	return output == ""
+		// }, 240*time.Second)
+
+		// wait for the backup to complete
+		databaseName := "demo"
+		backupJob := fmt.Sprintf("post-restore-%s-cronjob-", databaseName)
+		testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 		// populate some more data
 		k8s.RunKubectl(t, opts,
