@@ -171,7 +171,9 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 
 func restoreDatabase(t *testing.T, namespaceName string) {
 	// run the restore chart - which flags the database to restore on next startup
-	restName := "restore-demo"
+	randomSuffix := strings.ToLower(random.UniqueId())
+
+	restName := fmt.Sprintf("restore-demo-%s", randomSuffix)
 	options := &helm.Options{
 		SetValues: map[string]string{
 			"database.name":     "demo",
