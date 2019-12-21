@@ -187,8 +187,8 @@ func findPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, 
 		}
 	}
 
-	for _, pod = range findAllPodsInSchema(t, namespace) {
-		t.LogF("Pods %s%n", pod.Name)		
+	for _, pod := range findAllPodsInSchema(t, namespace) {
+		t.Logf("Pods %s%n", pod.Name)
 	}
 
 	return nil, errors.New("did not find any pod matching name")
