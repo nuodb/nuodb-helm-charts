@@ -189,7 +189,7 @@ func restoreDatabase(t *testing.T, namespaceName string) {
 	helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
 	testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 
-	testlib.AwaitPodPhase(t, namespaceName, restName, corev1.PodSucceeded, 120*time.Second)
+	testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
 }
 
 func TestKubernetesBasicDatabase(t *testing.T) {
