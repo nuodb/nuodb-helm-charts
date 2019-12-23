@@ -422,6 +422,11 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		opts.Namespace = namespaceName
 		databaseOptions.KubectlOptions = opts
 
+		// wait for the initial backup to complete
+		databaseName := "demo"
+		backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", databaseName)
+		testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
+
 		// populate some data
 		k8s.RunKubectl(t, opts,
 			"exec", admin0, "--",
@@ -429,7 +434,13 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"--user", "dba",
 			"--password", "secret",
 			"demo",
-			"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql")
+			"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
+		)
+
+		// verify that the database contains the populated data
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+		assert.NilError(t, err, "error running SQL: show schema User")
+		assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
 
 		// run a manual backup
 		// k8s.RunKubectl(t, opts,
@@ -441,11 +452,11 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		// 	"--backup-root", "/var/opt/nuodb/backup",
 		// )
 
-		// trigger a manual backup now
-		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--",
-			"nuocmd", "set", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE), "--value", "true", "--unconditional",
-		)
+		// // trigger a manual backup now
+		// k8s.RunKubectl(t, opts,
+		// 	"exec", admin0, "--",
+		// 	"nuocmd", "set", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE), "--value", "true", "--unconditional",
+		// )
 
 		// wait for backup to complete
 		// testlib.Await(t, func() bool {
@@ -457,20 +468,20 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		// 	return output == ""
 		// }, 240*time.Second)
 
-		// wait for the backup to complete - up to 3 mins to start, and another 3 mins to then complete...
-		databaseName := "demo"
-		backupJob := fmt.Sprintf("post-restore-%s-cronjob-", databaseName)
-		testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 480*time.Second)
+		// // wait for the backup to complete - up to 4 mins to start, and another 4 mins to then complete...
+		// databaseName := "demo"
+		// backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", databaseName)
+		// testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 		// populate some more data
-		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--",
-			"/opt/nuodb/bin/nuosql",
-			"--user", "dba",
-			"--password", "secret",
-			"demo",
-			"--file", "/opt/nuodb/samples/quickstart/sql/Teams.sql",
-		)
+		// k8s.RunKubectl(t, opts,
+		// 	"exec", admin0, "--",
+		// 	"/opt/nuodb/bin/nuosql",
+		// 	"--user", "dba",
+		// 	"--password", "secret",
+		// 	"demo",
+		// 	"--file", "/opt/nuodb/samples/quickstart/sql/Teams.sql",
+		// )
 
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		restoreDatabase(t, namespaceName)
@@ -487,15 +498,15 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		testlib.AwaitDatabaseDown(t, namespaceName, admin0, "demo")
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
-		// verify that the database contains the restored data
-		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		assert.NilError(t, err, "error running SQL: show schema User")
-		assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
+		// // verify that the database contains the restored data
+		// tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+		// assert.NilError(t, err, "error running SQL: show schema User")
+		// assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
 
 		// verify that the database does NOT contain the data from AFTER the backup
-		count, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "select 'count=' || count(*) from User.Teams")
-		assert.NilError(t, err, "error running SQL: select count(*) from User.Teams")
-		assert.Check(t, strings.Contains(count, "count=0"), "count returned: ", count)
+		tables, err = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+		assert.NilError(t, err, "error running SQL: show schema User")
+		assert.Check(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 	})
 }
 
