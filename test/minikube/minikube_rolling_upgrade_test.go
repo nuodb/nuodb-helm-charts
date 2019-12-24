@@ -4,13 +4,14 @@ package minikube
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+	"time"
+
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"gotest.tools/assert"
-	"strings"
-	"testing"
-	"time"
 )
 
 const OLD_RELEASE = "4.0"
@@ -87,12 +88,13 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
-
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
+
 	// all jobs need to be deleted before an upgrade can be performed
 	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
+	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
 
 	options.SetValues["nuodb.image.tag"] = NEW_RELEASE
 
@@ -112,7 +114,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 		testlib.Await(t, func() bool {
 			return testlib.GetStringOccurenceInLog(t, namespaceName, admin0,
 				"Reconnected with process with connectKey") == expectedNumberReconnects
-		},30*time.Second )
+		}, 30*time.Second)
 
 	})
 
@@ -139,7 +141,7 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"admin.replicas": "3",
+			"admin.replicas":  "3",
 			"nuodb.image.tag": OLD_RELEASE,
 		},
 	}
@@ -149,8 +151,8 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-	admin1 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
-	admin2 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", helmChartReleaseName)
+	admin2 := fmt.Sprintf("%s-nuodb-cluster0-2", helmChartReleaseName)
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
