@@ -226,9 +226,12 @@ func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate 
 	options.Namespace = namespace
 
 	Await(t, func() bool {
-		podName := GetPodName(t, namespace, podNameTemplate)
+		pod, err := findPod(t, namespace, podNameTemplate)
 
-		pod := k8s.GetPod(t, options, podName)
+		if err != nil {
+			t.Logf("No pod found with name ", podNameTemplate)
+			return false
+		}
 
 		for _, container := range pod.Spec.Containers {
 			t.Logf("Found container (%s) with image: %s", container.Name, container.Image)
@@ -246,7 +249,12 @@ func AwaitPodHasVersion(t *testing.T, namespace string, podName string, expected
 	options.Namespace = namespace
 
 	Await(t, func() bool {
-		pod := k8s.GetPod(t, options, podName)
+		pod, err := k8s.GetPodE(t, options, podName)
+
+		if err != nil {
+			t.Logf("No pod found with name ", podName)
+			return false
+		}
 
 		for _, container := range pod.Spec.Containers {
 			t.Logf("Found container (%s) with image: %s", container.Name, container.Image)

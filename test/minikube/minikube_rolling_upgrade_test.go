@@ -120,16 +120,16 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 		verifyAllProcessesRunning(t, namespaceName, admin0, 2)
 	})
 
-	databaseOptions.SetValues["nuodb.image.tag"] = NEW_RELEASE
+	t.Run("upgradeDatabaseHelm", func(t *testing.T) {
+		databaseOptions.SetValues["nuodb.image.tag"] = NEW_RELEASE
 
-	helm.Upgrade(t, &databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
+		helm.Upgrade(t, &databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
 
-	testlib.AwaitPodTemplateHasVersion(t, namespaceName, "sm-database", fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
-	testlib.AwaitPodTemplateHasVersion(t, namespaceName, "te-database", fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
+		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "sm-database", fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
+		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "te-database", fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
 
-	testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
-	t.Run("verifyAllProcessesRunning2", func(t *testing.T) {
 		verifyAllProcessesRunning(t, namespaceName, admin0, 2)
 	})
 }
