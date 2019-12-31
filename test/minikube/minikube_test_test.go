@@ -3,9 +3,10 @@
 package minikube
 
 import (
-	"github.com/gruntwork-io/terratest/modules/helm"
 	"testing"
 	"time"
+
+	"github.com/gruntwork-io/terratest/modules/helm"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
@@ -95,23 +96,23 @@ func TestGetExtractedOptions(t *testing.T) {
 
 	t.Run("emptyOptions", func(t *testing.T) {
 		opt := testlib.GetExtractedOptions(&helm.Options{
-			SetValues: map[string]string{
-
-			},
+			SetValues: map[string]string{},
 		})
 
 		assert.Check(t, opt.DbName == "demo")
 		assert.Check(t, opt.NrTePods == 1)
 		assert.Check(t, opt.NrSmPods == 1)
+		assert.Check(t, opt.ClusterName == "cluster0")
 	})
 
 	t.Run("overriddenOptions", func(t *testing.T) {
 		opt := testlib.GetExtractedOptions(&helm.Options{
 			SetValues: map[string]string{
-				"database.name": "green",
-				"database.te.replicas": "2",
-				"database.sm.hotCopy.replicas": "2",
+				"database.name":                  "green",
+				"database.te.replicas":           "2",
+				"database.sm.hotCopy.replicas":   "2",
 				"database.sm.noHotCopy.replicas": "2",
+				"cloud.clusterName":              "cluster1",
 			},
 		})
 
@@ -120,6 +121,7 @@ func TestGetExtractedOptions(t *testing.T) {
 		assert.Check(t, opt.NrSmHotCopyPods == 2)
 		assert.Check(t, opt.NrSmNoHotCopyPods == 2)
 		assert.Check(t, opt.NrSmPods == 4)
+		assert.Check(t, opt.ClusterName == "cluster1")
 	})
 
 }

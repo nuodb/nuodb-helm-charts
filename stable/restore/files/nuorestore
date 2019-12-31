@@ -6,9 +6,8 @@
 # args are:
 #   --type      - retore type: ( database | archive )
 #   --db-name   - database name to perform the restore operation on
+#   --semaphore - a key in the raftlog KV store to set to trigger a full backup after the restore
 #   --source    - source to restore from - can be a backupset or a URL
-#   --group     - arbitrary group to select the SMs to backup. Often the datacentre or cloud name
-#   --labels    - additional arbitrary labels to select the SMs to backup
 #   --auto      - automatically start the restore operation ( true | false )
 
 : ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
@@ -17,9 +16,8 @@
 restore_type="database"
 db_name=$DB_NAME
 semaphore="/nuobackup/semaphore"
-restore_url=$NUODB_RESTORE_URL
-backup_group="all"
-labels=""
+restore_source=":latest"
+auto="false"
 
 restore_credentials=$NUODB_RESTORE_CREDENTIALS
 [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:=:}

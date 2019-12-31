@@ -19,7 +19,7 @@ type ExtractedOptions struct {
 	NrSmNoHotCopyPods int
 	NrSmPods          int
 	DbName            string
-	ClusterName		  string
+	ClusterName       string
 }
 
 func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {

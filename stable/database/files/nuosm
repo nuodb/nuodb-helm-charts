@@ -154,7 +154,7 @@ if [ "$myArchive" != "-1" ]; then
   fi
 
 # my archive does not exist - check to see if we should IMPORT it
-elif [ -n "$NUODB_AUTO_IMPORT" ]; then
+elif [ -n "$NUODB_AUTO_IMPORT" -a ! -f $DB_DIR/1.atm ]; then
   restore_source="$NUODB_AUTO_IMPORT"
   restore_credentials=${DATABASE_IMPORT_CREDENTIALS:-:}
   strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
@@ -268,7 +268,7 @@ locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-a
 [ -n "$locked_archive" ] && $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
 
 # if a RESTORE_SOURCE is defined, and the archive dir is empty, then import/restore from the URL
-if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/info.json ]; then
+if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/1.atm ]; then
 
   # if the NUODB_IMPORT_URL has a protocol:/ prefix, then use curl to download the archive
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
