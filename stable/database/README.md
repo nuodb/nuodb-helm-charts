@@ -249,6 +249,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
+| `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
 | `te.replicas` | TE replicas | `1` |
 | `te.memoryOption` | TE engine memory (*future deprecation*) | `"8g"` |
 | `te.labels` | Labels given to the TEs started | `""` |
