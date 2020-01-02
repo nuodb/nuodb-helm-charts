@@ -22,7 +22,7 @@ auto="false"
 restore_credentials=$NUODB_RESTORE_CREDENTIALS
 [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:=:}
 
-while [[ $# -gt 0 ]] && [[ "$1" == "-"* ]] ;
+while [ $# -gt 0 ];
 do
     opt="$1";
     shift;

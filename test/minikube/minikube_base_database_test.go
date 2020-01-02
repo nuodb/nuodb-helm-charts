@@ -142,17 +142,6 @@ func verifyEngineAltAddress(t *testing.T, namespaceName string, admin0 string, e
 }
 
 func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
-	// NTJ- currently database chart automatically starts the hotcopy Job
-	// randomSuffix := strings.ToLower(random.UniqueId())
-
-	// bakName := fmt.Sprintf("backup-full-%s", randomSuffix)
-
-	// kubectlOptions := k8s.NewKubectlOptions("", "")
-	// options.KubectlOptions = kubectlOptions
-	// options.KubectlOptions.Namespace = namespaceName
-
-	//testlib.AddTeardown(testlib.TEARDOWN_BACKUP, func() { helm.Delete(t, options, bakName, true) })
-	//helm.Install(t, options, testlib.BACKUP_HELM_CHART_PATH, bakName)
 
 	// wait for the backup to both start _and_ complete successfully
 	backupJob := fmt.Sprintf("hotcopy-%s-job-initial", databaseName)
@@ -169,7 +158,7 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 	assert.Check(t, backupset != "")
 }
 
-func restoreDatabase(t *testing.T, namespaceName string) {
+func restoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options, restart string) {
 	// run the restore chart - which flags the database to restore on next startup
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -179,17 +168,25 @@ func restoreDatabase(t *testing.T, namespaceName string) {
 			"database.name":       "demo",
 			"restore.target":      "demo",
 			"restore.source":      ":latest",
-			"restore.autoRestart": "true",
+			"restore.autoRestart": restart,
 		},
 	}
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
-	testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
+	restore := func() {
+		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
+		testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
+	
+		testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)	
+	}
 
-	testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
+	if restart == "true" {
+		testlib.AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
+	} else {
+		restore()
+	}
 }
 
 func TestKubernetesBasicDatabase(t *testing.T) {
@@ -442,66 +439,9 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		assert.NilError(t, err, "error running SQL: show schema User")
 		assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
 
-		// run a manual backup
-		// k8s.RunKubectl(t, opts,
-		// 	"exec", admin0, "--",
-		// 	"nuodocker", "backup", "database",
-		// 	"--db-name", "demo",
-		// 	"--type", "full",
-		// 	"--timeout", "120",
-		// 	"--backup-root", "/var/opt/nuodb/backup",
-		// )
-
-		// // trigger a manual backup now
-		// k8s.RunKubectl(t, opts,
-		// 	"exec", admin0, "--",
-		// 	"nuocmd", "set", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE), "--value", "true", "--unconditional",
-		// )
-
-		// wait for backup to complete
-		// testlib.Await(t, func() bool {
-		// 	output, err := k8s.RunKubectlAndGetOutputE(t, opts,
-		// 		"exec", admin0, "--",
-		// 		"nuocmd", "get", "value", "--key", fmt.Sprintf("%s/demo/cluster0", testlib.BACKUP_SEMAPHORE),
-		// 	)
-		// 	assert.NilError(t, err, "Error getting value from KV")
-		// 	return output == ""
-		// }, 240*time.Second)
-
-		// // wait for the backup to complete - up to 4 mins to start, and another 4 mins to then complete...
-		// databaseName := "demo"
-		// backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", databaseName)
-		// testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
-
-		// populate some more data
-		// k8s.RunKubectl(t, opts,
-		// 	"exec", admin0, "--",
-		// 	"/opt/nuodb/bin/nuosql",
-		// 	"--user", "dba",
-		// 	"--password", "secret",
-		// 	"demo",
-		// 	"--file", "/opt/nuodb/samples/quickstart/sql/Teams.sql",
-		// )
-
+		// restore database
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
-		restoreDatabase(t, namespaceName)
-
-		// NTJ - Now automatically triggered by the restore chart (by default - can be overridden)
-		// and restart database - to trigger the restore
-		// k8s.RunKubectl(t, opts,
-		// 	"exec", admin0, "--",
-		// 	"nuocmd", "shutdown", "database",
-		// 	"--db-name", "demo",
-		// )
-
-		// wait for the datbase to be restarted (shutdown followed by restart)
-		testlib.AwaitDatabaseDown(t, namespaceName, admin0, "demo")
-		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
-
-		// // verify that the database contains the restored data
-		// tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		// assert.NilError(t, err, "error running SQL: show schema User")
-		// assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
+		restoreDatabase(t, namespaceName, admin0, &databaseOptions, "true")
 
 		// verify that the database does NOT contain the data from AFTER the backup
 		tables, err = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")

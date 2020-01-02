@@ -316,6 +316,50 @@ func AwaitDatabaseDown(t *testing.T, namespace string, podName string, databaseN
 		"--timeout", "300")
 }
 
+func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) [2]int {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	incarnation, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "database",
+		"--db-name", databaseName, "--db-format", "incarnation:{incarnation}")
+	assert.NilError(t, err)
+
+	return ParseDatabaseIncarnation(t, incarnation)
+}
+
+func ParseDatabaseIncarnation(t *testing.T, incarnation string) [2]int {
+	result := [2]int { -1, -1 }
+
+	var err error = nil
+
+	if inc_array := INCARNATION_PATTERN.FindStringSubmatch(incarnation); inc_array != nil {
+
+		t.Log("parsed incarnation string=", inc_array)
+
+		result[0], err = strconv.Atoi(inc_array[1])
+		result[1], err = strconv.Atoi(inc_array[2])
+
+		assert.NilError(t, err)
+	}
+
+	t.Log(t, "parsed incarnation=", result)
+
+	return result
+}
+
+func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databaseName string, databaseOptions *helm.Options, restart func()) {
+	incarnation := GetDatabaseIncarnation(t, namespace, podName, databaseName)
+
+	restart()
+
+	Await(t, func() bool {
+		return GetDatabaseIncarnation(t, namespace, podName, databaseName)[0] > incarnation[0]
+	}, 300*time.Second)
+
+	opts := GetExtractedOptions(databaseOptions)
+	AwaitDatabaseUp(t, namespace, podName, databaseName, opts.NrTePods+opts.NrSmPods)
+}
+
 func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace

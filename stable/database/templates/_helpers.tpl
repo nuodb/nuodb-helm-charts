@@ -7,19 +7,20 @@ Expand the name of the chart.
 
 {{/*
 Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+We truncate at 50 chars because some Kubernetes name fields are limited to 63 chars (by the DNS naming spec)
+and we have to allow for added suffixes including "-hotcopy" and "-NN" where NN is the pod number.
 */}}
 {{- define "database.fullname" -}}
 {{- $domain := default "domain" .Values.admin.domain -}}
 {{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
 {{- if .Values.database.fullnameOverride -}}
-{{- .Values.database.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- .Values.database.fullnameOverride | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name .Values.database.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 43 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 43 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 50 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
