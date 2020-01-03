@@ -255,7 +255,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotcopy.journalBackup.intervalMinutes` | Frequency of running `journal hotcopy` (minutes) | `15` |
 | `sm.hotcopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
 | `sm.hotcopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds) | `950` |
-| `sm.hotcopy.coldStorage.credentials` | Credentials for accessing backup cold storage | `""` |
+| `sm.hotcopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create DS/SS for non-hot-copy SMs | `true` |
 | `sm.memoryOption` | SM engine memory (*future deprecation*) | `"8g"` |
