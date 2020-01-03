@@ -118,7 +118,6 @@ database:
   ##
   envFrom:
     configMapRef: []
-    secretRef: []
 
   persistence:
     size: 20Gi
@@ -164,10 +163,10 @@ database:
       enablePod: true
       replicas: 1
 
-      # Deadline for starting a job - if a job hasn't started in this time - give up
+      # Deadline for starting a hotcopy job - if a job hasn't started in this time - give up
       deadine: 1800
 
-      # timeout for completing a job - if a job hasn't completed in this time - stop waiting for it
+      # timeout for completing a hotcopy job - if a job hasn't completed in this time - stop waiting for it
       timeout: 1800
 
       successHistory: 5
@@ -178,12 +177,12 @@ database:
       # group for selecting the SM(s) to backup - the default is the cloud.clusterName
       backupGroup: ""
 
-      ## Schedule for the running the full backup cron job
-      # Eg: At 22:35 on every day-of-month if it's on Sunday
+      ## Schedule for the running of the full backup cron job
+      # Eg: At 22:35 on every day-of-month that is a Sunday
       fullSchedule: "35 22 * * 6"
 
       ## Schedule for the running the incremental backup cron job
-      # Eg: At 22:35 on every day-of-month if it's on every day-of-week from Monday through Saturday
+      # Eg: At 22:35 on every day-of-month on every day-of-week from Monday through Saturday
       incrementalSchedule: "35 22 * * 0-5"
 
       persistence:

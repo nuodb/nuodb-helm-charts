@@ -50,6 +50,7 @@ The following tables list the configurable parameters for the `cloud` option:
 | ----- | ----------- | ------ |
 | `provider` | Cloud provider; permissible values include: `azure`, `amazon`, or `google` |`nil`|
 | `zones` | List of availability zones to deploy to |`[]`|
+| `clusterName` | logical name of the cluster. Useful in multi-cluster configs | `cluster0` |
 
 For example, for the Google Cloud:
 
@@ -60,6 +61,7 @@ cloud:
     - us-central1-a
     - us-central1-b
     - us-central1-c
+  clusterName: cluster0
 ```
 
 #### busybox.*
@@ -238,6 +240,22 @@ The following tables list the configurable parameters of the `database` chart an
 | `configFiles.*` | See below. | `{}` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
+| `sm.hotcopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
+| `sm.hotcopy.timeout` | Timeout for a started hotcopy job to complete (seconds) | `1800` |
+| `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
+| `sm.hotcopy.failureHostory` | Number of failed jobs to keep | `5` |
+| `sm.hotcopy.backupDir` | Directory path where backiupsets will be stored | `/var/opt/nuodb/backup` |
+| `sm.hotcopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.clusterName }}` |
+| `sm.hotcopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
+| `sm.hotcopy.incrementalSchedule` | cron schedule for INCREMENTAL hotcopy jobs | `35 22 * * 0-5` |
+| `sm.hotcopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
+| `sm.hotcopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
+| `sm.hotcopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
+| `sm.hotcopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
+| `sm.hotcopy.journalBackup.intervalMinutes` | Frequency of running `journal hotcopy` (minutes) | `15` |
+| `sm.hotcopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
+| `sm.hotcopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds) | `950` |
+| `sm.hotcopy.coldStorage.credentials` | Credentials for accessing backup cold storage | `""` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create DS/SS for non-hot-copy SMs | `true` |
 | `sm.memoryOption` | SM engine memory (*future deprecation*) | `"8g"` |
