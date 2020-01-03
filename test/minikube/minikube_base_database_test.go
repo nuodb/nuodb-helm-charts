@@ -323,11 +323,7 @@ func TestKubernetesAltAddress(t *testing.T) {
 func TestKubernetesBackupDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
-	adminOptions := helm.Options{
-		SetValues: map[string]string{
-			"nuodb.image.tag": testlib.BACKUP_NUODB_VERSION,
-		},
-	}
+	adminOptions := helm.Options{}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -339,7 +335,6 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
-				"nuodb.image.tag":                       testlib.BACKUP_NUODB_VERSION,
 				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
@@ -361,7 +356,6 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
-				"nuodb.image.tag":                       testlib.BACKUP_NUODB_VERSION,
 				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
@@ -386,11 +380,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 func TestKubernetesRestoreDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
-	adminOptions := helm.Options{
-		SetValues: map[string]string{
-			"nuodb.image.tag": testlib.BACKUP_NUODB_VERSION,
-		},
-	}
+	adminOptions := helm.Options{}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -402,7 +392,6 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
-				"nuodb.image.tag":                       testlib.BACKUP_NUODB_VERSION,
 				"database.name":                         "demo",
 				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
