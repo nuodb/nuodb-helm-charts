@@ -149,7 +149,7 @@ database:
 
   # ensure all values here are strings - so quote any purely numeric values
   autoRestore:
-    source:
+    source: ""
     credentials: ""
     stripLevels: "1"
 
@@ -260,7 +260,10 @@ database:
 
     # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
     replicas: 1
+
+    # NuoDB mem option - target maximum memory to be used by the cache
     memoryOption: 8g
+
     resources:
       limits:
         cpu: 4
@@ -268,6 +271,9 @@ database:
       requests:
         cpu: 2
         memory: 8Gi
+
+    ## Affinity, selector, and tolerations
+    # There are expanded as YAML, and can include variable and template references
     affinity: {}
     # nodeSelector: {}
     # tolerations: []
@@ -276,6 +282,7 @@ database:
     # Additional Labels given to the TEs started
     labels: {}
 
+    # additional options to pass to the starting NuoDB process.
     engineOptions: {}
 
     # named key/value pairs that need to be passed to the image, such as

@@ -336,7 +336,7 @@ func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, data
 }
 
 func ParseDatabaseIncarnation(t *testing.T, incarnation string) [2]int {
-	result := [2]int { -1, -1 }
+	result := [2]int{-1, -1}
 
 	var err error = nil
 
@@ -635,7 +635,7 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	assert.NilError(t, err, "Could not get KV value")
 	elapsed = time.Since(start)
 
-	assert.Check(t, elapsed.Seconds() < 2.0)
+	assert.Check(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
 
-	assert.Check(t, output == "testVal", fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
+	assert.Check(t, output == "testVal", fmt.Sprintf("KV get returned the wrong value: %s", output))
 }

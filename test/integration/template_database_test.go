@@ -595,8 +595,8 @@ func TestDatabaseDaemonSetVPNRenders(t *testing.T) {
 	options := &helm.Options{
 		SetValues: map[string]string{
 			"database.securityContext.capabilities[0]": "NET_ADMIN",
-			"database.envFrom.configMapRef[0]":      "test-config",
-			"database.enableDaemonSet":              "true",
+			"database.envFrom.configMapRef[0]":         "test-config",
+			"database.enableDaemonSet":                 "true",
 		},
 	}
 
@@ -628,8 +628,8 @@ func TestDatabaseDeploymentConfigVPNRenders(t *testing.T) {
 		SetValues: map[string]string{
 			"database.securityContext.capabilities[0]": "NET_ADMIN",
 			"database.envFrom.configMapRef[0]":         "test-config",
-			"openshift.enabled":                     "true",
-			"openshift.enableDeploymentConfigs":     "true",
+			"openshift.enabled":                        "true",
+			"openshift.enableDeploymentConfigs":        "true",
 		},
 	}
 
@@ -731,8 +731,6 @@ func TestDatabaseLabeling(t *testing.T) {
 
 				if testlib.IsStatefulSetHotCopyEnabled(&obj) {
 					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
-					// } else {
-					// 	assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
 			}
 		}
@@ -766,8 +764,6 @@ func TestDatabaseLabeling(t *testing.T) {
 
 				if testlib.IsDaemonSetHotCopyEnabled(&obj) {
 					assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
-					// } else {
-					// 	assert.Check(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup disabled"))
 				}
 			}
 		}

@@ -148,7 +148,6 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 	// verify that the backup has been documented by the Admin layer
-	// backupName := fmt.Sprintf("%s/%s", testlib.LAST_BACKUP_PREFIX, databaseName)
 	backupset, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions,
 		"exec", podName, "--",
 		"nuodocker", "get", "current-backup", "--db-name", databaseName,
@@ -158,7 +157,7 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 	assert.Check(t, backupset != "")
 }
 
-func restoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options, restart string) {
+func restoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options) {
 	// run the restore chart - which flags the database to restore on next startup
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -168,7 +167,7 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 			"database.name":       "demo",
 			"restore.target":      "demo",
 			"restore.source":      ":latest",
-			"restore.autoRestart": restart,
+			"restore.autoRestart": "true",
 		},
 	}
 	kubectlOptions := k8s.NewKubectlOptions("", "")
@@ -178,15 +177,11 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 	restore := func() {
 		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
 		testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
-	
-		testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)	
+
+		testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
 	}
 
-	if restart == "true" {
-		testlib.AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
-	} else {
-		restore()
-	}
+	testlib.AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
 }
 
 func TestKubernetesBasicDatabase(t *testing.T) {
@@ -430,7 +425,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 		// restore database
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
-		restoreDatabase(t, namespaceName, admin0, &databaseOptions, "true")
+		restoreDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		// verify that the database does NOT contain the data from AFTER the backup
 		tables, err = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
