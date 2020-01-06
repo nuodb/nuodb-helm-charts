@@ -23,7 +23,8 @@ func TestSecretsDatabaseDefault(t *testing.T) {
 	var object v1.Secret
 	helm.UnmarshalK8SYaml(t, output, &object)
 
-	assert.Check(t, len(object.StringData) == 5)
+	// make sure we got at least the 3 minumum secrets: database-name, database-username, and database-password
+	assert.Check(t, len(object.StringData) >= 3)
 
 	_, ok := object.StringData["database-name"]
 	assert.Check(t, ok)

@@ -162,45 +162,18 @@ The following tables list the configurable parameters of the backup chart and th
 
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
-| `timeout` | Job deadline (timeout) | 1800 |
-| `backupPvc` | PVC name for the backup volume | `nil` |
-| `archivePvc` | PVC name for the archive volume | `nil` |
-| `backupSet` | The backup set name to restore from | `nil` |
+| `restore.target` | Where to restore `TO` | `{{ .Values.database.name }}` |
+| `restore.source` | Where to restore `FROM` [ backupset | url | `:latest` ] | `:latest` |
+| `restore.credentials` | Credentials to use for a URL source (user:password) | `""` |
+| `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false) | `true` |
 
 ## Detailed Steps
 
-- First install Helm charts for Admin, Database, YCSB, Influx and Backup.
-
-### Save Existing PV/PVC Files
-
-Save the `archive-volume-sm-database-domain-demo-backup-0` and `backup-volume-sm-database-nuodb-demo-backup-0` PVC and their attached PV of SM for further use.
-
-First the archive PV/PVC files:
-
-```bash
-kubectl get pv $(kubectl get pv | grep archive-volume-sm-database-cashews-demo-backup-0 | awk '{ print $1 }') -o yaml > archive-pv.yaml
-sed -i '' 's/name: .*$/name: archive-pvc/g' archive-pv.yaml
-sed -i '' 's/volumeName: .*$/volumeName: archive-pv/g' archive-pv.yaml
-
-kubectl get pvc archive-volume-sm-database-cashews-demo-backup-0 -o yaml > archive-pvc.yaml
-sed -i '' 's/name: .*$/name: archive-pvc/g' archive-pvc.yaml
-sed -i '' 's/volumeName: .*$/volumeName: archive-pv/g' archive-pvc.yaml
-volumeName: pvc-affdb4ee-cf2c-11e9-be96-42010a800132
-```
-
-Then the backup PV/PVC files:
-
-```bash
-kubectl get pv $(kubectl get pv | grep backup-volume-sm-database-cashews-demo-backup-0 | awk '{ print $1 }') -o yaml > backup-pv.yaml
-sed
-
-kubectl get pvc backup-volume-sm-database-cashews-demo-backup-0 -o yaml > backup-pvc.yaml
-sed
-```
+- First install Helm charts for Admin, Database, and optionally Influx.
 
 ### Identify the Backupset
 
-While installing the restore chart, we will need the backupset of most recent backup taken. This can be done before the existing database is shut down, or afterwards using a simple Pod. The following instructions assume the former approach.
+While installing the restore chart, we may wish to find the backupset to be used. This can be done before the existing database is shut down, or afterwards using a simple Pod. The following instructions assume the former approach.
 
 #### While Database is Running
 
@@ -217,91 +190,18 @@ drwxr-xr-x 7 nuodb root  4096 Sep  4 16:05 20190904T160352
 drwx------ 2 root  root 16384 Sep  4 15:57 lost+found
 ```
 
-Then pick the most recent backupset and copy it in the values file of restore; as the backupsets naturally sort, the last one is the latest. In the above example it would be: `20190710T190517`
+Then pick the desired recent backupset and copy its name into the source value in the file of restore; as the backupsets naturally sort, the last one is the latest. In the above example it would be: `20190710T190517`
 
 In your values.yaml file, the place where you'd put the backupset name is as follows:
 
 ```bash
-backupSet: 20190904T160352
+source: 20190904T160352
 ```
 
 Or if you are using command line parameters, the setting would be:
 
 ```bash
-... --set restore.backupSet=20190904T160352 ...
-```
-
-### Set the Availability Zone in Values
-
-Restore MUST be done in the same region as the backup job as the volumes cannot move between zones.
-
-Therefore we need to have an affinity rule set up to select one node (`kubernetes.io/hostname`) in the zone, or specify the zone (`failure-domain.beta.kubernetes.io/zone`). But it must be constrained minimally by the zone.
-
-You can only specify one zone in the zone-list in the `restore/values.yaml` file; this zone MUST match the above.
-
-Set the zone in the values file of restore. This zone would be the zone mentioned in the PV attached to `archive-volume-sm-database-cashews-demo-backup-0` PVC; for example:
-
-From the PV we find the zone:
-
-```bash
-$ cat backup-pv.yaml | grep failure-domain.beta.kubernetes.io/zone:
-    failure-domain.beta.kubernetes.io/zone: us-central1-a
-
-Then in the `values.yaml` file we would set the zone to:
-
-```yaml
-cloud:
-  zones:
-    - us-central1-a
-```
-
-Or if you are using command line parameters:
-
-```bash
-... --set cloud.zones={us-central1-a} ...
-```
-
-### Set the Backup and Archive PVC in Values
-
-The backup and archive PVC need to be specified for the restore job.
-
-Set these in the values file as follows (noting differences in the domain name as necessary):
-
-```yaml
-restore:
-
-  backupPvc: backup-volume-sm-database-cashews-demo-backup-0
-
-  archivePvc: archive-volume-sm-database-cashews-demo-backup-0
-```
-
-Or, if using command line parameters:
-
-```bash
-... --set restore.backupPvc=backup-volume-sm-database-cashews-demo-backup-0 --set restore.archivePvc=archive-volume-sm-database-cashews-demo-backup-0 ...
-```
-
-### Delete the Database and Related Workloads
-
-```bash
-helm del --purge demo-ycsb backup database
-```
-
-### Delete the Archives
-
-To delete the archives at the admin layer, we need to exec into the admin pod and run the following commands:
-
-```bash
-kubectl exec -it admin-cashews-0 -- /bin/bash
-$ nuocmd show archives
-$ nuocmd delete database --db-name demo
-```
-
-Make sure the archives are clear if not we can delete the archives:
-
-```bash
-$ nuocmd delete archive --archive-id 0 --purge
-$ nuocmd show archives
+... --set restore.source=20190904T160352 ...
 ```
 
 ### Install Restore chart
@@ -312,153 +212,29 @@ If we have not set the values in `restore/values.yaml` then we can override it w
 helm install nuodb/restore -n restore \
   ${values_option} \
   --set admin.domain=${DOMAIN_NAME} \
-  --set restore.backupPvc=backup-volume-sm-database-cashews-demo-backup-0 \
-  --set restore.archivePvc=archive-volume-sm-database-cashews-demo-backup-0 \
+  --set restore.target=demoDb0 \
+  --set restore.source=:latest \
   --set cloud.zones={us-central1-a}
 ```
 
 The job should finish with a `Completed` status.
 
+### Optionally manually restart the database
+
+If `restore.autoRestart` was set to `true`, then the `restore` chart will restart the database, and the restore will proceeed automatically.
+
+However, if `restore.autoRestart` is set to `false`, then you retain control to manually stop and restart the pods you wish.
+
+* You could shut down all processes in any order using `nuocmd shutdown database`. This will cause k8s to autmatically restart all TE and SM pods in any order
+* Alternatively, you could scale-doen TE and SM pods, and then scale up the SM pods in the order of your choosing; and then scale-up the TE pods - again in the order of your choosing.
+
 ### Validate the restore
 
-Verify the restore completed successfully; view the log output from the restore Job pod, it should read similar to the following:
+Verify the restore completed successfully; view the log output from the restarted SM pods, it should contain something similar to the following:
 
 ```bash
 Finished restoring /var/opt/nuodb/backup/20190619T101450 to /var/opt/nuodb/archive/nuodb/demo. Created archive with archive ID 8
 ```
-
-Verify the archive entry has been created:
-
-```bash
-$ kubectl exec -it admin-cashews-0 -- nuocmd show archives
-[2] <NO VALUE> : /var/opt/nuodb/archive/cashews/demo @ demo [journal_path = ] [snapshot_archive_path = ] NOT_RUNNING
-```
-
-### Delete the Helm Restore Deployment and Validate Admin TOMBSTONE
-
-First drop the restore deployment:
-
-```bash
-helm del --purge restore
-```
-
-Then validate the admin lists the database as being in a TOMBSTONE state:
-
-```bash
-kubectl exec -it admin-cashews-0 -- nuocmd show domain
-```
-
-### Update the PV/PVC Objects
-
-Delete the archive-pv, backup-pv, archive-pvc and backup-pvc:
-
-```bash
-kubectl delete pvc archive-volume-sm-database-cashews-demo-0 backup-volume-sm-database-cashews-demo-backup-0
-kubectl delete pv pvc-b0007157-cf2c-11e9-be96-42010a800132 pvc-b00fbb79-cf2c-11e9-be96-42010a800132
-```
-
-Add a new storage class for restored database to use:
-
-```yaml
-apiVersion: storage.k8s.io/v1
-kind: StorageClass
-metadata:
-  name: nuodb-archive-from-snapshot
-provisioner: kubernetes.io/azure-disk
-parameters:
-  storageaccounttype: Standard_LRS
-  kind: Managed
-  cachingmode: ReadWrite
-reclaimPolicy: Retain
-volumeBindingMode: Immediate
-```
-
-It is important that `volumeBindingMode: Immediate` is specified.
-
-Update the archive-pv.yaml which was created in previous step and add label `database: demo` to it. Also change the storage class name as `nuodb-archive-from-snapshot` in the archive-pv.yaml.
-
-Below is the example for `archive-pv.yaml`:
-
-```yaml
-apiVersion: v1
-kind: PersistentVolume
-metadata:
-  labels:
-    failure-domain.beta.kubernetes.io/region: eastus
-    failure-domain.beta.kubernetes.io/zone: '1'
-    database: demo
-  name: pvc-5c3532ef-a335-11e9-97e4-52126adb550c
-spec:
-  accessModes:
-  - ReadWriteOnce
-  azureDisk:
-    cachingMode: ReadWrite
-    diskName: kubernetes-dynamic-pvc-5c3532ef-a335-11e9-97e4-52126adb550c
-    diskURI: /subscriptions/876c0bdf-be67-4156-877c-c4362fef9e92/resourceGroups/MC_helm-test_helm-test_eastus/providers/Microsoft.Compute/disks/kubernetes-dynamic-pvc-5c3532ef-a335-11e9-97e4-52126adb550c
-    fsType: ""
-    kind: Managed
-    readOnly: false
-  capacity:
-    storage: 20Gi
-  persistentVolumeReclaimPolicy: Retain
-  storageClassName: nuodb-archive-from-snapshot
-  ```
-
-Be mindful of the zone the PV is located; use the zones setting to place the new database in the zone where the PV is located:
-
-```yaml
-labels:
-     failure-domain.beta.kubernetes.io/region: eastus
-     failure-domain.beta.kubernetes.io/zone: '1
-```
-
-Apply the `archive-pv.yaml`. Note: Only PV needs to be applied and not the pvc as it will be created by the new database.
-
-```bash
-kubectl apply -f archive-pv.yaml
-```
-
-### Start a new Database
-
-Start a restored database:
-
-```bash
-helm install nuodb/database -n restored-database \
-  ${values_option} \
-  --set admin.domain=${DOMAIN_NAME} \
-  --set database.persistence.storageClass=nuodb-archive-from-snapshot \
-  --set cloud.zones={us-central1-a} \
-  --set database.isManualVolumeProvisioning=true \
-  --set backup.persistence.enabled=false
-```
-
-Validate the PV if it got bound to the PVC:
-
-```bash
-kubectl describe pv pvc-f91ce1b9-a255-11e9-90fe-42010a800179
-```
-
-Check the domain and the archives:
-
-```bash
-kubectl exec -it admin-cashews-0 -- nuocmd show domain
-kubectl exec -it admin-cashews-0 -- nuocmd show archives
-```
-
-**Tip**: List all releases using `helm list`
-
-Wait until the deployment completes:
-
-## Uninstalling the Chart
-
-To uninstall/delete the deployment:
-
-```bash
-helm del --purge restore
-kubectl delete jobs --all
-```
-
-The command removes all the Kubernetes components associated with the chart and deletes the release.
 
 ## References
 

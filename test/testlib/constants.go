@@ -1,5 +1,9 @@
 package testlib
 
+import (
+	"regexp"
+)
+
 const CA_CERT_FILE = "ca.cert"
 const CA_CERT_FILE_NEW = "ca_new.cert"
 const CA_CERT_SECRET = "nuodb-ca-cert"
@@ -39,3 +43,11 @@ const IMPORT_ARCHIVE_URL = "http://download.nuohub.org/ce_releases/restore.bak.t
 
 const MINIMAL_VIABLE_ENGINE_CPU = "500m"
 const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
+
+const INCARNATION_REGEX = "incarnation: *[(]([0-9]+) *, *([0-9]+)[)]"
+
+var INCARNATION_PATTERN *regexp.Regexp
+
+func init() {
+	INCARNATION_PATTERN = regexp.MustCompile(INCARNATION_REGEX)
+}

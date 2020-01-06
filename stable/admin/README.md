@@ -49,6 +49,8 @@ The following tables list the configurable parameters for the `cloud` option:
 | ----- | ----------- | ------ |
 | `provider` | Cloud provider; permissible values include: `azure`, `amazon`, or `google` |`nil`|
 | `zones` | List of availability zones to deploy to |`[]`|
+| `clusterName` | logical name of the cluster. Useful in multi-cluster configs | `cluster0` |
+
 
 For example, for the Google Cloud:
 
@@ -59,6 +61,7 @@ cloud:
     - us-central1-a
     - us-central1-b
     - us-central1-c
+  clusterName: cluster0
 ```
 
 #### busybox.*

@@ -108,7 +108,7 @@ func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
 	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions,
 		"exec", admin0, "--",
 		"bash", "-c",
-		fmt.Sprintf("curl -k %s | tar tzf - | head -n 10", testlib.IMPORT_ARCHIVE_URL),
+		fmt.Sprintf("curl -k %s | tar tzf - ", testlib.IMPORT_ARCHIVE_URL),
 	)
 	assert.NilError(t, err, "Could not fetch archive")
 	elapsed := time.Since(start)
@@ -142,51 +142,46 @@ func verifyEngineAltAddress(t *testing.T, namespaceName string, admin0 string, e
 }
 
 func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
-	randomSuffix := strings.ToLower(random.UniqueId())
-
-	bakName := fmt.Sprintf("backup-full-%s", randomSuffix)
-
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
-
-	testlib.AddTeardown(testlib.TEARDOWN_BACKUP, func() { helm.Delete(t, options, bakName, true) })
-	helm.Install(t, options, testlib.BACKUP_HELM_CHART_PATH, bakName)
 
 	// wait for the backup to both start _and_ complete successfully
-	backupJob := fmt.Sprintf("backup-%s-job-full", databaseName)
+	backupJob := fmt.Sprintf("hotcopy-%s-job-initial", databaseName)
 	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 	// verify that the backup has been documented by the Admin layer
-	backupName := fmt.Sprintf("%s/%s", testlib.LAST_BACKUP_PREFIX, databaseName)
 	backupset, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions,
 		"exec", podName, "--",
-		"nuocmd", "get", "value",
-		"--key", backupName,
+		"nuodocker", "get", "current-backup", "--db-name", databaseName,
 	)
 
-	assert.NilError(t, err, "Error running: nuocmd get value --key ", backupName)
+	assert.NilError(t, err, "Error running: nuodocker get current-backup  ")
 	assert.Check(t, backupset != "")
 }
 
-func restoreDatabase(t *testing.T, namespaceName string) {
+func restoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options) {
 	// run the restore chart - which flags the database to restore on next startup
-	restName := "restore-demo"
+	randomSuffix := strings.ToLower(random.UniqueId())
+
+	restName := fmt.Sprintf("restore-demo-%s", randomSuffix)
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.name":     "demo",
-			"restore.target":    "demo",
-			"restore.backupSet": ":latest",
+			"database.name":       "demo",
+			"restore.target":      "demo",
+			"restore.source":      ":latest",
+			"restore.autoRestart": "true",
 		},
 	}
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
-	testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
+	restore := func() {
+		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
+		testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 
-	testlib.AwaitPodPhase(t, namespaceName, restName, corev1.PodSucceeded, 120*time.Second)
+		testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
+	}
+
+	testlib.AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
 }
 
 func TestKubernetesBasicDatabase(t *testing.T) {
@@ -198,7 +193,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 	headlessServiceName := fmt.Sprintf("demo")
 	clusterServiceName := fmt.Sprintf("demo-clusterip")
 
@@ -299,7 +294,7 @@ func TestKubernetesAltAddress(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	t.Run("startDatabaseStatefulSetWithAltAddress", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
@@ -329,7 +324,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
@@ -386,7 +381,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
@@ -408,6 +403,11 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		opts.Namespace = namespaceName
 		databaseOptions.KubectlOptions = opts
 
+		// wait for the initial backup to complete
+		databaseName := "demo"
+		backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", databaseName)
+		testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
+
 		// populate some data
 		k8s.RunKubectl(t, opts,
 			"exec", admin0, "--",
@@ -415,49 +415,22 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"--user", "dba",
 			"--password", "secret",
 			"demo",
-			"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql")
-
-		// run a manual backup
-		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--",
-			"nuodocker", "backup", "database",
-			"--db-name", "demo",
-			"--type", "full",
-			"--timeout", "120",
-			"--backup-root", "/var/opt/nuodb/backup",
+			"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
 		)
 
-		// populate some more data
-		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--",
-			"/opt/nuodb/bin/nuosql",
-			"--user", "dba",
-			"--password", "secret",
-			"demo",
-			"--file", "/opt/nuodb/samples/quickstart/sql/Teams.sql",
-		)
-
-		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
-		restoreDatabase(t, namespaceName)
-
-		// and restart database - to trigger the restore
-		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--",
-			"nuocmd", "shutdown", "database",
-			"--db-name", "demo",
-		)
-
-		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
-
-		// verify that the database contains the restored data
+		// verify that the database contains the populated data
 		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
 		assert.NilError(t, err, "error running SQL: show schema User")
 		assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
 
+		// restore database
+		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+		restoreDatabase(t, namespaceName, admin0, &databaseOptions)
+
 		// verify that the database does NOT contain the data from AFTER the backup
-		count, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "select 'count=' || count(*) from User.Teams")
-		assert.NilError(t, err, "error running SQL: select count(*) from User.Teams")
-		assert.Check(t, strings.Contains(count, "count=0"), "count returned: ", count)
+		tables, err = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+		assert.NilError(t, err, "error running SQL: show schema User")
+		assert.Check(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 	})
 }
 
@@ -470,7 +443,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	verifyPacketFetch(t, namespaceName, admin0)
 
@@ -479,7 +452,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 
 		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{
-				"database.import.url":                   testlib.IMPORT_ARCHIVE_URL,
+				"database.autoImport.source":            testlib.IMPORT_ARCHIVE_URL,
 				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
@@ -501,7 +474,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 		testlib.StartDatabase(t, namespaceName, admin0,
 			&helm.Options{
 				SetValues: map[string]string{
-					"database.import.url":                   testlib.IMPORT_ARCHIVE_URL,
+					"database.autoImport.source":            testlib.IMPORT_ARCHIVE_URL,
 					"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 					"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,

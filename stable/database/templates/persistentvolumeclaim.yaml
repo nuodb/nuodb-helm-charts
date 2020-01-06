@@ -29,12 +29,12 @@ metadata:
     volume: backup
 spec:
   accessModes:
-  {{- range .Values.backup.persistence.accessModes }}
+  {{- range .Values.database.sm.hotCopy.persistence.accessModes }}
     - {{ . }}
   {{- end }}
   resources:
     requests:
-      storage: {{ .Values.backup.persistence.size | quote }}
-  storageClassName: {{ .Values.backup.persistence.storageClass }}
+      storage: {{ .Values.database.sm.hotCopy.persistence.size | quote }}
+  storageClassName: {{ .Values.database.sm.hotCopy.persistence.storageClass }}
 {{- end }}
 {{- end }}

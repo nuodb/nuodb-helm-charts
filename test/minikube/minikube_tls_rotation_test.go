@@ -43,13 +43,15 @@ func startDomainWithTLSCertificates(t *testing.T, options *helm.Options, namespa
 	certGeneratorPodName, _ := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands, "")
 
 	adminReleaseName, namespaceName := testlib.StartAdmin(t, options, adminReplicaCount, namespaceName)
-	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
 
 	return certGeneratorPodName, adminReleaseName, databaseReleaseName
 }
 
 func TestKubernetesTLSRotation(t *testing.T) {
+	t.Skip("Flaky! DB-29423")
+
 	testlib.AwaitTillerUp(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
@@ -117,7 +119,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	testlib.CreateSecretWithPassword(t, namespaceName, testlib.KEYSTORE_FILE, testlib.KEYSTORE_SECRET, testlib.SECRET_PASSWORD, newTLSKeysLocation)
 
 	testlib.RotateTLSCertificates(t, &options, kubectlOptions, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
-	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
 	assert.NilError(t, err)

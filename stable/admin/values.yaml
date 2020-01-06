@@ -15,6 +15,11 @@ cloud:
   #   - us-east-2b
   #   - us-east-2c
 
+  # cluster name is used to make resources unique in multi-cluster configurations.
+  # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique clusterName.
+  # The default is fine for single-cluster domains.
+  clusteName: cluster0
+
 busybox:
   image:
     registry: docker.io
@@ -83,9 +88,10 @@ admin:
     capabilities: []
 
   ## Specify one or more configMaps to import Environment Variables from
-  # Ex:  envFrom: [ configMapRef: { name: myConfigMap } ]
-  envFrom: []
-  
+  # Ex:  configMapRef: [ myConfigMap, myOtherConfigMap ]
+  envFrom:
+    configMapRef: []
+
   ## Admin options
   # These are applied using the nuoadmin startup command
   # Add these values as appropriate for this domain
