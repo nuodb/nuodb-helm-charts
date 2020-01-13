@@ -17,21 +17,15 @@ spec:
       template:
         spec:
           containers:
-          - name: nuodb-ce
+          - name: nuodb
             image: {{ template "nuodb.image" . }}
             imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
             args:
-            - "nuodocker"
-            - "--api-server"
-            - "https://{{ template "admin.address" . }}:8888"
-            - "backup"
-            - "database"
-            - "--db-name"
-            - "{{ .Values.database.name }}"
+            - "nuobackup"
             - "--type"
             - "full"
-            - "--labels"
-            - "backup enabled"
+            - "--group"
+            - {{ include "hotcopy.group" . }}
             - "--timeout"
             - "{{ .Values.backup.timeout }}"      
             - "--backup-root"
@@ -99,21 +93,15 @@ spec:
       template:
         spec:
           containers:
-          - name: nuodb-ce
+          - name: nuodb
             image: {{ template "nuodb.image" . }}
             imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
             args:
-            - "nuodocker"
-            - "--api-server"
-            - "https://{{ template "admin.address" . }}:8888"
-            - "backup"
-            - "database"
-            - "--db-name"
-            - "{{ .Values.database.name }}"
+            - "nuobackup"
             - "--type"
             - "incremental"
             - "--labels"
-            - "backup enabled"
+            - "backup {{ .Values.cloud.clusterName }}"
             - "--timeout"
             - "{{ .Values.backup.timeout }}"      
             - "--backup-root"
@@ -148,6 +136,9 @@ spec:
               subPath: {{ .Values.admin.tlsClientPEM.key }}
             {{- end }}
           volumes:
+        - name: nuosm
+          mountPath: /usr/local/bin/nuosm
+          subPath: nuosm
           {{- if .Values.admin.tlsCACert }}
           - name: tls-ca-cert
             secret:

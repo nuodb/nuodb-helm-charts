@@ -7,18 +7,20 @@ Expand the name of the chart.
 
 {{/*
 Create a default fully qualified app name.
-We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+We truncate at 50 chars because some Kubernetes name fields are limited to 63 chars (by the DNS naming spec)
+and we have to allow for added suffixes including "-hotcopy" and "-NN" where NN is the pod number.
 */}}
 {{- define "database.fullname" -}}
 {{- $domain := default "domain" .Values.admin.domain -}}
+{{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
 {{- if .Values.database.fullnameOverride -}}
-{{- .Values.database.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- .Values.database.fullnameOverride | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name .Values.database.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s" .Release.Name $domain .Values.database.name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s" .Release.Name $domain .Values.database.name $name | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 50 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -121,6 +123,29 @@ imagePullSecrets:
 {{- end -}}
 {{- end -}}
 
+
+{{/*
+Resolve the os.user
+*/}}
+{{- define "os.user" -}}
+{{- if .Values.database.securityContext.enabled -}}
+  {{ .Values.database.securityContext.runAsUser }}
+{{- else -}}
+   "1000"
+{{- end -}}
+{{- end -}}
+
+{{/*
+Resolve the os.group
+*/}}
+{{- define "os.group" -}}
+{{- if .Values.database.securityContext.enabled -}}
+  {{ .Values.database.securityContext.fsGroup }}
+{{- else -}}
+   "0"
+{{- end -}}
+{{- end -}}
+
 {{/*
 Add capabilities in a securityContext
 */}}
@@ -134,14 +159,27 @@ securityContext:
 
 {{/*
 Import ENV vars from configMaps
+**BEWARE!!**
+   The values for envFrom are formated into a single line because some parsers
+   - either in k8s or rancher - throw errors occasionally if the multi-line format is used.
+   You Have Been Warned.
 */}}
 {{- define "database.envFrom" }}
-envFrom:
-- configMapRef:
-    name: {{ template "database.fullname" .}}-restore
-{{- with .Values.database.envFrom }}
-{{ toYaml . -}}
+envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range $map := .Values.database.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
 {{- end -}}
+
+{{/*
+Return options as $key $value
+*/}}
+{{- define "opt.key-values" -}}
+{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}
+{{- end -}}
+
+{{/*
+Return the hotcopy group
+*/}}
+{{- define "hotcopy.group" -}}
+{{ default .Values.cloud.clusterName .Values.database.sm.hotCopy.backupGroup }}
 {{- end -}}
 
 

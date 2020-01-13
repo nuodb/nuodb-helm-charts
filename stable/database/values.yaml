@@ -15,6 +15,11 @@ cloud:
   #   - us-east-2b
   #   - us-east-2c
 
+  # cluster name is used to make resources unique in multi-cluster configurations.
+  # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique clusterName.
+  # The default is fine for single-cluster domains.
+  clusterName: cluster0
+
 busybox:
   image:
     registry: docker.io
@@ -47,9 +52,19 @@ nuodb:
     ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
     ##
 
+  # the prefix for the shared request value - default value is always valid
+  requestPrefix: ""
+
+  # the prefix for the shared latest backup value - default value is always valid
+  latestPrefix: ""
+
+  # the prefix for the shared latest backup ringbuffer - default value is always valid
+  latestKey: ""
+
 admin:
   # domain is the name of the NuoDB administration domain (e.g. the cluster name)
   domain: nuodb
+    
   # namespace: nuodb
   # tlsCACert:
   #   secret: nuodb-ca-cert
@@ -61,17 +76,6 @@ admin:
   # tlsClientPEM:
   #   secret: nuodb-client-pem
   #   key: nuocmd.pem
-
-backup:
-  persistence:
-    size: 20Gi
-    accessModes:
-      - ReadWriteOnce
-    # storageClass: "-"
-    
-  coldStorage:
-    credentials: ""
-
 
 database:
   ## Provide a name in place of prometheus-operator for `app:` labels
@@ -101,7 +105,7 @@ database:
     capabilities: []
     enabled: false
     runAsUser: 1000
-    fsGroup: 1000
+    fsGroup: 0
 
   ## Import Environment Variables inside containers
   # List of EnvVar v1 core definitions
@@ -110,9 +114,10 @@ database:
   env: []
 
   ## Import Environment Variables from one or more configMaps
-  # Ex: from: [ configMapRef: { name: myConfigMap }, configMapRef: { name: myOtherConfigMap } ]
+  # Ex: configMapRef: [ myConfigMap, myOtherConfigMap ]
   ##
-  envFrom: []
+  envFrom:
+    configMapRef: []
 
   persistence:
     size: 20Gi
@@ -137,25 +142,78 @@ database:
     #   verbose error,flush,warn
 
   # ensure all values here are strings - so quote any purely numeric values
-  import:
-    url: ""
+  autoImport:
+    source: ""
+    credentials: ""
+    stripLevels: "1"
+
+  # ensure all values here are strings - so quote any purely numeric values
+  autoRestore:
+    source: ""
     credentials: ""
     stripLevels: "1"
 
   sm:
-    # Number of storage manager (SM) nodes with hotcopy enabled.  Limit is 1 in CE version of NuoDB
-    # These SMs have hotcopy enabled, to start SMs without hotcopy use
+    # Settings for storage manager (SM) nodes with hotcopy enabled.
+    # Total SM Limit is 1 in CE version of NuoDB
+    # These SMs have hotcopy backup enabled. To start SMs without hotcopy use
     # database.sm.noHotCopy.replicas
+    # All time values are in seconds unless the unit is included in the name.
     hotCopy:
       enablePod: true
       replicas: 1
-    # Number of storage manager (SM) nodes.  Limit is 1 in CE version of NuoDB
+
+      # Deadline for starting a hotcopy job - if a job hasn't started in this time - give up
+      deadine: 1800
+
+      # timeout for completing a hotcopy job - if a job hasn't completed in this time - stop waiting for it
+      timeout: 1800
+
+      successHistory: 5
+      failureHistory: 5
+
+      backupDir: /var/opt/nuodb/backup
+
+      # group for selecting the SM(s) to backup - the default is the cloud.clusterName
+      backupGroup: ""
+
+      ## Schedule for the running of the full backup cron job
+      # Eg: At 22:35 on every day-of-month that is a Sunday
+      fullSchedule: "35 22 * * 6"
+
+      ## Schedule for the running the incremental backup cron job
+      # Eg: At 22:35 on every day-of-month on every day-of-week from Monday through Saturday
+      incrementalSchedule: "35 22 * * 0-5"
+
+      persistence:
+        size: 20Gi
+        accessModes:
+          - ReadWriteOnce
+        # storageClass: "-"
+        
+      coldStorage:
+        credentials: ""
+
+      ## settings for the journal backup
+      journalBackup:
+        enabled: false
+        intervalMinutes: 15
+        deadline: 90
+        timeout: 950
+
+    # Number of storage manager (SM) nodes that do not have hotcopy backup enabled.
+    # SM Limit is 1 in CE version of NuoDB
     # These SMs do not have hotcopy enabled, to start SMs with hotcopy use
     # database.sm.HotCopy.replicas
     noHotCopy:
       enablePod: true
       replicas: 0
+
+    # NuoDB mem option - target maximum memory to be used by the cache
     memoryOption: 8g
+
+    ## resources
+    # k8s resouce min (request) and max (limit)
     resources:
       limits:
         cpu: 8
@@ -163,14 +221,18 @@ database:
       requests:
         cpu: 4
         memory: 8Gi
+
+    ## Affinity, selector, and tolerations
+    # There are expanded as YAML, and can include variable and template references
     affinity: {}
     # nodeSelector: {}
     # tolerations: []
     
-    # labels
+    ## labels
     # Additional Labels given to the SMs started
     labels: {}
 
+    # additional options to pass to the starting NuoDB process.
     engineOptions: {}
 
     # named key/value pairs that need to be passed to the image, such as
@@ -198,7 +260,10 @@ database:
 
     # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
     replicas: 1
+
+    # NuoDB mem option - target maximum memory to be used by the cache
     memoryOption: 8g
+
     resources:
       limits:
         cpu: 4
@@ -206,6 +271,9 @@ database:
       requests:
         cpu: 2
         memory: 8Gi
+
+    ## Affinity, selector, and tolerations
+    # There are expanded as YAML, and can include variable and template references
     affinity: {}
     # nodeSelector: {}
     # tolerations: []
@@ -214,6 +282,7 @@ database:
     # Additional Labels given to the TEs started
     labels: {}
 
+    # additional options to pass to the starting NuoDB process.
     engineOptions: {}
 
     # named key/value pairs that need to be passed to the image, such as

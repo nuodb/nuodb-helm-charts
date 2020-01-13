@@ -54,8 +54,10 @@ spec:
           - "300"
           - "--options"
           - "mem {{ .Values.database.te.memoryOption}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
+        {{- with .Values.database.te.labels }}
           - "--labels"
-          - "{{- range $opt, $val := .Values.database.te.labels }} {{$opt}} {{$val}} {{- end}}"
+          - "{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}"
+        {{- end }}
 {{- range $opt, $val := .Values.database.te.otherOptions }}
           - "--{{$opt}}"
           - "{{$val}}"
@@ -77,6 +79,7 @@ spec:
           - { name: DB_NAME,             value: {{ .Values.database.name | quote }} }
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
           - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+          - { name: COMPONENT_NAME,      value: "te" }
 {{- include "database.env" . | indent 10 }}
       {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}

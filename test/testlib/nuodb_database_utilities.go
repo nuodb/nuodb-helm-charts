@@ -19,6 +19,7 @@ type ExtractedOptions struct {
 	NrSmNoHotCopyPods int
 	NrSmPods          int
 	DbName            string
+	ClusterName       string
 }
 
 func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
@@ -46,6 +47,11 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 		opt.DbName = "demo"
 	}
 
+	opt.ClusterName = options.SetValues["cloud.clusterName"]
+	if len(opt.ClusterName) == 0 {
+		opt.ClusterName = "cluster0"
+	}
+
 	return
 }
 
@@ -55,8 +61,8 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	opt := GetExtractedOptions(options)
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
-	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s", helmChartReleaseName, opt.DbName)
-	smPodName := fmt.Sprintf("sm-%s-nuodb-%s", helmChartReleaseName, opt.DbName)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
 
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	options.KubectlOptions = kubectlOptions
@@ -75,12 +81,12 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	AwaitNrReplicasScheduled(t, namespaceName, smPodName, opt.NrSmPods)
 
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
-	AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
+	AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 180*time.Second)
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
-	AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 120*time.Second)
+	AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 240*time.Second)
 
-	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods + opt.NrTePods)
+	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 	return
 }

@@ -25,7 +25,7 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 	headlessServiceName := fmt.Sprintf("nuodb")
 	clusterServiceName := fmt.Sprintf("nuodb-clusterip")
 
@@ -33,6 +33,9 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	t.Run("verifyOrderedLicensing", func(t *testing.T) {
 		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
 		testlib.VerifyLicensingErrorsInLog(t, namespaceName, admin0, false) // no error
+	})
+	t.Run("verifyAdminKvSetAndGet", func(t *testing.T) {
+		testlib.VerifyAdminKvSetAndGet(t, admin0, namespaceName)
 	})
 	t.Run("verifyAdminHeadlessService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, headlessServiceName, true) })
 	t.Run("verifyAdminClusterService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, clusterServiceName, false) })
@@ -57,7 +60,7 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	t.Run("verifyOrderedLicensing", func(t *testing.T) {
 		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)

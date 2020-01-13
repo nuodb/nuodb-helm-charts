@@ -15,6 +15,25 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 {{- end -}}
 
 {{/*
+Create a default fully qualified app name.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "database.fullname" -}}
+{{- $domain := default "domain" .Values.admin.domain -}}
+{{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
+{{- if .Values.database.fullnameOverride -}}
+{{- .Values.database.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.database.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 43 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 43 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Create chart name and version as used by the chart label.
 */}}
 {{- define "nuodb.chart" -}}
@@ -104,4 +123,29 @@ imagePullSecrets:
   - name: {{ . }}
 {{- end }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Import ENV vars from configMaps
+**BEWARE!!**
+   The values for envFrom are formated into a single line because some parsers
+   - either in k8s or rancher - throw errors occasionally if the multi-line format is used.
+   You Have Been Warned.
+*/}}
+{{- define "restore.envFrom" }}
+envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+{{- end -}}
+
+{{/*
+Return the restore target.
+*/}}
+{{- define "restore.target" -}}
+{{- default .Values.database.name .Values.restore.target -}}
+{{- end -}}
+
+{{/*
+Return the restore source.
+*/}}
+{{- define "restore.source" -}}
+{{- default ":latest" .Values.restore.source | trimSuffix "-" -}}
 {{- end -}}

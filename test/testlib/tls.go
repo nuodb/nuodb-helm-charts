@@ -148,7 +148,7 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options,
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
 	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
 	namespaceName := kubectlOptions.Namespace
-	admin0 := fmt.Sprintf("%s-nuodb-0", adminReleaseName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(tlsKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")
 	err = k8s.RunKubectlE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "add", "trusted-certificate",

@@ -82,3 +82,10 @@ imagePullSecrets:
 {{- end }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Return the hotcopy group
+*/}}
+{{- define "hotcopy.group" -}}
+{{ .Values.cloud.clusterName }}
+{{- end -}}

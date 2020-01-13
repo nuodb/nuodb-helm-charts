@@ -72,7 +72,7 @@ func TestAdminLicenseCanBeSet(t *testing.T) {
 			continue
 		}
 
-		if strings.Contains(part, "nuodb-admin-configuration") {
+		if strings.Contains(part, "nuodb-cluster0-admin-configuration") {
 			found = true
 
 			var object v1.ConfigMap
@@ -96,7 +96,7 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 	options := &helm.Options{
 		SetValues: map[string]string{
 			"admin.securityContext.capabilities":    "[ NET_ADMIN ]",
-			"admin.envFrom[0].configMapRef.name":    "test-config",
+			"admin.envFrom.configMapRef[0]":         "test-config",
 			"admin.options.leaderAssignmentTimeout": "30000",
 		},
 	}
@@ -217,8 +217,8 @@ func TestAdminServiceRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"cloud.provider": "amazon",
-			"admin.externalAccess.enabled": "true",
+			"cloud.provider":                  "amazon",
+			"admin.externalAccess.enabled":    "true",
 			"admin.externalAccess.internalIP": "true",
 		},
 	}
@@ -228,7 +228,7 @@ func TestAdminServiceRenders(t *testing.T) {
 
 	var object v1.Service
 	helm.UnmarshalK8SYaml(t, output, &object)
-	
+
 	assert.Check(t, strings.Contains(output, "kind: Service"))
 	assert.Check(t, strings.Contains(output, "name: nuodb-balancer"))
 	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
