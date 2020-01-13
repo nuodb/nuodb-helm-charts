@@ -313,7 +313,7 @@ spec:
       initContainers:
       - name: init-disk
         image: {{ template "init.image" . }}
-        imagePullPolicy: {{ default "" .Values.busyboximagepullPolicy | quote }}
+        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
         command: ['chmod' , '770', '/var/opt/nuodb/archive', 'var/opt/nuodb/backup', '/var/log/nuodb']
         volumeMounts:
         - name: archive-volume
