@@ -27,6 +27,7 @@ kubectl cluster-info
 helm init --service-account default
 
 # get the image to speed up tests
+docker pull nuodb/nuodb-ce:"${NUODB_VERSION}"
 docker pull nuodb/nuodb-ce:latest
 
 # print some info

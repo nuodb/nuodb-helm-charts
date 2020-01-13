@@ -52,7 +52,7 @@ func TestKubernetesTLS(t *testing.T) {
 		"setup-keys.sh",
 		"nuocmd show certificate --keystore " + testlib.KEYSTORE_FILE + " --store-password \"$DEFAULT_PASSWORD\" > nuoadmin.cert",
 	}
-	_, keysLocation := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands, "")
+	_, keysLocation := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands)
 
 	options := helm.Options{
 		SetValues: map[string]string{
