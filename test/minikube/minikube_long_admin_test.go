@@ -12,7 +12,7 @@ import (
 
 func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 	t.Skip("Flaky! DB-29422")
-	
+
 	testlib.AwaitTillerUp(t)
 
 	options := helm.Options{
