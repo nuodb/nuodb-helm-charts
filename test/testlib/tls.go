@@ -32,10 +32,8 @@ spec:
     command: ['tail', '-f', '/dev/null']
 `
 
-func createTLSGeneratorPod(t *testing.T, namespaceName string, image string, timeout time.Duration) string {
-	if image == "" {
-		image = "docker.io/nuodb/nuodb-ce:latest"
-	}
+func createTLSGeneratorPod(t *testing.T, namespaceName string, timeout time.Duration) string {
+	image := "docker.io/nuodb/nuodb-ce:latest"
 
 	podName := "tls-generator-" + strings.ToLower(random.UniqueId())
 	podTemplateString := fmt.Sprintf(TLS_GENERATOR_POD_TEMPLATE,
@@ -129,8 +127,8 @@ func BackupCerificateFilesOnTestFailure(t *testing.T, namespaceName string, srcD
 	}
 }
 
-func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []string, image string) (string, string) {
-	podName := createTLSGeneratorPod(t, namespaceName, image, 30*time.Second)
+func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []string) (string, string) {
+	podName := createTLSGeneratorPod(t, namespaceName, 300*time.Second) // this might pull an image
 	GenerateCustomCertificates(t, podName, namespaceName, commands)
 	keysLocation := CopyCertificatesToControlHost(t, podName, namespaceName)
 

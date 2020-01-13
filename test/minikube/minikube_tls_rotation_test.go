@@ -40,7 +40,7 @@ func startDomainWithTLSCertificates(t *testing.T, options *helm.Options, namespa
 	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
 
 	// create initial certs...
-	certGeneratorPodName, _ := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands, "")
+	certGeneratorPodName, _ := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands)
 
 	adminReleaseName, namespaceName := testlib.StartAdmin(t, options, adminReplicaCount, namespaceName)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
