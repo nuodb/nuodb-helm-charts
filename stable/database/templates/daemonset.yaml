@@ -147,7 +147,6 @@ spec:
           mountPath: /etc/nuodb/keys/nuoadmin.p12
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
-{{- include "nuodb.imagePullSecrets" . | indent 6 }}
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -157,6 +156,7 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: 1
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       - name: log-volume
         emptyDir: {}
@@ -350,7 +350,6 @@ spec:
           mountPath: /etc/nuodb/keys/nuoadmin.p12
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
-{{- include "nuodb.imagePullSecrets" . | indent 6 }}
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -360,6 +359,7 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: 1
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       - name: log-volume
         emptyDir: {}

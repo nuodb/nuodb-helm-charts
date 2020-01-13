@@ -179,7 +179,6 @@ spec:
         {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-{{- include "nuodb.imagePullSecrets" . | indent 6 }}
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -189,6 +188,7 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: 1
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}
       - name: configurations
@@ -313,7 +313,7 @@ spec:
       initContainers:
       - name: init-disk
         image: {{ template "init.image" . }}
-        imagePullPolicy: {{ default "" .Values.busybox.imagepullPolicy | quote }}
+        imagePullPolicy: {{ default "" .Values.busyboximagepullPolicy | quote }}
         command: ['chmod' , '770', '/var/opt/nuodb/archive', 'var/opt/nuodb/backup', '/var/log/nuodb']
         volumeMounts:
         - name: archive-volume
@@ -377,6 +377,11 @@ spec:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-import-credentials
+        - name: DATABASE_RESTORE_CREDENTIALS
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.database.name }}.nuodb.com
+              key: database-restore-credentials
         - name: DATABASE_BACKUP_CREDENTIALS
           valueFrom:
             secretKeyRef:
@@ -438,7 +443,6 @@ spec:
         {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
-{{- include "nuodb.imagePullSecrets" . | indent 6 }}
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -448,6 +452,7 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: 1
+{{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}
       - name: configurations

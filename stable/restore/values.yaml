@@ -67,10 +67,9 @@ restore:
   target: ""
 
   # source
-  # Can be:
+  # Can be one of:
   # * the name of a backupset on a hotcopy-SM's backup disk;
   # * the metaname ':latest'
-  # * a URL from which to download the backup (typically a TAR.GZ file)
   source: ""
 
   # credentials for the specified target - if different to the database.autoRestore.credentials
