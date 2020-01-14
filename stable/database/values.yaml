@@ -151,7 +151,6 @@ database:
     type: ""
 
   # ensure all values here are strings - so quote any purely numeric values
-  # source should be a tar.gz
   autoRestore:
     source: ""
     credentials: ""
