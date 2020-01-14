@@ -276,7 +276,7 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/1.atm ]; th
     # define the download directory depending on the type of source
     if [ $NUODB_AUTO_IMPORT_TYPE = "backupset" ]; then
       # It is a restore so switch the download to somewhere temporary available on all SMs (it will be removed later)
-      auto_restore_download_dir="${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}/$(basename $restore_source .tar.gz)-downloaded"
+      auto_restore_download_dir="${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}/$(basename $restore_source ..${restore_source#*.})-downloaded"
       mkdir $auto_restore_download_dir
     else
       auto_restore_download_dir=$DB_DIR
