@@ -272,15 +272,30 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/1.atm ]; th
 
   # if the NUODB_IMPORT_URL has a protocol:/ prefix, then use curl to download the archive
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
-   
-    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
-    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR
+
+    # define the download directory depending on the type of source
+    if [ $NUODB_AUTO_IMPORT_TYPE = "backupset" ]; then
+      # It is a restore so switch the download to somewhere temporary available on all SMs (it will be removed later)
+      auto_restore_download_dir="${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}/$(basename $restore_source .tar.gz)-downloaded"
+      mkdir $auto_restore_download_dir
+    else
+      auto_restore_download_dir=$DB_DIR
+    fi
+    
+    # download the source
+    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $auto_restore_download_dir"
+    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $auto_restore_download_dir
 
     chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
 
     [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
-
-    nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
+    
+    # if it was a backupset, proceed as for a restore, otherwise its an archive
+    if [ $NUODB_AUTO_IMPORT_TYPE = "backupset" ]; then
+      set -- --restore-from-dir "$auto_restore_download_dir" "$@"
+    else
+      nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
+    fi
 
     #ls -l $DB_DIR
   elif [ -d "$NUODB_BACKUPDIR/$restore_source" ]; then
@@ -300,4 +315,9 @@ if [ -n "${NUODB_OPTIONS}" ] ; then
     exec nuodocker start sm --archive-dir "${DB_DIR}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
 else
     exec nuodocker start sm --archive-dir "${DB_DIR}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "$@"
+fi
+
+# clean up the temporary download directory
+if [ $NUODB_AUTO_IMPORT_TYPE = "backupset" ]; then
+  rm -rf $auto_restore_download_dir
 fi

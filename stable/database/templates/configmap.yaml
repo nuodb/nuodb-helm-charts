@@ -67,8 +67,9 @@ data:
   NUODB_RESTORE_REQUEST_PREFIX: {{ default "/nuodb/nuosm/database" .Values.nuodb.requestKey }}
   NUODB_LATEST_BACKUP_PREFIX: {{ default "nuodb-backup/last_created" .Values.nuodb.latestPrefix }}
   NUODB_BACKUP_KEY: {{ default "/nuodb/nuobackup" .Values.nuodb.latestKey }}
-  NUODB_AUTO_IMPORT: {{ .Values.database.autoImport.source }}
-  NUODB_AUTO_RESTORE: {{ .Values.database.autoRestore.source }}
+  NUODB_AUTO_IMPORT: {{ default "" .Values.database.autoImport.source | quote}}
+  NUODB_AUTO_IMPORT_TYPE: {{ default "stream" .Values.database.autoImport.type | quote}}
+  NUODB_AUTO_RESTORE: {{ default "" .Values.database.autoRestore.source | quote}}
   NUODB_OS_USER: {{ include "os.user" . | quote }}
   NUODB_OS_GROUP: {{ include "os.group" . | quote }}
 ---
