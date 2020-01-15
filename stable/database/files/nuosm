@@ -150,6 +150,7 @@ if [ "$myArchive" != "-1" ]; then
   elif [ -n "$NUODB_AUTO_RESTORE" ]; then
     restore_source="$NUODB_AUTO_RESTORE"
     restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
+    restore_type=${NUODB_AUTO_RESTORE_TYPE}
     strip_levels=${NUODB_RESTORE_STRIP_LEVELS:-1}
   fi
 
@@ -157,6 +158,7 @@ if [ "$myArchive" != "-1" ]; then
 elif [ -n "$NUODB_AUTO_IMPORT" -a ! -f $DB_DIR/1.atm ]; then
   restore_source="$NUODB_AUTO_IMPORT"
   restore_credentials=${DATABASE_IMPORT_CREDENTIALS:-:}
+  restore_type=${NUODB_AUTO_IMPORT_TYPE}
   strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
 fi
 
@@ -259,11 +261,13 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
   nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
 
   # completely delete my previous archive metadata
+  # this is required because nuodocker always creates a new archive
   [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
 
 fi
 
 # release my archive if it is locked
+# this will likely never execute but has been left in for completeness
 locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -n "$locked_archive" ] && $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
 
@@ -272,21 +276,40 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/1.atm ]; th
 
   # if the NUODB_IMPORT_URL has a protocol:/ prefix, then use curl to download the archive
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
-   
-    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
-    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR
+
+    # define the download directory depending on the type of source
+    if [ "$restore_type" = "stream" ]; then
+      auto_download_dir=$DB_DIR
+    else
+      # It is a backupset so switch the download to somewhere temporary available on all SMs (it will be removed later)
+      # This will also run if TYPE has a mistake since it works for either type, but will be less efficient.
+      auto_download_dir=$(basename $restore_source)
+      auto_download_dir="${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}/$(basename $auto_download_dir .${auto_download_dir#*.})-downloaded"
+      mkdir $auto_download_dir
+    fi
+    
+    # download the source
+    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $auto_download_dir"
+    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $auto_download_dir
 
     chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
 
     [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
+    
+    # restore and/or fix the metadata
+    nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $auto_download_dir --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
+    
+    if [ "$auto_download_dir" != "$DB_DIR" ]; then
+      echo "removing $auto_download_dir"
+      rm -rf $auto_download_dir
+    fi
 
-    nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
-
-    #ls -l $DB_DIR
   elif [ -d "$NUODB_BACKUPDIR/$restore_source" ]; then
     # NUODB_IMPORT_URL has no protocol - so just append the --restore-from-dir option
     set -- --restore-from-dir "$NUODB_BACKUPDIR/$restore_source" "$@"
   fi
+  # completely delete my previous archive metadata
+  [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
 fi
 
 # release the first-in semaphore

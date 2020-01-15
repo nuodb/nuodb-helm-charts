@@ -142,16 +142,20 @@ database:
     #   verbose error,flush,warn
 
   # ensure all values here are strings - so quote any purely numeric values
+  # source should be a tar.gz or an already local backupset.
+  # type either stream or backupset
   autoImport:
     source: ""
     credentials: ""
     stripLevels: "1"
+    type: ""
 
   # ensure all values here are strings - so quote any purely numeric values
   autoRestore:
     source: ""
     credentials: ""
     stripLevels: "1"
+    type: ""
 
   sm:
     # Settings for storage manager (SM) nodes with hotcopy enabled.
