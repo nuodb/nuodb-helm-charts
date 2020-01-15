@@ -261,11 +261,13 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
   nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
 
   # completely delete my previous archive metadata
+  # this is required because nuodocker always creates a new archive
   [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
 
 fi
 
 # release my archive if it is locked
+# this will likely never execute but has been left in for completeness
 locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -n "$locked_archive" ] && $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
 
@@ -302,13 +304,12 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/1.atm ]; th
       rm -rf $auto_download_dir
     fi
 
-    # completely delete my previous archive metadata
-    [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
-
   elif [ -d "$NUODB_BACKUPDIR/$restore_source" ]; then
     # NUODB_IMPORT_URL has no protocol - so just append the --restore-from-dir option
     set -- --restore-from-dir "$NUODB_BACKUPDIR/$restore_source" "$@"
   fi
+  # completely delete my previous archive metadata
+  [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
 fi
 
 # release the first-in semaphore
