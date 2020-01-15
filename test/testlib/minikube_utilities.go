@@ -358,6 +358,17 @@ func ParseDatabaseIncarnation(t *testing.T, incarnation string) [2]int {
 func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databaseName string, databaseOptions *helm.Options, restart func()) {
 	incarnation := GetDatabaseIncarnation(t, namespace, podName, databaseName)
 
+	if restart == nil {
+		restart = func() {
+			options := k8s.NewKubectlOptions("", "")
+			options.Namespace = namespace
+
+			k8s.RunKubectl(t, options, "exec", podName, "--",
+				"nuocmd", "shutdown", "database", "--db-name", databaseName,
+			)
+		}
+	}
+
 	restart()
 
 	Await(t, func() bool {

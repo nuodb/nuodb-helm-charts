@@ -185,6 +185,8 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 }
 
 func TestKubernetesBasicDatabase(t *testing.T) {
+	t.Skip("testing")
+
 	testlib.AwaitTillerUp(t)
 
 	options := helm.Options{}
@@ -285,7 +287,155 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 	})
 }
 
+func TestKubernetesRestartDatabase(t *testing.T) {
+	t.Skip("testing")
+	
+	testlib.AwaitTillerUp(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+			
+		databaseOptions := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.labels.cloud":              LABEL_CLOUD,
+				"database.te.labels.region":             LABEL_REGION,
+				"database.te.labels.zone":               LABEL_ZONE,
+				"database.sm.labels.cloud":              LABEL_CLOUD,
+				"database.sm.labels.region":             LABEL_REGION,
+				"database.sm.labels.zone":               LABEL_ZONE,
+			},
+		}
+
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		t.Run("restartStatefulset", func(t *testing.T) { testlib.AwaitDatabaseRestart(t, namespaceName, admin0, "demo", &databaseOptions, nil) })
+	})
+
+	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+		databaseOptions := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.labels.cloud":              LABEL_CLOUD,
+				"database.te.labels.region":             LABEL_REGION,
+				"database.te.labels.zone":               LABEL_ZONE,
+				"database.sm.labels.cloud":              LABEL_CLOUD,
+				"database.sm.labels.region":             LABEL_REGION,
+				"database.sm.labels.zone":               LABEL_ZONE,
+				"database.enableDaemonSet":              "true",
+				// prevent non-backup SM from scheduling
+				"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
+			},
+		}
+
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		t.Run("restartDaemonset", func(t *testing.T) { testlib.AwaitDatabaseRestart(t, namespaceName, admin0, "demo", &databaseOptions, nil) })
+	})
+
+	t.Run("startDatabaseStatefulSetMultiTenant", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+		databaseOptions := helm.Options{
+			SetValues: map[string]string{
+				"database.name":                         "green",
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		}
+
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		t.Run("verifyNuoSQL-green", func(t *testing.T) {
+			verifyNuoSQL(t, namespaceName, admin0, "green")
+		})
+
+		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.name":                         "blue",
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		})
+
+		t.Run("verifyNuoSQL-blue", func(t *testing.T) {
+			verifyNuoSQL(t, namespaceName, admin0, "blue")
+		})
+
+		t.Run("restart-green", func(t *testing.T) { testlib.AwaitDatabaseRestart(t, namespaceName, admin0, "green", &databaseOptions, nil) })
+
+		t.Run("verifyNuoSQL-green", func(t *testing.T) {
+			verifyNuoSQL(t, namespaceName, admin0, "green")
+		})
+	})
+}
+
+func TestRestartPopulatedDatabase(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+			
+		databaseOptions := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.labels.cloud":              LABEL_CLOUD,
+				"database.te.labels.region":             LABEL_REGION,
+				"database.te.labels.zone":               LABEL_ZONE,
+				"database.sm.labels.cloud":              LABEL_CLOUD,
+				"database.sm.labels.region":             LABEL_REGION,
+				"database.sm.labels.zone":               LABEL_ZONE,
+			},
+		}
+
+		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		populateCreateDBData(t, namespaceName, admin0)
+
+		// verify that the database contains the populated data
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+		assert.NilError(t, err, "error running SQL: show schema User")
+		assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
+		
+		t.Run("restartPopulated", func(t *testing.T) { testlib.AwaitDatabaseRestart(t, namespaceName, admin0, "demo", &databaseOptions, nil) })
+	})
+
+}
+
 func TestKubernetesAltAddress(t *testing.T) {
+	t.Skip("testing")
+
 	testlib.AwaitTillerUp(t)
 
 	options := helm.Options{}
@@ -316,6 +466,8 @@ func TestKubernetesAltAddress(t *testing.T) {
 }
 
 func TestKubernetesBackupDatabase(t *testing.T) {
+	t.Skip("testing")
+
 	testlib.AwaitTillerUp(t)
 
 	adminOptions := helm.Options{}
@@ -373,6 +525,8 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 }
 
 func TestKubernetesRestoreDatabase(t *testing.T) {
+	t.Skip("test")
+
 	testlib.AwaitTillerUp(t)
 
 	adminOptions := helm.Options{}
@@ -409,14 +563,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 		// populate some data
-		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--",
-			"/opt/nuodb/bin/nuosql",
-			"--user", "dba",
-			"--password", "secret",
-			"demo",
-			"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
-		)
+		populateCreateDBData(t, namespaceName, admin0)
 
 		// verify that the database contains the populated data
 		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
@@ -435,6 +582,8 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 }
 
 func TestKubernetesImportDatabase(t *testing.T) {
+	t.Skip("test")
+
 	testlib.AwaitTillerUp(t)
 
 	adminOptions := helm.Options{}
