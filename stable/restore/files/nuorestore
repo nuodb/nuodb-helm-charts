@@ -79,4 +79,4 @@ if [ "$restore_type" = "database" ]; then
    [ "$auto" = "true" ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
 fi
 
-echo "Restore chart completed"
+echo "Restore job completed"
