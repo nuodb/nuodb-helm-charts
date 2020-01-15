@@ -23,6 +23,7 @@ main() {
 version () {
   echo "Updating Helm chart versions..."
   find stable -type f -name Chart.yaml -exec sed -i "" "s/version: .*/version: ${VERSION}/g" {} \;
+  find incubator -type f -name Chart.yaml -exec sed -i "" "s/version: .*/version: ${VERSION}/g" {} \;
   git add -u
   git commit -m "Release ${VERSION}"
 }
