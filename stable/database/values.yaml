@@ -155,6 +155,7 @@ database:
     source: ""
     credentials: ""
     stripLevels: "1"
+    type: ""
 
   sm:
     # Settings for storage manager (SM) nodes with hotcopy enabled.

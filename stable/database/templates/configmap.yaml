@@ -70,6 +70,7 @@ data:
   NUODB_AUTO_IMPORT: {{ default "" .Values.database.autoImport.source | quote }}
   NUODB_AUTO_IMPORT_TYPE: {{ default "stream" .Values.database.autoImport.type | quote }}
   NUODB_AUTO_RESTORE: {{ default "" .Values.database.autoRestore.source | quote }}
+  NUODB_AUTO_RESTORE_TYPE: {{ default "stream" .Values.database.autoRestore.type | quote }}
   NUODB_OS_USER: {{ include "os.user" . | quote }}
   NUODB_OS_GROUP: {{ include "os.group" . | quote }}
 ---
