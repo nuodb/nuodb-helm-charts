@@ -25,18 +25,18 @@ $ helm repo add nuodb https://nuodb-charts.storage.googleapis.com/
 "nuodb" has been added to your repositories
 ```
 
-You can then run `helm search nuodb/` to list the installed NuoDB charts.
+To list the installed NUoDB charts, run `helm search repo nuodb/`
 
 ## How do I enable the Incubator repository?
 
-To add the Incubator charts for your local client, run `helm repo add`:
+The Incubator repository contains enhancements not yet available in the supported releases. To add the Incubator charts for your local client, run the `helm repo add` command below:
 
 ```bash
 $ helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.com/
 "nuodb-incubator" has been added to your repositories
 ```
 
-You can then run `helm search nuodb-incubator/` to see the charts.
+To list the installed NuoDB incubator charts, run `helm search nuodb-incubator/`
 
 ## Repository Structure
 
