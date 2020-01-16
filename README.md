@@ -9,7 +9,7 @@ For more information on using Helm, refer to the [Helm's documentation](https://
 
 ## How to use this repository?
 
-For a list of supported NuoDB Helm Chart releases and where to download, see the Releases tab.
+For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above.
 
 For notification of new releases, click the `Watch` button above and subscribe to the `New Releases Only` selection.
 
