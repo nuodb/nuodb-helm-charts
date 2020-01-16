@@ -7,9 +7,14 @@ Use this repository to submit official Charts for NuoDB. Charts are curated appl
 
 For more information on using Helm, refer to the [Helm's documentation](https://github.com/kubernetes/helm#docs).
 
+## How to use this repository?
+
+For a list of supported NuoDB Helm Chart releases and where to download, see the Releases tab.
+For notification of new releases, click the `Watch` button and subscribe to this repository
+
 ## How do I install these charts?
 
-Just `helm install nuodb/<chart>`. This is the default repository for NuoDB which is located at
+Just run, `helm install nuodb/<chart>`. This is the default repository for NuoDB which is located at
  https://nuodb-charts.storage.googleapis.com/ and must be enabled to use.
 
 To add the charts for your local client, run `helm repo add`:
