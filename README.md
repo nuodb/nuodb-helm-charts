@@ -15,7 +15,7 @@ For notification of new releases, click the `Watch` button above and subscribe t
 
 ## How do I install these charts?
 
-Just run, `helm install nuodb/<chart>`. This is the default repository for NuoDB which is located at
+To install, run `helm install nuodb/<chart>`. This is the default repository for NuoDB which is located at
  https://nuodb-charts.storage.googleapis.com/ and must be enabled to use.
 
 To add the charts for your local client, run the `helm repo add` command below:
