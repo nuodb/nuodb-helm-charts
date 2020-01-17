@@ -493,7 +493,7 @@ func shouldGetDiagnose() bool {
 
 func GetK8sEventLog(t *testing.T, namespace string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, K8s_EVENT_LOG_FILE)
+	filePath := filepath.Join(dirPath, K8S_EVENT_LOG_FILE)
 
 	_ = os.MkdirAll(dirPath, 0700)
 
@@ -530,7 +530,7 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 
 func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, podName+fileNameSuffix)
+	filePath := filepath.Join(dirPath, podName+fileNameSuffix+".log")
 
 	_ = os.MkdirAll(dirPath, 0700)
 
@@ -567,18 +567,29 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 }
 
 func GetAdminEventLog(t *testing.T, namespace string, podName string) {
-	if !t.Failed() {
-		return
-	}
-	
+	dirPath := filepath.Join(RESULT_DIR, namespace)
+	filePath := filepath.Join(dirPath, "nuoadmin_event.log")
+
+	_ = os.MkdirAll(dirPath, 0700)
+
+	f, err := os.Create(filePath)
+	assert.NilError(t, err)
+	defer f.Close()
+
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
-	_, err := k8s.RunKubectlAndGetOutputE(t, options,
-		"exec", podName, "--",
-		"cat", "/var/log/nuodb/nuoadmin_event.log",
+	k8s.RunKubectl(t, options,
+		"cp",
+		fmt.Sprintf("%s/%s:%s", namespace, podName, "/var/log/nuodb/nuoadmin_event.log"),
+		filePath,
 	)
-	assert.NilError(t, err, "GetAdminEventLog: exec cat event_log")
+
+	if t.Failed() && shouldPrintToStdout() {
+		data, err := ioutil.ReadFile(filePath)
+		assert.NilError(t, err)
+		t.Log(data)
+	}
 }
 
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {

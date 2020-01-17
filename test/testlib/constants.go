@@ -1,7 +1,5 @@
 package testlib
 
-import "regexp"
-
 const CA_CERT_FILE = "ca.cert"
 const CA_CERT_FILE_NEW = "ca_new.cert"
 const CA_CERT_SECRET = "nuodb-ca-cert"
@@ -41,4 +39,4 @@ const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
 
 const NOT_RUNNING_ADMIN_DB_STATE = "NOT_RUNNING"
 
-const K8s_EVENT_LOG_FILE = "kubernetes_event.log"
+const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
