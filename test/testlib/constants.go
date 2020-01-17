@@ -51,3 +51,5 @@ var INCARNATION_PATTERN *regexp.Regexp
 func init() {
 	INCARNATION_PATTERN = regexp.MustCompile(INCARNATION_REGEX)
 }
+
+const K8s_EVENT_LOG_FILE = "kubernetes_event.log"

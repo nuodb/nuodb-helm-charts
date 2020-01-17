@@ -42,7 +42,10 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 		callerName := getFunctionCallerName()
 		namespaceName = fmt.Sprintf("%s-%s", strings.ToLower(callerName), randomSuffix)
 		k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-		AddTeardown(TEARDOWN_ADMIN, func() { k8s.DeleteNamespace(t, kubectlOptions, namespaceName) })
+		AddTeardown(TEARDOWN_ADMIN, func() {
+			GetK8sEventLog(t, namespaceName)
+			k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
+		})
 	} else {
 		namespaceName = namespace
 	}
@@ -51,7 +54,9 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
-	AddTeardown("admin", func() { helm.Delete(t, options, helmChartReleaseName, true) })
+	AddTeardown("admin", func() {
+		helm.Delete(t, options, helmChartReleaseName, true)
+	})
 
 	AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, replicaCount)
 

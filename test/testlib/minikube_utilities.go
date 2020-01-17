@@ -478,6 +478,43 @@ func shouldPrintToStdout() bool {
 	return exists
 }
 
+func GetK8sEventLog(t *testing.T, namespace string) {
+	dirPath := filepath.Join(RESULT_DIR, namespace)
+	filePath := filepath.Join(dirPath, K8s_EVENT_LOG_FILE)
+
+	_ = os.MkdirAll(dirPath, 0700)
+
+	f, err := os.Create(filePath)
+	assert.NilError(t, err)
+	defer f.Close()
+
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+
+	var opts metav1.ListOptions
+
+	events, err := client.CoreV1().Events(namespace).List(opts)
+	require.NoError(t, err)
+
+	// it is hard to recover this in Travis from the filesystem, without access to a AWS
+	// print it to stdout instead
+	var multiWriter io.Writer
+	if t.Failed() && shouldPrintToStdout() {
+		multiWriter = io.MultiWriter(f, os.Stdout)
+	} else {
+		multiWriter = io.MultiWriter(f)
+	}
+
+	for _, event := range events.Items {
+		_, err := fmt.Fprintln(multiWriter, event)
+		assert.NilError(t, err)
+	}
+
+}
+
 func GetAppLog(t *testing.T, namespace string, podName string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName)
