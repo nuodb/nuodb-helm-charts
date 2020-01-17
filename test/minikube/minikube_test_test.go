@@ -125,15 +125,3 @@ func TestGetExtractedOptions(t *testing.T) {
 	})
 
 }
-
-func TestParseIncarnations(t *testing.T) {
-
-	incarnation := `   incarnation:(3, 0)
-	[SM] sm-database-j7uzoi-nuodb-cluster0-demo-hotcopy-0/172.17.0.11:48006 [start_id = 3] [server_id = admin-uz7aiw-nuodb-cluster0-0] [pid = 152] [node_id = 1] [last_ack =  1.09] MONITORED:RUNNING
-	[TE] te-database-j7uzoi-nuodb-cluster0-demo-7789b6c57f-99xnz/172.17.0.4:48006 [start_id = 4] [server_id = admin-uz7aiw-nuodb-cluster0-0] [pid = 38] [node_id = 2] [last_ack =  0.56] MONITORED:RUNNING`
-
-	result := testlib.ParseDatabaseIncarnation(t, incarnation)
-
-	assert.Check(t, result[0] == 3)
-	assert.Check(t, result[1] == 0)
-}

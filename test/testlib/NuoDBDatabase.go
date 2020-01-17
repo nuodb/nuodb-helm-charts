@@ -6,7 +6,13 @@ import (
 	"strings"
 )
 
+type DBVersion struct {
+	Major int `json:"major"`
+	Minor int `json:"minor"`
+}
+
 type NuoDBDatabase struct {
+	Incarnation DBVersion `json:"incarnation"`
 	Name string `json:"name"`
 	Processes string `json:"processes"`
 	State string `json:"state"`

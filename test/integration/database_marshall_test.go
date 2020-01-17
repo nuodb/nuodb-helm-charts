@@ -27,5 +27,7 @@ func TestDatabaseUnmarshal(t *testing.T) {
 
 	assert.Check(t, obj.Name == "demo")
 	assert.Check(t, obj.State == "NOT_RUNNING")
+	assert.Check(t, obj.Incarnation.Major == 1)
+	assert.Check(t, obj.Incarnation.Minor == 2)
 
 }
