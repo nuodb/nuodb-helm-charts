@@ -606,6 +606,34 @@ func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *v1.Daem
 	return &object
 }
 
+func AwaitDatabaseNotRunning(t *testing.T, namespace string, dbName string, podName string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	Await(t, func() bool {
+		output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "--show-json", "get", "databases")
+		if err != nil {
+			t.Logf("AwaitDatabaseNotRunning failed with: %s", err)
+			return false;
+		}
+
+		err, databases := UnmarshalDatabase(output)
+		if err != nil {
+			t.Logf("AwaitDatabaseNotRunning failed with: %s", err)
+			return false;
+		}
+
+		for _, db := range databases {
+			if db.Name == dbName {
+				return db.State == NOT_RUNNING_ADMIN_DB_STATE
+			}
+		}
+
+		t.Logf("AwaitDatabaseNotRunning could not find database: %s", dbName)
+		return false
+	}, 30*time.Second )
+}
+
 func DeleteDatabase(t *testing.T, namespace string, dbName string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace

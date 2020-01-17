@@ -53,3 +53,5 @@ func init() {
 }
 
 const K8s_EVENT_LOG_FILE = "kubernetes_event.log"
+
+const NOT_RUNNING_ADMIN_DB_STATE = "NOT_RUNNING"

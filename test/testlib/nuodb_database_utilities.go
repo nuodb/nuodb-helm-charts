@@ -72,6 +72,7 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	AddTeardown(TEARDOWN_DATABASE, func() {
 		helm.Delete(t, options, helmChartReleaseName, true)
 		AwaitNoPods(t, namespaceName, helmChartReleaseName)
+		AwaitDatabaseNotRunning(t, namespaceName, opt.DbName, adminPod) // workaround for DB-29815
 		DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
 	})
 
