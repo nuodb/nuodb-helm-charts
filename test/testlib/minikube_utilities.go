@@ -586,9 +586,10 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	)
 
 	if t.Failed() && shouldPrintToStdout() {
-		data, err := ioutil.ReadFile(filePath)
-		assert.NilError(t, err)
-		t.Log(string(data))
+		k8s.RunKubectl(t, options,
+			"exec", podName, "--",
+			"cat", "/var/log/nuodb/nuoadmin_event.log",
+		)
 	}
 }
 
