@@ -566,6 +566,21 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 	return reader
 }
 
+func GetAdminEventLog(t *testing.T, namespace string, podName string) {
+	if !t.Failed() {
+		return
+	}
+	
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	_, err := k8s.RunKubectlAndGetOutputE(t, options,
+		"exec", podName, "--",
+		"cat", "/var/log/nuodb/nuoadmin_event.log",
+	)
+	assert.NilError(t, err, "GetAdminEventLog: exec cat event_log")
+}
+
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
