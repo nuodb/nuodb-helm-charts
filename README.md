@@ -36,7 +36,7 @@ $ helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapi
 "nuodb-incubator" has been added to your repositories
 ```
 
-To list the installed NuoDB incubator charts, run `helm search nuodb-incubator/`
+To list the installed NuoDB incubator charts, run `helm search repo nuodb-incubator/`
 
 ## Repository Structure
 
