@@ -1,0 +1,4 @@
+unreleased=false
+future-release=v2.3
+since-tag=v2.0
+exclude-labels=meta,duplicate,question,invalid,wontfix,documentation
