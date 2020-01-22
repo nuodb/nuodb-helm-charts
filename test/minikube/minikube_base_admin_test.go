@@ -107,7 +107,7 @@ func TestKubernetesBasicNameOverride(t *testing.T) {
 	// first await could be pulling the image from the repo
 	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
 
-	defer testlib.GetAppLog(t, namespaceName, admin0)
+	defer testlib.GetAppLog(t, namespaceName, admin0, "")
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 }
