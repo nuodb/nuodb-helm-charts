@@ -386,13 +386,13 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
-			"database.name":                         	"demo",
-			"database.sm.resources.requests.cpu":    	testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory": 	testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    	testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory": 	testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"backup.persistence.enabled":            	"true",
-			"backup.persistence.size":               	"1Gi",
+			"database.name":                         "demo",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"backup.persistence.enabled":            "true",
+			"backup.persistence.size":               "1Gi",
 		},
 	}
 

@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime/debug"
@@ -315,6 +316,32 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 		"--timeout", "300")
 }
 
+func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
+	if t.Failed() && shouldPrintToStdout() && shouldGetDiagnose() {
+		options := k8s.NewKubectlOptions("", "")
+		options.Namespace = namespace
+
+		targetDirPath := filepath.Join(RESULT_DIR, namespace, "diagnose")
+		_ = os.MkdirAll(targetDirPath, 0700)
+
+		// Get cores
+		t.Log(t, "Generating diagnose archive...")
+		k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "get", "diagnose-info",
+			"--include-cores", "--output-dir", "/tmp")
+		diagnoseFile, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", "ls -1 /tmp | grep diagnose-")
+		assert.NilError(t, err, "Can not find diagnose archive")
+
+		k8s.RunKubectl(t, options, "cp", podName+":/tmp/"+diagnoseFile, filepath.Join(targetDirPath, diagnoseFile))
+		files, _ := ioutil.ReadDir(targetDirPath)
+		for _, file := range files {
+			// The file can be recovered via xxd -r -p a.hex a.bin
+			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(targetDirPath, file.Name())).CombinedOutput()
+			t.Logf("%s:\n%s", file.Name(), string(output))
+		}
+		t.Log(files)
+	}
+}
+
 func AwaitDatabaseDown(t *testing.T, namespace string, podName string, databaseName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -475,6 +502,11 @@ func PingService(t *testing.T, namespace string, serviceName string, podName str
 
 func shouldPrintToStdout() bool {
 	_, exists := os.LookupEnv("NUODB_PRINT_TO_STDOUT")
+	return exists
+}
+
+func shouldGetDiagnose() bool {
+	_, exists := os.LookupEnv("NUODB_GET_DIAGNOSE")
 	return exists
 }
 
