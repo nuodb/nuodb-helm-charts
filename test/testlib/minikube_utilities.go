@@ -317,7 +317,7 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 }
 
 func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
-	if t.Failed() && shouldPrintToStdout() && shouldGetDiagnose() {
+	if t.Failed() && shouldGetDiagnose() {
 		options := k8s.NewKubectlOptions("", "")
 		options.Namespace = namespace
 
@@ -332,13 +332,14 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 		assert.NilError(t, err, "Can not find diagnose archive")
 
 		k8s.RunKubectl(t, options, "cp", podName+":/tmp/"+diagnoseFile, filepath.Join(targetDirPath, diagnoseFile))
-		files, _ := ioutil.ReadDir(targetDirPath)
-		for _, file := range files {
-			// The file can be recovered via xxd -r -p a.hex a.bin
-			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(targetDirPath, file.Name())).CombinedOutput()
-			t.Logf("%s:\n%s", file.Name(), string(output))
+		if shouldPrintToStdout() {
+			files, _ := ioutil.ReadDir(targetDirPath)
+			for _, file := range files {
+				// The file can be recovered via xxd -r -p a.hex a.bin
+				output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(targetDirPath, file.Name())).CombinedOutput()
+				t.Logf("%s:\n%s", file.Name(), string(output))
+			}
 		}
-		t.Log(files)
 	}
 }
 

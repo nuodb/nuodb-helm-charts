@@ -394,6 +394,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"backup.persistence.enabled":            "true",
 			"backup.persistence.size":               "1Gi",
 		},
+		ValuesFiles: []string{"../files/database-verbose.yaml"},
 	}
 
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
