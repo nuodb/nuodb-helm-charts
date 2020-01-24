@@ -61,7 +61,8 @@ cloud:
     - us-central1-a
     - us-central1-b
     - us-central1-c
-  cluster.name: cluster0
+  cluster:
+    name: cluster0
 ```
 
 #### busybox.*
