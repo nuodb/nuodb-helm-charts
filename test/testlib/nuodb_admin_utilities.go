@@ -65,7 +65,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 
 		// first await could be pulling the image from the repo
 		AwaitAdminPodUp(t, namespaceName, adminName, 300*time.Second)
-		AddTeardown("admin", func() { GetAppLog(t, namespaceName, adminName) })
+		AddTeardown("admin", func() { GetAppLog(t, namespaceName, adminName, "") })
 	}
 
 	for i := 0; i < replicaCount; i++ {

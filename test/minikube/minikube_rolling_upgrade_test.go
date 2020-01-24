@@ -99,7 +99,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	options.SetValues["nuodb.image.tag"] = NEW_RELEASE
 
 	// get the log before the restart
-	testlib.GetAppLog(t, namespaceName, admin0)
+	testlib.GetAppLog(t, namespaceName, admin0, "")
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
 

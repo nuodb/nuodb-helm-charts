@@ -515,9 +515,9 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 
 }
 
-func GetAppLog(t *testing.T, namespace string, podName string) {
+func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, podName)
+	filePath := filepath.Join(dirPath, podName+fileNameSuffix)
 
 	_ = os.MkdirAll(dirPath, 0700)
 
