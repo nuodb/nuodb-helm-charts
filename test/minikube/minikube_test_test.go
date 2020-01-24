@@ -112,7 +112,7 @@ func TestGetExtractedOptions(t *testing.T) {
 				"database.te.replicas":           "2",
 				"database.sm.hotCopy.replicas":   "2",
 				"database.sm.noHotCopy.replicas": "2",
-				"cloud.clusterName":              "cluster1",
+				"cloud.cluster.name":              "cluster1",
 			},
 		})
 

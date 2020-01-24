@@ -47,7 +47,7 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 		opt.DbName = "demo"
 	}
 
-	opt.ClusterName = options.SetValues["cloud.clusterName"]
+	opt.ClusterName = options.SetValues["cloud.cluster.name"]
 	if len(opt.ClusterName) == 0 {
 		opt.ClusterName = "cluster0"
 	}
