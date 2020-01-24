@@ -50,6 +50,8 @@ The following tables list the configurable parameters for the `cloud` option:
 | `provider` | Cloud provider; permissible values include: `azure`, `amazon`, or `google` |`nil`|
 | `zones` | List of availability zones to deploy to |`[]`|
 | `clusterName` | logical name of the cluster. Useful in multi-cluster configs | `cluster0` |
+| `clusterDomain` | Kubernetes domain as specified during kubernetes set up. Useful in multi-cluster configs | `cluster.local` |
+| `entrypointClusterDomain` | Kubernetes domain for the NuoDB Entrypoint Admin Process. Useful in multi-cluster configs | `cluster.local` |
 
 
 For example, for the Google Cloud:
