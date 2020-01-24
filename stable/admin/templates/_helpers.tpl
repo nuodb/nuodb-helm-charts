@@ -13,7 +13,7 @@ If release name contains chart name it will be used as a full name.
 */}}
 {{- define "admin.fullname" -}}
 {{- $domain := default "domain" .Values.admin.domain -}}
-{{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
+{{- $cluster := default "cluster0" .Values.cloud.cluster.name -}}
 {{- if .Values.admin.fullnameOverride -}}
 {{- .Values.admin.fullnameOverride | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
@@ -148,10 +148,21 @@ envFrom: [{{- range $index, $map := .Values.admin.envFrom.configMapRef }}{{if gt
 {{/*
 Define the cluster domains
 */}}
-{{- define "cloud.clusterDomain" -}}
-{{- .Values.cloud.clusterDomain | default "cluster.local" }}
+{{- define "cluster.domain" -}}
+{{- .Values.cloud.cluster.domain | default "cluster.local" }}
 {{- end -}}
 
-{{- define "cloud.entrypointClusterDomain" -}}
-{{- .Values.cloud.entrypointClusterDomain | default (include "cloud.clusterDomain" .) }}
+{{- define "cluster.entrypointDomain" -}}
+{{- .Values.cloud.cluster.entrypointDomain | default (include "cluster.domain" .) }}
+{{- end -}}
+
+{{/*
+Define the fully qualified NuoDB Admin addresses
+*/}}
+{{- define "nuodb.domainEntrypoint" -}}
+{{ include "admin.fullname" . }}-0.{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.entrypointDomain" . }}
+{{- end -}}
+
+{{- define "nuodb.altAddress" -}}
+$(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.domain" . }}
 {{- end -}}

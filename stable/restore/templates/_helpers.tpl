@@ -20,7 +20,7 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 */}}
 {{- define "database.fullname" -}}
 {{- $domain := default "domain" .Values.admin.domain -}}
-{{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
+{{- $cluster := default "cluster0" .Values.cloud.cluster.name -}}
 {{- if .Values.database.fullnameOverride -}}
 {{- .Values.database.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
