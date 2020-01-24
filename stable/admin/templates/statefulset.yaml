@@ -48,7 +48,7 @@ spec:
         volumeMounts:
         - name: raftlog
           mountPath: /var/opt/nuodb
-        - name: log-volume
+        - name: log
           mountPath: /var/log/nuodb
       containers:
       - name: admin
@@ -75,9 +75,15 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        # - name: CONTAINER_START_TIME
+        #   valueFrom:
+        #     fieldRef:
+        #       fieldPath: status.startTime
+        - { name: CONTAINER_START_TIME,    value: $(date +'%Y%m%dT%H%M%S') }
         - { name: NUODB_DOMAIN_ENTRYPOINT, value: "{{ template "admin.fullname" . }}-0.{{ .Values.admin.domain }}" }
         - { name: NUODB_ALT_ADDRESS,       value: "$(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc" }
         - { name: NUODB_VARDIR,            value: "/var/opt/nuodb/$(POD_NAME).$(NAMESPACE)" }
+        - { name: NUODB_LOGDIR,            value: "/var/log/nuodb" }
         - { name: COMPONENT_NAME,          value: "admin" }
       {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
@@ -110,7 +116,7 @@ spec:
           successThreshold: 2
           timeoutSeconds: 1
         volumeMounts:
-        - name: log-volume
+        - name: log
           mountPath: /var/log/nuodb
         {{- with .Values.admin.configFiles }}
         {{- range $key, $val := . }}
@@ -167,8 +173,10 @@ spec:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
           defaultMode: 0440
       {{- end }}
-      - name: log-volume
+      {{- if not .Values.admin.logPersistence.enabled }}
+      - name: log
         emptyDir: {}
+      {{- end }}
       {{- if .Values.admin.configFiles }}
       - name: configurations
         configMap:
@@ -198,3 +206,28 @@ spec:
       resources:
         requests:
           storage: {{ .Values.admin.persistence.size }}
+{{- if .Values.admin.logPersistence.enabled }}
+  - metadata:
+      name: log
+      labels:
+        app: {{ template "admin.fullname" . }}
+        group: nuodb
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "admin.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+    {{- if .Values.admin.logPersistence.storageClass }}
+      {{- if (eq "-" .Values.admin.logPersistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.admin.logPersistence.storageClass }}
+      {{- end }}
+    {{- end }}
+      accessModes:
+      {{- range .Values.admin.logPersistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.admin.logPersistence.size }}
+{{- end }}
