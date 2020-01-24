@@ -182,7 +182,6 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tolerations` | Tolerations for NuoDB Admin | `[]` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
-| `persistence.enabled` | Whether or not persistent storage is enabled for admin RAFT state | `false` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteMany` |
 | `persistence.size` | Amount of disk space allocated for admin RAFT state | `10Gi` |
 | `persistence.storageClass` | Storage class for volume backing admin RAFT state | `-` |
@@ -240,8 +239,7 @@ Verify the Helm chart:
 
 ```bash
 helm install nuodb/admin -n admin \
-    --set persistence.enabled=true \
-    --set persistence.storageClass=nuodb-admin \
+    --set persistence.storageClass=standard-storage \
     --debug --dry-run
 ```
 
@@ -249,8 +247,7 @@ Deploy the administration tier using volumes of the specified storage class:
 
 ```bash
 helm install nuodb/admin -n admin \
-    --set persistence.enabled=true \
-    --set persistence.storageClass=nuodb-admin
+    --set persistence.storageClass=standard-storage
 ```
 
   **Tip**: Be patient, it will take approximately 55 seconds to deploy.
