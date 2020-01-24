@@ -315,8 +315,7 @@ Verify the Helm chart:
 
 ```bash
 helm install nuodb/database -n database \
-    --set sm.persistence.enabled=true \
-    --set sm.persistence.storageClass=nuodb-archive \
+    --set sm.persistence.storageClass=standard-storage \
     --debug --dry-run
 ```
 
@@ -324,8 +323,7 @@ Deploy a database without backups:
 
 ```bash
 helm install nuodb/database -n database \
-    --set sm.persistence.enabled=true \
-    --set sm.persistence.storageClass=nuodb-archive
+    --set sm.persistence.storageClass=standard-storage
 ```
 
 The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
