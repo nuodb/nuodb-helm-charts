@@ -144,3 +144,14 @@ Import ENV vars from configMaps
 {{- define "admin.envFrom" }}
 envFrom: [{{- range $index, $map := .Values.admin.envFrom.configMapRef }}{{if gt $index 0}},{{end}} configMapRef: { name: {{$map}} } {{ end }}]
 {{- end -}}
+
+{{/*
+Define the cluster domains
+*/}}
+{{- define "cloud.clusterDomain" -}}
+{{- .Values.cloud.clusterDomain | default "cluster.local" }}
+{{- end -}}
+
+{{- define "cloud.entrypointClusterDomain" -}}
+{{- .Values.cloud.entrypointClusterDomain | default (include "cloud.clusterDomain" .) }}
+{{- end -}}
