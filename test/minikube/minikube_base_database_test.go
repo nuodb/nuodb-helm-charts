@@ -393,11 +393,14 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"backup.persistence.enabled":            "true",
 			"backup.persistence.size":               "1Gi",
+			"database.options.verbose":				"error\\,warn\\,msgs",
 		},
-		ValuesFiles: []string{"../files/database-verbose.yaml"},
 	}
 
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// Generate diagnose in case this test fails
+	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() { testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0) })
 
 	opts := k8s.NewKubectlOptions("", "")
 	opts.Namespace = namespaceName

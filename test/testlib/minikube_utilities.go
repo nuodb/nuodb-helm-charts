@@ -333,12 +333,9 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 
 		k8s.RunKubectl(t, options, "cp", podName+":/tmp/"+diagnoseFile, filepath.Join(targetDirPath, diagnoseFile))
 		if shouldPrintToStdout() {
-			files, _ := ioutil.ReadDir(targetDirPath)
-			for _, file := range files {
-				// The file can be recovered via xxd -r -p a.hex a.bin
-				output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(targetDirPath, file.Name())).CombinedOutput()
-				t.Logf("%s:\n%s", file.Name(), string(output))
-			}
+			// The file can be recovered via xxd -r -p a.hex a.bin
+			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(targetDirPath, diagnoseFile)).CombinedOutput()
+			t.Logf("%s:\n%s", diagnoseFile, string(output))
 		}
 	}
 }
