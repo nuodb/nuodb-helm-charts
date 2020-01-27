@@ -36,7 +36,7 @@ helm init
 helm install nuodb/<chart>
 ```
 
-## NuoDB Helm Chart Incubator Repository
+## NuoDB Helm Chart Incubator Repository Installation
 
 The Incubator repository contains enhancements not yet available in the supported releases. To add the Incubator charts for your local client, run the `helm repo add` command below:
 
