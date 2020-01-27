@@ -14,7 +14,7 @@ For more information on using Helm, refer to the [Helm's documentation](https://
 | Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.15 then 1.15 and 1.14 are supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window.|
 | Helm       |  Version 2.x, 2.9 or greater   |
 | NuoDB      |  Version [4.0](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
-| NuoDB Helm Charts      |  For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection.. |
+| NuoDB Helm Charts      |  For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection. |
 
 ## NuoDB Helm Chart Installation
 
