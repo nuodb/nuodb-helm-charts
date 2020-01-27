@@ -9,8 +9,8 @@ For more information on using Helm, refer to the [Helm's documentation](https://
 
 ## Software Release requirements
 
-| Software   |      Release Requirements                        | 
-|----------- |:------------------------------------------------:|
+| Software   |      Release Requirements                      | 
+|------------|------------------------------------------------|
 | Kubernetes |  This chart repository supports the latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.15 then 1.15 and 1.14 are supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window.|
 | Helm       |  2.x, 2.9 or greater   |
 | NuoDB      |  Version [4.0](https://hub.docker.com/layers/nuodb/nuodb-ce/4.0/images/sha256-aaa558ef71795f15d5b3a1ef07b6be4890925dbd023c59b1f9a674ca20614763) and onwards. |
