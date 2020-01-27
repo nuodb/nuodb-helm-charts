@@ -27,7 +27,7 @@ $ helm repo add nuodb https://nuodb-charts.storage.googleapis.com/
 "nuodb" has been added to your repositories
 ```
 
-To list the installed NuoDB charts, run `helm search nuodb/`
+To list the NuoDB charts added to your repository, run `helm search nuodb/`
 
 To install a chart, run `helm install nuodb/<chart>`
 
@@ -40,7 +40,7 @@ $ helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapi
 "nuodb-incubator" has been added to your repositories
 ```
 
-To list the installed NuoDB incubator charts, run `helm search nuodb-incubator/`
+To list the NuoDB incubator charts added to your repository, run `helm search nuodb-incubator/`
 
 ## Repository Structure
 
