@@ -6,21 +6,21 @@
 
 **Implemented enhancements:**
 
-- add SFTP autoImport [\#46](https://github.com/nuodb/nuodb-helm-charts/pull/46) ([acabrele](https://github.com/acabrele))
-- Enhanced backup and restore including PiT backup [\#38](https://github.com/nuodb/nuodb-helm-charts/pull/38) ([NikTJ777](https://github.com/NikTJ777))
-- Make DB Services for direct TE connections turn-offable. [\#33](https://github.com/nuodb/nuodb-helm-charts/pull/33) ([acabrele](https://github.com/acabrele))
-- add local storage class [\#28](https://github.com/nuodb/nuodb-helm-charts/pull/28) ([vegichan](https://github.com/vegichan))
-- Add Cluster Services [\#27](https://github.com/nuodb/nuodb-helm-charts/pull/27) ([acabrele](https://github.com/acabrele))
+- Add option to use SFTP source for autoImport & autoRestore and define the type of the source [\#46](https://github.com/nuodb/nuodb-helm-charts/pull/46) ([acabrele](https://github.com/acabrele))
+- Enhanced backup and restore including the addition of PiT backup [\#38](https://github.com/nuodb/nuodb-helm-charts/pull/38) ([NikTJ777](https://github.com/NikTJ777))
+- Provide an option to disable DB Services for direct TE connections [\#33](https://github.com/nuodb/nuodb-helm-charts/pull/33) ([acabrele](https://github.com/acabrele))
+- Move database monitoring to incubator and enhanced it to work with a VPN based multi-cluster  [\#31](https://github.com/nuodb/nuodb-helm-charts/pull/31) ([acabrele](https://github.com/acabrele))
+- Move YCSB to incubator and enhanced it to allow use with a VPN based multi-cluster [\#29](https://github.com/nuodb/nuodb-helm-charts/pull/29) ([acabrele](https://github.com/acabrele))
+- Add local-storage StorageClass to the StorageClass chart [\#28](https://github.com/nuodb/nuodb-helm-charts/pull/28) ([vegichan](https://github.com/vegichan))
+- Add Cluster IP Services [\#27](https://github.com/nuodb/nuodb-helm-charts/pull/27) ([acabrele](https://github.com/acabrele))
 - \[DB-29171\] Feature request for user provided environment variables for database chart [\#26](https://github.com/nuodb/nuodb-helm-charts/pull/26) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
-- Ac/new make admin optional or internal [\#23](https://github.com/nuodb/nuodb-helm-charts/pull/23) ([acabrele](https://github.com/acabrele))
+- Make Load Balancer services optional and add ability to provision internal cloud IPs [\#23](https://github.com/nuodb/nuodb-helm-charts/pull/23) ([acabrele](https://github.com/acabrele))
 
 **Fixed bugs:**
 
-- Ac/backup restore fixes [\#45](https://github.com/nuodb/nuodb-helm-charts/pull/45) ([acabrele](https://github.com/acabrele))
-- fix image pull policy reference [\#44](https://github.com/nuodb/nuodb-helm-charts/pull/44) ([acabrele](https://github.com/acabrele))
-- Backup & restore, permissions secrets fixes [\#42](https://github.com/nuodb/nuodb-helm-charts/pull/42) ([acabrele](https://github.com/acabrele))
-- Ac/fix monitoring [\#31](https://github.com/nuodb/nuodb-helm-charts/pull/31) ([acabrele](https://github.com/acabrele))
-- Ac/fix ycsb [\#29](https://github.com/nuodb/nuodb-helm-charts/pull/29) ([acabrele](https://github.com/acabrele))
+- Small fixes for backup and restore [\#45](https://github.com/nuodb/nuodb-helm-charts/pull/45) ([acabrele](https://github.com/acabrele))
+- Fix image pull policy reference [\#44](https://github.com/nuodb/nuodb-helm-charts/pull/44) ([acabrele](https://github.com/acabrele))
+- Backup & restore, permissions and pull secrets fixes [\#42](https://github.com/nuodb/nuodb-helm-charts/pull/42) ([acabrele](https://github.com/acabrele))
 
 **Merged pull requests:**
 
@@ -35,15 +35,15 @@
 
 **Implemented enhancements:**
 
-- Add engine readiness probe [\#18](https://github.com/nuodb/nuodb-helm-charts/pull/18) ([vegichan](https://github.com/vegichan))
+- Add readiness probes for NuoDB engine StatefulSet/Deployment [\#18](https://github.com/nuodb/nuodb-helm-charts/pull/18) ([vegichan](https://github.com/vegichan))
 - \[DB-28964\] Externalize config files using generalized idiomatic approaches. [\#13](https://github.com/nuodb/nuodb-helm-charts/pull/13) ([rbuck](https://github.com/rbuck))
-- DB-28838 Make nuoadmin configuration options available in helm values [\#12](https://github.com/nuodb/nuodb-helm-charts/pull/12) ([acabrele](https://github.com/acabrele))
-- improve readiness check [\#8](https://github.com/nuodb/nuodb-helm-charts/pull/8) ([vegichan](https://github.com/vegichan))
+- \[DB-28838\] Make nuoadmin configuration options available in helm values [\#12](https://github.com/nuodb/nuodb-helm-charts/pull/12) ([acabrele](https://github.com/acabrele))
+- Add more state checks to Admin StatefulSet readiness probe [\#8](https://github.com/nuodb/nuodb-helm-charts/pull/8) ([vegichan](https://github.com/vegichan))
 - \[DB-28313\] Enable passing of certificates directly to the engine [\#4](https://github.com/nuodb/nuodb-helm-charts/pull/4) ([vegichan](https://github.com/vegichan))
 
 **Fixed bugs:**
 
-- \[DB-28733\] add missing mount [\#5](https://github.com/nuodb/nuodb-helm-charts/pull/5) ([vegichan](https://github.com/vegichan))
+- \[DB-28733\] add missing volumeMount to the THP chart [\#5](https://github.com/nuodb/nuodb-helm-charts/pull/5) ([vegichan](https://github.com/vegichan))
 - \[DB-28712\] Fix Admin Resources [\#2](https://github.com/nuodb/nuodb-helm-charts/pull/2) ([vegichan](https://github.com/vegichan))
 
 **Closed issues:**
