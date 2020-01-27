@@ -23,16 +23,15 @@ The default repository for NuoDB is located at https://nuodb-charts.storage.goog
 To add the charts for your local client, run the `helm repo add` command below:
 
 ```bash
-$ helm init
 $ helm repo add nuodb https://nuodb-charts.storage.googleapis.com/
 "nuodb" has been added to your repositories
 ```
 
-To list the installed NUoDB charts, run `helm search repo nuodb/`
+To list the installed NuoDB charts, run `helm search nuodb/`
 
-To install, run `helm install nuodb/<chart>`. T
+To install a chart, run `helm install nuodb/<chart>`
 
-## How do I enable the Incubator repository?
+## NuoDB Helm Chart Incubator Repository
 
 The Incubator repository contains enhancements not yet available in the supported releases. To add the Incubator charts for your local client, run the `helm repo add` command below:
 
@@ -41,7 +40,7 @@ $ helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapi
 "nuodb-incubator" has been added to your repositories
 ```
 
-To list the installed NuoDB incubator charts, run `helm search repo nuodb-incubator/`
+To list the installed NuoDB incubator charts, run `helm search nuodb-incubator/`
 
 ## Repository Structure
 
