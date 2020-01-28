@@ -7,6 +7,13 @@ Use this repository to submit official Charts for NuoDB. Charts are curated appl
 
 For more information on using Helm, refer to the [Helm's documentation](https://github.com/kubernetes/helm#docs).
 
+## NuoDB Helm Chart Version support
+
+For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. 
+
+To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection. |
+
+
 ## Software Release requirements
 
 | Software   | Release Requirements                           | 
@@ -14,7 +21,6 @@ For more information on using Helm, refer to the [Helm's documentation](https://
 | Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.15 then 1.15 and 1.14 are supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
 | Helm       |  Version 2 is supported, v2.9 or greater   |
 | NuoDB      |  Version [4.0](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
-| NuoDB Helm Charts      |  For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection. |
 
 ## NuoDB Helm Chart Installation
 
