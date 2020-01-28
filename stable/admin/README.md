@@ -185,6 +185,10 @@ The following tables list the configurable parameters for the `admin` option of 
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteMany` |
 | `persistence.size` | Amount of disk space allocated for admin RAFT state | `10Gi` |
 | `persistence.storageClass` | Storage class for volume backing admin RAFT state | `-` |
+| `logPersistence.enabled` | Whether to enable persistent storage for logs | `20Gi` |
+| `logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
+| `logPersistence.size` | Amount of disk space allocated for log storage | `20Gi` |
+| `logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
 | `envFrom` | Import ENV vars from one or more configMaps | `[]` |
 | `options` | Set optons to be passed to nuoadmin as arguments | `{}` |
 | `securityContext.capabilities` | add capabilities to the container | `[]` |
