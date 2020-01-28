@@ -82,7 +82,7 @@ admin:
 
   ## Enable persistent log volumes to retain logs when an external logging solution is not used.
   logPersistence:
-    enabled: true
+    enabled: false
     size: 20Gi
     accessModes:
       - ReadWriteOnce
