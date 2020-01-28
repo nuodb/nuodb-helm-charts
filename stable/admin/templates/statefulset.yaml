@@ -48,7 +48,7 @@ spec:
         volumeMounts:
         - name: raftlog
           mountPath: /var/opt/nuodb
-        - name: log
+        - name: log-volume
           mountPath: /var/log/nuodb
       containers:
       - name: admin
@@ -75,15 +75,9 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        # - name: CONTAINER_START_TIME
-        #   valueFrom:
-        #     fieldRef:
-        #       fieldPath: status.startTime
-        - { name: CONTAINER_START_TIME,    value: $(date +'%Y%m%dT%H%M%S') }
         - { name: NUODB_DOMAIN_ENTRYPOINT, value: "{{ template "admin.fullname" . }}-0.{{ .Values.admin.domain }}" }
         - { name: NUODB_ALT_ADDRESS,       value: "$(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc" }
         - { name: NUODB_VARDIR,            value: "/var/opt/nuodb/$(POD_NAME).$(NAMESPACE)" }
-        - { name: NUODB_LOGDIR,            value: "/var/log/nuodb" }
         - { name: COMPONENT_NAME,          value: "admin" }
       {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
@@ -95,7 +89,7 @@ spec:
         - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
         {{- end }}
       {{- end }}
-        args:
+        args: 
           - "nuoadmin"
           - "--"
           - "pendingReconnectTimeout=60000"
@@ -116,7 +110,7 @@ spec:
           successThreshold: 2
           timeoutSeconds: 1
         volumeMounts:
-        - name: log
+        - name: log-volume
           mountPath: /var/log/nuodb
         {{- with .Values.admin.configFiles }}
         {{- range $key, $val := . }}
@@ -127,6 +121,9 @@ spec:
         {{- end }}
         - name: raftlog
           mountPath: /var/opt/nuodb
+        - name: nuoadmin
+          mountPath: /usr/local/bin/nuoadmin
+          subPath: nuoadmin
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert
           mountPath: /etc/nuodb/keys/ca.cert
@@ -174,7 +171,7 @@ spec:
           defaultMode: 0440
       {{- end }}
       {{- if not .Values.admin.logPersistence.enabled }}
-      - name: log
+      - name: log-volume
         emptyDir: {}
       {{- end }}
       {{- if .Values.admin.configFiles }}
@@ -182,6 +179,10 @@ spec:
         configMap:
           name: {{ template "admin.fullname" . }}-configuration
       {{- end }}
+      - name: nuoadmin
+        configMap:
+          name: {{ template "admin.fullname" . }}-nuoadmin
+          defaultMode: 0777
   volumeClaimTemplates:
   - metadata:
       name: raftlog
@@ -208,7 +209,7 @@ spec:
           storage: {{ .Values.admin.persistence.size }}
 {{- if .Values.admin.logPersistence.enabled }}
   - metadata:
-      name: log
+      name: log-volume
       labels:
         app: {{ template "admin.fullname" . }}
         group: nuodb
