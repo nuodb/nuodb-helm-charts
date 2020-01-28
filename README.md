@@ -73,11 +73,8 @@ Incubator Charts are those that do not meet these criteria. Having the incubator
 
 In order to get a Chart from incubator to stable, Chart maintainers should open a pull request that moves the chart folder.
 
-
 To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.
 
-
-These chart repository supports 
 ## Status of the Project
 
 This project is still under active development, so you might run into [issues](https://github.com/nuodb/nuodb-helm-charts/issues). If you do, please don't be shy about letting us know, or better yet, contribute a fix or feature.
