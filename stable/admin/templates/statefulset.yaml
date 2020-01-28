@@ -89,7 +89,7 @@ spec:
         - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
         {{- end }}
       {{- end }}
-        args: 
+        args:
           - "nuoadmin"
           - "--"
           - "pendingReconnectTimeout=60000"
