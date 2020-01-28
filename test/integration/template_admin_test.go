@@ -234,3 +234,32 @@ func TestAdminServiceRenders(t *testing.T) {
 	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
 	assert.Check(t, strings.Contains(output, "aws-load-balancer-internal"))
 }
+
+func TestAdminStatefulSetVolumes(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{"admin.logPersistence.enabled": "true"},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if !strings.Contains(part, "kind: StatefulSet") {
+			continue
+		}
+
+		var ss appsv1.StatefulSet
+		helm.UnmarshalK8SYaml(t, part, &ss)
+
+		assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "raftlog"))
+		assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
+	}
+}
