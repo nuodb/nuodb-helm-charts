@@ -238,7 +238,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
-| `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `20Gi` |
+| `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `sm.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.logPersistence.size` | Amount of disk space allocated for log storage | `20Gi` |
 | `sm.logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
