@@ -11,7 +11,7 @@ For more information on using Helm, refer to the [Helm's documentation](https://
 
 | Software   | Release Requirements                           | 
 |------------|------------------------------------------------|
-| Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.15 then 1.15 and 1.14 are supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window.|
+| Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.15 then 1.15 and 1.14 are supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
 | Helm       |  Version 2 is supported, v2.9 or greater   |
 | NuoDB      |  Version [4.0](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
 | NuoDB Helm Charts      |  For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection. |
@@ -72,8 +72,6 @@ Stable Charts meet the criteria in the [technical requirements](CONTRIBUTING.md#
 Incubator Charts are those that do not meet these criteria. Having the incubator folder allows charts to be shared and improved on until they are ready to be moved into the stable folder. The charts in the `incubator/` directory can be found in the [`gs://nuodb-charts-incubator` Google Storage Bucket](https://console.cloud.google.com/storage/browser/nuodb-charts-incubator).
 
 In order to get a Chart from incubator to stable, Chart maintainers should open a pull request that moves the chart folder.
-
-To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.
 
 ## Status of the Project
 
