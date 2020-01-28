@@ -8,7 +8,7 @@ Use this repository to submit official Charts for NuoDB. Charts are curated appl
 ## NuoDB Helm Chart Version support
 
 For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. 
-To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection. |
+To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection.
 
 
 ## Software Release requirements
