@@ -158,6 +158,14 @@ database:
     type: ""
 
   sm:
+    ## Enable persistent log volumes to retain logs when an external logging solution is not used.
+    logPersistence:
+      enabled: true
+      size: 20Gi
+      accessModes:
+        - ReadWriteOnce
+      # storageClass: "-"  
+
     # Settings for storage manager (SM) nodes with hotcopy enabled.
     # Total SM Limit is 1 in CE version of NuoDB
     # These SMs have hotcopy backup enabled. To start SMs without hotcopy use
@@ -251,6 +259,14 @@ database:
     # tolerationsDS: []
 
   te:
+    ## Enable persistent log volumes to retain logs when an external logging solution is not used.
+    logPersistence:
+      enabled: false
+      size: 20Gi
+      accessModes:
+        - ReadWriteOnce
+      # storageClass: "-"  
+
     ## Enable the Layer 4 Load balancer if required,
     ## and specify if it should provision an internal or external cloud IP address
     externalAccess: {}

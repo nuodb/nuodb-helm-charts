@@ -19,8 +19,6 @@ cloud:
   # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique clusterName.
   # The default is fine for single-cluster domains.
   clusterName: cluster0
-  clusterDomain: cluster.local
-  entrypointClusterDomain: cluster.local
 
 busybox:
   image:
@@ -84,7 +82,7 @@ admin:
 
   ## Enable persistent log volumes to retain logs when an external logging solution is not used.
   logPersistence:
-    enabled: false
+    enabled: true
     size: 20Gi
     accessModes:
       - ReadWriteOnce
