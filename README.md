@@ -3,14 +3,11 @@
 [![Build Status](https://travis-ci.org/nuodb/nuodb-helm-charts.svg?branch=master)](https://travis-ci.org/nuodb/nuodb-helm-charts)
 
 Use this repository to submit official Charts for NuoDB. Charts are curated application definitions for Helm. For more information about installing and using Helm, see its
-[README.md](https://github.com/helm/helm/tree/master/README.md). To get a quick introduction to Charts see this [chart document](https://github.com/helm/helm/blob/master/docs/charts.md).
-
-For more information on using Helm, refer to the [Helm's documentation](https://github.com/kubernetes/helm#docs).
+[README.md](https://github.com/helm/helm/tree/master/README.md). To get a quick introduction to Charts see this [chart document](https://github.com/helm/helm/blob/master/docs/charts.md). For more information on using Helm, refer to the [Helm's documentation](https://github.com/kubernetes/helm#docs).
 
 ## NuoDB Helm Chart Version support
 
 For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. 
-
 To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection. |
 
 
