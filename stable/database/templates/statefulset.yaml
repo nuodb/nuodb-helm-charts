@@ -130,6 +130,8 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: COMPONENT_NAME,      value: "sm" }
+        - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
+        - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -421,6 +423,8 @@ spec:
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUODB_BACKUP_GROUP,  value: "{{ include "hotcopy.group" . }}" }
         - { name: COMPONENT_NAME,      value: "sm" }
+        - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
+        - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
