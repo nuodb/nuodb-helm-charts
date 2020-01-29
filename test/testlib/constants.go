@@ -37,6 +37,4 @@ const IMPORT_ARCHIVE_URL = "http://download.nuohub.org/ce_releases/restore.bak.t
 const MINIMAL_VIABLE_ENGINE_CPU = "500m"
 const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
 
-const NOT_RUNNING_ADMIN_DB_STATE = "NOT_RUNNING"
-
 const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
