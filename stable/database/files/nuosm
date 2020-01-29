@@ -21,11 +21,14 @@ DB_DIR=${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}/${DB_NAME}
 NUODB_BINDIR=$NUODB_HOME/bin
 [ -z "$NUOCMD" ] && NUOCMD="$NUODB_BINDIR/nuocmd --api-server $NUOCMD_API_SERVER"
 
-# attempt to retain the previous crash directory
+# attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
 if [ -f $NUODB_CRASHDIR/* ]; then
-  crashbackupdir="$NUODB_LOGDIR/crash-$( date +%Y%m%dT%H%M%S )/"
-  mkdir $crashbackupdir
-  mv $NUODB_CRASHDIR/* $crashbackupdir
+  crashcount=$(find $NUODB_LOGDIR/crash-* -type d -cmin -10 ! -path . | wc -l)
+  if [ $crashcount -lt 2 ]; then
+    crashbackupdir="$NUODB_LOGDIR/crash-$( date +%Y%m%dT%H%M%S )/"
+    mkdir $crashbackupdir
+    mv $NUODB_CRASHDIR/* $crashbackupdir
+  fi
 fi
 
 export NUOCMD DB_NAME

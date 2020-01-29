@@ -239,6 +239,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
+| `sm.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
+| `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
 | `sm.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.logPersistence.size` | Amount of disk space allocated for log storage | `20Gi` |
 | `sm.logPersistence.storageClass` | Storage class for volume backing log storage | `-` |

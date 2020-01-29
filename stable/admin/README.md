@@ -186,6 +186,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `persistence.size` | Amount of disk space allocated for admin RAFT state | `10Gi` |
 | `persistence.storageClass` | Storage class for volume backing admin RAFT state | `-` |
 | `logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
+| `logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
+| `logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
 | `logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `logPersistence.size` | Amount of disk space allocated for log storage | `20Gi` |
 | `logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
