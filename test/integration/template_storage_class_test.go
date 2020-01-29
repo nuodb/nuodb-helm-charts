@@ -136,8 +136,26 @@ func TestStorageClassTemplateLocal(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/storageclass.yaml"})
 
-	var sc1 storagev1.StorageClass
-	helm.UnmarshalK8SYaml(t, output, &sc1)
+	partCounter := 0
+	storageClasses := make([]storagev1.StorageClass, 0)
 
-	assert.Check(t, sc1.Provisioner == expectedProvisioner)
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+
+		if len(part) == 0 {
+			continue
+		}
+
+		partCounter += 1
+
+		var sc1 storagev1.StorageClass
+		helm.UnmarshalK8SYaml(t, part, &sc1)
+		storageClasses = append(storageClasses, sc1)
+		
+		if strings.Contains(part, "local-storage") {
+			assert.Check(t, sc1.Provisioner == expectedProvisioner)
+		}
+	}
+
+	assert.Equal(t, partCounter, 2)
 }
