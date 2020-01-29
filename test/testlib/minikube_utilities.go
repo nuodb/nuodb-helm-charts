@@ -325,6 +325,8 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 		_ = os.MkdirAll(targetDirPath, 0700)
 
 		// Get cores
+		// Once DB-29847 is implemented, we can set a --timeout or --wait-forever flags
+		// So that core dump streams doesn't timeout in minikube environments
 		t.Log(t, "Generating diagnose archive...")
 		k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "get", "diagnose-info",
 			"--include-cores", "--output-dir", "/tmp")
