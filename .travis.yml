@@ -25,6 +25,7 @@ env:
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
     - NUODB_PRINT_TO_STDOUT=true
+    - NUODB_GET_DIAGNOSE=true
     - NUODB_VERSION=4.0.3
 
 cache:

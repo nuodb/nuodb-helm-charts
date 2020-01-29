@@ -84,7 +84,7 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	// this is relevant for any tests that restart TEs/SMs
 
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
-	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "")})
+	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "") })
 	AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 180*time.Second)
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
