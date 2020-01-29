@@ -28,7 +28,7 @@ data:
   {{ $key }}: |-
 {{ $val | indent 4}}
 {{- end }}
-{{- end -}}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
