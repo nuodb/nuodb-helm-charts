@@ -342,44 +342,25 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 	}
 }
 
-func AwaitDatabaseDown(t *testing.T, namespace string, podName string, databaseName string) {
+func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) *DBVersion {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
-	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
-		"--db-name", databaseName, "--num-processes", "0",
-		"--timeout", "300")
-}
-
-func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) [2]int {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespace
-
-	incarnation, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "database",
-		"--db-name", databaseName, "--db-format", "incarnation:{incarnation}")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "--show-json", "get", "databases")
 	assert.NilError(t, err)
 
-	return ParseDatabaseIncarnation(t, incarnation)
-}
+	err, databases := UnmarshalDatabase(output)
+	assert.NilError(t, err)
 
-func ParseDatabaseIncarnation(t *testing.T, incarnation string) [2]int {
-	result := [2]int{-1, -1}
-
-	var err error = nil
-
-	if inc_array := INCARNATION_PATTERN.FindStringSubmatch(incarnation); inc_array != nil {
-
-		t.Log("parsed incarnation string=", inc_array)
-
-		result[0], err = strconv.Atoi(inc_array[1])
-		result[1], err = strconv.Atoi(inc_array[2])
-
-		assert.NilError(t, err)
+	for _, db := range databases {
+		if db.Name == databaseName {
+			return &db.Incarnation
+		}
 	}
 
-	t.Log(t, "parsed incarnation=", result)
-
-	return result
+	t.Logf("GetDatabaseIncarnation did not find DB name: %s", databaseName)
+	t.FailNow()
+	return nil
 }
 
 func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databaseName string, databaseOptions *helm.Options, restart func()) {
@@ -388,7 +369,7 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 	restart()
 
 	Await(t, func() bool {
-		return GetDatabaseIncarnation(t, namespace, podName, databaseName)[0] > incarnation[0]
+		return GetDatabaseIncarnation(t, namespace, podName, databaseName).Major > incarnation.Major
 	}, 300*time.Second)
 
 	opts := GetExtractedOptions(databaseOptions)
@@ -512,7 +493,7 @@ func shouldGetDiagnose() bool {
 
 func GetK8sEventLog(t *testing.T, namespace string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, K8s_EVENT_LOG_FILE)
+	filePath := filepath.Join(dirPath, K8S_EVENT_LOG_FILE)
 
 	_ = os.MkdirAll(dirPath, 0700)
 
@@ -549,7 +530,7 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 
 func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, podName+fileNameSuffix)
+	filePath := filepath.Join(dirPath, podName+fileNameSuffix+".log")
 
 	_ = os.MkdirAll(dirPath, 0700)
 
@@ -583,6 +564,33 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 	assert.NilError(t, err)
 
 	return reader
+}
+
+func GetAdminEventLog(t *testing.T, namespace string, podName string) {
+	dirPath := filepath.Join(RESULT_DIR, namespace)
+	filePath := filepath.Join(dirPath, "nuoadmin_event.log")
+
+	_ = os.MkdirAll(dirPath, 0700)
+
+	f, err := os.Create(filePath)
+	assert.NilError(t, err)
+	defer f.Close()
+
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	k8s.RunKubectl(t, options,
+		"cp",
+		fmt.Sprintf("%s/%s:%s", namespace, podName, "/var/log/nuodb/nuoadmin_event.log"),
+		filePath,
+	)
+
+	if t.Failed() && shouldPrintToStdout() {
+		k8s.RunKubectl(t, options,
+			"exec", podName, "--",
+			"cat", "/var/log/nuodb/nuoadmin_event.log",
+		)
+	}
 }
 
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {
@@ -670,13 +678,6 @@ func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, co
 
 func UnmarshalJSONObject(t *testing.T, stringJSON string) map[string]interface{} {
 	var results map[string]interface{}
-	err := json.Unmarshal([]byte(stringJSON), &results)
-	assert.NilError(t, err)
-	return results
-}
-
-func UnmarshalJSONArray(t *testing.T, stringJSON string) []interface{} {
-	var results []interface{}
 	err := json.Unmarshal([]byte(stringJSON), &results)
 	assert.NilError(t, err)
 	return results

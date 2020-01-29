@@ -1,17 +1,11 @@
 package testlib
 
-import (
-	"regexp"
-)
-
 const CA_CERT_FILE = "ca.cert"
 const CA_CERT_FILE_NEW = "ca_new.cert"
 const CA_CERT_SECRET = "nuodb-ca-cert"
-const CA_CERT_SECRET_NEW = "nuodb-ca-cert-new"
 
 const KEYSTORE_FILE = "nuoadmin.p12"
 const KEYSTORE_SECRET = "nuodb-keystore"
-const KEYSTORE_SECRET_NEW = "nuodb-keystore-new"
 
 const TRUSTSTORE_FILE = "nuoadmin-truststore.p12"
 const TRUSTSTORE_SECRET = "nuodb-truststore"
@@ -38,18 +32,9 @@ const THP_HELM_CHART_PATH = "../../stable/transparent-hugepage"
 
 const RESULT_DIR = "../../results"
 
-const LAST_BACKUP_PREFIX string = "nuodb-backup/last_created"
 const IMPORT_ARCHIVE_URL = "http://download.nuohub.org/ce_releases/restore.bak.tz"
 
 const MINIMAL_VIABLE_ENGINE_CPU = "500m"
 const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
 
-const INCARNATION_REGEX = "incarnation: *[(]([0-9]+) *, *([0-9]+)[)]"
-
-var INCARNATION_PATTERN *regexp.Regexp
-
-func init() {
-	INCARNATION_PATTERN = regexp.MustCompile(INCARNATION_REGEX)
-}
-
-const K8s_EVENT_LOG_FILE = "kubernetes_event.log"
+const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
