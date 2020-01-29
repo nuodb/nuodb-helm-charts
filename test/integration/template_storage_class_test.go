@@ -52,31 +52,36 @@ func StorageClassTemplateE(t *testing.T, options *helm.Options, expectedProvisio
 		var sc1 storagev1.StorageClass
 		helm.UnmarshalK8SYaml(t, part, &sc1)
 		storageClasses = append(storageClasses, sc1)
+		
+		if !strings.Contains(part, "local-storage") {
+			assert.Check(t, sc1.Provisioner == expectedProvisioner)
+			b, err := strconv.ParseBool(options.SetValues["storageClass.allowVolumeExpansion"])
+			assert.NilError(t, err)
+			assert.Check(t, *sc1.AllowVolumeExpansion == b)
 
-		assert.Check(t, sc1.Provisioner == expectedProvisioner)
-		b, err := strconv.ParseBool(options.SetValues["storageClass.allowVolumeExpansion"])
-		assert.NilError(t, err)
-		assert.Check(t, *sc1.AllowVolumeExpansion == b)
-
-		// Validate encrypted and iopsPerGB. Amazon-only!
-		re := regexp.MustCompile("(\\w+)-storage")
-		values := re.FindStringSubmatch(sc1.ObjectMeta.Name)
-		assert.Check(t, len(values) == 2)
-		class := values[1]
-		classes := []string{"fast", "manual"}
-		if Contains(classes, class) {
-			encKey := fmt.Sprintf("storageClass.%s.encrypted", class)
-			if enc, ok := options.SetValues[encKey]; ok {
-				assert.Check(t, sc1.Parameters["encrypted"] == enc)
+			// Validate encrypted and iopsPerGB. Amazon-only!
+			re := regexp.MustCompile("(\\w+)-storage")
+			values := re.FindStringSubmatch(sc1.ObjectMeta.Name)
+			assert.Check(t, len(values) == 2)
+			class := values[1]
+			classes := []string{"fast", "manual"}
+			if Contains(classes, class) {
+				encKey := fmt.Sprintf("storageClass.%s.encrypted", class)
+				if enc, ok := options.SetValues[encKey]; ok {
+					assert.Check(t, sc1.Parameters["encrypted"] == enc)
+				}
+				iopsKey := fmt.Sprintf("storageClass.%s.iopsPerGB", class)
+				if iops, ok := options.SetValues[iopsKey]; ok {
+					assert.Check(t, sc1.Parameters["iopsPerGB"] == iops)
+				}
 			}
-			iopsKey := fmt.Sprintf("storageClass.%s.iopsPerGB", class)
-			if iops, ok := options.SetValues[iopsKey]; ok {
-				assert.Check(t, sc1.Parameters["iopsPerGB"] == iops)
-			}
+		} else {
+			// Validate local-storage is always created
+			assert.Check(t, sc1.Provisioner == "kubernetes.io/no-provisioner")
 		}
 	}
 
-	assert.Equal(t, partCounter, 3)
+	assert.Equal(t, partCounter, 4)
 }
 
 func TestStorageClassTemplateAzure(t *testing.T) {
