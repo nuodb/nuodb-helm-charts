@@ -146,3 +146,7 @@ admin:
   # tlsClientPEM:
   #   secret: nuodb-client-pem
   #   key: nuocmd.pem
+
+  serviceSuffix:
+    clusterip: clusterip
+    balancer: balancer
