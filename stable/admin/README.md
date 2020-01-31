@@ -189,7 +189,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
 | `logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
-| `logPersistence.size` | Amount of disk space allocated for log storage | `20Gi` |
+| `logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
 | `logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
 | `envFrom` | Import ENV vars from one or more configMaps | `[]` |
 | `options` | Set optons to be passed to nuoadmin as arguments | `{}` |

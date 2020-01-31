@@ -164,10 +164,10 @@ database:
       overwriteBackoff:
         # Copies of the crash directory are taken to avoid overwrites of root crash.
         # This controls the window within which no more copies of the crash directory will be taken to avoid the disk filling.
-        # Default will retain 3 copies within the last 120 minutes, after which they will resume.
+        # Default will retain 3 copies within the last 120 minutes, after which copies will continue to be created.
         copies: 3
         windowMinutes: 120
-      size: 20Gi
+      size: 60Gi
       accessModes:
         - ReadWriteOnce
       # storageClass: "-"
