@@ -8,10 +8,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+)
+
+const (
+	adminDomainName = "nuodb"
 )
 
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
@@ -25,9 +29,9 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-	headlessServiceName := fmt.Sprintf("nuodb")
-	clusterServiceName := fmt.Sprintf("nuodb-clusterip")
+	admin0 := fmt.Sprintf("%s-%s-cluster0-0", helmChartReleaseName, adminDomainName)
+	headlessServiceName := adminDomainName
+	clusterServiceName := fmt.Sprintf("%s-clusterip", adminDomainName)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 	t.Run("verifyOrderedLicensing", func(t *testing.T) {
@@ -39,7 +43,7 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	})
 	t.Run("verifyAdminHeadlessService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, headlessServiceName, true) })
 	t.Run("verifyAdminClusterService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, clusterServiceName, false) })
-	t.Run("verifyLBPolicy", func(t *testing.T) { verifyLBPolicy(t, namespaceName, admin0) })
+	t.Run("verifyLBPolicy", func(t *testing.T) { verifyLBPolicy(t, namespaceName, admin0, adminDomainName) })
 	t.Run("verifyPodKill", func(t *testing.T) { verifyPodKill(t, namespaceName, admin0, helmChartReleaseName, 1) })
 	t.Run("verifyProcessKill", func(t *testing.T) { verifyKillProcess(t, namespaceName, admin0, helmChartReleaseName, 1) })
 }
@@ -60,7 +64,7 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-%s-cluster0-0", helmChartReleaseName, adminDomainName)
 
 	t.Run("verifyOrderedLicensing", func(t *testing.T) {
 		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)

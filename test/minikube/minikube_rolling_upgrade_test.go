@@ -40,14 +40,15 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-%s-cluster0-0", helmChartReleaseName, adminDomainName)
 
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
+	jobLBPolicy := fmt.Sprintf("%s-job-lb-policy-nearest", adminDomainName)
+	testlib.AwaitBalancerTerminated(t, namespaceName, jobLBPolicy)
 
 	// all jobs need to be deleted before an upgrade can be performed
 	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
 	// if we find it, this line can be removed and the test should still pass
-	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
+	testlib.DeletePod(t, namespaceName, "jobs/"+jobLBPolicy)
 
 	options.SetValues["nuodb.image.tag"] = NEW_RELEASE
 
@@ -72,7 +73,9 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	adminHelmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-%s-cluster0-0", adminHelmChartReleaseName, adminDomainName)
+
+	jobLBPolicy := fmt.Sprintf("%s-job-lb-policy-nearest", adminDomainName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
@@ -88,12 +91,12 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
+	testlib.AwaitBalancerTerminated(t, namespaceName, jobLBPolicy)
 
 	// all jobs need to be deleted before an upgrade can be performed
 	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
 	// if we find it, this line can be removed and the test should still pass
-	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
+	testlib.DeletePod(t, namespaceName, "jobs/"+jobLBPolicy)
 	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
 
 	options.SetValues["nuodb.image.tag"] = NEW_RELEASE
@@ -150,16 +153,17 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
 
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", helmChartReleaseName)
-	admin2 := fmt.Sprintf("%s-nuodb-cluster0-2", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-%s-cluster0-0", helmChartReleaseName, adminDomainName)
+	admin1 := fmt.Sprintf("%s-%s-cluster0-1", helmChartReleaseName, adminDomainName)
+	admin2 := fmt.Sprintf("%s-%s-cluster0-2", helmChartReleaseName, adminDomainName)
 
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
+	jobLBPolicy := fmt.Sprintf("%s-job-lb-policy-nearest", adminDomainName)
+	testlib.AwaitBalancerTerminated(t, namespaceName, jobLBPolicy)
 
 	// all jobs need to be deleted before an upgrade can be performed
 	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
 	// if we find it, this line can be removed and the test should still pass
-	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
+	testlib.DeletePod(t, namespaceName, "jobs/"+jobLBPolicy)
 
 	options.SetValues["nuodb.image.tag"] = NEW_RELEASE
 

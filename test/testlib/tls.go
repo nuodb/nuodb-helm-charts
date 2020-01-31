@@ -6,10 +6,10 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
-	"strconv"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -155,7 +155,8 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options,
 
 	if helmUpgrade == true {
 		// Upgrade admin release
-		DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
+		jobLBPolicy := fmt.Sprintf("jobs/%s-job-lb-policy-nearest", adminReleaseName)
+		DeletePod(t, namespaceName, jobLBPolicy)
 		helm.Upgrade(t, options, ADMIN_HELM_CHART_PATH, adminReleaseName)
 
 		adminStatefulSet := fmt.Sprintf("%s-nuodb", adminReleaseName)
@@ -166,7 +167,7 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options,
 		helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, databaseReleaseName)
 	} else {
 		// Rolling upgrade could take a lot of time due to readiness probes.
-		// Faster approach will be to restart all PODs. A prerequsite for this 
+		// Faster approach will be to restart all PODs. A prerequsite for this
 		// is to have the same secrets update before hand.
 		k8s.RunKubectl(t, kubectlOptions, "delete", "pod", "--selector=domain=nuodb")
 		AwaitPodPhase(t, namespaceName, admin0, corev1.PodRunning, 60*time.Second)

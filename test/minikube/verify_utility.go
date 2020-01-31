@@ -1,10 +1,11 @@
 package minikube
 
 import (
+        "fmt"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"gotest.tools/assert"
 	"testing"
 	"time"
-	"gotest.tools/assert"
 )
 
 func verifyAdminService(t *testing.T, namespaceName string, podName string, serviceName string, ping bool) {
@@ -17,8 +18,9 @@ func verifyAdminService(t *testing.T, namespaceName string, podName string, serv
 	}
 }
 
-func verifyLBPolicy(t *testing.T, namespaceName string, podName string) {
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
+func verifyLBPolicy(t *testing.T, namespaceName string, podName string, domainName string) {
+	jobLBPolicy := fmt.Sprintf("%s-job-lb-policy-nearest", domainName)
+	testlib.AwaitBalancerTerminated(t, namespaceName, jobLBPolicy)
 	testlib.VerifyPolicyInstalled(t, namespaceName, podName)
 }
 

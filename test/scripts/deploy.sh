@@ -112,7 +112,7 @@ check-pod "admin-${DOMAIN_NAME}-0" "1/1"
 
 # check and delete the lb policy jobs
 
-check-job "job-lb-policy-nearest" "0/1"
+check-job "${DOMAIN_NAME}-job-lb-policy-nearest" "0/1"
 kubectl delete jobs --all
 
 kubectl scale sts admin-${DOMAIN_NAME} --replicas=3

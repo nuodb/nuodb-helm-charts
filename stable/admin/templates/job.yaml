@@ -2,7 +2,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   labels:
-    app: job-lb-policy-{{ template "admin.fullname" . }}
+    app: {{ .Values.admin.domain }}-job-lb-policy-{{ template "admin.fullname" . }}
     group: nuodb
     domain: {{ .Values.admin.domain }}
     chart: {{ template "admin.chart" . }}
@@ -14,12 +14,12 @@ spec:
   template:
     metadata:
       labels:
-        app: job-lb-policy-{{ template "admin.fullname" . }}
+        app: {{ .Values.admin.domain }}-job-lb-policy-{{ template "admin.fullname" . }}
         group: nuodb
         domain: {{ .Values.admin.domain }}
         chart: {{ template "admin.chart" . }}
         release: {{ .Release.Name | quote }}
-      name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
+      name: {{ .Values.admin.domain }}-job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
     spec:
       initContainers:
       - name: wait
