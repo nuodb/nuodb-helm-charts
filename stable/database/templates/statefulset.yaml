@@ -130,6 +130,8 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: COMPONENT_NAME,      value: "sm" }
+        - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
+        - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -195,8 +197,10 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-configuration
       {{- end }}
+      {{- if not .Values.database.sm.logPersistence.enabled }}
       - name: log-volume
         emptyDir: {}
+      {{- end }}
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm
@@ -257,7 +261,34 @@ spec:
       resources:
         requests:
           storage: {{ .Values.database.persistence.size }}
+  {{- if .Values.database.sm.logPersistence.enabled }}
+  - metadata:
+      name: log-volume
+      labels:
+        app: {{ template "database.fullname" . }}
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      accessModes:
+      {{- range .Values.database.sm.logPersistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+    {{- if .Values.database.sm.logPersistence.storageClass }}
+      {{- if (eq "-" .Values.database.sm.logPersistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.database.sm.logPersistence.storageClass }}
+      {{- end }}
+    {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.sm.logPersistence.size }}
+  {{- end }}
 {{- end }}
+
 {{- if .Values.database.sm.hotCopy.enablePod }}
 ---
 apiVersion: apps/v1
@@ -392,6 +423,8 @@ spec:
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUODB_BACKUP_GROUP,  value: "{{ include "hotcopy.group" . }}" }
         - { name: COMPONENT_NAME,      value: "sm" }
+        - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
+        - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -459,8 +492,10 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-configuration
       {{- end }}
+      {{- if not .Values.database.sm.logPersistence.enabled }}
       - name: log-volume
         emptyDir: {}
+      {{- end }}
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm
@@ -545,5 +580,31 @@ spec:
       resources:
         requests:
           storage: {{ .Values.database.sm.hotCopy.persistence.size }}
+  {{- if .Values.database.sm.logPersistence.enabled }}
+  - metadata:
+      name: log-volume
+      labels:
+        app: {{ template "database.fullname" . }}
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      accessModes:
+      {{- range .Values.database.sm.logPersistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+    {{- if .Values.database.sm.logPersistence.storageClass }}
+      {{- if (eq "-" .Values.database.sm.logPersistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.database.sm.logPersistence.storageClass }}
+      {{- end }}
+    {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.sm.logPersistence.size }}
+  {{- end }}
 {{- end }}
 {{- end }}

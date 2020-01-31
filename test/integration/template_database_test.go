@@ -304,6 +304,45 @@ func TestDatabaseStatefulSet(t *testing.T) {
 	assert.Check(t, cnt == 2)
 }
 
+func TestDatabaseStatefulSetVolumes(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{"database.sm.logPersistence.enabled": "true"},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+	var cnt int
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if strings.Contains(part, "kind: StatefulSet") {
+			cnt++
+
+			var ss appsv1.StatefulSet
+			helm.UnmarshalK8SYaml(t, part, &ss)
+			
+			if strings.Contains(part, "-hotcopy") {
+				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
+				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "backup-volume"))
+				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[2].ObjectMeta.Name, "log-volume"))
+			} else {
+				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
+				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))	
+			}
+		}
+	}
+
+	assert.Check(t, cnt == 2)
+}
+
 func TestDatabaseDeploymentDisabled(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"

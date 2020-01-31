@@ -1,0 +1,40 @@
+#!/bin/sh
+
+. ${NUODB_HOME}/etc/nuodb_setup.sh
+
+if [ -e ${NUODB_CFGDIR}/jvm-options -a "$NUODB_JAVA_OPTS" = "" ] ; then
+    . ${NUODB_CFGDIR}/jvm-options
+fi
+
+: ${NUODB_SERVERID:=$(hostname)}
+: ${NUODB_ALT_ADDRESS:=$(hostname --fqdn)}
+: ${NUODB_ADMIN_PORT:="48005"}
+
+if [ "${NUODB_ALTERNATIVE_ENTRYPOINT}" != "" ] ; then
+    if nuodocker --api-server "${NUODB_ALTERNATIVE_ENTRYPOINT}:8888" check servers ; then
+        # Admin server exists at alternative entrypoint. Use it instead
+        NUODB_DOMAIN_ENTRYPOINT="${NUODB_ALTERNATIVE_ENTRYPOINT}"
+    fi
+fi
+
+# if endpoint is not specified, default to bootstrap server
+if [ "${NUODB_DOMAIN_ENTRYPOINT}" = "" ] ; then
+    NUODB_DOMAIN_ENTRYPOINT="${NUODB_BOOTSTRAP_SERVERID}"
+fi
+
+export NUODB_LOGDIR NUODB_CFGDIR NUODB_VARDIR NUODB_BINDIR NUODB_RUNDIR
+
+# attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
+if [ -f $NUODB_CRASHDIR/* ]; then
+  crashcount=$(find $NUODB_LOGDIR/crash-* -type d -cmin -$OVERWRITE_WINDOW ! -path . | wc -l)
+  if [ $crashcount -lt $OVERWRITE_COPIES ]; then
+    crashbackupdir="$NUODB_LOGDIR/crash-$( date +%Y%m%dT%H%M%S )/"
+    mkdir $crashbackupdir
+    mv $NUODB_CRASHDIR/* $crashbackupdir
+  fi
+fi
+
+exec nuodocker start admin \
+     --server-id "$NUODB_SERVERID" --alt-address "$NUODB_ALT_ADDRESS" --admin-port "$NUODB_ADMIN_PORT" \
+     --domain-entrypoint "$NUODB_DOMAIN_ENTRYPOINT" --bootstrap-server-id "$NUODB_BOOTSTRAP_SERVERID" \
+     --java-opts "$NUODB_JAVA_OPTS" --args "$*"

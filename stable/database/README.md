@@ -238,6 +238,12 @@ The following tables list the configurable parameters of the `database` chart an
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
+| `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
+| `sm.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
+| `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
+| `sm.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
+| `sm.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
+| `sm.logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
 | `sm.hotcopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
@@ -315,8 +321,7 @@ Verify the Helm chart:
 
 ```bash
 helm install nuodb/database -n database \
-    --set sm.persistence.enabled=true \
-    --set sm.persistence.storageClass=nuodb-archive \
+    --set sm.persistence.storageClass=standard-storage \
     --debug --dry-run
 ```
 
@@ -324,8 +329,7 @@ Deploy a database without backups:
 
 ```bash
 helm install nuodb/database -n database \
-    --set sm.persistence.enabled=true \
-    --set sm.persistence.storageClass=nuodb-archive
+    --set sm.persistence.storageClass=standard-storage
 ```
 
 The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
