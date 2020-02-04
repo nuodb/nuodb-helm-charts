@@ -10,6 +10,7 @@ set -o pipefail
 : ${PLATFORM:="google"}
 : ${TILLER_NAMESPACE:="nuodb"}
 : ${DOMAIN_NAME:="cashews"}
+: ${CLUSTER_NAME:="cluster0"}
 : ${VALUE_CLASS:="tiny"}
 
 # optionally set to 'nuodb' or nuodb-incubator'
@@ -59,15 +60,15 @@ restart () {
 status () {
   local term="${1?Specify term}"
   local expected="${2?Specify expected}"
-  result=( $(kubectl get pods --all-namespaces | grep ${term} | awk '{ print $4 }') )
-  [ $result == ${expected} ];
+  local result=( $(kubectl get pods --all-namespaces | grep ${term} | awk '{ print $4 }') )
+  [ "${result}" == "${expected}" ];
 }
 
 ready () {
   local term="${1?Specify term}"
   local count="${2?Specify count}"
-  result=( $(kubectl get pods --all-namespaces | grep ${term} | awk '{ print $3 }') )
-  [ $result == $count ];
+  local result=( $(kubectl get pods --all-namespaces | grep ${term} | awk '{ print $3 }') )
+  [ "${result}" == "${count}" ];
 }
 
 check () {
@@ -108,19 +109,19 @@ helm install ${REPO_NAME}/admin --name admin \
 
 sleep 180
 
-check-pod "admin-${DOMAIN_NAME}-0" "1/1"
+check-pod "admin-${DOMAIN_NAME}-${CLUSTER_NAME}-0" "1/1"
 
 # check and delete the lb policy jobs
 
 check-job "${DOMAIN_NAME}-job-lb-policy-nearest" "0/1"
 kubectl delete jobs --all
 
-kubectl scale sts admin-${DOMAIN_NAME} --replicas=3
+kubectl scale sts admin-${DOMAIN_NAME}-${CLUSTER_NAME} --replicas=3
 
 sleep 180
 
-check-pod "admin-${DOMAIN_NAME}-1" "1/1"
-check-pod "admin-${DOMAIN_NAME}-2" "1/1"
+check-pod "admin-${DOMAIN_NAME}-${CLUSTER_NAME}-1" "1/1"
+check-pod "admin-${DOMAIN_NAME}-${CLUSTER_NAME}-2" "1/1"
 
 helm install ${REPO_NAME}/database --name database \
   ${values_option} \
