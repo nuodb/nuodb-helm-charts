@@ -204,6 +204,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tlsTrustStore.password` | TLS truststore secret password | `nil` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
+| `serviceSuffix.balancer` | The suffix to use for the LoadBalancer service name | `balancer` |
+| `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 
