@@ -2,6 +2,7 @@ package testlib
 
 import (
 	"fmt"
+    "io/ioutil"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -20,6 +21,18 @@ func getFunctionCallerName() string {
 	name := strings.TrimPrefix(nameEnd, ".") // foo
 
 	return name
+}
+
+func InjectTestVersion(t *testing.T, options *helm.Options) {
+       dat, err := ioutil.ReadFile(INJECT_FILE)
+       if err != nil {
+               return
+       }
+
+       t.Log("Using injected values:\n", string(dat))
+
+       options.ValuesFiles = []string{INJECT_FILE}
+
 }
 
 func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (helmChartReleaseName string, namespaceName string) {
@@ -52,6 +65,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 
 	options.KubectlOptions.Namespace = namespaceName
 
+    InjectTestVersion(t, options)
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
 	AddTeardown("admin", func() {

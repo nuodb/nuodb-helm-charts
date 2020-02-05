@@ -33,7 +33,11 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
 	options := helm.Options{
-		SetValues: map[string]string{"nuodb.image.tag": OLD_RELEASE},
+		SetValues: map[string]string{
+			"nuodb.image.registry": "docker.io",
+			"nuodb.image.repository": "nuodb/nuodb-ce",
+			"nuodb.image.tag": OLD_RELEASE,
+			},
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -49,7 +53,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-	options.SetValues["nuodb.image.tag"] = NEW_RELEASE
+    options = helm.Options{}
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 

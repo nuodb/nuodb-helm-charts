@@ -125,3 +125,11 @@ func TestGetExtractedOptions(t *testing.T) {
 	})
 
 }
+
+func TestInjection(t *testing.T) {
+       options := helm.Options{
+               SetValues: map[string]string{},
+       }
+
+       testlib.InjectTestVersion(t, &options)
+}
