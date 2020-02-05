@@ -53,7 +53,10 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-    options = helm.Options{}
+	// reset options back to defaults
+	options = helm.Options{
+		SetValues: map[string]string{},
+	}
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
@@ -68,6 +71,8 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	options := helm.Options{
 		SetValues: map[string]string{
+			"nuodb.image.registry": "docker.io",
+			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": OLD_RELEASE,
 		},
 	}
@@ -86,6 +91,8 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"nuodb.image.registry": 				"docker.io",
+			"nuodb.image.repository": 				"nuodb/nuodb-ce",
 			"nuodb.image.tag":                       OLD_RELEASE,
 		},
 	}
@@ -100,7 +107,10 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
 
-	options.SetValues["nuodb.image.tag"] = NEW_RELEASE
+	// reset options back to defaults
+	options = helm.Options{
+		SetValues: map[string]string{},
+	}
 
 	// get the log before the restart
 	testlib.GetAppLog(t, namespaceName, admin0, "")
@@ -127,7 +137,15 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	})
 
 	t.Run("upgradeDatabaseHelm", func(t *testing.T) {
-		databaseOptions.SetValues["nuodb.image.tag"] = NEW_RELEASE
+		// reset back to current newest
+		databaseOptions := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		}
 
 		helm.Upgrade(t, &databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
 
@@ -146,6 +164,8 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	options := helm.Options{
 		SetValues: map[string]string{
 			"admin.replicas":  "3",
+			"nuodb.image.registry": "docker.io",
+			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": OLD_RELEASE,
 		},
 	}
@@ -165,7 +185,12 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-	options.SetValues["nuodb.image.tag"] = NEW_RELEASE
+	// reset options back to defaults
+	options = helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas":  "3",
+		},
+	}
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 

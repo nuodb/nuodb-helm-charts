@@ -87,6 +87,17 @@ func RemoveEmptyLines(s string) string {
 	return s
 }
 
+func InjectTestVersion(t *testing.T, options *helm.Options) {
+	dat, err := ioutil.ReadFile(INJECT_FILE)
+	if err != nil {
+		return
+	}
+
+	t.Log("Using injected values:\n", string(dat))
+
+	options.ValuesFiles = []string{INJECT_FILE}
+}
+
 func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
 	status corev1.ConditionStatus) bool {
 	for _, cnd := range pod.Status.Conditions {
