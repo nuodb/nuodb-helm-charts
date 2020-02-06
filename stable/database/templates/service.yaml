@@ -20,7 +20,7 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "database.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ .Values.database.name }}-balancer
+  name: {{ .Values.database.name }}-{{ default .Values.admin.serviceSuffix.balancer .Values.database.serviceSuffix.balancer }}
 spec:
   ports:
   - { name: 48006-tcp,  port: 48006,  protocol: TCP,  targetPort: 48006 }

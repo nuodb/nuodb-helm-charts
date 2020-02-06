@@ -77,6 +77,10 @@ admin:
   #   secret: nuodb-client-pem
   #   key: nuocmd.pem
 
+  serviceSuffix:
+    clusterip: "clusterip"
+    balancer: "balancer"
+
 database:
   ## Provide a name in place of prometheus-operator for `app:` labels
   ##
@@ -156,6 +160,12 @@ database:
     credentials: ""
     stripLevels: "1"
     type: ""
+
+  # The names of the clusterIP and balancer services can be adjusted by customising the suffix
+  # The default is to use the same as specified for the admin clusterIP and balancer load-balancers.
+  serviceSuffix:
+    clusterip: ""
+    balancer: ""
 
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
