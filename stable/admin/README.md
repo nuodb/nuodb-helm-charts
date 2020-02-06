@@ -235,12 +235,12 @@ Any file located in `admin.configFilesPath` can be replaced; the YAML key corres
 
 #### admin.serviceSuffix
 
-The purpose of this section s to allow customisation of the names of the clusterIP and balancer admin services (load-balancers).
+The purpose of this section is to allow customisation of the names of the clusterIP and balancer admin services (load-balancers).
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
-| `nuoadmin.conf` | suffix for the balancer service | "balancer" |
+| `balancer` | suffix for the balancer service | "balancer" |
 
 
 ### Running

@@ -206,12 +206,12 @@ Any file located in `admin.configFilesPath` can be replaced; the YAML key corres
 
 #### admin.serviceSuffix
 
-The purpose of this section s to allow customisation of the names of the clusterIP and balancer admin services (load-balancers).
+The purpose of this section is to allow customisation of the names of the clusterIP and balancer admin services (load-balancers).
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
-| `nuoadmin.conf` | suffix for the balancer service | "balancer" |
+| `balancer` | suffix for the balancer service | "balancer" |
 
 #### backup.*
 
@@ -308,20 +308,18 @@ There are two sets of configuration files documented:
 
 Any file located in `database.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
-The following tables list the configurable parameters for the `database` option of the database chart and their default values.
-
 | Key | Description | Default |
 | ----- | ----------- | ------ |
 | `nuodb.config` | [NuoDB database options][6] | `nil` |
 
 #### database.serviceSuffix
 
-The purpose of this section s to allow customisation of the names of the clusterIP and balancer database services (load-balancers).
+The purpose of this section is to allow customisation of the names of the clusterIP and balancer database services (load-balancers).
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
-| `nuoadmin.conf` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
+| `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
 
 ### Running
 
