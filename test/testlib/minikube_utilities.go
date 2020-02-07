@@ -92,9 +92,43 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 		return
 	}
 
+	// do not inject anything if the test overrides these
+	if options.SetValues["nuodb.image.registry"] != "" ||
+		options.SetValues["nuodb.image.repository"] != "" ||
+		options.SetValues["nuodb.image.tag"] != "" {
+
+		return
+
+	}
+
 	t.Log("Using injected values:\n", string(dat))
 
-	options.ValuesFiles = []string{INJECT_FILE}
+	err, image := UnmarshalImageYAML(string(dat))
+	assert.NilError(t, err)
+
+	options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
+	options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
+	options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+}
+
+func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options, suggestedVersion string) string {
+	dat, err := ioutil.ReadFile(INJECT_FILE)
+	if err != nil {
+		options.SetValues["nuodb.image.tag"] = suggestedVersion
+
+	} else {
+		err, image := UnmarshalImageYAML(string(dat))
+		assert.NilError(t, err)
+
+		options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
+		options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
+		options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+	}
+
+	return fmt.Sprintf("%s/%s:%s", options.SetValues["nuodb.image.registry"],
+		options.SetValues["nuodb.image.repository"],
+		options.SetValues["nuodb.image.tag"])
+
 }
 
 func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,

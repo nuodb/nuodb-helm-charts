@@ -29,6 +29,8 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 	}, 30*time.Second)
 }
 
+
+
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
@@ -53,14 +55,11 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-	// reset options back to defaults
-	options = helm.Options{
-		SetValues: map[string]string{},
-	}
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
-	testlib.AwaitPodHasVersion(t, namespaceName, admin0, fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
+	testlib.AwaitPodHasVersion(t, namespaceName, admin0, fmt.Sprintf(expectedNewVersion), 300*time.Second)
 	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
@@ -107,17 +106,14 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
 
-	// reset options back to defaults
-	options = helm.Options{
-		SetValues: map[string]string{},
-	}
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
 
 	// get the log before the restart
 	testlib.GetAppLog(t, namespaceName, admin0, "")
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
 
-	testlib.AwaitPodHasVersion(t, namespaceName, admin0, fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
+	testlib.AwaitPodHasVersion(t, namespaceName, admin0, expectedNewVersion, 300*time.Second)
 	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
@@ -137,20 +133,12 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	})
 
 	t.Run("upgradeDatabaseHelm", func(t *testing.T) {
-		// reset back to current newest
-		databaseOptions := helm.Options{
-			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			},
-		}
+		expectedNewDatabaseVersion := testlib.GetUpgradedReleaseVersion(t, &databaseOptions, NEW_RELEASE)
 
 		helm.Upgrade(t, &databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
 
-		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "sm-database", fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
-		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "te-database", fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
+		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "sm-database", expectedNewDatabaseVersion, 300*time.Second)
+		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "te-database", expectedNewDatabaseVersion, 300*time.Second)
 
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
@@ -185,23 +173,18 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-	// reset options back to defaults
-	options = helm.Options{
-		SetValues: map[string]string{
-			"admin.replicas":  "3",
-		},
-	}
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
 	// the rolling upgrade is done in reverse order
-	testlib.AwaitPodHasVersion(t, namespaceName, admin2, fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
+	testlib.AwaitPodHasVersion(t, namespaceName, admin2, expectedNewVersion, 300*time.Second)
 	testlib.AwaitAdminPodUp(t, namespaceName, admin2, 300*time.Second)
 
-	testlib.AwaitPodHasVersion(t, namespaceName, admin1, fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
+	testlib.AwaitPodHasVersion(t, namespaceName, admin1, expectedNewVersion, 300*time.Second)
 	testlib.AwaitAdminPodUp(t, namespaceName, admin1, 300*time.Second)
 
-	testlib.AwaitPodHasVersion(t, namespaceName, admin0, fmt.Sprintf("docker.io/nuodb/nuodb-ce:%s", NEW_RELEASE), 300*time.Second)
+	testlib.AwaitPodHasVersion(t, namespaceName, admin0, expectedNewVersion, 300*time.Second)
 	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
