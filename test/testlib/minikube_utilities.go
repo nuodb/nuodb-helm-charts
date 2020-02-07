@@ -93,6 +93,7 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 	}
 
 	// do not inject anything if the test overrides these
+	// access to nil map yields the default
 	if options.SetValues["nuodb.image.registry"] != "" ||
 		options.SetValues["nuodb.image.repository"] != "" ||
 		options.SetValues["nuodb.image.tag"] != "" {
@@ -105,6 +106,10 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 
 	err, image := UnmarshalImageYAML(string(dat))
 	assert.NilError(t, err)
+
+	if options.SetValues == nil {
+		options.SetValues = make(map[string]string)
+	}
 
 	options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
 	options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
@@ -119,6 +124,10 @@ func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options, suggestedVer
 	} else {
 		err, image := UnmarshalImageYAML(string(dat))
 		assert.NilError(t, err)
+
+		if options.SetValues == nil {
+			options.SetValues = make(map[string]string)
+		}
 
 		options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
 		options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
