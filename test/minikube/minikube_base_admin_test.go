@@ -14,10 +14,6 @@ import (
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 )
 
-const (
-	adminDomainName = "nuodb"
-)
-
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 

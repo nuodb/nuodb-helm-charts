@@ -1,11 +1,15 @@
 package minikube
 
 import (
-        "fmt"
+	"fmt"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"gotest.tools/assert"
 	"testing"
 	"time"
+)
+
+const (
+	adminDomainName = "nuodb"
 )
 
 func verifyAdminService(t *testing.T, namespaceName string, podName string, serviceName string, ping bool) {
