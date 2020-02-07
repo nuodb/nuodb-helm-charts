@@ -188,7 +188,7 @@ admin:
 
 #### admin.configFiles.*
 
-The purpose of this section is to detail how to provide alternate configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
+The purpose of this section is to detail how to provide alternative configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
 
 There are two sets of configuration files documented:
 
@@ -197,14 +197,21 @@ There are two sets of configuration files documented:
 
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
-The following tables list the configurable parameters for the `admin` option of the admin chart and their default values.
-
 | Key | Description | Default |
 | ----- | ----------- | ------ |
 | `nuodb.lic` | [NuoDB license file content; defaults to NuoDB CE Edition][3] | `nil` |
 | `nuoadmin.conf` | [NuoDB Admin host properties][4] | `nil` |
 | `nuodb-types.config`| [Type mappings for the NuoDB Migrator tool][5] | `nil` |
 | `nuoadmin.logback.xml` | Logging configuration. NuoDB recommends using the default settings. | `nil` |
+
+#### admin.serviceSuffix
+
+The purpose of this section is to allow customisation of the names of the clusterIP and balancer admin services (load-balancers).
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
+| `balancer` | suffix for the balancer service | "balancer" |
 
 #### backup.*
 
@@ -301,11 +308,18 @@ There are two sets of configuration files documented:
 
 Any file located in `database.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
-The following tables list the configurable parameters for the `database` option of the database chart and their default values.
-
 | Key | Description | Default |
 | ----- | ----------- | ------ |
 | `nuodb.config` | [NuoDB database options][6] | `nil` |
+
+#### database.serviceSuffix
+
+The purpose of this section is to allow customisation of the names of the clusterIP and balancer database services (load-balancers).
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
+| `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
 
 ### Running
 
