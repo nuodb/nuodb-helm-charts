@@ -234,18 +234,6 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 }
 
 func AwaitAdminPodUp(t *testing.T, namespace string, adminPodName string, timeout time.Duration) {
-	defer func() {
-		if (t.Failed()) {
-			options := k8s.NewKubectlOptions("", "")
-			options.Namespace = namespace
-
-			// ignore any errors. This is already failed
-			_ = k8s.RunKubectlE(t, options, "describe", "pod", adminPodName)
-
-		}
-	}()
-
-
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
 }
 
