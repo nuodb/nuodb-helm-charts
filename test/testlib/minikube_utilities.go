@@ -18,7 +18,6 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/stretchr/testify/require"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/apps/v1"
 
@@ -516,12 +515,12 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 	options.Namespace = namespace
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	var opts metav1.ListOptions
 
 	events, err := client.CoreV1().Events(namespace).List(opts)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	// it is hard to recover this in Travis from the filesystem, without access to a AWS
 	// print it to stdout instead
@@ -567,7 +566,7 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 	options.Namespace = namespace
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	podLogOpts := corev1.PodLogOptions{}
 

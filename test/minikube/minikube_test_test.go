@@ -10,14 +10,11 @@ import (
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
-	// NTJ - commented until we can get TestAwaitFailure() working - then uncomment; or remove if the solution does not use this package
-	// verify "github.com/stretchr/testify/assert"
-
 	"gotest.tools/assert"
 )
 
 /**
- * A set of tests thattest the test infrastructure
+ * A set of tests that test the test infrastructure
  */
 
 func TestAwaitSuccess(t *testing.T) {
