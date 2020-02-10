@@ -1,6 +1,6 @@
-cloud:
+cloud: {}
   # supported: amazon, azure, google
-  provider:
+  # provider:
   # zones:
   #   - us-east-2a
   #   - us-east-2b

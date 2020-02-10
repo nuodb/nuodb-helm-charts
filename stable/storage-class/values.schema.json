@@ -1,0 +1,95 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "cloud": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "title": "Cloud Provider (amazon,azure,google)",
+          "form": true
+        }
+      },
+      "required": [
+      ]
+    },
+    "storageClass": {
+      "type": "object",
+      "properties": {
+        "allowVolumeExpansion": {
+          "type": "boolean",
+          "title": "Allow Volume Expansion",
+          "form": true
+        },
+        "standard": {
+          "type": "object",
+          "form": true,
+          "title": "Standard Storage Class",
+          "properties": {
+            "encrypted": {
+              "type": "boolean",
+	      "title": "Encrypted",
+	      "default": false,
+              "form": true
+            }
+          },
+          "required": [
+          ]
+        },
+        "fast": {
+          "type": "object",
+          "form": true,
+          "title": "Fast Storage Class",
+          "properties": {
+            "encrypted": {
+              "type": "boolean",
+	      "title": "Encrypted",
+	      "default": false,
+              "form": true
+            },
+            "iopsPerGB": {
+              "type": "string",
+	      "title": "IOPS/GB (amazon only)",
+              "form": true,
+              "render": "slider",
+              "sliderMin": 1,
+              "sliderMax": 50
+            }
+          },
+          "required": [
+          ]
+        },
+        "manual": {
+          "type": "object",
+          "form": true,
+          "title": "Manual Storage Class",
+          "properties": {
+            "encrypted": {
+              "type": "boolean",
+	      "title": "Encrypted",
+	      "default": false,
+              "form": true
+            },
+            "iopsPerGB": {
+              "type": "string"
+            }
+          },
+          "required": [
+          ]
+        }
+      },
+      "required": [
+        "allowVolumeExpansion",
+        "standard",
+        "fast",
+        "manual"
+      ]
+    }
+  },
+  "required": [
+    "cloud",
+    "storageClass"
+  ]
+}

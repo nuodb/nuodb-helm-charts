@@ -1,0 +1,327 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "cloud": {
+      "type": "object",
+      "properties": {
+        "provider": {
+	  "type" : "string",
+          "title": "Cloud Provider (amazon,azure,google)",
+          "form": true
+	},
+        "clusterName": {
+          "type": "string",
+          "title": "Cluster Name",
+	  "default": "cluster0"
+        }
+      },
+      "required": [
+	  "provider",
+          "clusterName"
+      ]
+    },
+    "busybox": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "registry": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "registry",
+            "repository",
+            "tag",
+            "pullPolicy"
+          ]
+        }
+      },
+      "required": [
+        "image"
+      ]
+    },
+    "nuodb": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "registry": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "registry",
+            "repository",
+            "tag",
+            "pullPolicy"
+          ]
+        }
+      },
+      "required": [
+        "image"
+      ]
+    },
+    "admin": {
+      "type": "object",
+      "properties": {
+        "domain": {
+            "type": "string",
+	    "title": "Domain Name",
+	    "form": true,
+	    "default": "nuodb"
+        },
+        "replicas": {
+            "type": "integer",
+	    "form": true,
+	    "title": "# Replicas",
+	    "default": 1
+        },
+        "lbPolicy": {
+          "type": "string",
+	    "form": true,
+	    "title": "LBPolicy"
+        },
+        "lbQuery": {
+          "type": "string",
+	    "form" : true,
+	    "title" : "LBQuery"
+        },
+        "externalAccess": {
+            "type": "object",
+	    "form":true,
+	    "title": "Service LoadBalancer",
+            "properties": {
+		"enabled": {
+		    "type": "boolean",
+		    "title": "Enable",
+		    "form": true,
+		    "default": false
+		},
+		"internalIP": {
+		    "type": "boolean",
+		    "title": "Use InternalIP",
+		    "form": true,
+		    "hidden": {
+			"value": "admin.externalAccess.enabled",
+			"condition": false
+		    }
+		}
+	    },
+            "required": []
+        },
+        "persistence": {
+          "type": "object",
+	    "form" : true,
+	    "title" : "Raft Persistence",
+          "properties": {
+            "size": {
+		"type": "string",
+		"form": true,
+		"title": "Size",
+		"render": "slider",
+		"sliderMin": 1,
+		"sliderMax": 10,
+		"sliderUnit": "Gi"
+            },
+            "accessModes": {
+              "type": "array",
+              "items": {
+                "required": [],
+                "properties": {}
+              }
+            },
+	      "storageClass": {
+		  "type": "string",
+		  "form": true,
+		  "title": "Storage Class",
+		  "default": "-"
+	      }
+          },
+          "required": [
+            "size",
+            "accessModes"
+          ]
+        },
+        "logPersistence": {
+            "type": "object",
+	    "form": true,
+	    "title" : "Log Persistence",
+          "properties": {
+            "enabled": {
+		"type": "boolean",
+		"form": true,
+		"title": "Enable",
+		"default": false
+            },
+            "overwriteBackoff": {
+              "type": "object",
+		"form": true,
+		"title": "Overwrite Backup",
+		"hidden": {
+		    "value": "admin.logPersistence.enabled",
+		    "condition": false
+		},
+              "properties": {
+                "copies": {
+                    "type": "integer",
+		    "form": true,
+		    "title": "# Copies",
+		    "render": "slider",
+		    "sliderMin": 3,
+		    "sliderMax": 10,
+		    "default": 3
+                },
+                "windowMinutes": {
+                    "type": "integer",
+		    "form": true,
+		    "title": "Window (minutes)",
+		    "default": 120,
+		    "sliderMin": 20,
+		    "sliderMax": 240
+                }
+              },
+              "required": [
+                "copies",
+                "windowMinutes"
+              ]
+            },
+            "size": {
+		"type": "string",
+		"form": true,
+		"title": "Size",
+		"render": "slider",
+		"sliderMin": 20,
+		"sliderMax": 100,
+		"sliderUnit": "Gi",
+		"hidden": {
+		    "value": "admin.logPersistence.enabled",
+		    "condition": false
+		}
+            },
+            "accessModes": {
+              "type": "array",
+              "items": {
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          "required": [
+            "enabled",
+            "overwriteBackoff",
+            "size",
+            "accessModes"
+          ]
+        },
+        "securityContext": {
+          "type": "object",
+          "properties": {
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          "required": [
+            "capabilities"
+          ]
+        },
+        "envFrom": {
+          "type": "object",
+          "properties": {
+            "configMapRef": {
+              "type": "array",
+              "items": {
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          "required": [
+            "configMapRef"
+          ]
+        },
+        "options": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "resources": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "configFilesPath": {
+          "type": "string"
+        },
+        "configFiles": {
+          "type": "object",
+          "properties": {
+	  },
+          "required": []
+        },
+        "serviceSuffix": {
+          "type": "object",
+          "properties": {
+            "clusterip": {
+              "type": "string"
+            },
+            "balancer": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "clusterip",
+            "balancer"
+          ]
+        }
+      },
+      "required": [
+        "domain",
+        "replicas",
+        "lbPolicy",
+        "lbQuery",
+        "persistence",
+        "logPersistence",
+        "securityContext",
+        "envFrom",
+        "options",
+        "resources",
+        "configFilesPath",
+        "configFiles",
+        "serviceSuffix"
+      ]
+    }
+  },
+  "required": [
+    "cloud",
+    "busybox",
+    "nuodb",
+    "admin"
+  ]
+}
