@@ -313,7 +313,7 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
 		"--db-name", databaseName, "--check-running", "--check-liveness", "20",
 		"--num-processes", strconv.Itoa(numProcesses),
-		"--timeout", "530")
+		"--timeout", "240")
 }
 
 func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
