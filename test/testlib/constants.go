@@ -31,6 +31,7 @@ const RESTORE_HELM_CHART_PATH = "../../stable/restore"
 const THP_HELM_CHART_PATH = "../../stable/transparent-hugepage"
 
 const RESULT_DIR = "../../results"
+const INJECT_FILE = "../../versionInject.yaml"
 
 const IMPORT_ARCHIVE_URL = "http://download.nuohub.org/ce_releases/restore.bak.tz"
 

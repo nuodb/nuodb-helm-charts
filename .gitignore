@@ -11,8 +11,8 @@ incubator-staging/
 incubator-index/
 credential.json
 .helm.yaml
-vendor
 keys/
 results/
 .vscode/
 venv/
+versionInject.yaml

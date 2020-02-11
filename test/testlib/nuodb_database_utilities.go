@@ -58,6 +58,7 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 func StartDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
+	InjectTestVersion(t, options)
 	opt := GetExtractedOptions(options)
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)

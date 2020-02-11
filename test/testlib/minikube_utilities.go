@@ -18,7 +18,6 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/stretchr/testify/require"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/apps/v1"
 
@@ -85,6 +84,60 @@ func RemoveEmptyLines(s string) string {
 	s = strings.TrimRight(s, "\n")
 
 	return s
+}
+
+func InjectTestVersion(t *testing.T, options *helm.Options) {
+	dat, err := ioutil.ReadFile(INJECT_FILE)
+	if err != nil {
+		return
+	}
+
+	// do not inject anything if the test overrides these
+	// access to nil map yields the default
+	if options.SetValues["nuodb.image.registry"] != "" ||
+		options.SetValues["nuodb.image.repository"] != "" ||
+		options.SetValues["nuodb.image.tag"] != "" {
+
+		return
+
+	}
+
+	t.Log("Using injected values:\n", string(dat))
+
+	err, image := UnmarshalImageYAML(string(dat))
+	assert.NilError(t, err)
+
+	if options.SetValues == nil {
+		options.SetValues = make(map[string]string)
+	}
+
+	options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
+	options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
+	options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+}
+
+func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options, suggestedVersion string) string {
+	dat, err := ioutil.ReadFile(INJECT_FILE)
+	if err != nil {
+		options.SetValues["nuodb.image.tag"] = suggestedVersion
+
+	} else {
+		err, image := UnmarshalImageYAML(string(dat))
+		assert.NilError(t, err)
+
+		if options.SetValues == nil {
+			options.SetValues = make(map[string]string)
+		}
+
+		options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
+		options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
+		options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+	}
+
+	return fmt.Sprintf("%s/%s:%s", options.SetValues["nuodb.image.registry"],
+		options.SetValues["nuodb.image.repository"],
+		options.SetValues["nuodb.image.tag"])
+
 }
 
 func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
@@ -505,12 +558,12 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 	options.Namespace = namespace
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	var opts metav1.ListOptions
 
 	events, err := client.CoreV1().Events(namespace).List(opts)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	// it is hard to recover this in Travis from the filesystem, without access to a AWS
 	// print it to stdout instead
@@ -556,7 +609,7 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 	options.Namespace = namespace
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	podLogOpts := corev1.PodLogOptions{}
 

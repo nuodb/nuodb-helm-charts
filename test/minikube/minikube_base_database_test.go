@@ -175,6 +175,7 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 	options.KubectlOptions.Namespace = namespaceName
 
 	restore := func() {
+		testlib.InjectTestVersion(t, options)
 		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
 		testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 

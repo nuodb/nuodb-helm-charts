@@ -52,6 +52,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 
 	options.KubectlOptions.Namespace = namespaceName
 
+    InjectTestVersion(t, options)
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
 	AddTeardown("admin", func() {
@@ -62,6 +63,15 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 
 	for i := 0; i < replicaCount; i++ {
 		adminName := adminNames[i] // array will be out of scope for defer
+
+		defer func() {
+			if (t.Failed()) {
+				options := k8s.NewKubectlOptions("", "")
+				options.Namespace = namespace
+				// ignore any errors. This is already failed
+				_ = k8s.RunKubectlE(t, options, "describe", "pod", adminName)
+			}
+		}()
 
 		// first await could be pulling the image from the repo
 		AwaitAdminPodUp(t, namespaceName, adminName, 300*time.Second)

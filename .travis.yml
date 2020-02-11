@@ -28,19 +28,11 @@ env:
     - NUODB_GET_DIAGNOSE=true
     - NUODB_VERSION=4.0.3
 
-cache:
-  directories:
-    - $GOPATH/pkg/dep
-
 before_install:
   - sudo apt-get update
   - sudo apt-get install socat
   - chmod +x scripts/ci/install_deps.sh
   - scripts/ci/install_deps.sh
-
-install:
-  - go get -u github.com/golang/dep/cmd/dep
-  - dep ensure -v
 
 script:
   - chmod +x scripts/ci/determine_and_run_tests.sh
