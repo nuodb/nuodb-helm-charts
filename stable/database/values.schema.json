@@ -1,0 +1,698 @@
+{
+  "$schema": "http://json-schema.org/schema#",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "cloud": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "title": "Cloud Provider (amazon,azure,google)",
+          "form": true
+        },
+        "zones": {
+          "type": "array",
+          "items": {
+            "required": [],
+            "properties": {}
+          }
+        },
+        "clusterName": {
+          "type": "string",
+          "title": "Cluster Name",
+          "form": true
+        }
+      },
+      "required": []
+    },
+    "busybox": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "registry": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "registry",
+            "repository",
+            "tag",
+            "pullPolicy"
+          ]
+        }
+      },
+      "required": [
+        "image"
+      ]
+    },
+    "nuodb": {
+      "type": "object",
+      "properties": {
+        "image": {
+          "type": "object",
+          "properties": {
+            "registry": {
+              "type": "string"
+            },
+            "repository": {
+              "type": "string"
+            },
+            "tag": {
+              "type": "string"
+            },
+            "pullPolicy": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "registry",
+            "repository",
+            "tag",
+            "pullPolicy"
+          ]
+        },
+        "requestPrefix": {
+          "type": "string"
+        },
+        "latestPrefix": {
+          "type": "string"
+        },
+        "latestKey": {
+          "type": "string"
+        }
+      },
+      "required": []
+    },
+    "admin": {
+      "type": "object",
+      "form": true,
+      "title": "NuoDB Domain",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "form": true,
+          "title": "name"
+        },
+        "serviceSuffix": {
+          "type": "object",
+          "form": true,
+          "title": "Service Suffix:",
+          "properties": {
+            "clusterip": {
+              "type": "string",
+              "title": "clusterip",
+              "form": true
+            },
+            "balancer": {
+              "type": "string",
+              "title": "balancer",
+              "form": true
+            }
+          },
+          "required": []
+        }
+      },
+      "required": []
+    },
+    "database": {
+      "type": "object",
+      "form": true,
+      "title": "Database",
+      "properties": {
+        "name": {
+          "type": "string",
+          "form": true,
+          "title": "Name"
+        },
+        "rootUser": {
+          "type": "string",
+          "form": true,
+          "title": "DBA Username"
+        },
+        "rootPassword": {
+          "type": "string",
+          "form": true,
+          "title": "DBA Password"
+        },
+        "securityContext": {
+          "type": "object",
+          "properties": {
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "required": [],
+                "properties": {}
+              }
+            },
+            "enabled": {
+              "type": "boolean"
+            },
+            "runAsUser": {
+              "type": "integer"
+            },
+            "fsGroup": {
+              "type": "integer"
+            }
+          },
+          "required": []
+        },
+        "env": {
+          "type": "array",
+          "items": {
+            "required": [],
+            "properties": {}
+          }
+        },
+        "envFrom": {
+          "type": "object",
+          "properties": {
+            "configMapRef": {
+              "type": "array",
+              "items": {
+                "required": [],
+                "properties": {}
+              }
+            }
+          },
+          "required": []
+        },
+        "persistence": {
+          "type": "object",
+          "form": true,
+          "title": "Archive",
+          "properties": {
+            "size": {
+              "type": "string",
+              "form": true,
+              "title": "Size",
+              "render": "slider",
+              "sliderMin": 10,
+              "sliderMax": 200,
+              "sliderUnit": "Gi"
+            },
+            "accessModes": {
+              "type": "array",
+              "items": {
+                "required": [],
+                "properties": {}
+              }
+            },
+            "storageClass": {
+              "type": "string",
+              "form": true,
+              "title": "Storage Class"
+            }
+          },
+          "required": []
+        },
+        "options": {
+          "type": "object",
+          "properties": {
+            "ping-timeout": {
+              "type": "integer"
+            },
+            "max-lost-archives": {
+              "type": "integer"
+            }
+          },
+          "required": []
+        },
+        "configFilesPath": {
+          "type": "string"
+        },
+        "configFiles": {
+          "type": "object",
+          "properties": {},
+          "required": []
+        },
+        "autoImport": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "credentials": {
+              "type": "string"
+            },
+            "stripLevels": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "source",
+            "credentials",
+            "stripLevels",
+            "type"
+          ]
+        },
+        "autoRestore": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string"
+            },
+            "credentials": {
+              "type": "string"
+            },
+            "stripLevels": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            }
+          },
+          "required": []
+        },
+        "serviceSuffix": {
+          "type": "object",
+          "properties": {
+            "clusterip": {
+              "type": "string"
+            },
+            "balancer": {
+              "type": "string"
+            }
+          },
+          "required": []
+        },
+        "sm": {
+          "type": "object",
+          "form": true,
+          "title": "Storage Managers",
+          "properties": {
+            "logPersistence": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "overwriteBackoff": {
+                  "type": "object",
+                  "properties": {
+                    "copies": {
+                      "type": "integer"
+                    },
+                    "windowMinutes": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": []
+                },
+                "size": {
+                  "type": "string"
+                },
+                "accessModes": {
+                  "type": "array",
+                  "items": {
+                    "required": [],
+                    "properties": {}
+                  }
+                }
+              },
+              "required": []
+            },
+            "hotCopy": {
+              "type": "object",
+              "form": true,
+              "title": "Hotcopy enabled",
+              "properties": {
+                "enablePod": {
+                  "type": "boolean",
+                  "form": true,
+                  "title": "Enabled?"
+                },
+                "replicas": {
+                  "type": "integer",
+                  "form": true,
+                  "title": "Count",
+                  "hidden": {
+                    "value": "database.sm.hotCopy.enablePod",
+                    "condition": false
+                  }
+                },
+                "deadline": {
+                  "type": "integer",
+                  "form": true,
+                  "title": "Deadline",
+                  "hidden": {
+                    "value": "database.sm.hotCopy.enablePod",
+                    "condition": false
+                  }
+                },
+                "timeout": {
+                  "type": "integer",
+                  "form": true,
+                  "title": "Timeout",
+                  "hidden": {
+                    "value": "database.sm.hotCopy.enablePod",
+                    "condition": false
+                  }
+                },
+                "successHistory": {
+                  "type": "integer"
+                },
+                "failureHistory": {
+                  "type": "integer"
+                },
+                "backupDir": {
+                  "type": "string"
+                },
+                "backupGroup": {
+                  "type": "string"
+                },
+                "fullSchedule": {
+                  "type": "string",
+                  "form": true,
+                  "title": "schedule (full):",
+                  "hidden": {
+                    "value": "database.sm.hotCopy.enablePod",
+                    "condition": false
+                  }
+                },
+                "incrementalSchedule": {
+                  "type": "string",
+                  "form": true,
+                  "title": "schedule (incremental):",
+                  "hidden": {
+                    "value": "database.sm.hotCopy.enablePod",
+                    "condition": false
+                  }
+                },
+                "persistence": {
+                  "type": "object",
+                  "form": true,
+                  "title": "Backup Volume",
+                  "hidden": {
+                    "value": "database.sm.hotCopy.enablePod",
+                    "condition": false
+                  },
+                  "properties": {
+                    "size": {
+                      "type": "string",
+                      "form": true,
+                      "title": "Size",
+                      "render": "slider",
+                      "sliderMin": 10,
+                      "sliderMax": 200,
+                      "sliderUnit": "Gi",
+                      "hidden": {
+                        "value": "database.sm.hotCopy.enablePod",
+                        "condition": false
+                      }
+                    },
+                    "accessModes": {
+                      "type": "array",
+                      "items": {
+                        "required": [],
+                        "properties": {}
+                      }
+                    },
+                    "storageClass": {
+                      "type": "string",
+                      "form": true,
+                      "title": "Storage Class",
+                      "hidden": {
+                        "value": "database.sm.hotCopy.enablePod",
+                        "condition": false
+                      }
+                    }
+                  },
+                  "required": []
+                },
+                "coldStorage": {
+                  "type": "object",
+                  "properties": {
+                    "credentials": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "credentials"
+                  ]
+                },
+                "journalBackup": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {
+                      "type": "boolean"
+                    },
+                    "intervalMinutes": {
+                      "type": "integer"
+                    },
+                    "deadline": {
+                      "type": "integer"
+                    },
+                    "timeout": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": []
+                }
+              },
+              "required": []
+            },
+            "noHotCopy": {
+              "type": "object",
+              "form": true,
+              "title": "Hotcopy not enabled",
+              "properties": {
+                "enablePod": {
+                  "type": "boolean",
+                  "form": true,
+                  "title": "Enabled?"
+                },
+                "replicas": {
+                  "type": "integer",
+                  "form": true,
+                  "title": "Count",
+                  "hidden": {
+                    "value": "database.sm.noHotCopy.enablePod",
+                    "condition": false
+                  }
+                }
+              },
+              "required": []
+            },
+            "memoryOption": {
+              "type": "string",
+              "form": true,
+              "title": "Engine Memory Size",
+              "render": "slider",
+              "sliderMin": 2,
+              "sliderMax": 64,
+              "sliderUnit": "Gi"
+            },
+            "resources": {
+              "type": "object",
+              "title": "Required Resources",
+              "description": "Configure resource limits and requests for all storage managers",
+              "form": true,
+              "properties": {
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+			"type": "string",
+			"form": true,
+                      "render": "slider",
+                      "title": "Memory Limit",
+                      "sliderMin": 2,
+                      "sliderMax": 72,
+                      "sliderUnit": "Gi"
+                    },
+                    "cpu": {
+			"type": "integer",
+			"form": true,
+			"title": "CPU Limit"
+                    }
+                  },
+                  "required": []
+                },
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string",
+			"form": true,
+                      "render": "slider",
+                      "title": "Memory Request",
+                      "sliderMin": 2,
+                      "sliderMax": 72,
+                      "sliderUnit": "Gi"
+                    },
+                    "cpu": {
+			"type": "integer",
+			"form": true,
+			"title": "CPU Request"
+                    }
+                  }
+                }
+              }
+            },
+            "affinity": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            },
+            "labels": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            },
+            "engineOptions": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            },
+            "otherOptions": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "te": {
+          "type": "object",
+          "form": true,
+          "title": "Transaction Engines",
+          "properties": {
+            "externalAccess": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            },
+            "dbServices": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            },
+            "replicas": {
+              "type": "integer",
+              "form": true,
+              "title": "Count"
+            },
+            "memoryOption": {
+              "type": "string",
+              "form": true,
+              "title": "Engine Memory Size",
+              "render": "slider",
+              "sliderMin": 2,
+              "sliderMax": 64,
+              "sliderUnit": "Gi"
+            },
+            "resources": {
+              "type": "object",
+              "title": "Required Resources",
+              "description": "Configure resource limits and requests for all transaction engines",
+              "form": true,
+              "properties": {
+                "limits": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+			"type": "string",
+			"form": true,
+                      "render": "slider",
+                      "title": "Memory Limit",
+                      "sliderMin": 2,
+                      "sliderMax": 72,
+                      "sliderUnit": "Gi"
+                    },
+                    "cpu": {
+			"type": "integer",
+			"form": true,
+			"title": "CPU Limit"
+                    }
+                  },
+                  "required": []
+                },
+                "requests": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "string",
+			"form": true,
+                      "render": "slider",
+                      "title": "Memory Request",
+                      "sliderMin": 2,
+                      "sliderMax": 72,
+                      "sliderUnit": "Gi"
+                    },
+                    "cpu": {
+			"type": "integer",
+			"form": true,
+			"title": "CPU Request"
+                    }
+                  }
+                }
+              }
+            },
+            "affinity": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            },
+            "labels": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            },
+            "engineOptions": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            },
+            "otherOptions": {
+              "type": "object",
+              "properties": {},
+              "required": []
+            }
+          },
+          "required": []
+        },
+        "enableDaemonSet": {
+          "type": "boolean"
+        },
+        "isManualVolumeProvisioning": {
+          "type": "boolean"
+        },
+        "isRestore": {
+          "type": "boolean"
+        }
+      },
+      "required": []
+    },
+    "openshift": {
+      "type": "object",
+      "properties": {
+        "enabled": {
+          "type": "boolean"
+        },
+        "enableDeploymentConfigs": {
+          "type": "boolean"
+        },
+        "enableRoutes": {
+          "type": "boolean"
+        }
+      },
+      "required": []
+    }
+  },
+  "required": []
+}
