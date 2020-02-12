@@ -192,7 +192,7 @@ database:
       replicas: 1
 
       # Deadline for starting a hotcopy job - if a job hasn't started in this time - give up
-      deadine: 1800
+      deadline: 1800
 
       # timeout for completing a hotcopy job - if a job hasn't completed in this time - stop waiting for it
       timeout: 1800
