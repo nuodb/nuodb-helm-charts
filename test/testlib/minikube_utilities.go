@@ -620,7 +620,10 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 }
 
 func GetAdminEventLog(t *testing.T, namespace string, podName string) {
-	dirPath := filepath.Join(RESULT_DIR, namespace)
+	pwd, err := os.Getwd()
+	assert.NilError(t, err)
+	
+	dirPath := filepath.Join(pwd, RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, "nuoadmin_event.log")
 
 	_ = os.MkdirAll(dirPath, 0700)
