@@ -10,6 +10,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -55,6 +56,14 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 	return
 }
 
+func EnsureDatabaseNotRunning(t *testing.T, adminPod string, opt ExtractedOptions, kubectlOptions *k8s.KubectlOptions) {
+	// invoke shutdown database; this may fail if the database is already NOT_RUNNING, which is okay
+	k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "shutdown", "database", "--db-name", opt.DbName)
+	// wait for all database processes to exit
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "check", "database", "--db-name", opt.DbName, "--num-processes", "0", "--timeout", "30")
+	assert.NilError(t, err, output)
+}
+
 func StartDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -73,6 +82,7 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	AddTeardown(TEARDOWN_DATABASE, func() {
 		helm.Delete(t, options, helmChartReleaseName, true)
 		AwaitNoPods(t, namespaceName, helmChartReleaseName)
+		EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
 		DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
 	})
 
