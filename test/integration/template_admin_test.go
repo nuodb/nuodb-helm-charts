@@ -129,7 +129,7 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 			adminOptions[option] = true
 		}
 		assert.Check(t, adminOptions["pendingReconnectTimeout=60000"])
-		assert.Check(t, adminOptions["processLivenessCheckSec=15"])
+		assert.Check(t, adminOptions["processLivenessCheckSec=30"])
 		assert.Check(t, adminOptions["leaderAssignmentTimeout=30000"])
 	}
 }
