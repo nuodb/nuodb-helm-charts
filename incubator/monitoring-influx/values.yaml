@@ -145,7 +145,5 @@ grafana:
 openshift:
   # change this to true if you want to deploy using OpenShift proprietary features
   enabled: false
-  # generally avoid deployment configs, favor deployments, so leave this as false
-  enableDeploymentConfigs: false
   # if openshift is enabled, then also permit routes by default
   enableRoutes: true
