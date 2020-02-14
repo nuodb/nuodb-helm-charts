@@ -185,10 +185,15 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tolerations` | Tolerations for NuoDB Admin | `[]` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
-| `persistence.enabled` | Whether or not persistent storage is enabled for admin RAFT state | `false` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteMany` |
 | `persistence.size` | Amount of disk space allocated for admin RAFT state | `10Gi` |
 | `persistence.storageClass` | Storage class for volume backing admin RAFT state | `-` |
+| `logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
+| `logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
+| `logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
+| `logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
+| `logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
+| `logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
 | `envFrom` | Import ENV vars from one or more configMaps | `[]` |
 | `options` | Set optons to be passed to nuoadmin as arguments | `{}` |
 | `securityContext.capabilities` | add capabilities to the container | `[]` |
@@ -202,6 +207,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tlsTrustStore.password` | TLS truststore secret password | `nil` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
+| `serviceSuffix.balancer` | The suffix to use for the LoadBalancer service name | `balancer` |
+| `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 
@@ -222,14 +229,22 @@ There are two sets of configuration files documented:
 
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
-The following tables list the configurable parameters for the `admin` option of the admin chart and their default values.
-
 | Key | Description | Default |
 | ----- | ----------- | ------ |
 | `nuodb.lic` | [NuoDB license file content; defaults to NuoDB CE Edition][3] | `nil` |
 | `nuoadmin.conf` | [NuoDB Admin host properties][4] | `nil` |
 | `nuodb-types.config`| [Type mappings for the NuoDB Migrator tool][5] | `nil` |
 | `nuoadmin.logback.xml` | Logging configuration. NuoDB recommends using the default settings. | `nil` |
+
+#### admin.serviceSuffix
+
+The purpose of this section is to allow customisation of the names of the clusterIP and balancer admin services (load-balancers).
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
+| `balancer` | suffix for the balancer service | "balancer" |
+
 
 ### Running
 
@@ -243,8 +258,7 @@ Verify the Helm chart:
 
 ```bash
 helm install nuodb/admin -n admin \
-    --set persistence.enabled=true \
-    --set persistence.storageClass=nuodb-admin \
+    --set persistence.storageClass=standard-storage \
     --debug --dry-run
 ```
 
@@ -252,8 +266,7 @@ Deploy the administration tier using volumes of the specified storage class:
 
 ```bash
 helm install nuodb/admin -n admin \
-    --set persistence.enabled=true \
-    --set persistence.storageClass=nuodb-admin
+    --set persistence.storageClass=standard-storage
 ```
 
   **Tip**: Be patient, it will take approximately 55 seconds to deploy.

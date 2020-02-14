@@ -1,42 +1,63 @@
-# Helm Charts
+<img src="https://www.nuodb.com/sites/all/themes/nuodb/logo.svg" data-canonical-src="https://www.nuodb.com/sites/all/themes/nuodb/logo.svg" width="200" height="200" />
+
+# NuoDB Helm Charts
 
 [![Build Status](https://travis-ci.org/nuodb/nuodb-helm-charts.svg?branch=master)](https://travis-ci.org/nuodb/nuodb-helm-charts)
 
 Use this repository to submit official Charts for NuoDB. Charts are curated application definitions for Helm. For more information about installing and using Helm, see its
-[README.md](https://github.com/helm/helm/tree/master/README.md). To get a quick introduction to Charts see this [chart document](https://github.com/helm/helm/blob/master/docs/charts.md).
+[README.md](https://github.com/helm/helm/tree/master/README.md). To get a quick introduction to Charts see this [chart document](https://github.com/helm/helm/blob/master/docs/charts.md). For more information on using Helm, refer to the [Helm's documentation](https://github.com/kubernetes/helm#docs).
 
-For more information on using Helm, refer to the [Helm's documentation](https://github.com/kubernetes/helm#docs).
+## NuoDB Helm Chart Version support
 
-## How to use this repository?
-
-For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above.
-
+For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. 
 To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection.
 
-## How do I install these charts?
 
-To install, run `helm install nuodb/<chart>`. This is the default repository for NuoDB which is located at
- https://nuodb-charts.storage.googleapis.com/ and must be enabled to use.
+## Software Release requirements
+
+| Software   | Release Requirements                           | 
+|------------|------------------------------------------------|
+| Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.15 then 1.15 and 1.14 are supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
+| Helm       |  Version 2 is supported, v2.9 or greater   |
+| NuoDB      |  Version [4.0](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
+
+## NuoDB Helm Chart Installation
+
+The default repository for NuoDB is located at https://nuodb-charts.storage.googleapis.com/ and must be enabled.
 
 To add the charts for your local client, run the `helm repo add` command below:
 
-```bash
-$ helm repo add nuodb https://nuodb-charts.storage.googleapis.com/
+```
+helm repo add nuodb https://nuodb-charts.storage.googleapis.com/
 "nuodb" has been added to your repositories
 ```
 
-To list the installed NUoDB charts, run `helm search repo nuodb/`
+To list the NuoDB charts added to your repository, run `helm search nuodb/`
 
-## How do I enable the Incubator repository?
+To install a chart into your Kubernetes cluster, run 
+
+```
+helm init
+helm install nuodb/<chart>
+```
+
+## NuoDB Helm Chart Incubator Repository Installation
 
 The Incubator repository contains enhancements not yet available in the supported releases. To add the Incubator charts for your local client, run the `helm repo add` command below:
 
-```bash
-$ helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.com/
+```
+helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.com/
 "nuodb-incubator" has been added to your repositories
 ```
 
-To list the installed NuoDB incubator charts, run `helm search repo nuodb-incubator/`
+To list the NuoDB incubator charts added to your repository, run `helm search nuodb-incubator/`
+
+To install an incubator chart into your Kubernetes cluster, run 
+
+```
+helm init
+helm install nuodb-incubator/<chart>
+```
 
 ## Repository Structure
 
@@ -56,16 +77,6 @@ Stable Charts meet the criteria in the [technical requirements](CONTRIBUTING.md#
 Incubator Charts are those that do not meet these criteria. Having the incubator folder allows charts to be shared and improved on until they are ready to be moved into the stable folder. The charts in the `incubator/` directory can be found in the [`gs://nuodb-charts-incubator` Google Storage Bucket](https://console.cloud.google.com/storage/browser/nuodb-charts-incubator).
 
 In order to get a Chart from incubator to stable, Chart maintainers should open a pull request that moves the chart folder.
-
-## Supported Kubernetes Versions
-
-This chart repository supports the latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.8 then 1.7 and 1.8 are supported. Charts may still work on previous versions of Kubernertes even though they are outside the target supported window.
-
-To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.
-
-## Supported NuoDB Versions
-
-These chart repository supports NuoDB version [4.0](https://hub.docker.com/layers/nuodb/nuodb-ce/4.0/images/sha256-aaa558ef71795f15d5b3a1ef07b6be4890925dbd023c59b1f9a674ca20614763) and onwards.
 
 ## Status of the Project
 

@@ -175,6 +175,7 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 	options.KubectlOptions.Namespace = namespaceName
 
 	restore := func() {
+		testlib.InjectTestVersion(t, options)
 		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
 		testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 
@@ -383,55 +384,66 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-		databaseOptions := helm.Options{
-			SetValues: map[string]string{
-				"database.name":                         "demo",
-				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"backup.persistence.enabled":            "true",
-				"backup.persistence.size":               "1Gi",
-			},
-		}
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "demo",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"backup.persistence.enabled":            "true",
+			"backup.persistence.size":               "1Gi",
+		},
+	}
 
-		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
-		opts := k8s.NewKubectlOptions("", "")
-		opts.Namespace = namespaceName
-		databaseOptions.KubectlOptions = opts
+	// Generate diagnose in case this test fails
+	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() { testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0) })
 
-		// wait for the initial backup to complete
-		databaseName := "demo"
-		backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", databaseName)
-		testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
+	opts := k8s.NewKubectlOptions("", "")
+	opts.Namespace = namespaceName
+	databaseOptions.KubectlOptions = opts
 
-		// populate some data
-		k8s.RunKubectl(t, opts,
-			"exec", admin0, "--",
-			"/opt/nuodb/bin/nuosql",
-			"--user", "dba",
-			"--password", "secret",
-			"demo",
-			"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
-		)
+	// wait for the initial backup to complete
+	databaseName := "demo"
+	backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", databaseName)
+	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
-		// verify that the database contains the populated data
-		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		assert.NilError(t, err, "error running SQL: show schema User")
-		assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
+	// populate some data
+	k8s.RunKubectl(t, opts,
+		"exec", admin0, "--",
+		"/opt/nuodb/bin/nuosql",
+		"--user", "dba",
+		"--password", "secret",
+		"demo",
+		"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
+	)
 
-		// restore database
-		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
-		restoreDatabase(t, namespaceName, admin0, &databaseOptions)
+	// verify that the database contains the populated data
+	tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+	assert.NilError(t, err, "error running SQL: show schema User")
+	assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
 
-		// verify that the database does NOT contain the data from AFTER the backup
-		tables, err = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		assert.NilError(t, err, "error running SQL: show schema User")
-		assert.Check(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
-	})
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+	testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart")
+
+	smPodName0 := testlib.GetPodName(t, namespaceName, smPodName)
+	testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart")
+
+	// restore database
+	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+	restoreDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// verify that the database does NOT contain the data from AFTER the backup
+	tables, err = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+	assert.NilError(t, err, "error running SQL: show schema User")
+	assert.Check(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 }
 
 func TestKubernetesImportDatabase(t *testing.T) {

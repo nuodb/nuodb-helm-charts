@@ -58,6 +58,7 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 func StartDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
+	InjectTestVersion(t, options)
 	opt := GetExtractedOptions(options)
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
@@ -80,10 +81,15 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, opt.NrTePods)
 	AwaitNrReplicasScheduled(t, namespaceName, smPodName, opt.NrSmPods)
 
+	// NOTE: the Teardown logic will pick a TE/SM that is running during teardown time. Not the TE/SM that was running originally
+	// this is relevant for any tests that restart TEs/SMs
+
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
+	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "") })
 	AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 180*time.Second)
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
+	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "") })
 	AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 240*time.Second)
 
 	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)

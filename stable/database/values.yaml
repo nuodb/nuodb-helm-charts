@@ -41,7 +41,7 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.0.4
+    tag: 4.0.3
     pullPolicy: Always
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -77,6 +77,10 @@ admin:
   # tlsClientPEM:
   #   secret: nuodb-client-pem
   #   key: nuocmd.pem
+
+  serviceSuffix:
+    clusterip: "clusterip"
+    balancer: "balancer"
 
 database:
   ## Provide a name in place of prometheus-operator for `app:` labels
@@ -158,7 +162,27 @@ database:
     stripLevels: "1"
     type: ""
 
+  # The names of the clusterIP and balancer services can be adjusted by customising the suffix
+  # The default is to use the same as specified for the admin clusterIP and balancer load-balancers.
+  serviceSuffix:
+    clusterip: ""
+    balancer: ""
+
   sm:
+    ## Enable persistent log volumes to retain logs when an external logging solution is not used.
+    logPersistence:
+      enabled: false
+      overwriteBackoff:
+        # Copies of the crash directory are taken to avoid overwrites of root crash.
+        # This controls the window within which no more copies of the crash directory will be taken to avoid the disk filling.
+        # Default will retain 3 copies within the last 120 minutes, after which copies will continue to be created.
+        copies: 3
+        windowMinutes: 120
+      size: 60Gi
+      accessModes:
+        - ReadWriteOnce
+      # storageClass: "-"
+
     # Settings for storage manager (SM) nodes with hotcopy enabled.
     # Total SM Limit is 1 in CE version of NuoDB
     # These SMs have hotcopy backup enabled. To start SMs without hotcopy use

@@ -96,7 +96,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 		tePodNameTemplate := fmt.Sprintf("te-%s", databaseReleaseName)
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-		defer testlib.GetAppLog(t, namespaceName, tePodName)
+		defer testlib.GetAppLog(t, namespaceName, tePodName, "")
 
 		// TE certificate is signed by the admin and the DN entry is the pod name
 		// this is the 4th pod name because: #0 and #1 are trusted certs, #2 is CA, #3 is admin, #4 is engine
@@ -121,7 +121,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 		tePodNameTemplate := fmt.Sprintf("te-%s", databaseReleaseName)
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-		defer testlib.GetAppLog(t, namespaceName, tePodName)
+		defer testlib.GetAppLog(t, namespaceName, tePodName, "")
 
 		// TE certificate is not signed by the admin and the DN entry is the generic admin name
 		// this is the 3rd pod name because: #0 and #1 are trusted certs, #2 is CA, #3 is admin (and engine)

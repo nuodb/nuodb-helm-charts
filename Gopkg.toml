@@ -6,6 +6,10 @@
   name = "github.com/russross/blackfriday"
   version = "1.5.2"
 
+[[override]]
+  name = "github.com/googleapis/gnostic"
+  version = "v0.4.0"
+
 [prune]
   go-tests = true
   unused-packages = true

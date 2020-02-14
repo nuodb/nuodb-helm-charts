@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime/debug"
@@ -17,7 +18,6 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/stretchr/testify/require"
 	"gotest.tools/assert"
 	v1 "k8s.io/api/apps/v1"
 
@@ -84,6 +84,60 @@ func RemoveEmptyLines(s string) string {
 	s = strings.TrimRight(s, "\n")
 
 	return s
+}
+
+func InjectTestVersion(t *testing.T, options *helm.Options) {
+	dat, err := ioutil.ReadFile(INJECT_FILE)
+	if err != nil {
+		return
+	}
+
+	// do not inject anything if the test overrides these
+	// access to nil map yields the default
+	if options.SetValues["nuodb.image.registry"] != "" ||
+		options.SetValues["nuodb.image.repository"] != "" ||
+		options.SetValues["nuodb.image.tag"] != "" {
+
+		return
+
+	}
+
+	t.Log("Using injected values:\n", string(dat))
+
+	err, image := UnmarshalImageYAML(string(dat))
+	assert.NilError(t, err)
+
+	if options.SetValues == nil {
+		options.SetValues = make(map[string]string)
+	}
+
+	options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
+	options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
+	options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+}
+
+func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options, suggestedVersion string) string {
+	dat, err := ioutil.ReadFile(INJECT_FILE)
+	if err != nil {
+		options.SetValues["nuodb.image.tag"] = suggestedVersion
+
+	} else {
+		err, image := UnmarshalImageYAML(string(dat))
+		assert.NilError(t, err)
+
+		if options.SetValues == nil {
+			options.SetValues = make(map[string]string)
+		}
+
+		options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
+		options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
+		options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+	}
+
+	return fmt.Sprintf("%s/%s:%s", options.SetValues["nuodb.image.registry"],
+		options.SetValues["nuodb.image.repository"],
+		options.SetValues["nuodb.image.tag"])
+
 }
 
 func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
@@ -312,47 +366,54 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
 		"--db-name", databaseName, "--check-running", "--check-liveness", "20",
 		"--num-processes", strconv.Itoa(numProcesses),
-		"--timeout", "300")
+		"--timeout", "600")
 }
 
-func AwaitDatabaseDown(t *testing.T, namespace string, podName string, databaseName string) {
+func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
+	if t.Failed() && shouldGetDiagnose() {
+		options := k8s.NewKubectlOptions("", "")
+		options.Namespace = namespace
+
+		targetDirPath := filepath.Join(RESULT_DIR, namespace, "diagnose")
+		_ = os.MkdirAll(targetDirPath, 0700)
+
+		// Get cores
+		// Once DB-29847 is implemented, we can set a --timeout or --wait-forever flags
+		// So that core dump streams doesn't timeout in minikube environments
+		t.Log(t, "Generating diagnose archive...")
+		k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "get", "diagnose-info",
+			"--include-cores", "--output-dir", "/tmp")
+		diagnoseFile, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", "ls -1 /tmp | grep diagnose-")
+		assert.NilError(t, err, "Can not find diagnose archive")
+
+		k8s.RunKubectl(t, options, "cp", podName+":/tmp/"+diagnoseFile, filepath.Join(targetDirPath, diagnoseFile))
+		if shouldPrintToStdout() {
+			// The file can be recovered via xxd -r -p a.hex a.bin
+			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(targetDirPath, diagnoseFile)).CombinedOutput()
+			t.Logf("%s:\n%s", diagnoseFile, string(output))
+		}
+	}
+}
+
+func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) *DBVersion {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
-	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
-		"--db-name", databaseName, "--num-processes", "0",
-		"--timeout", "300")
-}
-
-func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) [2]int {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespace
-
-	incarnation, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "database",
-		"--db-name", databaseName, "--db-format", "incarnation:{incarnation}")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "--show-json", "get", "databases")
 	assert.NilError(t, err)
 
-	return ParseDatabaseIncarnation(t, incarnation)
-}
+	err, databases := UnmarshalDatabase(output)
+	assert.NilError(t, err)
 
-func ParseDatabaseIncarnation(t *testing.T, incarnation string) [2]int {
-	result := [2]int{-1, -1}
-
-	var err error = nil
-
-	if inc_array := INCARNATION_PATTERN.FindStringSubmatch(incarnation); inc_array != nil {
-
-		t.Log("parsed incarnation string=", inc_array)
-
-		result[0], err = strconv.Atoi(inc_array[1])
-		result[1], err = strconv.Atoi(inc_array[2])
-
-		assert.NilError(t, err)
+	for _, db := range databases {
+		if db.Name == databaseName {
+			return &db.Incarnation
+		}
 	}
 
-	t.Log(t, "parsed incarnation=", result)
-
-	return result
+	t.Logf("GetDatabaseIncarnation did not find DB name: %s", databaseName)
+	t.FailNow()
+	return nil
 }
 
 func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databaseName string, databaseOptions *helm.Options, restart func()) {
@@ -361,7 +422,7 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 	restart()
 
 	Await(t, func() bool {
-		return GetDatabaseIncarnation(t, namespace, podName, databaseName)[0] > incarnation[0]
+		return GetDatabaseIncarnation(t, namespace, podName, databaseName).Major > incarnation.Major
 	}, 300*time.Second)
 
 	opts := GetExtractedOptions(databaseOptions)
@@ -478,9 +539,14 @@ func shouldPrintToStdout() bool {
 	return exists
 }
 
+func shouldGetDiagnose() bool {
+	_, exists := os.LookupEnv("NUODB_GET_DIAGNOSE")
+	return exists
+}
+
 func GetK8sEventLog(t *testing.T, namespace string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, K8s_EVENT_LOG_FILE)
+	filePath := filepath.Join(dirPath, K8S_EVENT_LOG_FILE)
 
 	_ = os.MkdirAll(dirPath, 0700)
 
@@ -492,12 +558,12 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 	options.Namespace = namespace
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	var opts metav1.ListOptions
 
 	events, err := client.CoreV1().Events(namespace).List(opts)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	// it is hard to recover this in Travis from the filesystem, without access to a AWS
 	// print it to stdout instead
@@ -515,9 +581,9 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 
 }
 
-func GetAppLog(t *testing.T, namespace string, podName string) {
+func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, podName)
+	filePath := filepath.Join(dirPath, podName+fileNameSuffix+".log")
 
 	_ = os.MkdirAll(dirPath, 0700)
 
@@ -543,7 +609,7 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 	options.Namespace = namespace
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	require.NoError(t, err)
+	assert.NilError(t, err)
 
 	podLogOpts := corev1.PodLogOptions{}
 
@@ -551,6 +617,36 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 	assert.NilError(t, err)
 
 	return reader
+}
+
+func GetAdminEventLog(t *testing.T, namespace string, podName string) {
+	pwd, err := os.Getwd()
+	assert.NilError(t, err)
+	
+	dirPath := filepath.Join(pwd, RESULT_DIR, namespace)
+	filePath := filepath.Join(dirPath, "nuoadmin_event.log")
+
+	_ = os.MkdirAll(dirPath, 0700)
+
+	f, err := os.Create(filePath)
+	assert.NilError(t, err)
+	defer f.Close()
+
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	k8s.RunKubectl(t, options,
+		"cp",
+		fmt.Sprintf("%s/%s:%s", namespace, podName, "/var/log/nuodb/nuoadmin_event.log"),
+		filePath,
+	)
+
+	if t.Failed() && shouldPrintToStdout() {
+		k8s.RunKubectl(t, options,
+			"exec", podName, "--",
+			"cat", "/var/log/nuodb/nuoadmin_event.log",
+		)
+	}
 }
 
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {
@@ -638,13 +734,6 @@ func ExecuteCommandsInPod(t *testing.T, podName string, namespaceName string, co
 
 func UnmarshalJSONObject(t *testing.T, stringJSON string) map[string]interface{} {
 	var results map[string]interface{}
-	err := json.Unmarshal([]byte(stringJSON), &results)
-	assert.NilError(t, err)
-	return results
-}
-
-func UnmarshalJSONArray(t *testing.T, stringJSON string) []interface{} {
-	var results []interface{}
 	err := json.Unmarshal([]byte(stringJSON), &results)
 	assert.NilError(t, err)
 	return results

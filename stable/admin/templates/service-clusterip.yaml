@@ -11,7 +11,7 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "admin.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ .Values.admin.domain }}-clusterip
+  name: {{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.clusterip }}
 spec:
   ports:
   - { name: 8888-tcp,   port: 8888,   protocol: TCP,  targetPort: 8888  }
