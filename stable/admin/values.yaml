@@ -40,7 +40,7 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.0.3
+    tag: 4.0.4
     pullPolicy: Always
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -109,7 +109,16 @@ admin:
   ## Admin options
   # These are applied using the nuoadmin startup command
   # Add these values as appropriate for this domain
-  options: {}
+  options:
+      # this high reconnect timeout is necessary because an admin can be
+      # rescheduled on a different Node and a reconnecting engine will not
+      # connect to it until the stale DNS entry in its local cache expires,
+      # which has a default TTL of 30 seconds
+      pendingReconnectTimeout: 60000
+      # this is necessary because killed engine Pods may not generate a TCP_RST
+      # packet to close the admin connection, leaving a database process entry
+      # in the domain state that has no running Pod associated with it
+      processLivenessCheckSec: 30
 
   ## nuodb-admin resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/

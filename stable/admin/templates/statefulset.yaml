@@ -94,7 +94,6 @@ spec:
         args:
           - "nuoadmin"
           - "--"
-          - "pendingReconnectTimeout=60000"
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
           {{- end}}

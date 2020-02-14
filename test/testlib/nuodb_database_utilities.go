@@ -55,6 +55,13 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 	return
 }
 
+func EnsureDatabaseNotRunning(t *testing.T, adminPod string, opt ExtractedOptions, kubectlOptions *k8s.KubectlOptions) {
+	// invoke shutdown database; this may fail if the database is already NOT_RUNNING, which is okay
+	k8s.RunKubectlE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "shutdown", "database", "--db-name", opt.DbName)
+	// wait for all database processes to exit
+	k8s.RunKubectl(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "check", "database", "--db-name", opt.DbName, "--num-processes", "0", "--timeout", "30")
+}
+
 func StartDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -73,6 +80,7 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	AddTeardown(TEARDOWN_DATABASE, func() {
 		helm.Delete(t, options, helmChartReleaseName, true)
 		AwaitNoPods(t, namespaceName, helmChartReleaseName)
+		EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
 		DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
 	})
 
