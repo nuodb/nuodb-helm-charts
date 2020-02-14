@@ -1,6 +1,6 @@
 apiVersion: "v1"
 name: monitoring-influx
-version: 2.3
+version: 2.3.0
 description: Monitors NuoDB using InfluxDB+Grafana.
 keywords:
 - nuodb
