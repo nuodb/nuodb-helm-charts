@@ -1,5 +1,0 @@
-nuodb:
-    image:
-        registry: registry.internal.nuodb.com
-        repository: nightly/master-centos7
-        tag: latest
