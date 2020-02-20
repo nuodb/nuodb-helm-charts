@@ -432,6 +432,23 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 	AwaitDatabaseUp(t, namespace, podName, databaseName, opts.NrTePods+opts.NrSmPods)
 }
 
+
+func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName string, expectedRestartCount int32) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	Await(t, func() bool {
+		pod := k8s.GetPod(t, options, podName)
+
+		var restartCount int32
+		for _, status := range pod.Status.ContainerStatuses {
+			restartCount += status.RestartCount
+		}
+
+		return restartCount > expectedRestartCount
+	}, 30*time.Second)
+}
+
 func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
@@ -515,6 +532,8 @@ func KillAdminProcess(t *testing.T, namespace string, podName string) {
 	t.Logf("Killing pid %s in pod %s\n", pid, podName)
 
 	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", pid)
+
+	AwaitPodRestartCountGreaterThan(t, namespace, podName, 0)
 }
 
 func GetService(t *testing.T, namespaceName string, serviceName string) *corev1.Service {
