@@ -927,3 +927,219 @@ func volumesContain(mounts []v1.Volume, expectedName string) bool {
 	}
 	return false
 }
+
+func TestDatabaseOpenShift(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"openshift.enabled": "true",
+		},
+	}
+
+	mainContainerChecks := func(spec v1.PodSpec) {
+		assert.Assert(t, spec.Containers[0].SecurityContext.Privileged != nil)
+		assert.Check(t, *spec.Containers[0].SecurityContext.Privileged == true)
+	}
+
+	initContainerChecks := func(spec v1.PodSpec) {
+		assert.Assert(t, spec.InitContainers[0].SecurityContext.Privileged != nil)
+		assert.Assert(t, spec.Containers[0].SecurityContext.Privileged != nil)
+
+		assert.Check(t, *spec.InitContainers[0].SecurityContext.Privileged == true)
+		assert.Check(t, *spec.Containers[0].SecurityContext.Privileged == true)
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/deployment.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: Deployment"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		mainContainerChecks(obj.Spec.Template.Spec)
+	})
+
+	t.Run("testDeploymentConfig", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["openshift.enableDeploymentConfigs"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/deploymentconfig.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: DeploymentConfig"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		mainContainerChecks(obj.Spec.Template.Spec)
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: StatefulSet") {
+				cnt++
+
+				var obj appsv1.StatefulSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				mainContainerChecks(obj.Spec.Template.Spec)
+				initContainerChecks(obj.Spec.Template.Spec)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/daemonset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: DaemonSet") {
+				cnt++
+
+				var obj appsv1.DaemonSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				mainContainerChecks(obj.Spec.Template.Spec)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+}
+
+func TestDatabaseOpenShiftWithCapability(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.securityContext.capabilities":    "[ NET_ADMIN ]",
+			"openshift.enabled": "true",
+		},
+	}
+
+	mainContainerChecks := func(spec v1.PodSpec) {
+		assert.Assert(t, spec.Containers[0].SecurityContext.Privileged != nil)
+		assert.Check(t, *spec.Containers[0].SecurityContext.Privileged == true)
+		assert.Check(t, spec.Containers[0].SecurityContext.Capabilities.Add[0] == "NET_ADMIN")
+	}
+
+	initContainerChecks := func(spec v1.PodSpec) {
+		assert.Assert(t, spec.InitContainers[0].SecurityContext.Privileged != nil)
+		assert.Assert(t, spec.Containers[0].SecurityContext.Privileged != nil)
+
+		assert.Check(t, *spec.InitContainers[0].SecurityContext.Privileged == true)
+		assert.Check(t, *spec.Containers[0].SecurityContext.Privileged == true)
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/deployment.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: Deployment"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		mainContainerChecks(obj.Spec.Template.Spec)
+	})
+
+	t.Run("testDeploymentConfig", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["openshift.enableDeploymentConfigs"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/deploymentconfig.yaml"})
+
+		assert.Check(t, strings.Contains(output, "kind: DeploymentConfig"))
+
+		var obj appsv1.Deployment
+		helm.UnmarshalK8SYaml(t, output, &obj)
+
+		mainContainerChecks(obj.Spec.Template.Spec)
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: StatefulSet") {
+				cnt++
+
+				var obj appsv1.StatefulSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				mainContainerChecks(obj.Spec.Template.Spec)
+				initContainerChecks(obj.Spec.Template.Spec)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, []string{"templates/daemonset.yaml"})
+
+		var cnt int
+
+		parts := strings.Split(output, "---")
+		for _, part := range parts {
+			if len(part) == 0 {
+				continue
+			}
+
+			if strings.Contains(part, "kind: DaemonSet") {
+				cnt++
+
+				var obj appsv1.DaemonSet
+				helm.UnmarshalK8SYaml(t, part, &obj)
+
+				mainContainerChecks(obj.Spec.Template.Spec)
+			}
+		}
+
+		assert.Check(t, cnt == 2)
+	})
+}

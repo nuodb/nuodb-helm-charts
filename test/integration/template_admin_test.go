@@ -270,3 +270,75 @@ func TestAdminStatefulSetVolumes(t *testing.T) {
 		assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
 	}
 }
+
+func TestAdminOpenShift(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"openshift.enabled": "true",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if !strings.Contains(part, "kind: StatefulSet") {
+			continue
+		}
+
+		var object appsv1.StatefulSet
+		helm.UnmarshalK8SYaml(t, part, &object)
+
+		assert.Assert(t, object.Spec.Template.Spec.InitContainers[0].SecurityContext.Privileged != nil)
+		assert.Assert(t, object.Spec.Template.Spec.Containers[0].SecurityContext.Privileged != nil)
+
+		assert.Check(t, *object.Spec.Template.Spec.InitContainers[0].SecurityContext.Privileged == true)
+		assert.Check(t, *object.Spec.Template.Spec.Containers[0].SecurityContext.Privileged == true)
+	}
+}
+
+func TestAdminOpenShiftWithCapability(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.securityContext.capabilities":    "[ NET_ADMIN ]",
+			"openshift.enabled": "true",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if !strings.Contains(part, "kind: StatefulSet") {
+			continue
+		}
+
+		var object appsv1.StatefulSet
+		helm.UnmarshalK8SYaml(t, part, &object)
+
+		assert.Assert(t, object.Spec.Template.Spec.InitContainers[0].SecurityContext.Privileged != nil)
+		assert.Assert(t, object.Spec.Template.Spec.Containers[0].SecurityContext.Privileged != nil)
+
+		assert.Check(t, *object.Spec.Template.Spec.InitContainers[0].SecurityContext.Privileged == true)
+		assert.Check(t, *object.Spec.Template.Spec.Containers[0].SecurityContext.Privileged == true)
+
+		adminContainer := object.Spec.Template.Spec.Containers[0]
+		assert.Check(t, adminContainer.SecurityContext.Capabilities.Add[0] == "NET_ADMIN")
+	}
+}

@@ -17,9 +17,7 @@ import (
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
-	options := helm.Options{
-		SetValues: map[string]string{},
-	}
+	options := helm.Options{}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 

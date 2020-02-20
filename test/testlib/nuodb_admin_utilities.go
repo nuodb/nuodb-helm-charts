@@ -13,6 +13,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
+
 func getFunctionCallerName() string {
 	pc, _, _, _ := runtime.Caller(2)
 	nameFull := runtime.FuncForPC(pc).Name() // main.foo
@@ -41,7 +42,14 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	if namespace == "" {
 		callerName := getFunctionCallerName()
 		namespaceName = fmt.Sprintf("%s-%s", strings.ToLower(callerName), randomSuffix)
-		k8s.CreateNamespace(t, kubectlOptions, namespaceName)
+
+		if isOpenShiftEnvironment(t) {
+			createOpenShiftProject(t, namespaceName)
+		} else {
+			k8s.CreateNamespace(t, kubectlOptions, namespaceName)
+		}
+
+
 		AddTeardown(TEARDOWN_ADMIN, func() {
 			GetK8sEventLog(t, namespaceName)
 			k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
@@ -53,6 +61,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	options.KubectlOptions.Namespace = namespaceName
 
     InjectTestVersion(t, options)
+	InjectOpenShiftValues(t, options)
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
 	AddTeardown("admin", func() {

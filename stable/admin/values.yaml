@@ -95,11 +95,15 @@ admin:
     # storageClass: "-"
 
   ## Use a securityContext to specify additional capabilities
+  # Typically set to runAsUser and/or fsGroup to 0 or 1000.
   # For example, if the container needs to configure network setting, then add "NET_ADMIN"
   # Ex: capabilities: [ "NET_ADMIN" ]
   ##
   securityContext:
     capabilities: []
+    enabled: false
+    runAsUser: 1000
+    fsGroup: 0
 
   ## Specify one or more configMaps to import Environment Variables from
   # Ex:  configMapRef: [ myConfigMap, myOtherConfigMap ]
@@ -173,3 +177,7 @@ admin:
   serviceSuffix:
     clusterip: clusterip
     balancer: balancer
+
+openshift:
+  # change this to true if you want to deploy using OpenShift proprietary features
+  enabled: false

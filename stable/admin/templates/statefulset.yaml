@@ -44,6 +44,10 @@ spec:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+{{- if .Values.openshift.enabled }}
+        securityContext:
+          privileged: true
+{{- end }}
         command: ['chmod' , '770', '/var/opt/nuodb', '/var/log/nuodb']
         volumeMounts:
         - name: raftlog
@@ -54,7 +58,13 @@ spec:
       - name: admin
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "admin.capabilities" . | indent 8 }}
+{{- if or (.Values.openshift.enabled) (.Values.admin.securityContext.capabilities) }}
+        securityContext:
+{{- if .Values.openshift.enabled }}
+          privileged: true
+{{- end}}
+        {{- include "admin.capabilities" . | indent 10 }}
+{{- end }}
         ports:
         - { containerPort: 8888,  protocol: TCP }
         - { containerPort: 48004, protocol: TCP }

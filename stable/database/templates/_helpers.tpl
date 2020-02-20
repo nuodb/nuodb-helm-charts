@@ -151,9 +151,8 @@ Add capabilities in a securityContext
 */}}
 {{- define "database.capabilities" -}}
 {{- with .Values.database.securityContext.capabilities }}
-securityContext:
-  capabilities:
-    add: {{ . }}
+capabilities:
+  add: {{ . }}
 {{- end }}
 {{- end -}}
 

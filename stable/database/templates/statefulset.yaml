@@ -55,6 +55,10 @@ spec:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
+{{- if .Values.openshift.enabled }}
+        securityContext:
+          privileged: true
+{{- end }}
         command: ['chmod' , '770', '/var/opt/nuodb/archive', '/var/log/nuodb']
         volumeMounts:
         - name: archive-volume
@@ -65,7 +69,13 @@ spec:
       - name: sm
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "database.capabilities" . | indent 8 }}
+{{- if or (.Values.openshift.enabled) (.Values.database.securityContext.capabilities) }}
+        securityContext:
+{{- if .Values.openshift.enabled }}
+          privileged: true
+{{- end}}
+        {{- include "database.capabilities" . | indent 10 }}
+{{- end }}
         args: 
           - "nuosm"
           - "--servers-ready-timeout"
@@ -345,6 +355,10 @@ spec:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
+{{- if .Values.openshift.enabled }}
+        securityContext:
+          privileged: true
+{{- end }}
         command: ['chmod' , '770', '/var/opt/nuodb/archive', 'var/opt/nuodb/backup', '/var/log/nuodb']
         volumeMounts:
         - name: archive-volume
@@ -357,7 +371,13 @@ spec:
       - name: sm
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "database.capabilities" . | indent 8 }}
+{{- if or (.Values.openshift.enabled) (.Values.database.securityContext.capabilities) }}
+        securityContext:
+{{- if .Values.openshift.enabled }}
+          privileged: true
+{{- end}}
+        {{- include "database.capabilities" . | indent 10 }}
+{{- end }}
         args:
           - "nuosm"
           - "--servers-ready-timeout"

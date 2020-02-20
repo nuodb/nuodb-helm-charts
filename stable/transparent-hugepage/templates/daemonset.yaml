@@ -43,6 +43,10 @@ spec:
       - name: disable-thp
         image: {{ template "thp.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+{{- if .Values.openshift.enabled }}
+        securityContext:
+          privileged: true
+{{- end }}
         volumeMounts:
         - name: host-sys
           mountPath: /host-sys
@@ -51,6 +55,10 @@ spec:
       - name: busybox
         image: {{ template "thp.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+{{- if .Values.openshift.enabled }}
+        securityContext:
+          privileged: true
+{{- end }}
         volumeMounts:
         - name: host-sys
           mountPath: /host-sys

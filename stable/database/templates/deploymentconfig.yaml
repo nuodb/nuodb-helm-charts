@@ -44,7 +44,9 @@ spec:
       - name: te-{{ template "database.fullname" . }}
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "database.capabilities" . | indent 8 }}
+        securityContext:
+          privileged: true
+    {{- include "database.capabilities" . | indent 10 }}
         args:
           - "nuote"
           - "--database-created-timeout"

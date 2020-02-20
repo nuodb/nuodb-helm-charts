@@ -46,7 +46,13 @@ spec:
       - name: sm
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "database.capabilities" . | indent 8 }}
+{{- if or (.Values.openshift.enabled) (.Values.database.securityContext.capabilities) }}
+        securityContext:
+{{- if .Values.openshift.enabled }}
+          privileged: true
+{{- end}}
+        {{- include "database.capabilities" . | indent 10 }}
+{{- end }}
         args:
           - "nuosm"
           - "--servers-ready-timeout"
@@ -247,7 +253,13 @@ spec:
       - name: sm
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "database.capabilities" . | indent 8 }}
+{{- if or (.Values.openshift.enabled) (.Values.database.securityContext.capabilities) }}
+        securityContext:
+{{- if .Values.openshift.enabled }}
+          privileged: true
+{{- end}}
+        {{- include "database.capabilities" . | indent 10 }}
+{{- end }}
         args:
           - "nuosm"
           - "--servers-ready-timeout"

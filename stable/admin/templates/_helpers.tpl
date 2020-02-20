@@ -128,9 +128,8 @@ Add capabilities in a securityContext
 */}}
 {{- define "admin.capabilities" -}}
 {{- with .Values.admin.securityContext.capabilities }}
-securityContext:
-  capabilities:
-    add: {{ . }}
+capabilities:
+  add: {{ . }}
 {{- end }}
 {{- end -}}
 

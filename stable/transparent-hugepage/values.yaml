@@ -51,3 +51,7 @@ thp:
 
   # nodeSelector: {}
   # tolerations: []
+
+openshift:
+  # change this to true if you want to deploy using OpenShift proprietary features
+  enabled: false

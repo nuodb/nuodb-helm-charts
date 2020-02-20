@@ -66,6 +66,7 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	randomSuffix := strings.ToLower(random.UniqueId())
 
 	InjectTestVersion(t, options)
+	InjectOpenShiftValues(t, options)
 	opt := GetExtractedOptions(options)
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
