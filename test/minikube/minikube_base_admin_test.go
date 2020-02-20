@@ -8,16 +8,17 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 )
 
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
-	options := helm.Options{}
+	options := helm.Options{
+		SetValues: map[string]string{},
+	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -87,14 +88,11 @@ func TestKubernetesBasicNameOverride(t *testing.T) {
 			"admin.fullnameOverride": nonDefaultName,
 		},
 	}
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
 
-	namespaceName := fmt.Sprintf("testadminsinglereplica-%s", randomSuffix)
-	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
+	namespaceName := fmt.Sprintf("testbasicnameoverride-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
+
 	options.KubectlOptions.Namespace = namespaceName
-
-	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
 
 	helm.Install(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 

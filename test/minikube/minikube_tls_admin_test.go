@@ -37,12 +37,8 @@ func TestKubernetesTLS(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-
-	namespaceName := fmt.Sprintf("test-admin-tls-%s", randomSuffix)
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-
-	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
+	namespaceName := fmt.Sprintf("testbasicnameoverride-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	

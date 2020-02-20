@@ -23,6 +23,21 @@ func getFunctionCallerName() string {
 	return name
 }
 
+func CreateNamespace(t *testing.T, namespaceName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+
+	if isOpenShiftEnvironment(t) {
+		createOpenShiftProject(t, namespaceName)
+	} else {
+		k8s.CreateNamespace(t, kubectlOptions, namespaceName)
+	}
+
+	AddTeardown(TEARDOWN_ADMIN, func() {
+		GetK8sEventLog(t, namespaceName)
+		k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
+	})
+}
+
 func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (helmChartReleaseName string, namespaceName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -36,35 +51,24 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 		adminNames[i] = fmt.Sprintf("%s-nuodb-cluster0-%d", helmChartReleaseName, i)
 	}
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
-
 	if namespace == "" {
 		callerName := getFunctionCallerName()
 		namespaceName = fmt.Sprintf("%s-%s", strings.ToLower(callerName), randomSuffix)
 
-		if isOpenShiftEnvironment(t) {
-			createOpenShiftProject(t, namespaceName)
-		} else {
-			k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-		}
-
-
-		AddTeardown(TEARDOWN_ADMIN, func() {
-			GetK8sEventLog(t, namespaceName)
-			k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
-		})
+		CreateNamespace(t, namespaceName)
 	} else {
 		namespaceName = namespace
 	}
 
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
     InjectTestVersion(t, options)
 	InjectOpenShiftValues(t, options)
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
-	AddTeardown("admin", func() {
+	AddTeardown(TEARDOWN_ADMIN, func() {
 		helm.Delete(t, options, helmChartReleaseName, true)
 	})
 

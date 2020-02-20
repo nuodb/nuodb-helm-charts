@@ -113,10 +113,7 @@ func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 	options.KubectlOptions = kubectlOptions
 
 	namespaceName := fmt.Sprintf("testthp-%s", randomSuffix)
-	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-	options.KubectlOptions.Namespace = namespaceName
-
-	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
+	testlib.CreateNamespace(t, namespaceName)
 
 	/*
 		These tests do not verify that THP can be turned off via DaemonSet.

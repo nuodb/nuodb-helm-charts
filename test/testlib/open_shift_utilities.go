@@ -17,7 +17,9 @@ func isOpenShiftEnvironment(t *testing.T) bool {
 		var isOs = (err == nil)
 		isOpenShift = &isOs
 
-		t.Logf("Running in OpenShift:\n%s", string(output))
+		if isOs {
+			t.Logf("Running in OpenShift:\n%s", string(output))
+		}
 	}
 
 	return *isOpenShift

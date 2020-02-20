@@ -17,7 +17,7 @@ import (
 	"gotest.tools/assert"
 )
 
-func verifyAdminCeritificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
+func verifyAdminCertificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
 	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
 	for _, value := range certificateInfo["serverCertificates"].(map[string]interface{}) {
 		certSubjectName := value.(map[string]interface{})["subjectName"].(string)
@@ -26,7 +26,7 @@ func verifyAdminCeritificates(t *testing.T, certificateInfoJSON string, expected
 	}
 }
 
-func verifyEngineCeritificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
+func verifyEngineCertificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
 	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
 	for _, value := range certificateInfo["processCertificates"].(map[string]interface{}) {
 		certIssuerName := value.(map[string]interface{})["issuerName"].(string)
@@ -53,24 +53,17 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	t.Skip("Flaky! DB-29423")
 
 	testlib.AwaitTillerUp(t)
-
 	randomSuffix := strings.ToLower(random.UniqueId())
-
-	namespaceName := fmt.Sprintf("test-tls-rotation-%s", randomSuffix)
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-
-	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
-
-	kubectlOptions.Namespace = namespaceName
+	namespaceName := fmt.Sprintf("testbasicnameoverride-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
 
 	initialTLSCommands := []string{
 		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
 		"setup-keys.sh",
 	}
 
-	// As nuodocker/nuoadmin wrapper is using peer insead of initialMembership,
-	//   we need to use persistence for admin Raft logs during the rolling upgrade.
+	// As nuodocker/nuoadmin wrapper is using peer instead of initialMembership,
+	// we need to use persistence for admin Raft logs during the rolling upgrade.
 	options := helm.Options{
 		SetValues: map[string]string{
 			"admin.replicas":                        "2",
@@ -118,17 +111,19 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	testlib.CreateSecret(t, namespaceName, testlib.CA_CERT_FILE, testlib.CA_CERT_SECRET, newTLSKeysLocation)
 	testlib.CreateSecretWithPassword(t, namespaceName, testlib.KEYSTORE_FILE, testlib.KEYSTORE_SECRET, testlib.SECRET_PASSWORD, newTLSKeysLocation)
 
-	testlib.RotateTLSCertificates(t, &options, kubectlOptions, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
+	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions.Namespace = namespaceName
 	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
 	assert.NilError(t, err)
 
-	t.Run("verifyAdminCeritificates", func(t *testing.T) {
-		verifyAdminCeritificates(t, certificateInfo, expectedAdminDN)
+	t.Run("verifyAdminCertificates", func(t *testing.T) {
+		verifyAdminCertificates(t, certificateInfo, expectedAdminDN)
 	})
 
-	t.Run("verifyEngineCeritificates", func(t *testing.T) {
-		verifyEngineCeritificates(t, certificateInfo, expectedAdminDN)
+	t.Run("verifyEngineCertificates", func(t *testing.T) {
+		verifyEngineCertificates(t, certificateInfo, expectedAdminDN)
 	})
 }
