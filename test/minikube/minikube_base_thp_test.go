@@ -16,20 +16,6 @@ import (
 	"gotest.tools/assert"
 )
 
-func labelMinikubeNode(t *testing.T, namespace string, labelName string, labelValue string) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespace
-
-	var labelString string
-
-	if labelValue != "" {
-		labelString = fmt.Sprintf("%s=%s", labelName, labelValue)
-	} else {
-		labelString = fmt.Sprintf("%s-", labelName)
-	}
-
-	k8s.RunKubectl(t, options, "label", "nodes", "minikube", labelString, "--overwrite")
-}
 
 func scheduleDefault(t *testing.T, helmChartPath string, namespaceName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
@@ -66,7 +52,7 @@ func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	labelMinikubeNode(t, namespaceName, "failure-domain.beta.kubernetes.io/zone", randomSuffix)
+	testlib.LabelNodes(t, namespaceName, "failure-domain.beta.kubernetes.io/zone", randomSuffix)
 
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
@@ -90,7 +76,7 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	labelMinikubeNode(t, namespaceName, "failure-domain.beta.kubernetes.io/zone", "")
+	testlib.LabelNodes(t, namespaceName, "failure-domain.beta.kubernetes.io/zone", "")
 
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 

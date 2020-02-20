@@ -765,7 +765,6 @@ func UnmarshalJSONObject(t *testing.T, stringJSON string) map[string]interface{}
 }
 
 func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) {
-
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespaceName
 
@@ -789,4 +788,26 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	assert.Check(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
 
 	assert.Check(t, output == "testVal", fmt.Sprintf("KV get returned the wrong value: %s", output))
+}
+
+func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+
+	var labelString string
+
+	if labelValue != "" {
+		labelString = fmt.Sprintf("%s=%s", labelName, labelValue)
+	} else {
+		labelString = fmt.Sprintf("%s-", labelName)
+	}
+
+	nodes := k8s.GetNodes(t , options)
+
+	assert.Assert(t, len(nodes) > 0)
+
+	for _, node := range nodes {
+		err := k8s.RunKubectlE(t, options, "label", "node", node.Name, labelString, "--overwrite")
+		assert.NilError(t, err, "Labeling node %s with '%s' failed", node.Name, labelString)
+	}
 }
