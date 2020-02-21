@@ -25,9 +25,6 @@ if [[ -n "$REQUIRES_MINIKUBE" ]]; then
   # Use default K8s service account as a workaround explained in https://github.com/helm/helm/issues/3460
   helm init --service-account default
 
-  # print some info
-  helm version
-
   kubectl version
 elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
   wget https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -O /tmp/oc.tar.gz

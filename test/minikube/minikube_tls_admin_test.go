@@ -68,7 +68,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, namespaceName)
+	helmChartReleaseName, _ := testlib.StartAdmin(t, &options, 3, namespaceName)
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
