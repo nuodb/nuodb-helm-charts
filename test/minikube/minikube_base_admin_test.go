@@ -4,6 +4,7 @@ package minikube
 
 import (
 	"fmt"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"strings"
 	"testing"
 	"time"
@@ -88,6 +89,9 @@ func TestKubernetesBasicNameOverride(t *testing.T) {
 			"admin.fullnameOverride": nonDefaultName,
 		},
 	}
+
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	options.KubectlOptions = kubectlOptions
 
 	namespaceName := fmt.Sprintf("testbasicnameoverride-%s", randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)

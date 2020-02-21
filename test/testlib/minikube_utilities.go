@@ -175,18 +175,24 @@ func Await(t *testing.T, lmbd func() bool, timeout time.Duration) {
 }
 
 func AwaitTillerUp(t *testing.T) {
-    return 
-
-
-	Await(t, func() bool {
-		for _, pod := range findAllPodsInSchema(t, "kube-system") {
-			if strings.Contains(pod.Name, "tiller-deploy") {
+	tillerCheck := func(namespace string, podName string) bool {
+		for _, pod := range findAllPodsInSchema(t, namespace) {
+			if strings.Contains(pod.Name, podName) {
 				if arePodConditionsMet(&pod, corev1.PodReady, corev1.ConditionTrue) {
 					return true
 				}
 			}
 		}
+
 		return false
+	}
+
+    Await(t, func() bool {
+		if isOpenShiftEnvironment(t) {
+			return tillerCheck("tiller", "tiller")
+		} else {
+			return tillerCheck("kube-system", "tiller-deploy")
+		}
 	}, 30*time.Second)
 }
 
