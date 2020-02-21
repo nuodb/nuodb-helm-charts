@@ -10,7 +10,7 @@ import (
 
 var isOpenShift *bool
 
-func isOpenShiftEnvironment(t *testing.T) bool {
+func IsOpenShiftEnvironment(t *testing.T) bool {
 	if isOpenShift == nil {
 		output, err := exec.Command("oc", "status").Output()
 
@@ -45,7 +45,7 @@ func InjectOpenShiftValues(t *testing.T, options *helm.Options) {
 		options.SetValues = make(map[string]string)
 	}
 
-	if isOpenShiftEnvironment(t) {
+	if IsOpenShiftEnvironment(t) {
 		options.SetValues["openshift.enabled"] = "true"
 	}
 }

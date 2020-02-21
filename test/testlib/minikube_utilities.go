@@ -188,7 +188,7 @@ func AwaitTillerUp(t *testing.T) {
 	}
 
     Await(t, func() bool {
-		if isOpenShiftEnvironment(t) {
+		if IsOpenShiftEnvironment(t) {
 			return tillerCheck("tiller", "tiller")
 		} else {
 			return tillerCheck("kube-system", "tiller-deploy")

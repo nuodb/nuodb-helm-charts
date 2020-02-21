@@ -26,7 +26,7 @@ func getFunctionCallerName() string {
 func CreateNamespace(t *testing.T, namespaceName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 
-	if isOpenShiftEnvironment(t) {
+	if IsOpenShiftEnvironment(t) {
 		createOpenShiftProject(t, namespaceName)
 	} else {
 		k8s.CreateNamespace(t, kubectlOptions, namespaceName)
