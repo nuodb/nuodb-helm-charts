@@ -45,12 +45,6 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	helmChartPath := ADMIN_HELM_CHART_PATH
 	helmChartReleaseName = fmt.Sprintf("admin-%s", randomSuffix)
 
-	adminNames := make([]string, replicaCount)
-
-	for i := 0; i < replicaCount; i++ {
-		adminNames[i] = fmt.Sprintf("%s-nuodb-cluster0-%d", helmChartReleaseName, i)
-	}
-
 	if namespace == "" {
 		callerName := getFunctionCallerName()
 		namespaceName = fmt.Sprintf("%s-%s", strings.ToLower(callerName), randomSuffix)
@@ -72,7 +66,24 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 		helm.Delete(t, options, helmChartReleaseName, true)
 	})
 
-	AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, replicaCount)
+
+	adminNames := make([]string, replicaCount)
+
+	for i := 0; i < replicaCount; i++ {
+		if options.SetValues["admin.fullnameOverride"] != "" {
+			adminNames[i] = fmt.Sprintf("%s-%d", options.SetValues["admin.fullnameOverride"], i)
+		} else if  options.SetValues["admin.nameOverride"] != "" {
+			adminNames[i] = fmt.Sprintf("%s-nuodb-cluster0-%s-%d", helmChartReleaseName, options.SetValues["admin.nameOverride"], i)
+		} else {
+			adminNames[i] = fmt.Sprintf("%s-nuodb-cluster0-%d", helmChartReleaseName, i)
+		}
+	}
+
+	if options.SetValues["admin.fullnameOverride"] != "" {
+		AwaitNrReplicasScheduled(t, namespaceName, options.SetValues["admin.fullnameOverride"], replicaCount)
+	} else {
+		AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, replicaCount)
+	}
 
 	for i := 0; i < replicaCount; i++ {
 		adminName := adminNames[i] // array will be out of scope for defer

@@ -4,14 +4,9 @@ package minikube
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	"strings"
-	"testing"
-	"time"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"testing"
 )
 
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
@@ -80,39 +75,36 @@ func TestKubernetesBasicNameOverride(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
-	randomSuffix := strings.ToLower(random.UniqueId())
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.nameOverride":     "aws-a",
+		},
+	}
 
-	helmChartReleaseName := fmt.Sprintf("admin-%s", randomSuffix)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-%s-0", helmChartReleaseName, "aws-a")
+
+	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
+}
+
+func TestKubernetesFullNameOverride(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
 	nonDefaultName := "nondefault-adminname"
 	admin0 := fmt.Sprintf("%s-0", nonDefaultName)
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.nameOverride":     "aws-a",
 			"admin.fullnameOverride": nonDefaultName,
 		},
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
-
-	namespaceName := fmt.Sprintf("testbasicnameoverride-%s", randomSuffix)
-	testlib.CreateNamespace(t, namespaceName)
-
-	options.KubectlOptions.Namespace = namespaceName
-
-	helm.Install(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
-
-	defer helm.Delete(t, options, helmChartReleaseName, true)
-
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, nonDefaultName, 1)
-
-	// first await could be pulling the image from the repo
-	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
-
-	defer testlib.GetAppLog(t, namespaceName, admin0, "")
+	_, namespaceName := testlib.StartAdmin(t, options, 1, "")
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 }
