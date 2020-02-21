@@ -93,6 +93,8 @@ func TestKubernetesBasicNameOverride(t *testing.T) {
 		},
 	}
 
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	options.KubectlOptions = kubectlOptions
 
