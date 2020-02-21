@@ -88,6 +88,7 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 
 func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -97,6 +98,8 @@ func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	options.KubectlOptions = kubectlOptions
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN) // some namespace cleanup
 
 	namespaceName := fmt.Sprintf("testthp-%s", randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)

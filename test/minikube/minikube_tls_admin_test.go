@@ -35,6 +35,7 @@ func verifyKeystore(t *testing.T, namespace string, podName string, keystore str
 
 func TestKubernetesTLS(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
 	namespaceName := fmt.Sprintf("testkubernetestls-%s", randomSuffix)

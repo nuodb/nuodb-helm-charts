@@ -16,6 +16,7 @@ import (
 
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
 		SetValues: map[string]string{},
@@ -46,6 +47,7 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 
 func TestKubernetesInvalidLicense(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	licenseString := "red-riding-hood"
 	customFile := "customFile"
@@ -76,6 +78,7 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 
 func TestKubernetesBasicNameOverride(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
 

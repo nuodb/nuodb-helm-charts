@@ -53,6 +53,8 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	t.Skip("Flaky! DB-29423")
 
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	
 	randomSuffix := strings.ToLower(random.UniqueId())
 	namespaceName := fmt.Sprintf("testtlsrotation-%s", randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
