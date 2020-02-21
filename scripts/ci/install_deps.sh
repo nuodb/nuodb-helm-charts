@@ -60,6 +60,14 @@ elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
   helm version
 
   kubectl version
+
+  # disable THP to match minikube
+  oc adm policy add-scc-to-user privileged system:serviceaccount:tiller:default
+  oc adm policy add-scc-to-user privileged system:serviceaccount:tiller:tiller
+
+  helm install --set openshift.enabled=true stable/transparent-hugepage/
+
+
 else
   echo "Skipping installation steps"
 fi

@@ -147,17 +147,8 @@ The following tables list the configurable parameters for the `openshift` option
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
 | `enabled` | Enable OpenShift features | `false` |
-| `enableDeploymentConfigs` | Prefer DeploymentConfig over Deployment |`false`|
-| `enableRoutes` | Enable OpenShift routes | `true` |
 
-For example, to enable an OpenShift integration, and enable routes:
-
-```yaml
-openshift:
-  enabled: true
-  enableDeploymentConfigs: false
-  enableRoutes: true
-```
+Enabling OpenShift will automatically run all Kubernetes objects with elevated `privileges`.
 
 #### admin.*
 

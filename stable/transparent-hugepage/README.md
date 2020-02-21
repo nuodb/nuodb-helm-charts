@@ -99,6 +99,19 @@ busybox:
     pullPolicy: Always
 ```
 
+#### openshift.*
+
+The purpose of this section is to specify parameters specific to OpenShift, e.g. enable features only present in OpenShift.
+
+The following tables list the configurable parameters for the `openshift` option:
+
+| Parameter | Description | Default |
+| ----- | ----------- | ------ |
+| `enabled` | Enable OpenShift features | `false` |
+
+Enabling OpenShift will automatically run all Kubernetes objects with elevated `privileges`.
+
+
 #### thp.*
 
 The following tables list the configurable parameters of the transparent-hugepages chart and their default values.
