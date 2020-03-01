@@ -14,6 +14,7 @@ metadata:
     release: {{ .Release.Name | quote }}
   name: {{ .Values.database.name }}
 spec:
+  publishNotReadyAddresses: true
   clusterIP: None
   ports:
   - { name: 48006-tcp,  port: 48006,  protocol: TCP,  targetPort: 48006 }

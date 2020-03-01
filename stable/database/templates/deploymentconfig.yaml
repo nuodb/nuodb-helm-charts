@@ -1,3 +1,4 @@
+{{- if not .Values.database.te.enableStatefulSet }}
 {{- if and (.Values.openshift.enabled) (.Values.openshift.enableDeploymentConfigs) }}
 apiVersion: apps.openshift.io/v1
 kind: DeploymentConfig
@@ -173,4 +174,5 @@ spec:
       schedulerName: default-scheduler
       securityContext: {}
       terminationGracePeriodSeconds: 15
+{{- end }}
 {{- end }}

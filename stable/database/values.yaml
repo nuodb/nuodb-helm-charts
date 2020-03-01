@@ -286,6 +286,11 @@ database:
     dbServices: {}
       # enabled: false
 
+    # Define TEs as a StatefulSet so that DNS entries are created for TEs
+    # (assuming that dbServices.enabled is not false), allowing TLS hostname
+    # verification to be enabled by SQL clients
+    enableStatefulSet: false
+
     # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
     replicas: 1
 

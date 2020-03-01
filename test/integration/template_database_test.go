@@ -150,6 +150,44 @@ func TestDatabaseDaemonSetEnabled(t *testing.T) {
 	assert.Check(t, cnt == 2)
 }
 
+func assertExpectedKinds(t *testing.T, optionsMap *map[string]string, templateNames []string, expectedKinds *map[string]int) {
+	options := &helm.Options{
+		SetValues: *optionsMap,
+	}
+
+	output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, templateNames)
+	kinds := make(map[string]int)
+	for _, document := range strings.Split(output, "---") {
+		for _, line := range strings.Split(document, "\n") {
+			if value := strings.TrimPrefix(line, "kind: "); value != line {
+				kinds[value]++
+			}
+		}
+	}
+
+	for kind, cnt := range *expectedKinds {
+		assert.Equal(t, cnt, kinds[kind], "Unexpected number of kind "+kind)
+	}
+}
+
+func TestDatabaseTeStatefulSetEnabled(t *testing.T) {
+	optionsMap := map[string]string{
+		"database.te.enableStatefulSet": "true",
+	}
+	templateNames := []string{
+		"templates/deployment.yaml",
+		"templates/deploymentconfig.yaml",
+		"templates/statefulset.yaml",
+	}
+	// there should be three statefulsets: SM, hotcopy SM, and TE
+	expectedKinds := map[string]int{
+		"Deployment":       0,
+		"DeploymentConfig": 0,
+		"StatefulSet":      3,
+	}
+	assertExpectedKinds(t, &optionsMap, templateNames, &expectedKinds)
+}
+
 func TestDatabaseDeploymentConfigDisabled(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
@@ -328,14 +366,14 @@ func TestDatabaseStatefulSetVolumes(t *testing.T) {
 
 			var ss appsv1.StatefulSet
 			helm.UnmarshalK8SYaml(t, part, &ss)
-			
+
 			if strings.Contains(part, "-hotcopy") {
 				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
 				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "backup-volume"))
 				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[2].ObjectMeta.Name, "log-volume"))
 			} else {
 				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
-				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))	
+				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
 			}
 		}
 	}

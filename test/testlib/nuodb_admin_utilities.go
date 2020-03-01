@@ -23,11 +23,19 @@ func getFunctionCallerName() string {
 }
 
 func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (helmChartReleaseName string, namespaceName string) {
-	randomSuffix := strings.ToLower(random.UniqueId())
+	return StartAdminWithReleaseName(t, options, replicaCount, namespace, "")
+}
 
+func StartAdminWithReleaseName(t *testing.T, options *helm.Options, replicaCount int, namespace string, helmChartRelease string) (helmChartReleaseName string, namespaceName string) {
 	// Path to the helm chart we will test
 	helmChartPath := ADMIN_HELM_CHART_PATH
-	helmChartReleaseName = fmt.Sprintf("admin-%s", randomSuffix)
+
+	randomSuffix := strings.ToLower(random.UniqueId())
+	if helmChartRelease == "" {
+		helmChartReleaseName = fmt.Sprintf("admin-%s", randomSuffix)
+	} else {
+		helmChartReleaseName = helmChartRelease
+	}
 
 	adminNames := make([]string, replicaCount)
 

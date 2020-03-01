@@ -4,9 +4,9 @@ package minikube
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
-	"path/filepath"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"gotest.tools/assert"
@@ -45,7 +45,7 @@ func TestKubernetesTLS(t *testing.T) {
 	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
-	
+
 	// create the certs and secrets...
 	tlsCommands := []string{
 		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
@@ -101,6 +101,29 @@ func TestKubernetesTLS(t *testing.T) {
 		// TE certificate is signed by the admin and the DN entry is the pod name
 		// this is the 4th pod name because: #0 and #1 are trusted certs, #2 is CA, #3 is admin, #4 is engine
 		expectedLogLine := fmt.Sprintf(ENGINE_CERTIFICATE_LOG_TEMPLATE, 4, tePodName)
+		testlib.VerifyCertificateInLog(t, namespaceName, tePodName, expectedLogLine)
+	})
+
+	t.Run("testDatabaseTeFqdn", func(t *testing.T) {
+		// make a copy
+		localOptions := options
+		localOptions.SetValues["database.te.enableStatefulSet"] = "true"
+		localOptions.SetValues["database.sm.resources.requests.cpu"] = testlib.MINIMAL_VIABLE_ENGINE_CPU
+		localOptions.SetValues["database.sm.resources.requests.memory"] = testlib.MINIMAL_VIABLE_ENGINE_MEMORY
+		localOptions.SetValues["database.te.resources.requests.cpu"] = testlib.MINIMAL_VIABLE_ENGINE_CPU
+		localOptions.SetValues["database.te.resources.requests.memory"] = testlib.MINIMAL_VIABLE_ENGINE_MEMORY
+
+		defer testlib.Teardown("database")
+
+		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &localOptions)
+		tePodNameTemplate := fmt.Sprintf("te-%s", databaseReleaseName)
+		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+		teFqdn := fmt.Sprintf("%s.demo.%s.svc.cluster.local", tePodName, namespaceName)
+		defer testlib.GetAppLog(t, namespaceName, tePodName, "")
+
+		// TE certificate is signed by the admin and the DN entry is the FQDN
+		// this is the 4th pod name because: #0 and #1 are trusted certs, #2 is CA, #3 is admin, #4 is engine
+		expectedLogLine := fmt.Sprintf(ENGINE_CERTIFICATE_LOG_TEMPLATE, 4, teFqdn)
 		testlib.VerifyCertificateInLog(t, namespaceName, tePodName, expectedLogLine)
 	})
 
