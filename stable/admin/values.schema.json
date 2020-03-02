@@ -282,6 +282,9 @@
         "configFiles": {
           "type": "object",
           "properties": {
+	      "nuodb.lic": {
+		  "type": "string"
+	      }
 	  },
           "required": []
         },
@@ -296,32 +299,13 @@
             }
           },
           "required": [
-            "clusterip",
-            "balancer"
           ]
         }
       },
       "required": [
-        "domain",
-        "replicas",
-        "lbPolicy",
-        "lbQuery",
-        "persistence",
-        "logPersistence",
-        "securityContext",
-        "envFrom",
-        "options",
-        "resources",
-        "configFilesPath",
-        "configFiles",
-        "serviceSuffix"
       ]
     }
   },
   "required": [
-    "cloud",
-    "busybox",
-    "nuodb",
-    "admin"
   ]
 }
