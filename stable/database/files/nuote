@@ -1,8 +1,18 @@
 #!/bin/sh
 
+. /usr/local/bin/cloud.sh
+: ${CLOUD_PROVIDER:=$(cloud_provider)}
+: ${NODE_ZONE:=$(cloud_zone)}
+: ${CLOUD_REGION:=$(cloud_region)}
+: ${NODE_NAME:=$(cloud_hostname)}
+: ${POD_NAME:=$(hostname)}
+: ${NUODB_LABELS:=""}
+
+LABELS="cloud ${CLOUD_PROVIDER} region ${CLOUD_REGION} zone ${NODE_ZONE} node ${NODE_NAME} pod ${POD_NAME} ${NUODB_LABELS}"
+
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
-    exec nuodocker start te --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
+    exec nuodocker start te --db-name "${DB_NAME}" --labels "${LABELS}" --options "${NUODB_OPTIONS}" "$@"
 else
-    exec nuodocker start te --db-name "${DB_NAME}" "$@"
+    exec nuodocker start te --db-name "${DB_NAME}" --labels "${LABELS}"  "$@"
 fi
