@@ -4,18 +4,14 @@ package minikube
 
 import (
 	"fmt"
-	"strings"
-	"testing"
-	"time"
-
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"testing"
 )
 
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
 		SetValues: map[string]string{},
@@ -46,6 +42,7 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 
 func TestKubernetesInvalidLicense(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	licenseString := "red-riding-hood"
 	customFile := "customFile"
@@ -76,38 +73,38 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 
 func TestKubernetesBasicNameOverride(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
-	randomSuffix := strings.ToLower(random.UniqueId())
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.nameOverride":     "aws-a",
+		},
+	}
 
-	helmChartReleaseName := fmt.Sprintf("admin-%s", randomSuffix)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-%s-0", helmChartReleaseName, "aws-a")
+
+	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
+}
+
+func TestKubernetesFullNameOverride(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
 	nonDefaultName := "nondefault-adminname"
 	admin0 := fmt.Sprintf("%s-0", nonDefaultName)
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.nameOverride":     "aws-a",
 			"admin.fullnameOverride": nonDefaultName,
 		},
 	}
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
 
-	namespaceName := fmt.Sprintf("testadminsinglereplica-%s", randomSuffix)
-	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-	options.KubectlOptions.Namespace = namespaceName
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
-
-	helm.Install(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
-
-	defer helm.Delete(t, options, helmChartReleaseName, true)
-
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, nonDefaultName, 1)
-
-	// first await could be pulling the image from the repo
-	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
-
-	defer testlib.GetAppLog(t, namespaceName, admin0, "")
+	_, namespaceName := testlib.StartAdmin(t, options, 1, "")
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 }

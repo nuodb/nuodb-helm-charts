@@ -60,41 +60,29 @@ export HELM_HOME=`pwd`/.helm
 export KUBECONFIG=`pwd`/.kube/config
 ```
 
-### Create a Project
-
-We're limiting the Tiller server to manage infrastructure in the project (namespace) where it is installed. So the TILLER_NAMESPACE equals the namespace where NuoDB will be installed.
-
-When we install the Helm client, it will need to know the name of the namespace (project) where Tiller is installed. This can be indicated by locally setting the `TILLER_NAMESPACE` environment variable as follows:
-
-```bash
-export TILLER_NAMESPACE=nuodb
-```
-
-We’ll be imaginative and call the project `nuodb`, but you can call it anything you like. However, following best practice, every project should be completely isolated and have **its own tiller installation**.
-
-```bash
-oc new-project ${TILLER_NAMESPACE}
-```
-
-If you already have an OpenShift project you want to use, select it as follows:
-
-```bash
-oc project ${TILLER_NAMESPACE}
-```
-
 ### Install the Tiller Server
 
-In principle this can be done using `helm init`, but currently the helm client doesn’t fully set up the service account rolebindings that OpenShift expects. To try to keep things simple, we’ll use a pre-prepared OpenShift template instead. The template sets up a dedicated service account for the Tiller server, gives it the necessary permissions, then deploys a Tiller pod that runs under the newly created SA.
+We will be creating the Tiller server in the `kube-system` namespace so that it is available to all projects.
 
 ```bash
-$ oc process -f https://github.com/openshift/origin/raw/master/examples/helm/tiller-template.yaml -p TILLER_NAMESPACE="${TILLER_NAMESPACE}" -p HELM_VERSION=v2.14.1 | oc create -f -
+oc project kube-system
 ```
 
-At this point, you’ll need to wait for a moment until the Tiller server is up and running:
-
+Create a new service account for tiller.
 ```bash
-$ oc rollout status deployment tiller
-deployment "tiller" successfully rolled out
+kubectl -n kube-system create serviceaccount tiller-system
+```
+
+Give `cluster-admin` permissions to the newly created service account.
+```bash
+kubectl create clusterrolebinding tiller-system \
+--clusterrole cluster-admin \
+--serviceaccount=kube-system:tiller-system
+```
+
+Start the Tiller server.
+```bash
+helm init --service-account tiller-system --tiller-namespace kube-system
 ```
 
 We’ll check that the Helm client and Tiller server are able to communicate correctly by running helm version. The results should be as follows:
@@ -105,41 +93,49 @@ Client: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7
 Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
 ```
 
-### Grant the Tiller Server Edit Access to the Current Project
-
-The Tiller server will probably need at least `edit` access to each project where it will manage applications. In the case that Tiller will be handling Charts containing Role objects, `admin` access will be needed.
-
+You can also verify that the Tiller server is running via `kubectl`.
 ```bash
-oc policy add-role-to-user edit "system:serviceaccount:${TILLER_NAMESPACE}:tiller"
+kubectl get pods -n kube-system
+NAME                                READY   STATUS    RESTARTS   AGE
+...
+tiller-deploy-8c5679674-k9c7m       1/1     Running   0          47m
+...
 ```
 
-The [blog article written by Red Hat][0] suggests having `Tiller` in its own project, separate from application projects. However, this is **NOT** how banks deploy Tiller, it is **NOT** best practice from a security perspective. Banks typically deploy Tiller in each application's project. That way:
-
-- the tiller `edit` role does not have to have `admin` access to the whole cluster
-- each project can be individually managed w.r.t. the version of `tiller` managing its deployments; e.g., no **"big bang"** during an upgrade.
-
-So instead lets only run our applications alongside `tiller`, in the same project. To deploy a canary application, such as Node.js:
-
-```bash
-$ helm install https://github.com/jim-minter/nodejs-ex/raw/helm/helm/nodejs-0.1.tgz -n nodejs-ex
-```
-
-Verify that `tiller` properly launched Node.js.
-
-```bash
-$ oc get pods
-NAME                      READY     STATUS    RESTARTS   AGE
-nodejs-example-1-build    1/1       Running   0          1m
-tiller-86c4495fcc-rhq97   1/1       Running   0          15m
-```
-
-Now that we've seen Helm deploy an application successfully, we're confident in its installation and configuration, lets now move on to deploying NuoDB. But first, lets clean up Node.js:
-
-```bash
-$ helm del --purge nodejs-ex
-```
 
 ## Deploying NuoDB using Helm Charts
+
+### Grant OpenShift privileges
+
+First, you should create a new namespace for NuoDB.
+```bash
+oc new-project nuodb
+```
+
+Create a new service account.
+```bash
+kubectl -n nuodb create serviceaccount nuodb
+```
+
+Next, you will want to give your new service account the correct SecurityContextConstraints to run NuoDB.
+You can find the recommended SecurityContextConstraints in `deploy/nuodb-scc.yaml`
+
+```bash
+oc apply -f deploy/nuodb-scc.yaml -n nuodb
+oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuodb
+oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
+```
+
+Here is a short list of NuoDB charts and their privilege requirements.
+
+| Charts | Privilege | Short Explanation |
+| ----- | ----------- | ------ |
+| transparent-hugepage| allowHostDirVolumePlugin: true | To mount hostPath and disable THP on host|
+| transparent-hugepage| volumes.hostPath | To mount hostPath and disable THP on host|
+| transparent-hugepage| seLinuxContext.* | To mount hostPath and disable THP on host|
+| admin, database| allowedCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
+| admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
+
 
 ### Deploy NuoDB (et al) via Helm Charts
 
@@ -152,9 +148,6 @@ In a nutshell the order of installation is:
 - **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
 - **admin** ([documentation](admin/README.md))
 - **database** ([documentation](database/README.md))
-- **backup** ([documentation](backup/README.md))
-- **restore** ([documentation](restore/README.md))
-- **demo-quickstart** ([documentation](demo-quickstart/README.md))
 
 See the instructions for the individual charts for deploying the applications.
 
@@ -165,16 +158,10 @@ See the instructions for the individual charts for deleting the applications.
 An alternative cleanup strategy is to delete the entire project:
 
 ```bash
-oc delete project <project-name>
+oc delete project nuodb
 ```
 
-## References
-
-1. Materials herein unscrupulously stolen from [an online article written by Jim Minter, Red Hat, September 21, 2017][0].
-
-[0]: https://blog.openshift.com/getting-started-helm-openshift/
 [1]: https://helm.sh/docs/using_helm/
 [2]: https://github.com/helm/helm/releases
-[3]: https://docs.google.com/document/d/1G1Ljwe0c97KsH881QPUZK6ZtIShCk8jkxskXehuLpKw/edit#
 [4]: #getting-started-with-helm-on-openshift
 [5]: #deploying-nuodb-using-helm-charts

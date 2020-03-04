@@ -11,14 +11,21 @@ go:
 env:
   jobs:
     - TEST_SUITE=basic
+
     - TEST_SUITE=minikube-short REQUIRES_MINIKUBE=true
     - TEST_SUITE=minikube-long REQUIRES_MINIKUBE=true
+
+    # does not work due to KVM/Virtualbox limitations of Travis
+    # Minishift can not run with --vm-driver=none https://github.com/minishift/minishift/issues/2757
+    #- TEST_SUITE=minikube-short REQUIRES_MINISHIFT=true
+    #- TEST_SUITE=minikube-long REQUIRES_MINISHIFT=true
   global:
     - HELM_VERSION="v2.9.0"
     - DEP_VERSION=0.5.4
     - KUBERNETES_VERSION=1.15.0
+    - OPENSHIFT_VERSION=3.11.0
     - MINIKUBE_VERSION=1.2.0
-    - CHANGE_MINIKUBE_NONE_USER=true
+    - MINISHIFT_VERSION=1.34.2
     - MINIKUBE_WANTUPDATENOTIFICATION=false
     - MINIKUBE_WANTREPORTERRORPROMPT=false
     - MINIKUBE_HOME=$HOME
@@ -26,7 +33,6 @@ env:
     - KUBECONFIG=$HOME/.kube/config
     - NUODB_PRINT_TO_STDOUT=true
     - NUODB_GET_DIAGNOSE=true
-    - NUODB_VERSION=4.0.4
 
 before_install:
   - sudo apt-get update

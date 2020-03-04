@@ -14,6 +14,7 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 	t.Skip("Flaky! DB-29422")
 
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
 		SetValues: map[string]string{"admin.replicas": "3"},
