@@ -630,3 +630,74 @@ func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
 	// with daemonSet
 	assert.Equal(t, partCounter, 1)
 }
+
+func assertExpectedLines(t *testing.T, optionsMap *map[string]string, helmChartName string, templateNames []string, expectedLines *map[string]int) {
+	options := &helm.Options{
+		SetValues: *optionsMap,
+	}
+
+	output := helm.RenderTemplate(t, options, "../../stable/"+helmChartName, templateNames)
+	actualLines := make(map[string]int)
+	for _, line := range strings.Split(output, "\n") {
+		if count, ok := (*expectedLines)[line]; ok {
+			assert.Check(t, count != 0, "Unexpected line: "+line)
+			actualLines[line]++
+		}
+	}
+
+	for line, cnt := range *expectedLines {
+		assert.Equal(t, cnt, actualLines[line], "Unexpected number of occurrences of "+line)
+	}
+}
+
+func TestAddRoleBindingEnabled(t *testing.T) {
+	optionsMap := map[string]string{}
+	templateNames := []string{
+		"templates/role.yaml",
+		"templates/rolebinding.yaml",
+		"templates/serviceaccount.yaml",
+		"templates/statefulset.yaml",
+	}
+	// expect Role, RoleBinding, and ServiceAccount to be created
+	expectedLines := map[string]int{
+		"kind: Role":                      1,
+		"kind: RoleBinding":               1,
+		"kind: ServiceAccount":            1,
+		"      serviceAccountName: nuodb": 1,
+	}
+	assertExpectedLines(t, &optionsMap, "admin", templateNames, &expectedLines)
+}
+
+func TestAddRoleBindingDisabled(t *testing.T) {
+	// disable creation of role and role binding
+	optionsMap := map[string]string{
+		"nuodb.serviceAccount": "default",
+		"nuodb.addRoleBinding": "false",
+	}
+	templateNames := []string{
+		"templates/role.yaml",
+		"templates/rolebinding.yaml",
+		"templates/serviceaccount.yaml",
+		"templates/statefulset.yaml",
+	}
+	expectedLines := map[string]int{
+		"kind: Role":                        0,
+		"kind: RoleBinding":                 0,
+		"kind: ServiceAccount":              1,
+		"      serviceAccountName: default": 1,
+	}
+	assertExpectedLines(t, &optionsMap, "admin", templateNames, &expectedLines)
+}
+
+func TestDatabaseServiceAccount(t *testing.T) {
+	optionsMap := map[string]string{}
+	templateNames := []string{
+		"templates/deployment.yaml",
+		"templates/statefulset.yaml",
+	}
+	// there should be three serviceAccount declarations: SM, hotcopy SM, and TE
+	expectedLines := map[string]int{
+		"      serviceAccountName: nuodb": 3,
+	}
+	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
+}

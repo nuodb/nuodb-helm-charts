@@ -52,6 +52,14 @@ nuodb:
     ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
     ##
 
+  # the name of the ServiceAccount to use for all NuoDB Pods
+  serviceAccount: nuodb
+
+  # unless set to false, a Role and RoleBinding named "nuodb-kube-inspector"
+  # that grants access to Pods, PersistentVolumeClaims, PersistentVolumes, and
+  # StatefulSets is added to nuodb.serviceAccount
+  addRoleBinding: true
+
 admin:
   # nameOverride: east
   # fullnameOverride: admin-east
