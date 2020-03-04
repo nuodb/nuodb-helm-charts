@@ -132,7 +132,7 @@ spec:
           failureThreshold: 54
           # the TE becomes unready if it does not start within 5 minutes = 30s + 5s*54
           successThreshold: 2
-          timeoutSeconds: 1
+          timeoutSeconds: 5
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
         {{- if .Values.database.configFiles }}
