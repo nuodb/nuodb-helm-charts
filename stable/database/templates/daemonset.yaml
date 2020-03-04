@@ -155,7 +155,7 @@ spec:
           failureThreshold: 58
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
-          timeoutSeconds: 1
+          timeoutSeconds: 5
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       - name: log-volume
@@ -358,7 +358,7 @@ spec:
           failureThreshold: 58
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
-          timeoutSeconds: 1
+          timeoutSeconds: 5
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       - name: log-volume
