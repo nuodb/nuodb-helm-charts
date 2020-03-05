@@ -432,7 +432,6 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 	AwaitDatabaseUp(t, namespace, podName, databaseName, opts.NrTePods+opts.NrSmPods)
 }
 
-
 func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName string, expectedRestartCount int32) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace

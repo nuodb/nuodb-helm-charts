@@ -141,9 +141,10 @@ func verifyEngineAltAddress(t *testing.T, namespaceName string, admin0 string, e
 	}
 }
 
-func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
+func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, shouldTimeout bool, options *helm.Options) {
 
 	// wait for the backup to both start _and_ complete successfully
+	// if we expect backup to never schedule, don't use await. Instead sleep the backuptimeout and check the state of the pod using the same
 	backupJob := fmt.Sprintf("hotcopy-%s-job-initial", databaseName)
 	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
@@ -154,7 +155,11 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 	)
 
 	assert.NilError(t, err, "Error running: nuodocker get current-backup  ")
-	assert.Check(t, backupset != "")
+	if(!shouldTimeout) {
+		assert.Check(t, backupset != "")
+	} else {
+		assert.Check(t, backupset == "")
+	}
 }
 
 func restoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options) {
@@ -345,7 +350,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		populateCreateDBData(t, namespaceName, admin0)
 
 		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
-		backupDatabase(t, namespaceName, admin0, "demo", &databaseOptions)
+		backupDatabase(t, namespaceName, admin0, "demo", false, &databaseOptions)
 	})
 
 	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
@@ -369,11 +374,68 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		populateCreateDBData(t, namespaceName, admin0)
 
 		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
-		backupDatabase(t, namespaceName, admin0, "demo", &databaseOptions)
+		backupDatabase(t, namespaceName, admin0, "demo", false, &databaseOptions)
 	})
+
+	t.Run("nobackupSMBackup", func(t *testing.T) {
+		t.Skip("See: https://github.com/nuodb/nuodb-helm-charts/issues/64")
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+		databaseOptions := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"backup.persistence.enabled":            "true",
+				"backup.persistence.size":               "1Gi",
+				"database.sm.HotCopy.replicas":          "0",
+				"database.sm.HotCopy.enabled":           "true",
+				"database.sm.noHotCopy.replicas":        "1",
+			},
+		}
+
+                testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+                populateCreateDBData(t, namespaceName, admin0)
+
+                defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
+                backupDatabase(t, namespaceName, admin0, "demo", false, &databaseOptions)
+	})
+
+	t.Run("killSMProcessTest", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+		databaseOptions := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"backup.persistence.enabled":            "true",
+				"backup.persistence.size":               "1Gi",
+				"database.sm.HotCopy.replicas":          "1",
+			},
+		}
+
+		databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		populateCreateDBData(t, namespaceName, admin0)
+
+		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
+		opt := testlib.GetExtractedOptions(&databaseOptions)
+		opts := k8s.NewKubectlOptions("", "")
+		opts.Namespace = namespaceName
+
+		smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy-0", databaseChartName, opt.ClusterName, opt.DbName)
+
+		testlib.KillProcess(t, namespaceName, smPodName)
+		backupDatabase(t, namespaceName, admin0, "demo", true, &databaseOptions)
+		testlib.AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, 1)
+	})
+
 }
 
 func TestKubernetesRestoreDatabase(t *testing.T) {
+
 	testlib.AwaitTillerUp(t)
 
 	adminOptions := helm.Options{}

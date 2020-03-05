@@ -39,7 +39,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 			"nuodb.image.registry": "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": OLD_RELEASE,
-			},
+		},
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
