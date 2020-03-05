@@ -275,7 +275,7 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 	}, timeout)
 }
 
-func AwaitAdminPodUp(t *testing.T, namespace string, adminPodName string, timeout time.Duration) {
+func AwaitPodUp(t *testing.T, namespace string, adminPodName string, timeout time.Duration) {
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
 }
 
@@ -513,25 +513,12 @@ func KillAdminPod(t *testing.T, namespace string, podName string) {
 	assert.Assert(t, strings.Contains(output, "deleted"), "`deleted` not found in %s", output)
 }
 
-func KillAdminProcess(t *testing.T, namespace string, podName string) {
+func KillProcess(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "ps")
-	assert.NilError(t, err, "killAdminProcess: exec ps")
-	parts := strings.Split(output, "\n")
-
-	var pid string
-	for _, part := range parts {
-		if strings.Contains(part, "java") {
-			pid = strings.Fields(part)[0]
-		}
-	}
-	assert.Assert(t, pid != "", "pid not found in :%s\n", output)
-
-	t.Logf("Killing pid %s in pod %s\n", pid, podName)
-
-	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", pid)
+	t.Logf("Killing pid 1 in pod %s\n", podName)
+	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", "1")
 
 	AwaitPodRestartCountGreaterThan(t, namespace, podName, 0)
 }
@@ -644,7 +631,7 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	pwd, err := os.Getwd()
 	assert.NilError(t, err)
-	
+
 	dirPath := filepath.Join(pwd, RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, "nuoadmin_event.log")
 

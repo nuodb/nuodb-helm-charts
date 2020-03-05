@@ -105,7 +105,7 @@ func TestKubernetesBasicNameOverride(t *testing.T) {
 	testlib.AwaitNrReplicasScheduled(t, namespaceName, nonDefaultName, 1)
 
 	// first await could be pulling the image from the repo
-	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	defer testlib.GetAppLog(t, namespaceName, admin0, "")
 

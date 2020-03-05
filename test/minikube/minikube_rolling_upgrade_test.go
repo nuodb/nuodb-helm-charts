@@ -60,7 +60,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
 	testlib.AwaitPodHasVersion(t, namespaceName, admin0, fmt.Sprintf(expectedNewVersion), 300*time.Second)
-	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 }
@@ -114,7 +114,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
 
 	testlib.AwaitPodHasVersion(t, namespaceName, admin0, expectedNewVersion, 300*time.Second)
-	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 
@@ -179,13 +179,13 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 
 	// the rolling upgrade is done in reverse order
 	testlib.AwaitPodHasVersion(t, namespaceName, admin2, expectedNewVersion, 300*time.Second)
-	testlib.AwaitAdminPodUp(t, namespaceName, admin2, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin2, 300*time.Second)
 
 	testlib.AwaitPodHasVersion(t, namespaceName, admin1, expectedNewVersion, 300*time.Second)
-	testlib.AwaitAdminPodUp(t, namespaceName, admin1, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin1, 300*time.Second)
 
 	testlib.AwaitPodHasVersion(t, namespaceName, admin0, expectedNewVersion, 300*time.Second)
-	testlib.AwaitAdminPodUp(t, namespaceName, admin0, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 }
