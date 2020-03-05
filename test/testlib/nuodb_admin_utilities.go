@@ -64,8 +64,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	AddTeardown(TEARDOWN_ADMIN, func() {
 		helm.Delete(t, options, helmChartReleaseName, true)
 	})
-
-
+	
 	adminNames := make([]string, replicaCount)
 
 	for i := 0; i < replicaCount; i++ {
