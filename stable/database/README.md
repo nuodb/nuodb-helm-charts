@@ -389,6 +389,14 @@ $ nuocmd delete database --db-name demo
 $ nuocmd show domain
 ```
 
+Then you must also clear the PVCs:
+
+```bash
+kubectl delete pvc archive-volume-sm-database-nuodb-demo-0
+kubectl delete pvc archive-volume-sm-database-nuodb-demo-hotcopy-0
+kubectl delete pvc backup-volume-sm-database-nuodb-demo-hotcopy-0
+```
+
 ## Uninstalling the Chart
 
 To uninstall/delete the deployment:
