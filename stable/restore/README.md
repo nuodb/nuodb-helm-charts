@@ -105,7 +105,7 @@ The following tables list the configurable parameters of the backup chart and th
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
 | `admin.domain` | NuoDB admin cluster name | `domain` |
-| `admin.namespace` | OpenShift project where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
+| `admin.namespace` | Namespace where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
 | `tlsCACert.secret` | TLS CA certificate secret name | `nil` |
 | `tlsCACert.key` | TLS CA certificate secret key | `nil` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
@@ -235,24 +235,3 @@ Verify the restore completed successfully; view the log output from the restarte
 ```bash
 Finished restoring /var/opt/nuodb/backup/20190619T101450 to /var/opt/nuodb/archive/nuodb/demo. Created archive with archive ID 8
 ```
-
-## References
-
-1. Kubernetes Concepts: [Persistent Volumes][0]
-2. Kubernetes How To: [How to Use Preexisting Persistent Disks][1]
-
-[0]: https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes
-[1]: https://cloud.google.com/kubernetes-engine/docs/how-to/persistent-volumes/preexisting-pd
-[2]: images/restore-workflow.png
-[3]: https://github.com/kubernetes/examples/blob/master/staging/volumes/azure_disk/README.md
-[4]: https://github.com/kubernetes/examples/blob/master/staging/volumes/azure_disk/azure.yaml
-[5]: https://kubernetes.io/docs/concepts/storage/storage-classes/#aws-ebs
-[6]: https://kubernetes.io/docs/concepts/storage/storage-classes/#azure-disk
-[7]: https://kubernetes.io/docs/concepts/storage/storage-classes/#gce-pd
-[8]: https://kubernetes.io/docs/concepts/storage/volumes/#awselasticblockstore
-[9]: https://kubernetes.io/docs/concepts/storage/volumes/#azuredisk
-[10]: https://kubernetes.io/docs/concepts/storage/volumes/#gcepersistentdisk
-[11]: https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/aks/azure-disks-dynamic-pv.md
-
-[internal-0]: http://confluence.internal.nuodb.com/display/EN2/Restore+in+Openshift
-[internal-1]: http://confluence.internal.nuodb.com/pages/viewpage.action?pageId=34079913

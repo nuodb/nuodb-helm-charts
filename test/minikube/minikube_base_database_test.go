@@ -187,6 +187,7 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 
 func TestKubernetesBasicDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{}
 
@@ -288,6 +289,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 func TestKubernetesAltAddress(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{}
 
@@ -318,6 +320,7 @@ func TestKubernetesAltAddress(t *testing.T) {
 
 func TestKubernetesBackupDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	adminOptions := helm.Options{}
 
@@ -375,6 +378,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 
 func TestKubernetesRestoreDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	adminOptions := helm.Options{}
 
@@ -448,6 +452,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 func TestKubernetesImportDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	adminOptions := helm.Options{}
 

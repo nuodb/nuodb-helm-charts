@@ -33,6 +33,7 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
 		SetValues: map[string]string{
@@ -67,6 +68,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 
 func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
 		SetValues: map[string]string{
@@ -148,6 +150,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
 		SetValues: map[string]string{

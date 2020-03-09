@@ -328,5 +328,3 @@ openshift:
   enabled: false
   # generally avoid deployment configs, favor deployments, so leave this as false
   enableDeploymentConfigs: false
-  # if openshift is enabled, then also permit routes by default
-  enableRoutes: true
