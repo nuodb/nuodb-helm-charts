@@ -17,11 +17,13 @@ cloud:
 
   cluster:
     # cluster name is used to make resources unique in multi-cluster configurations.
-    # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique cluster.name.
+    # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique cluster.name
+    # and the entrypointName should be used to specify which name is used as the entrypoint.
     # The default is fine for single-cluster domains.
     name: cluster0
+    entrypointName: cluster0
 
-    # cluster domain is that specified during kubernetes deployment.  In multi-cluster configurations, it might be
+    # cluster domain is that specified during kubernetes deployment.  In multi-cluster configurations, it is
     # necessary to specify which cluster domain is used as the NuoDB Domain Entrypoint, and change it for the other clusters.
     # Defaults to cluster.local if omitted
     domain: cluster.local

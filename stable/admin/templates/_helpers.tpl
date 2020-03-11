@@ -157,10 +157,25 @@ Define the cluster domains
 {{- end -}}
 
 {{/*
-Define the fully qualified NuoDB Admin addresses
+Define the fully qualified NuoDB Admin address for the domain entrypoint.
 */}}
+{{- define "admin.entrypointFullname" -}}
+{{- $domain := default "domain" .Values.admin.domain -}}
+{{- $cluster := default "cluster0" .Values.cloud.cluster.entrypointName -}}
+{{- if .Values.admin.fullnameOverride -}}
+{{- .Values.admin.fullnameOverride | trunc 50 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.admin.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- printf "%s-%s-%s" .Release.Name .Values.admin.domain $cluster | trunc 50 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s-%s-%s" .Release.Name .Values.admin.domain $cluster $name | trunc 50 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "nuodb.domainEntrypoint" -}}
-{{ include "admin.fullname" . }}-0.{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.entrypointDomain" . }}
+{{ include "admin.entrypointFullname" . }}-0.{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.entrypointDomain" . }}
 {{- end -}}
 
 {{- define "nuodb.altAddress" -}}
