@@ -73,8 +73,6 @@ The Charts in this repository are organized into two folders:
 * stable
 * incubator
 
-Stable Charts meet the criteria in the [technical requirements](CONTRIBUTING.md#technical-requirements).
-
 Incubator Charts are those that do not meet these criteria. Having the incubator folder allows charts to be shared and improved on until they are ready to be moved into the stable folder. The charts in the `incubator/` directory can be found in the [`gs://nuodb-charts-incubator` Google Storage Bucket](https://console.cloud.google.com/storage/browser/nuodb-charts-incubator).
 
 In order to get a Chart from incubator to stable, Chart maintainers should open a pull request that moves the chart folder.
