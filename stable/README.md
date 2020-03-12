@@ -121,7 +121,7 @@ oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuo
 oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
 ```
 
-Here is a short list of NuoDB charts and their privilege requirements.
+NuoDB charts and their privilege requirements.
 
 | Charts | Privilege | Short Explanation |
 | ----- | ----------- | ------ |
@@ -138,9 +138,11 @@ Here is a short list of NuoDB charts and their privilege requirements.
     
     You MUST first disable THP on nodes where NuoDB will run. Run the `transparent-hugepage` chart first.
 
-In a nutshell the order of installation is:
-
 - **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
+
+
+Deploy NuoDB Components in this order : 
+
 - **admin** ([documentation](admin/README.md))
 - **database** ([documentation](database/README.md))
 
