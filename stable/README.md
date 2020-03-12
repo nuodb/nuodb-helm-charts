@@ -1,15 +1,15 @@
-# Getting Started with NuoDB/Helm on OpenShift
+# Getting Started with NuoDB Helm Charts
 
-This post will walk you through getting both the Tiller server and Helm client up and running on OpenShift, and then installing your first NuoDB Helm Chart. It assumes that you already have the OpenShift `oc client` installed locally and that you are logged into your OpenShift instance.
+This section will walk you through getting both the Tiller server and Helm client up and running in your Kubernetes cluster. If using Red Hat OpenShfit, this page assumes that you already have the OpenShift `oc client` installed locally and that you are logged into your OpenShift instance.
 
 The instructions are in two parts:
 
-1. **[Getting Started with Helm on OpenShift][4]** covers how to install and configure Helm on a bastion host. It will walk you through deploying a canary application to make sure Helm is properly configured.
+1. **[Getting Started with Helm[4]** covers how to install and configure Helm on a client host. It will walk you through deploying a canary application to make sure Helm is properly configured.
 2. **[Deploying NuoDB using Helm Charts][5]** covers how to configure hosts to permit running NuoDB, and covers deploying your first NuoDB database using the provided Helm charts.
 
-Bear in mind there are sub-charts in subdirectories included in this distribution. Instructions provided in this specific README are more geared towards the prerequisite setup of projects, Helm and Tiller, security settings, etc. Sub-charts have details for each of the deployed components.
+Bear in mind there are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
 
-## Getting Started with Helm on OpenShift
+## Getting Started with Helm
 
 ### Install Helm and Tiller
 
@@ -23,12 +23,12 @@ Every [release][2] of Helm provides binary releases for a variety of OSes. These
 
 From there, you should be able to run the client: `helm help`.
 
-We’ll use Helm version 2.14.1, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v2.14.1.>
+We’ll use Helm version 2.16.1, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v2.16.1.>
 
 Run the following commands to install the Helm client:
 
 ```bash
-$ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-linux-amd64.tar.gz | tar xz
+$ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-linux-amd64.tar.gz | tar xz
 $ cd linux-amd64
 $ mv helm /usr/local/bin
 $ mv tiller /usr/local/bin
@@ -37,7 +37,7 @@ $ mv tiller /usr/local/bin
 If you're running on Mac, the curl commands above would be:
 
 ```bash
-$ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.14.1-darwin-amd64.tar.gz | tar xz
+$ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-darwin-amd64.tar.gz | tar xz
 $ cd darwin-amd64
 $ mv helm /usr/local/bin
 $ mv tiller /usr/local/bin
