@@ -136,7 +136,8 @@ NuoDB charts and their privilege requirements.
 
     IMPORTANT:
     
-    You MUST first disable THP on nodes where NuoDB will run. Run the `transparent-hugepage` chart first.
+    You MUST first disable THP on nodes where NuoDB will run. 
+    Run the `transparent-hugepage` chart first.
 
 - **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
 
@@ -146,7 +147,6 @@ Deploy NuoDB Components in this order :
 - **admin** ([documentation](admin/README.md))
 - **database** ([documentation](database/README.md))
 
-See the instructions for the individual charts for deploying the applications.
 
 ## Cleanup
 
