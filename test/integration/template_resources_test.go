@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -638,7 +639,8 @@ func assertExpectedLines(t *testing.T, optionsMap *map[string]string, helmChartN
 
 	output := helm.RenderTemplate(t, options, "../../stable/"+helmChartName, templateNames)
 	actualLines := make(map[string]int)
-	for _, line := range strings.Split(output, "\n") {
+	// iterate through all lines of rendered output, removing any trailing spaces
+	for _, line := range regexp.MustCompile(" *\n").Split(output, -1) {
 		if count, ok := (*expectedLines)[line]; ok {
 			assert.Check(t, count != 0, "Unexpected line: "+line)
 			actualLines[line]++
@@ -689,15 +691,55 @@ func TestAddRoleBindingDisabled(t *testing.T) {
 	assertExpectedLines(t, &optionsMap, "admin", templateNames, &expectedLines)
 }
 
-func TestDatabaseServiceAccount(t *testing.T) {
+func TestDeploymentServiceAccount(t *testing.T) {
 	optionsMap := map[string]string{}
 	templateNames := []string{
 		"templates/deployment.yaml",
+	}
+	expectedLines := map[string]int{
+		"      serviceAccountName: nuodb": 1,
+	}
+	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
+}
+
+func TestStatefulSetServiceAccount(t *testing.T) {
+	optionsMap := map[string]string{}
+	templateNames := []string{
 		"templates/statefulset.yaml",
 	}
-	// there should be three serviceAccount declarations: SM, hotcopy SM, and TE
+	// there should be two serviceAccountName declarations, for SM and hotcopy SM
 	expectedLines := map[string]int{
-		"      serviceAccountName: nuodb": 3,
+		"kind: StatefulSet":               2,
+		"      serviceAccountName: nuodb": 2,
+	}
+	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
+}
+
+func TestDeploymentConfigServiceAccount(t *testing.T) {
+	optionsMap := map[string]string{
+		"openshift.enabled":                 "true",
+		"openshift.enableDeploymentConfigs": "true",
+	}
+	templateNames := []string{
+		"templates/deploymentconfig.yaml",
+	}
+	expectedLines := map[string]int{
+		"      serviceAccountName: nuodb": 1,
+	}
+	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
+}
+
+func TestDaemonSetServiceAccount(t *testing.T) {
+	optionsMap := map[string]string{
+		"database.enableDaemonSet": "true",
+	}
+	templateNames := []string{
+		"templates/daemonset.yaml",
+	}
+	// there should be two serviceAccountName declarations, for SM and hotcopy SM
+	expectedLines := map[string]int{
+		"kind: DaemonSet":                 2,
+		"      serviceAccountName: nuodb": 2,
 	}
 	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
 }

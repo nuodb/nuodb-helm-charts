@@ -236,6 +236,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
 {{- with .Values.database.sm.nodeSelectorHotCopyDS }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
