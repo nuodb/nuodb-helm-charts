@@ -134,15 +134,12 @@ NuoDB charts and their privilege requirements.
 
 ## Deploy NuoDB Helm Charts
 
-    IMPORTANT:
-    
-    You MUST first disable THP on nodes where NuoDB will run. 
-    Run the `transparent-hugepage` chart first.
+**Note:** You MUST first disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods. Run the `transparent-hugepage` chart first.
 
 - **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
 
 
-Deploy NuoDB Components in this order : 
+Deploy the NuoDB Components in this order : 
 
 - **admin** ([documentation](admin/README.md))
 - **database** ([documentation](database/README.md))
