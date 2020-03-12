@@ -18,7 +18,7 @@ To enable automated notification of new releases, click the `Watch` button above
 | Software   | Release Requirements                           | 
 |------------|------------------------------------------------|
 | Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.16 then 1.16 and 1.15 are offically supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
-| Kubernetes Distributions |  OpenShift 3.11, 4.x, GKE, EKS, AKS, or RKE. Other Kubernetes distributions may work, these are the distributions we test with regularly. |
+| Managed Kubernetes Distributions |  OpenShift 3.11, 4.x, GKE, EKS, AKS, or RKE. Other Kubernetes distributions may work. The listed distributions are tested regularly. |
 | Helm       |  Version 2 is supported, v2.9 or greater   |
 | NuoDB      |  Version [4.0](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
 
