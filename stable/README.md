@@ -43,21 +43,21 @@ $ mv helm /usr/local/bin
 $ mv tiller /usr/local/bin
 ```
 
-The following command will configure the current users environment for Helm; it will create a `.helm` directory in `${HOME}`.
+To keep isolated between individuals sharing a login, you can have separate Kubernetes, Helm, and Tiller state. Run these before proceeding.
+
+```bash
+export TILLER_NAMESPACE=nuodb
+export HELM_HOME=`pwd`/.helm
+export KUBECONFIG=`pwd`/.kube/config
+```
+
+The following commands will configure the current users environment for Helm; it will create a `.helm` directory in `${HOME}`.
 
 ```bash
 $ helm init --client-only
 $HELM_HOME has been configured at /home/clusteradmin/.helm.
 Not installing Tiller due to 'client-only' flag having been set
 Happy Helming!
-```
-
-Alternatively, to keep isolated between individuals sharing a login, you can have separate Kube, Helm, and Tiller state (so run these before the above init command):
-
-```bash
-export TILLER_NAMESPACE=nuodb
-export HELM_HOME=`pwd`/.helm
-export KUBECONFIG=`pwd`/.kube/config
 ```
 
 ### Install the Tiller Server in Kubernetes
