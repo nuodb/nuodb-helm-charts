@@ -76,7 +76,7 @@ kubectl create clusterrolebinding tiller-system \
 --serviceaccount=kube-system:tiller-system
 ```
 
-### Start the Tiller server.
+### Start the Tiller server
 ```bash
 helm init --service-account tiller-system --tiller-namespace kube-system
 ```
