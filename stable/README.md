@@ -7,7 +7,7 @@ The instructions are in two parts:
 1. **[Getting Started with Helm][4]** covers how to install and configure Helm on a client host. It will walk you through deploying a canary application to make sure Helm is properly configured.
 2. **[Deploying NuoDB using Helm Charts][5]** covers how to configure hosts to permit running NuoDB, and covers deploying your first NuoDB database using the provided Helm charts.
 
-Bear in mind there are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
+There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
 
 ## Getting Started with Helm
 
@@ -108,7 +108,7 @@ tiller-deploy-8c5679674-k9c7m       1/1     Running   0          47m
 
 ## For Red Hat OpenShift only - Grant OpenShift privileges
 
-Create a new service account.
+Create a new service account `nuodb`.
 
 `kubectl -n nuodb create serviceaccount nuodb`
 
