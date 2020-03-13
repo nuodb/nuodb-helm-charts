@@ -2,7 +2,7 @@
 
 This chart starts a Daemonset to disable transparent huge pages on the Linux hosts.
 
-## TL;DR;
+## Command
 
 ```bash
 helm install nuodb/transparent-hugepage
