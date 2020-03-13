@@ -1,12 +1,12 @@
-// +build short
+// +build long
 
 package minikube
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
-	"path/filepath"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"gotest.tools/assert"
@@ -46,7 +46,7 @@ func TestKubernetesTLS(t *testing.T) {
 	testlib.CreateNamespace(t, namespaceName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
-	
+
 	// create the certs and secrets...
 	tlsCommands := []string{
 		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",

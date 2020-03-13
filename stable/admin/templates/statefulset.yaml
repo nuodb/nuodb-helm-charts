@@ -27,6 +27,7 @@ spec:
         domain: {{ .Values.admin.domain }}
         group: nuodb
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -71,6 +72,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         - name: NAMESPACE
           valueFrom:
             fieldRef:
