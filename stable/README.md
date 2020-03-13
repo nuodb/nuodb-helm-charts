@@ -1,6 +1,6 @@
 # Getting Started with NuoDB Helm Charts
 
-This section will walk you through getting both the Tiller server and Helm client up and running in your Kubernetes cluster. If using Red Hat OpenShfit, this page assumes that you already have the OpenShift `oc client` installed locally and that you are logged into your OpenShift instance.
+This section will walk you through getting both the Tiller server and Helm client up and running in your Kubernetes cluster. If using Red Hat OpenShfit, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
 
 The instructions are in two parts:
 
@@ -132,7 +132,7 @@ NuoDB charts and their privilege requirements.
 | admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 
 
-## Deploy NuoDB Helm Charts
+## Deploying NuoDB using Helm Charts
 
 **Note:** You MUST first disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods. Run the `transparent-hugepage` chart first.
 
