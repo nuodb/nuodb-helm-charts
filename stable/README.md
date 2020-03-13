@@ -11,7 +11,7 @@ There are sub-charts in subdirectories included in this distribution. Instructio
 
 ## Getting Started with Helm
 
-### Install Helm and Tiller
+### Install Helm and Tiller on your Client
 
 There are two parts to Helm: The Helm client (`helm`) and the Helm server (Tiller). This guide shows how to [install the client][1], and then proceeds to show two ways to install the server.
 
