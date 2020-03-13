@@ -52,7 +52,7 @@ func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	testlib.LabelNodes(t, namespaceName, "failure-domain.beta.kubernetes.io/zone", randomSuffix)
+	testlib.LabelNodes(t, namespaceName, "test.nuodb.com/zone", randomSuffix)
 
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
@@ -76,7 +76,7 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	testlib.LabelNodes(t, namespaceName, "failure-domain.beta.kubernetes.io/zone", "")
+	testlib.LabelNodes(t, namespaceName, "test.nuodb.com/zone", "")
 
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
