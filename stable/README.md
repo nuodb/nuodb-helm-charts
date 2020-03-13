@@ -64,10 +64,6 @@ export KUBECONFIG=`pwd`/.kube/config
 
 We will be creating the Tiller server in the `kube-system` namespace so that it is available to all projects.
 
-```bash
-oc project kube-system
-```
-
 Create a new service account for tiller.
 ```bash
 kubectl -n kube-system create serviceaccount tiller-system
@@ -84,8 +80,7 @@ kubectl create clusterrolebinding tiller-system \
 ```bash
 helm init --service-account tiller-system --tiller-namespace kube-system
 ```
-
-We’ll check that the Helm client and Tiller server are able to communicate correctly by running helm version. The results should be as follows:
+Check that the Helm client and Tiller server are able to communicate correctly by running helm version. The results should be as follows:
 
 ```bash
 $ helm version
