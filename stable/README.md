@@ -97,11 +97,11 @@ tiller-deploy-8c5679674-k9c7m       1/1     Running   0          47m
 ...
 ```
 
-## Create a NuoDB namespace to install NuoDB
+### Create a NuoDB namespace to install NuoDB
 
 `kubectl create namespace nuodb`
 
-## For Red Hat OpenShift only - Grant OpenShift privileges
+### For Red Hat OpenShift only - Grant OpenShift privileges
 
 Create a new service account `nuodb`.
 
