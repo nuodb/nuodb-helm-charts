@@ -8,10 +8,6 @@ This chart starts a Daemonset to disable transparent huge pages on the Linux hos
 helm install nuodb/transparent-hugepage
 ```
 
-## Prerequisites
-
-- Kubernetes 1.9+
-
 ## Installing the Chart
 
 ### Configuration
