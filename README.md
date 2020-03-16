@@ -23,12 +23,12 @@ To enable automated notification of new releases, click the `Watch` button above
 
 ## NuoDB Helm Chart Installation
 
-The default repository for NuoDB is located at https://nuodb-charts.storage.googleapis.com/ and must be enabled.
+The default repository for NuoDB is located at https://storage.googleapis.com/nuodb-charts and must be enabled.
 
 To add the charts for your local client, run the `helm repo add` command below:
 
 ```
-helm repo add nuodb https://nuodb-charts.storage.googleapis.com/
+helm repo add nuodb https://storage.googleapis.com/nuodb-charts
 "nuodb" has been added to your repositories
 ```
 

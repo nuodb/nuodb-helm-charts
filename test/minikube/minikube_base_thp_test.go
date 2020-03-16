@@ -16,20 +16,6 @@ import (
 	"gotest.tools/assert"
 )
 
-func labelMinikubeNode(t *testing.T, namespace string, labelName string, labelValue string) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespace
-
-	var labelString string
-
-	if labelValue != "" {
-		labelString = fmt.Sprintf("%s=%s", labelName, labelValue)
-	} else {
-		labelString = fmt.Sprintf("%s-", labelName)
-	}
-
-	k8s.RunKubectl(t, options, "label", "nodes", "minikube", labelString, "--overwrite")
-}
 
 func scheduleDefault(t *testing.T, helmChartPath string, namespaceName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
@@ -66,7 +52,7 @@ func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	labelMinikubeNode(t, namespaceName, "failure-domain.beta.kubernetes.io/zone", randomSuffix)
+	testlib.LabelNodes(t, namespaceName, "test.nuodb.com/zone", randomSuffix)
 
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
@@ -90,7 +76,7 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	labelMinikubeNode(t, namespaceName, "failure-domain.beta.kubernetes.io/zone", "")
+	testlib.LabelNodes(t, namespaceName, "test.nuodb.com/zone", "")
 
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
@@ -102,6 +88,7 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 
 func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
 
@@ -112,11 +99,10 @@ func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	options.KubectlOptions = kubectlOptions
 
-	namespaceName := fmt.Sprintf("testthp-%s", randomSuffix)
-	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-	options.KubectlOptions.Namespace = namespaceName
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN) // some namespace cleanup
 
-	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
+	namespaceName := fmt.Sprintf("testthp-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
 
 	/*
 		These tests do not verify that THP can be turned off via DaemonSet.

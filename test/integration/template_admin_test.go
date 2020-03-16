@@ -122,8 +122,15 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 		assert.Check(t, adminContainer.EnvFrom[0].ConfigMapRef.LocalObjectReference.Name == "test-config")
 		assert.Check(t, adminContainer.Args[0] == "nuoadmin")
 		assert.Check(t, adminContainer.Args[1] == "--")
-		assert.Check(t, adminContainer.Args[2] == "pendingReconnectTimeout=60000")
-		assert.Check(t, adminContainer.Args[3] == "leaderAssignmentTimeout=30000")
+
+		// make sure all expected admin option overrides appear in command-line
+		adminOptions := make(map[string]bool)
+		for _, option := range adminContainer.Args[2:] {
+			adminOptions[option] = true
+		}
+		assert.Check(t, adminOptions["pendingReconnectTimeout=60000"])
+		assert.Check(t, adminOptions["processLivenessCheckSec=30"])
+		assert.Check(t, adminOptions["leaderAssignmentTimeout=30000"])
 	}
 }
 

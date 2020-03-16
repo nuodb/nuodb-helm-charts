@@ -25,11 +25,11 @@ func verifyLBPolicy(t *testing.T, namespaceName string, podName string) {
 func verifyPodKill(t *testing.T, namespaceName string, podName string, helmChartReleaseName string, nrReplicasExpected int) {
 	testlib.KillAdminPod(t, namespaceName, podName)
 	testlib.AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, nrReplicasExpected)
-	testlib.AwaitAdminPodUp(t, namespaceName, podName, 100*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, podName, 100*time.Second)
 }
 
 func verifyKillProcess(t *testing.T, namespaceName string, podName string, helmChartReleaseName string, nrReplicasExpected int) {
-	testlib.KillAdminProcess(t, namespaceName, podName)
+	testlib.KillProcess(t, namespaceName, podName)
 	testlib.AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, nrReplicasExpected)
-	testlib.AwaitAdminPodUp(t, namespaceName, podName, 100*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, podName, 100*time.Second)
 }

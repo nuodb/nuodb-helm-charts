@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# exit when any command fails
+set -e
+
 # Download kubectl, which is a requirement for using minikube.
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${KUBERNETES_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
@@ -7,28 +10,60 @@ curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${K
 wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
-if [[ -z "$REQUIRES_MINIKUBE" ]]; then
-    echo "Skipping minikube installation step"
-    exit 0
+if [[ -n "$REQUIRES_MINIKUBE" ]]; then
+    # Download minikube.
+  curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+  mkdir -p "$HOME"/.kube "$HOME"/.minikube
+  touch "$KUBECONFIG"
+
+  # start minikube
+  sudo minikube start --vm-driver=none --kubernetes-version=v"${KUBERNETES_VERSION}" --memory=8000 --cpus=4
+  sudo chown -R travis: /home/travis/.minikube/
+  kubectl cluster-info
+
+  # install helm
+  # Use default K8s service account as a workaround explained in https://github.com/helm/helm/issues/3460
+  helm init --service-account default
+
+  kubectl version
+elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
+  wget https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -O /tmp/oc.tar.gz
+  tar xzf /tmp/oc.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/oc && sudo mv /tmp/oc /usr/local/bin
+
+  oc version
+
+  sudo apt install libvirt-bin qemu-kvm
+  sudo usermod -a -G libvirtd "$(whoami)"
+
+  curl -L https://github.com/dhiltgen/docker-machine-kvm/releases/download/v0.10.0/docker-machine-driver-kvm-ubuntu14.04 -o /tmp/docker-machine-driver-kvm
+  chmod +x /tmp/docker-machine-driver-kvm && sudo mv /tmp/docker-machine-driver-kvm /usr/local/bin
+
+  wget https://github.com/minishift/minishift/releases/download/v"${MINISHIFT_VERSION}"/minishift-"${MINISHIFT_VERSION}"-linux-amd64.tgz -O /tmp/minishift.tar.gz
+  tar xzf /tmp/minishift.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/minishift && sudo mv /tmp/minishift /usr/local/bin
+
+  sudo minishift start --openshift-version=v"${OPENSHIFT_VERSION}" --memory=8000 --cpus=4
+
+  oc login -u system:admin
+  oc status
+
+  kubectl cluster-info
+
+  kubectl -n kube-system create serviceaccount tiller-system
+  kubectl create clusterrolebinding tiller-system --clusterrole cluster-admin --serviceaccount=kube-system:tiller-system
+  helm init --service-account tiller-system --tiller-namespace kube-system
+
+  helm version
+
+  kubectl version
+
+  # disable THP to match minikube
+  kubectl create namespace nuodb
+  kubectl -n nuodb create serviceaccount nuodb
+  oc apply -f deploy/nuodb-scc.yaml -n nuodb
+  oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuodb
+  oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
+  helm install stable/transparent-hugepage/ --namespace nuodb
+
+else
+  echo "Skipping installation steps"
 fi
-
-# Download minikube.
-curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
-mkdir -p "$HOME"/.kube "$HOME"/.minikube
-touch "$KUBECONFIG"
-
-# start minikube
-sudo minikube start --vm-driver=none --kubernetes-version=v"${KUBERNETES_VERSION}" --memory=8000 --cpus=4
-sudo chown -R travis: /home/travis/.minikube/
-kubectl cluster-info
-
-# install helm
-# Use default K8s service account as a workaround explained in https://github.com/helm/helm/issues/3460
-helm init --service-account default
-
-# get the image to speed up tests
-docker pull nuodb/nuodb-ce:"${NUODB_VERSION}"
-docker pull nuodb/nuodb-ce:latest
-
-# print some info
-helm version

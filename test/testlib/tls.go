@@ -140,12 +140,14 @@ func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []str
 	return podName, keysLocation
 }
 
-func RotateTLSCertificates(t *testing.T, options *helm.Options,
-	kubectlOptions *k8s.KubectlOptions, adminReleaseName string, databaseReleaseName string, tlsKeysLocation string, helmUpgrade bool) {
+func RotateTLSCertificates(t *testing.T, options *helm.Options, namespaceName string,
+	adminReleaseName string, databaseReleaseName string, tlsKeysLocation string, helmUpgrade bool) {
+
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions.Namespace = namespaceName
 
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
 	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
-	namespaceName := kubectlOptions.Namespace
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(tlsKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")

@@ -4,5 +4,5 @@ thp:
       requiredDuringSchedulingIgnoredDuringExecution:
         nodeSelectorTerms:
           - matchExpressions:
-              - key: failure-domain.beta.kubernetes.io/zone
+              - key: test.nuodb.com/zone
                 operator: Exists

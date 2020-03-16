@@ -3,9 +3,9 @@
 set -o errexit
 set -o pipefail
 
-# VERSION=1.3 scripts/ci/tag
+# VERSION=1.3.0 scripts/ci/tag
 
-: ${VERSION:?"Specify <major.minor> version for release, e.g 1.2"}
+: ${VERSION:?"Specify <major.minor> version for release, e.g 1.2.3"}
 
 GIT_TAG=v${VERSION}
 
@@ -24,6 +24,7 @@ version () {
   echo "Updating Helm chart versions..."
   find stable -type f -name Chart.yaml -exec sed -i "" "s/version: .*/version: ${VERSION}/g" {} \;
   find incubator -type f -name Chart.yaml -exec sed -i "" "s/version: .*/version: ${VERSION}/g" {} \;
+  sed -i "" "s/future-release=.*/future-release=${VERSION}/g" .github_changelog_generator
   git add -u
   git commit -m "Release ${VERSION}"
 }

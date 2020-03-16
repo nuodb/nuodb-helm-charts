@@ -11,7 +11,7 @@ helm install nuodb/admin
 ## Prerequisites
 
 - Kubernetes 1.9+
-- PV provisioner support in the underlying infrastructure (see `{provider}-storage.yaml`)
+- PV provisioner support in the underlying infrastructure (see `storage-class` chart)
 
 ## Installing the Chart
 
@@ -117,6 +117,8 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.tag` | NuoDB container image tag | `latest` |
 | `image.pullPolicy` | NuoDB container pull policy |`Always`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
+| `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
+| `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
 
@@ -139,27 +141,6 @@ nuodb:
     repository: nuodb/nuodb-ce
     tag: latest
     pullPolicy: Always
-```
-
-#### openshift.*
-
-The purpose of this section is to specify parameters specific to OpenShift, e.g. enable features only present in OpenShift.
-
-The following tables list the configurable parameters for the `openshift` option:
-
-| Parameter | Description | Default |
-| ----- | ----------- | ------ |
-| `enabled` | Enable OpenShift features | `false` |
-| `enableDeploymentConfigs` | Prefer DeploymentConfig over Deployment |`false`|
-| `enableRoutes` | Enable OpenShift routes | `true` |
-
-For example, to enable an OpenShift integration, and enable routes:
-
-```yaml
-openshift:
-  enabled: true
-  enableDeploymentConfigs: false
-  enableRoutes: true
 ```
 
 #### admin.*
@@ -248,28 +229,20 @@ The purpose of this section is to allow customisation of the names of the cluste
 
 ### Running
 
-Deploy storage classes and volumes (or suitable replacement):
-
-```bash
-kubectl create -f stable/admin/${cloud_provider}-storage.yaml
-```
-
 Verify the Helm chart:
 
 ```bash
 helm install nuodb/admin -n admin \
-    --set persistence.storageClass=standard-storage \
     --debug --dry-run
 ```
 
 Deploy the administration tier using volumes of the specified storage class:
 
 ```bash
-helm install nuodb/admin -n admin \
-    --set persistence.storageClass=standard-storage
+helm install nuodb/admin -n admin
 ```
 
-  **Tip**: Be patient, it will take approximately 55 seconds to deploy.
+  **Tip**: Be patient, it will take approximately 1 minute to deploy.
 
 The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
 
@@ -286,7 +259,7 @@ Verify the pods are running:
 ```bash
 $ kubectl get pods
 NAME                           READY     STATUS    RESTARTS   AGE
-admin-nuodb-0                         1/1       Running   0          29m
+admin-nuodb-0                  1/1       Running   0          29m
 tiller-86c4495fcc-lczdp        1/1       Running   0          5h
 ```
 
@@ -322,7 +295,6 @@ To uninstall/delete the deployment:
 
 ```bash
 helm del --purge admin
-kubectl delete -f admin/${cloud_provider}-storage.yaml
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.

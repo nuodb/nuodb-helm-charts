@@ -275,7 +275,7 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 	}, timeout)
 }
 
-func AwaitAdminPodUp(t *testing.T, namespace string, adminPodName string, timeout time.Duration) {
+func AwaitPodUp(t *testing.T, namespace string, adminPodName string, timeout time.Duration) {
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
 }
 
@@ -366,7 +366,7 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
 		"--db-name", databaseName, "--check-running", "--check-liveness", "20",
 		"--num-processes", strconv.Itoa(numProcesses),
-		"--timeout", "600")
+		"--timeout", "300")
 }
 
 func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
@@ -374,13 +374,16 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 		options := k8s.NewKubectlOptions("", "")
 		options.Namespace = namespace
 
-		targetDirPath := filepath.Join(RESULT_DIR, namespace, "diagnose")
+		pwd, err := os.Getwd()
+		assert.NilError(t, err)
+
+		targetDirPath := filepath.Join(pwd, RESULT_DIR, namespace, "diagnose")
 		_ = os.MkdirAll(targetDirPath, 0700)
 
 		// Get cores
 		// Once DB-29847 is implemented, we can set a --timeout or --wait-forever flags
 		// So that core dump streams doesn't timeout in minikube environments
-		t.Log(t, "Generating diagnose archive...")
+		t.Log("Generating diagnose archive...")
 		k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "get", "diagnose-info",
 			"--include-cores", "--output-dir", "/tmp")
 		diagnoseFile, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", "ls -1 /tmp | grep diagnose-")
@@ -427,6 +430,23 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 
 	opts := GetExtractedOptions(databaseOptions)
 	AwaitDatabaseUp(t, namespace, podName, databaseName, opts.NrTePods+opts.NrSmPods)
+}
+
+
+func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName string, expectedRestartCount int32) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	Await(t, func() bool {
+		pod := k8s.GetPod(t, options, podName)
+
+		var restartCount int32
+		for _, status := range pod.Status.ContainerStatuses {
+			restartCount += status.RestartCount
+		}
+
+		return restartCount > expectedRestartCount
+	}, 30*time.Second)
 }
 
 func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
@@ -493,25 +513,14 @@ func KillAdminPod(t *testing.T, namespace string, podName string) {
 	assert.Assert(t, strings.Contains(output, "deleted"), "`deleted` not found in %s", output)
 }
 
-func KillAdminProcess(t *testing.T, namespace string, podName string) {
+func KillProcess(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "ps")
-	assert.NilError(t, err, "killAdminProcess: exec ps")
-	parts := strings.Split(output, "\n")
+	t.Logf("Killing pid 1 in pod %s\n", podName)
+	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", "1")
 
-	var pid string
-	for _, part := range parts {
-		if strings.Contains(part, "java") {
-			pid = strings.Fields(part)[0]
-		}
-	}
-	assert.Assert(t, pid != "", "pid not found in :%s\n", output)
-
-	t.Logf("Killing pid %s in pod %s\n", pid, podName)
-
-	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", pid)
+	AwaitPodRestartCountGreaterThan(t, namespace, podName, 0)
 }
 
 func GetService(t *testing.T, namespaceName string, serviceName string) *corev1.Service {
@@ -622,7 +631,7 @@ func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadClos
 func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	pwd, err := os.Getwd()
 	assert.NilError(t, err)
-	
+
 	dirPath := filepath.Join(pwd, RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, "nuoadmin_event.log")
 
@@ -740,7 +749,6 @@ func UnmarshalJSONObject(t *testing.T, stringJSON string) map[string]interface{}
 }
 
 func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) {
-
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespaceName
 
@@ -764,4 +772,26 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	assert.Check(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
 
 	assert.Check(t, output == "testVal", fmt.Sprintf("KV get returned the wrong value: %s", output))
+}
+
+func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+
+	var labelString string
+
+	if labelValue != "" {
+		labelString = fmt.Sprintf("%s=%s", labelName, labelValue)
+	} else {
+		labelString = fmt.Sprintf("%s-", labelName)
+	}
+
+	nodes := k8s.GetNodes(t , options)
+
+	assert.Assert(t, len(nodes) > 0)
+
+	for _, node := range nodes {
+		err := k8s.RunKubectlE(t, options, "label", "node", node.Name, labelString, "--overwrite")
+		assert.NilError(t, err, "Labeling node %s with '%s' failed", node.Name, labelString)
+	}
 }

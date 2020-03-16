@@ -11,7 +11,7 @@ helm install nuodb/database
 ## Prerequisites
 
 - Kubernetes 1.9+
-- PV provisioner support in the underlying infrastructure (see `{provider}-storage.yaml`)
+- PV provisioner support in the underlying infrastructure (see `storage-class` chart)
 - An existing NuoDB Admin cluster has been provisioned
 
 ## Installing the Chart
@@ -115,6 +115,8 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.tag` | NuoDB container image tag | `latest` |
 | `image.pullPolicy` | NuoDB container pull policy |`Always`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
+| `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
+| `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
 
@@ -149,15 +151,13 @@ The following tables list the configurable parameters for the `openshift` option
 | ----- | ----------- | ------ |
 | `enabled` | Enable OpenShift features | `false` |
 | `enableDeploymentConfigs` | Prefer DeploymentConfig over Deployment |`false`|
-| `enableRoutes` | Enable OpenShift routes | `true` |
 
-For example, to enable an OpenShift integration, and enable routes:
+For example, to enable an OpenShift integration, and enable DeploymentConfigs:
 
 ```yaml
 openshift:
   enabled: true
-  enableDeploymentConfigs: false
-  enableRoutes: true
+  enableDeploymentConfigs: true
 ```
 
 #### admin.*
@@ -179,13 +179,6 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tlsKeyStore.password` | TLS keystore secret password | `nil` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
-
-For example, to enable an OpenShift integration, and enable routes:
-
-```yaml
-admin:
-  domain: nuodb
-```
 
 #### admin.configFiles.*
 
@@ -324,19 +317,10 @@ The purpose of this section is to allow customisation of the names of the cluste
 
 ### Running
 
-Deploy storage classes and volumes (or suitable replacement):
-
-```bash
-kubectl create -f stable/database/${cloud_provider}-storage.yaml
-```
-
-  **Hint:** The `nuodb-archive` storage class is provisioned by the prior command, and used below.
-
 Verify the Helm chart:
 
 ```bash
 helm install nuodb/database -n database \
-    --set sm.persistence.storageClass=standard-storage \
     --debug --dry-run
 ```
 
@@ -344,12 +328,8 @@ Deploy a database without backups:
 
 ```bash
 helm install nuodb/database -n database \
-    --set sm.persistence.storageClass=standard-storage
+    --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1
 ```
-
-The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
-
-  **Tip**: List all releases using `helm list`
 
 Wait until the deployment completes:
 
@@ -377,8 +357,6 @@ Verify the connected states of the database domain:
 ```bash
 $ kubectl exec -it admin-nuodb-0 -- nuocmd show domain
 
-sh-4.2$ nuocmd show domain
-
 server version: 4.0-2-ef765f7906, server license: Enterprise
 server time: 2019-08-29T13:31:10.325, client token: b2c99602e831c0ad61e9becd518e4d5b323d6b3f
 Servers:
@@ -403,7 +381,7 @@ deployment.extensions/te-database-nuodb-demo scaled
 
 ## Cleaning Up Archive References
 
-This will clear the archive references and metadata between test runs:
+This will clear the archive references and metadata from the admin layer if the default demo database was recreated
 
 ```bash
 kubectl exec -it admin-nuodb-0  -- /bin/bash
@@ -428,7 +406,6 @@ To uninstall/delete the deployment:
 
 ```bash
 helm del --purge database
-kubectl delete -f stable/database/${cloud_provider}-storage.yaml
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
