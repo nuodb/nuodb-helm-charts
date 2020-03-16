@@ -134,14 +134,14 @@ helm install nuodb/transparent-hugepage \
     --debug --dry-run
 ```
 
-Deploy the administration tier using volumes of the specified storage class:
+Run the Helm Chart
 
 ```bash
 helm install nuodb/transparent-hugepage \
     --name thp
 ```
 
-Wait until the deployment completes:
+Check the deployment status
 
 ```bash
 helm status thp
