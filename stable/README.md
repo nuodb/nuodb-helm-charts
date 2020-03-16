@@ -139,8 +139,8 @@ NuoDB charts and their privilege requirements.
 
 Deploy the NuoDB Components in this order : 
 
-- **admin** ([documentation](admin/README.md))
-- **database** ([documentation](database/README.md))
+- **NuoDB Admin** The NuoDB Admin domain component required before starting a database ([documentation](admin/README.md))
+- **NuoDB Database** ([documentation](database/README.md))
 
 
 ## Cleanup
