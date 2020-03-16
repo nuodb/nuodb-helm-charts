@@ -263,3 +263,40 @@ func TestAdminStatefulSetVolumes(t *testing.T) {
 		assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
 	}
 }
+
+func TestAdminMultiClusterEnvVars(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.cluster.name": "cluster-2",
+			"cloud.cluster.entrypointName": "cluster-1",
+			"cloud.cluster.domain": "cluster2.local",
+			"cloud.cluster.entrypointDomain": "cluster1.local",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if !strings.Contains(part, "kind: StatefulSet") {
+			continue
+		}
+
+		var ss appsv1.StatefulSet
+		helm.UnmarshalK8SYaml(t, part, &ss)
+
+		// This is the NUODB_DOMAIN_ENTRYPOINT variable
+		assert.Check(t, strings.Contains(ss.Spec.Template.Spec.Containers[0].Env[3].Value, "release-name-nuodb-cluster-1-admin-0.nuodb.$(NAMESPACE).svc.cluster1.local"))
+
+		// This is the NUODB_ALT_ADDRESS variable
+		assert.Check(t, strings.Contains(ss.Spec.Template.Spec.Containers[0].Env[4].Value, "$(POD_NAME).nuodb.$(NAMESPACE).svc.cluster2.local"))
+	}
+}
