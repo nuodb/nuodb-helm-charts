@@ -146,11 +146,10 @@ Deploy the NuoDB Components in this order :
 ## Cleanup
 
 See the instructions for the individual charts for deleting the applications.
-
 An alternative cleanup strategy is to delete the entire project:
 
 ```bash
-oc delete project nuodb
+kubectl delete namespace nuodb
 ```
 
 [1]: https://helm.sh/docs/using_helm/
