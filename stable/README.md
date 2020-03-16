@@ -13,9 +13,8 @@ There are sub-charts in subdirectories included in this distribution. Instructio
 
 Please visit the **[NuoDB Helm Chart main page][6]** for software version pre-requisites.
 
-## Getting Started with Helm
 
-### Install Helm and Tiller on your Client
+## Install Helm and Tiller on your Client
 
 There are two parts to Helm: The Helm client (`helm`) and the Helm server (Tiller). This guide shows how to [install the client][1], and then proceeds to show two ways to install the server.
 
