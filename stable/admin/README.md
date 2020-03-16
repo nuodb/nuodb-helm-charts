@@ -2,16 +2,11 @@
 
 This chart starts a NuoDB admin deployment on a Kubernetes cluster using the Helm package manager.
 
-## TL;DR;
+## Command
 
 ```bash
 helm install nuodb/admin
 ```
-
-## Prerequisites
-
-- Kubernetes 1.9+
-- PV provisioner support in the underlying infrastructure (see `storage-class` chart)
 
 ## Installing the Chart
 
