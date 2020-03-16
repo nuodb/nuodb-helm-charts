@@ -134,14 +134,14 @@ helm install nuodb/transparent-hugepage \
     --debug --dry-run
 ```
 
-Run the Helm Chart
+Run the Helm Chart:
 
 ```bash
 helm install nuodb/transparent-hugepage \
     --name thp
 ```
 
-Check the deployment status
+Check the deployment status:
 
 ```bash
 helm status thp
