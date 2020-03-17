@@ -178,8 +178,8 @@ The purpose of this section is to detail how to provide alternative configuratio
 
 There are two sets of configuration files documented:
 
-- [Admin Configuration for a Particular Host][1]
-- [Database Configuration for a Particular Host][2]
+- [Admin Configuration for a Particular Deployment][1]
+- [Database Configuration for a Particular Deployment][2]
 
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
