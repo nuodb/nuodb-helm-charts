@@ -156,7 +156,7 @@ openshift:
 
 The purpose of this section is to specify the NuoDB Admin parameters.
 
-The following tables list the configurable parameters for the `admin` option of the admin chart and their default values.
+The following tables list the configurable admin parameters for a database and their default values.
 
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
@@ -174,7 +174,7 @@ The following tables list the configurable parameters for the `admin` option of 
 
 #### admin.configFiles.*
 
-The purpose of this section is to detail how to provide alternative configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
+The purpose of this section is to detail how to provide alternative configuration files for NuoDB. 
 
 There are two sets of configuration files documented:
 
