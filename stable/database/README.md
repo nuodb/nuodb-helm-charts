@@ -1,18 +1,13 @@
 # NuoDB Database Helm Chart
 
-This chart starts a NuoDB database deployment on a Kubernetes cluster using the Helm package manager.
+This chart starts a NuoDB database deployment on a Kubernetes cluster using the Helm package manager. To start a second database under the same NuoDB Admin deployment, start a second database using the same instructions with a new database name. 
 
-## TL;DR;
+## Command
 
 ```bash
 helm install nuodb/database
 ```
 
-## Prerequisites
-
-- Kubernetes 1.9+
-- PV provisioner support in the underlying infrastructure (see `storage-class` chart)
-- An existing NuoDB Admin cluster has been provisioned
 
 ## Installing the Chart
 
