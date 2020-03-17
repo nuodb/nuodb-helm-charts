@@ -222,17 +222,17 @@ The purpose of this section is to allow customisation of the names of the cluste
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/admin -n admin \
+helm install nuodb/admin -n nuodb \
     --debug --dry-run
 ```
 
 Deploy the administration tier using volumes of the specified storage class:
 
 ```bash
-helm install nuodb/admin -n admin
+helm install nuodb/admin -n nuodb
 ```
 
-  **Tip**: Be patient, it will take approximately 1 minute to deploy.
+  **Tip**: It will take approximately 1 minute to deploy.
 
 The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
 
