@@ -191,12 +191,7 @@ For example, when using GlusterFS storage class, you would supply the following 
 
 #### admin.configFiles.*
 
-The purpose of this section is to detail how to provide alternate configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
-
-There are two sets of configuration files documented:
-
-- [Admin Configuration for a Particular Host][1]
-- [Database Configuration for a Particular Host][2]
+The purpose of this section is to detail how to provide alternate configuration files for NuoDB. 
 
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
@@ -231,12 +226,13 @@ Deploy the administration tier using storage volumes specified in the storagecla
 ```bash
 helm install nuodb/admin -n nuodb
 ```
+**Note**: If deploying in Red Hat OpenShift add `--set openshift.enabled=true` to your `helm install` command.
 
-  **Tip**: It will take approximately 1 minute to deploy.
+**Tip**: It will take approximately 1 minute to deploy.
 
 The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
 
-  **Tip**: List all releases using `helm list`
+**Tip**: List all releases using `helm list`
 
 Wait until the deployment completes:
 
