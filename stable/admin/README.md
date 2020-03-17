@@ -191,12 +191,7 @@ For example, when using GlusterFS storage class, you would supply the following 
 
 #### admin.configFiles.*
 
-The purpose of this section is to detail how to provide alternate configuration files for NuoDB. 
-
-There are two sets of configuration files documented:
-
-- [Admin Configuration for a Particular Deployment][1]
-- [Database Configuration for a Particular Deployment][2]
+The purpose of this section is to detail how to provide alternate Admin configuration files for NuoDB. 
 
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
@@ -289,8 +284,6 @@ helm del --purge admin
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
 
-[1]: #adminconfigfiles
-[2]: /stable/database/README.md#databaseconfigfiles
 [3]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Obtaining-and-Installing-NuoDB-Licenses.htm
 [4]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Host-Properties.htm
 [5]: http://doc.nuodb.com/Latest/Content/Data-Type-Mappings.htm
