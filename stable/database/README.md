@@ -312,16 +312,18 @@ The purpose of this section is to allow customisation of the names of the cluste
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/database -n database \
+helm install nuodb/database -n nuodb \
     --debug --dry-run
 ```
 
 Deploy a database without backups:
 
 ```bash
-helm install nuodb/database -n database \
+helm install nuodb/database -n nuodb \
     --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1
 ```
+
+**Note**: If deploying in Red Hat OpenShift add `--set openshift.enabled=true` to your `helm install` command.
 
 Wait until the deployment completes:
 
