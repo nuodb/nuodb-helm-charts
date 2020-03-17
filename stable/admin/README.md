@@ -226,7 +226,6 @@ Deploy the administration tier using storage volumes specified in the storagecla
 ```bash
 helm install nuodb/admin -n nuodb
 ```
-**Note**: If deploying in Red Hat OpenShift add `--set openshift.enabled=true` to your `helm install` command.
 
 **Tip**: It will take approximately 1 minute to deploy.
 
