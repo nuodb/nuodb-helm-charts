@@ -193,6 +193,11 @@ For example, when using GlusterFS storage class, you would supply the following 
 
 The purpose of this section is to detail how to provide alternate configuration files for NuoDB. 
 
+There are two sets of configuration files documented:
+
+- [Admin Configuration for a Particular Deployment][1]
+- [Database Configuration for a Particular Deployment][2]
+
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
 | Key | Description | Default |
