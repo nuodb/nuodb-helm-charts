@@ -300,9 +300,9 @@ func TestAdminMultiClusterEnvVars(t *testing.T) {
 		var ss appsv1.StatefulSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		println("NUODB_DOMAIN_ENTRYPOINT: ", ss.Spec.Template.Spec.Containers[0].Env[3].Value)
-		println("NUODB_ALT_ADDRESS: ", ss.Spec.Template.Spec.Containers[0].Env[4].Value)
-
+		println(ss.Spec.Template.Spec.Containers[0].Env[3].Value)
+		println(ss.Spec.Template.Spec.Containers[0].Env[4].Value)
+		
 		// This is the NUODB_DOMAIN_ENTRYPOINT variable
 		assert.Check(t, strings.Contains(ss.Spec.Template.Spec.Containers[0].Env[3].Value, "RELEASE-NAME-nuodb-cluster-1-admin-0.nuodb.$(NAMESPACE).svc.cluster1.local"))
 
