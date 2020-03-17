@@ -1,6 +1,6 @@
 # NuoDB Admin Helm Chart
 
-This chart starts a NuoDB admin deployment on a Kubernetes cluster using the Helm package manager.
+This chart starts a NuoDB admin deployment on a Kubernetes cluster using the Helm package manager. An the NuoDB Admin domain must be running before attempting to start a NuoDB database.
 
 ## Command
 
