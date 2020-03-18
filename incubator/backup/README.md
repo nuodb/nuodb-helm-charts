@@ -5,7 +5,7 @@ This chart starts a NuoDB database backup on existing NuoDB storage managers in 
 ## Command
 
 ```bash
-helm install nuodb/backup [--name backup] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/backup [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Installing the Chart
