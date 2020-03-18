@@ -67,9 +67,9 @@ This GitHub repository contains the source for the packaged and versioned charts
 The Charts in this repository are organized into two folders:
 
 
-[stable](stable/README.md)
+  [stable](stable/README.md)
 
-[incubator](incubator)
+  [incubator](incubator)
 
 
 The charts in the `stable` directory in the master branch of this repository match the latest packaged Chart in the Chart Repository, though there may be previous versions of a Chart available in that Chart Repository. The purpose of this repository is to provide a place for maintaining and contributing official Charts, with CI processes in place for managing the releasing of Charts into the Chart Repository.
