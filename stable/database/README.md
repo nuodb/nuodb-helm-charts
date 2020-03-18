@@ -313,8 +313,6 @@ helm install nuodb/database --name database \
     --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1
 ```
 
-**Note**: If deploying in Red Hat OpenShift add `--set openshift.enabled=true` to your `helm install` command.
-
 Wait until the deployment completes:
 
 ```bash
