@@ -66,8 +66,6 @@ This GitHub repository contains the source for the packaged and versioned charts
 
 The Charts in this repository are organized into two folders:
 
-* stable
-* incubator
 
 - **stable** ([directory](stable/README.md)) 
 - **incubator** ([directory](incubator/README.md)) 
