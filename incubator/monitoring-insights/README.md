@@ -5,7 +5,7 @@ This chart deploys NuoDB Insights on a Kubernetes cluster using the Helm package
 ## Command
 
 ```bash
-helm install nuodb/monitoring-insights --name insights [--set parameter] [--values myvalues.yaml]
+helm install nuodb/monitoring-insights [--name insights] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Installing the Chart
