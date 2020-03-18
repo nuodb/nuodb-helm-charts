@@ -5,7 +5,7 @@ The instructions on this page are in two parts:
 
 # Getting Started with NuoDB Helm Charts
 
-This section will walk you through getting both the Tiller server and Helm client up and running in your Kubernetes cluster. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
+This section will walk you through getting both Helm client and the Tiller server up and running in your environment. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
 
 There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
 
@@ -63,7 +63,7 @@ Not installing Tiller due to 'client-only' flag having been set
 Happy Helming!
 ```
 
-### Install the Tiller Server in Kubernetes
+## Install the Tiller Server in Kubernetes
 
 We will be creating the Tiller server in the `kube-system` namespace so that it is available to all projects.
 
@@ -79,7 +79,7 @@ kubectl create clusterrolebinding tiller-system \
 --serviceaccount=kube-system:tiller-system
 ```
 
-### Start the Tiller server
+## Start the Tiller server
 ```bash
 helm init --service-account tiller-system --tiller-namespace kube-system
 ```
@@ -102,11 +102,11 @@ tiller-deploy-8c5679674-k9c7m       1/1     Running   0          47m
 
 # Deploying NuoDB using Helm Charts
 
-### Create a NuoDB namespace to install NuoDB
+## Create a NuoDB namespace to install NuoDB
 
 `kubectl create namespace nuodb`
 
-### For Red Hat OpenShift only - Grant OpenShift privileges
+## For Red Hat OpenShift only - Grant OpenShift privileges
 
 Create a new service account `nuodb`.
 
@@ -132,9 +132,7 @@ NuoDB charts and their privilege requirements.
 | admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 
 
-## NuoDB Helm Chart Deployment
-
-### Configuration Parameterrs
+## Configuration Parameterrs
 
 Each Helm Chart has a default values.yaml parameter file that contains configuration parameters specific to that chart. The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
 
@@ -145,7 +143,7 @@ Each Helm Chart has a default values.yaml parameter file that contains configura
 - each chart has its own scoped section named after it
 - cloud information is used to drive availability zones (particularly)
 
-### Deployment Steps
+## Deployment Steps
 
 **Note:** You MUST first disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods. Run the `transparent-hugepage` chart first.
 
