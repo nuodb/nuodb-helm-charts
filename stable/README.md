@@ -3,7 +3,7 @@
 1. **[Getting Started with Helm][4]** covers how to install and configure Helm on a client host. It will walk you through deploying a canary application to make sure Helm is properly configured.
 2. **[Deploying NuoDB using Helm Charts][5]** covers how to configure hosts to permit running NuoDB, and covers deploying your first NuoDB database using the provided Helm charts.
 
-# Getting Started with NuoDB Helm Charts
+# Getting Started with Helm 
 
 This section will walk you through getting both Helm client and the Tiller server up and running in your environment. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
 
@@ -170,7 +170,7 @@ kubectl delete namespace nuodb
 
 [1]: https://helm.sh/docs/using_helm/
 [2]: https://github.com/helm/helm/releases
-[4]: #getting-started-with-nuodb-helm-charts
+[4]: #getting-started-with-helm
 [5]: #deploying-nuodb-using-helm-charts
 [6]: https://github.com/nuodb/nuodb-helm-charts
 
