@@ -5,13 +5,8 @@ This chart starts a NuoDB database backup on existing NuoDB storage managers in 
 ## Command
 
 ```bash
-helm install nuodb/backup --name <resourceName> [--set parameter] [--values myvalues.yaml]
+helm install nuodb/backup --name backup [--set parameter] [--values myvalues.yaml]
 ```
-
-## Prerequisites
-
-- Kubernetes 1.9+
-- An existing NuoDB Admin cluster has been provisioned
 
 ## Installing the Chart
 
