@@ -146,7 +146,7 @@ See the following online resource for an interactive tool to create cron schedul
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/backup -n backup \
+helm install nuodb/backup --name backup \
     --debug --dry-run
 ```
 
