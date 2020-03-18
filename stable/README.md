@@ -1,6 +1,6 @@
 # Getting Started with NuoDB Helm Charts
 
-This section will walk you through getting both the Tiller server and Helm client up and running in your Kubernetes cluster. If using Red Hat OpenShfit, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
+This section will walk you through getting both the Tiller server and Helm client up and running in your Kubernetes cluster. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
 
 The instructions are in two parts:
 
@@ -136,6 +136,9 @@ NuoDB charts and their privilege requirements.
 
 - **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
 
+Optionally, consider configuring storage classes for persistent storage use. You can still use persistent storage without using the Storage Class Helm Chart and the NuoDB Admin and Database charts will choose a default based on what's available in your Kubernetes  environment.
+
+- **Storage Classes** ([documentation](storage-class/README.md)) 
 
 Deploy the NuoDB Components in this order : 
 
