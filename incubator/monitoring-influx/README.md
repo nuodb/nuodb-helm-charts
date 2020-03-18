@@ -2,10 +2,10 @@
 
 This chart deploys NuoDB Influx on a Kubernetes cluster using the Helm package manager.
 
-## TL;DR;
+## Command
 
 ```bash
-helm install nuodb/monitoring-influx -n influx
+helm install nuodb/monitoring-influx --name <resourceName> [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Prerequisites
