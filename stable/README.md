@@ -1,11 +1,11 @@
-# Getting Started with NuoDB Helm Charts
-
-This section will walk you through getting both the Tiller server and Helm client up and running in your Kubernetes cluster. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
-
 The instructions are in two parts:
 
 1. **[Getting Started with Helm][4]** covers how to install and configure Helm on a client host. It will walk you through deploying a canary application to make sure Helm is properly configured.
 2. **[Deploying NuoDB using Helm Charts][5]** covers how to configure hosts to permit running NuoDB, and covers deploying your first NuoDB database using the provided Helm charts.
+
+# Getting Started with NuoDB Helm Charts
+
+This section will walk you through getting both the Tiller server and Helm client up and running in your Kubernetes cluster. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
 
 There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
 
@@ -100,6 +100,8 @@ tiller-deploy-8c5679674-k9c7m       1/1     Running   0          47m
 ...
 ```
 
+# Deploying NuoDB using Helm Charts
+
 ### Create a NuoDB namespace to install NuoDB
 
 `kubectl create namespace nuodb`
@@ -170,7 +172,7 @@ kubectl delete namespace nuodb
 
 [1]: https://helm.sh/docs/using_helm/
 [2]: https://github.com/helm/helm/releases
-[4]: #getting-started-with-helm-on-openshift
+[4]: #getting-started-with-nuodb-helm-charts
 [5]: #deploying-nuodb-using-helm-charts
 [6]: https://github.com/nuodb/nuodb-helm-charts
 
