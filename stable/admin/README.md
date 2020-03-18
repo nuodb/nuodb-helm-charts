@@ -5,7 +5,7 @@ This chart starts a NuoDB Admin deployment on a Kubernetes cluster using the Hel
 ## Command
 
 ```bash
-helm install nuodb/admin --name <resourceName> [--set parameter] [--values myvalues.yaml]
+helm install nuodb/admin --name admin [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Installing the Chart
@@ -206,14 +206,14 @@ The purpose of this section is to allow customisation of the names of the cluste
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/admin -n nuodb \
+helm install nuodb/admin --name admin \
     --debug --dry-run
 ```
 
 Deploy the administration tier using storage volumes specified in the storageclass chart:
 
 ```bash
-helm install nuodb/admin -n nuodb
+helm install nuodb/admin --name admin
 ```
 
 **Tip**: It will take approximately 1 minute to deploy.
