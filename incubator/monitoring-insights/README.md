@@ -8,11 +8,6 @@ This chart deploys NuoDB Insights on a Kubernetes cluster using the Helm package
 helm install nuodb/monitoring-insights --name <resourceName> [--set parameter] [--values myvalues.yaml]
 ```
 
-## Prerequisites
-
-- Kubernetes 1.9+
-- An existing NuoDB Admin cluster has been provisioned
-
 ## Installing the Chart
 
 ### Configuration
