@@ -5,23 +5,12 @@ This chart starts a Daemonset to disable transparent huge pages (THP) on the Lin
 ## Command
 
 ```bash
-helm install nuodb/transparent-hugepage
+helm install nuodb/transparent-hugepage --name thp [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Installing the Chart
 
-### Configuration
-
-The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
-
-- values files have structure, values are scoped
-- different values files for different deployments
-- values files follow the single definition rule (no repeats)
-- global configuration exists under its own scoped section
-- each chart has its own scoped section named after it
-- cloud information is used to drive availability zones (particularly)
-
-All configurable parameters for each top-level scope is detailed below, organized by scope.
+All configurable parameters for each top-level scope are detailed below, organized by scope.
 
 #### global.*
 
