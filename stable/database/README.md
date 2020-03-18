@@ -5,7 +5,7 @@ This chart starts a NuoDB database deployment on a Kubernetes cluster using the 
 ## Command
 
 ```bash
-helm install nuodb/database
+helm install nuodb/database --name <resourceName> [--set parameter] [--values myvalues.yaml]
 ```
 
 
