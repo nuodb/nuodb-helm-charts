@@ -2,16 +2,11 @@
 
 This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm package manager.
 
-## TL;DR;
+## Command
 
 ```bash
 helm install nuodb/storage-class
 ```
-
-## Prerequisites
-
-- Kubernetes 1.9+
-- [Tiller service account should have _storageclasses_ resource permissions in cluster scope][0]
 
 ## Installing the Chart
 
