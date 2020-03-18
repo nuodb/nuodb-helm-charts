@@ -5,7 +5,7 @@ This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm
 ## Command
 
 ```bash
-helm install nuodb/storage-class --name storage-class [--set parameter] [--values myvalues.yaml]
+helm install nuodb/storage-class [--name storage-class] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Installing the Chart
