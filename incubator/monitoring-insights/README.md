@@ -147,7 +147,7 @@ helm install nuodb/monitoring-insights --name insights --debug --dry-run
 Deploy Insights:
 
 ```bash
-helm install nuodb/monitoring-insights --names insights
+helm install nuodb/monitoring-insights --name insights
 ```
 
 The command deploys NuoDB Insights on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
