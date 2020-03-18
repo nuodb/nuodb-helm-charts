@@ -101,7 +101,7 @@ spec:
             - "--type"
             - "incremental"
             - "--labels"
-            - "backup {{ .Values.cloud.clusterName }}"
+            - "backup {{ .Values.cloud.cluster.name }}"
             - "--timeout"
             - "{{ .Values.backup.timeout }}"      
             - "--backup-root"

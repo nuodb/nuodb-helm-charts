@@ -14,6 +14,12 @@ cloud:
   #   - us-east-2a
   #   - us-east-2b
   #   - us-east-2c
+  
+  cluster:
+    # cluster name is used to make resources unique in multi-cluster configurations.
+    # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique cluster.name.
+    # The default is fine for single-cluster domains.
+    name: cluster0
 
 busybox:
   image:
