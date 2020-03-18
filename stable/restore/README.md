@@ -219,3 +219,12 @@ Verify the restore completed successfully; view the log output from the restarte
 ```bash
 Finished restoring /var/opt/nuodb/backup/20190619T101450 to /var/opt/nuodb/archive/nuodb/demo. Created archive with archive ID 8
 ```
+
+## Uninstalling the Chart
+
+To uninstall/delete the deployment:
+
+```bash
+helm del --purge restore
+```
+
