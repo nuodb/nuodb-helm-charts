@@ -75,8 +75,6 @@ The charts in the `stable` directory in the master branch of this repository are
 
 The charts in the `Incubator` directory are those that do not meet these criteria. Having the incubator folder allows charts to be shared and improved on until they are ready to be moved into the stable folder. The charts in the `incubator/` directory can be found in the [`gs://nuodb-charts-incubator` Google Storage Bucket](https://console.cloud.google.com/storage/browser/nuodb-charts-incubator).
 
-In order to get a Chart from incubator to stable, Chart maintainers should open a pull request that moves the chart folder.
-
 ## Status of the Project
 
 This project is still under active development, so you might run into [issues](https://github.com/nuodb/nuodb-helm-charts/issues). If you do, please don't be shy about letting us know, or better yet, contribute a fix or feature.
