@@ -210,7 +210,7 @@ helm install nuodb/admin --name admin \
     --debug --dry-run
 ```
 
-Deploy the administration tier using storage volumes specified in the storageclass chart:
+Deploy the administration tier:
 
 ```bash
 helm install nuodb/admin --name admin
