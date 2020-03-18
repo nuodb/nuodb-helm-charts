@@ -2,10 +2,10 @@
 
 This chart starts a NuoDB database backup on existing NuoDB storage managers in a Kubernetes cluster using the Helm package manager.
 
-## TL;DR;
+## Command
 
 ```bash
-helm install nuodb/backup
+helm install nuodb/backup --name <resourceName> [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Prerequisites
