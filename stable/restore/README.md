@@ -5,7 +5,7 @@ This chart starts a Job to restore a NuoDB database from an existing backup, in 
 ## Command
 
 ```bash
-helm install nuodb/restore --name restore [--set parameter] [--values myvalues.yaml]
+helm install nuodb/restore [--name restore] [--set parameter] [--values myvalues.yaml]
 ```
 
 ### Configuration
