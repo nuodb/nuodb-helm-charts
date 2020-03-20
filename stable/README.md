@@ -13,9 +13,9 @@ There are sub-charts in subdirectories included in this distribution. Instructio
 
 Please visit the **[NuoDB Helm Chart main page][6]** for software version pre-requisites.
 
-NuoDB charts and their privilege requirements
+NuoDB Helm Charts and their privilege requirements:
 
-| Charts | Privilege | Short Explanation |
+| Helm Charts | Privilege | Short Explanation |
 | ----- | ----------- | ------ |
 | transparent-hugepage| allowHostDirVolumePlugin: true | To mount hostPath and disable THP on host|
 | transparent-hugepage| volumes.hostPath | To mount hostPath and disable THP on host|
