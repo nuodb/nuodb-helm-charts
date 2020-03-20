@@ -58,12 +58,24 @@ $ mv tiller /usr/local/bin
 
 ## For Kubernetes
 
+Initialize Helm and Tiller
+
+```bash
 $ helm init
+```
+
+Check that the Helm client and Tiller server are able to communicate correctly by running helm version. The results should be as follows:
+
+```bash
+$ helm version
+Client: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
+Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
+```
 
 
 ## For Red Hat OpenShift
 
-The following commands will configure the current users environment for Helm; it will also create a `.helm` directory in `${HOME}`.
+The following commands will initialize Helm locally
 
 ```bash
 $ helm init --client-only
@@ -100,15 +112,6 @@ Client: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7
 Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
 ```
 
-You can also verify that the Tiller server is running via `kubectl`.
-```bash
-kubectl get pods -n kube-system
-NAME                                READY   STATUS    RESTARTS   AGE
-...
-tiller-deploy-8c5679674-k9c7m       1/1     Running   0          47m
-...
-```
-
 Create a new service account `nuodb`.
 
 `kubectl -n nuodb create serviceaccount nuodb`
@@ -119,7 +122,6 @@ You can find the recommended SecurityContextConstraints in ([deploy/nuodb-scc.ya
 ```bash
 oc apply -f deploy/nuodb-scc.yaml -n nuodb
 oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuodb
-oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
 ```
 
 
