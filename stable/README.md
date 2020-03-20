@@ -16,7 +16,7 @@ Please visit the **[NuoDB Helm Chart main page][6]** for software version pre-re
 
 ## Install Helm and Tiller on your Client
 
-There are two parts to Helm: The Helm client (`helm`) and the Helm server (Tiller). This guide shows how to [install the client][1], and then proceeds to show two ways to install the server.
+There are two parts to Helm: The Helm client (`helm`) and the Helm server ('tiller`). This guide shows how to [install the client][1], and then proceeds to show two ways to install the server.
 
 Every [release][2] of Helm provides binary releases for a variety of OSes. These binary versions can be manually downloaded and installed.
 
