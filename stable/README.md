@@ -56,6 +56,11 @@ $ mv helm /usr/local/bin
 $ mv tiller /usr/local/bin
 ```
 
+## Create a NuoDB namespace to install NuoDB
+
+`kubectl create namespace nuodb`
+
+
 ## For Kubernetes
 
 Initialize Helm and Tiller
@@ -84,11 +89,8 @@ Not installing Tiller due to 'client-only' flag having been set
 Happy Helming!
 ```
 
-### Install the Tiller Server in Kubernetes
+### Create the Tiller server account in the `kube-system` namespace 
 
-Create the Tiller server in the `kube-system` namespace so that it is available to all projects.
-
-Create a new service account for tiller.
 ```bash
 kubectl -n kube-system create serviceaccount tiller-system
 ```
@@ -100,10 +102,13 @@ kubectl create clusterrolebinding tiller-system \
 --serviceaccount=kube-system:tiller-system
 ```
 
+Tiller is now available to all projects.
+
 ### Start the Tiller server
 ```bash
 helm init --service-account tiller-system --tiller-namespace kube-system
 ```
+
 Check that the Helm client and Tiller server are able to communicate correctly by running helm version. The results should be as follows:
 
 ```bash
@@ -112,9 +117,9 @@ Client: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7
 Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
 ```
 
-Create a new service account `nuodb`.
+### Create a new service account `nuodb`.
 
-`kubectl -n nuodb create serviceaccount nuodb`
+`kubectl create serviceaccount nuodb -n nuodb `
 
 Next, you will want to give your new service account the correct SecurityContextConstraints to run NuoDB.
 You can find the recommended SecurityContextConstraints in ([deploy/nuodb-scc.yaml](deploy/nuodb-scc.yaml)
@@ -125,12 +130,9 @@ oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuo
 ```
 
 
-
 # Deploying NuoDB using Helm Charts
 
-## Create a NuoDB namespace to install NuoDB
-
-`kubectl create namespace nuodb`
+The following section outlines the steps in order to deploy a NuoDB database using this Helm Chart repository.
 
 ## Configuration Parameters
 
