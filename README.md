@@ -71,7 +71,7 @@ The Charts in this repository are organized into two folders:
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [incubator](incubator)
 
-The charts in the `stable` directory in the master branch of this repository are the latest packaged chart in the chart Repository. The purpose of this repository is to provide a place for maintaining and contributing official chart uupdates and enhanbcements into the chart repository.
+The charts in the `stable` directory in the master branch of this repository are the latest packaged chart in the chart Repository. The purpose of this repository is to provide a place for maintaining and contributing official chart uupdates and enhancements into the chart repository.
 
 The charts in the `Incubator` directory are those that do not meet these criteria. Having the incubator folder allows charts to be shared and improved on until they are ready to be moved into the stable folder. The charts in the `incubator/` directory can be found in the [`gs://nuodb-charts-incubator` Google Storage Bucket](https://console.cloud.google.com/storage/browser/nuodb-charts-incubator).
 
