@@ -121,8 +121,7 @@ Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7
 
 `kubectl create serviceaccount nuodb -n nuodb `
 
-Next, you will want to give your new service account the correct SecurityContextConstraints to run NuoDB.
-You can find the recommended SecurityContextConstraints in ([deploy/nuodb-scc.yaml](deploy/nuodb-scc.yaml)
+### Give your new service account the correct SecurityContextConstraints to run NuoDB.
 
 ```bash
 oc apply -f deploy/nuodb-scc.yaml -n nuodb
