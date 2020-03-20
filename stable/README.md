@@ -117,11 +117,11 @@ Client: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7
 Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
 ```
 
-### Create a new service account `nuodb`.
+### Create a new service account `nuodb`
 
 `kubectl create serviceaccount nuodb -n nuodb `
 
-### Give your new service account the correct SecurityContextConstraints to run NuoDB.
+### Assign the correct SecurityContextConstraints to service account `nuodb` 
 
 ```bash
 oc apply -f deploy/nuodb-scc.yaml -n nuodb
