@@ -13,10 +13,20 @@ There are sub-charts in subdirectories included in this distribution. Instructio
 
 Please visit the **[NuoDB Helm Chart main page][6]** for software version pre-requisites.
 
+NuoDB charts and their privilege requirements
+
+| Charts | Privilege | Short Explanation |
+| ----- | ----------- | ------ |
+| transparent-hugepage| allowHostDirVolumePlugin: true | To mount hostPath and disable THP on host|
+| transparent-hugepage| volumes.hostPath | To mount hostPath and disable THP on host|
+| transparent-hugepage| seLinuxContext.* | To mount hostPath and disable THP on host|
+| admin, database| allowedCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
+| admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
+
 
 ## Install Helm and Tiller on your Client
 
-There are two parts to Helm: The Helm client (`helm`) and the Helm server ('tiller`). This guide shows how to [install the client][1], and then proceeds to show two ways to install the server.
+There are two parts to Helm: The Helm client (`helm`) and the Helm server (`tiller`). This guide shows how to [install the client][1], and then proceeds to show two ways to install the server.
 
 Every [release][2] of Helm provides binary releases for a variety of OSes. These binary versions can be manually downloaded and installed.
 
@@ -28,7 +38,7 @@ From there, you should be able to run the client: `helm help`.
 
 We’ll use Helm version 2.16.1, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v2.16.1.>
 
-Run the following commands to install the Helm client:
+Run the following commands to install the Helm locally on your Linux client machine:
 
 ```bash
 $ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-linux-amd64.tar.gz | tar xz
@@ -37,7 +47,7 @@ $ mv helm /usr/local/bin
 $ mv tiller /usr/local/bin
 ```
 
-If you're running on Mac, the curl commands above would be:
+If you're running on Mac, the commands are:
 
 ```bash
 $ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-darwin-amd64.tar.gz | tar xz
@@ -46,15 +56,14 @@ $ mv helm /usr/local/bin
 $ mv tiller /usr/local/bin
 ```
 
-To keep isolated between individuals sharing a login, you can have separate Kubernetes, Helm, and Tiller state. Run these before proceeding.
+## For Kubernetes
 
-```bash
-export TILLER_NAMESPACE=nuodb
-export HELM_HOME=`pwd`/.helm
-export KUBECONFIG=`pwd`/.kube/config
-```
+$ helm init
 
-The following commands will configure the current users environment for Helm; it will create a `.helm` directory in `${HOME}`.
+
+## For Red Hat OpenShift
+
+The following commands will configure the current users environment for Helm; it will also create a `.helm` directory in `${HOME}`.
 
 ```bash
 $ helm init --client-only
@@ -63,9 +72,9 @@ Not installing Tiller due to 'client-only' flag having been set
 Happy Helming!
 ```
 
-## Install the Tiller Server in Kubernetes
+### Install the Tiller Server in Kubernetes
 
-We will be creating the Tiller server in the `kube-system` namespace so that it is available to all projects.
+Create the Tiller server in the `kube-system` namespace so that it is available to all projects.
 
 Create a new service account for tiller.
 ```bash
@@ -79,7 +88,7 @@ kubectl create clusterrolebinding tiller-system \
 --serviceaccount=kube-system:tiller-system
 ```
 
-## Start the Tiller server
+### Start the Tiller server
 ```bash
 helm init --service-account tiller-system --tiller-namespace kube-system
 ```
@@ -100,14 +109,6 @@ tiller-deploy-8c5679674-k9c7m       1/1     Running   0          47m
 ...
 ```
 
-# Deploying NuoDB using Helm Charts
-
-## Create a NuoDB namespace to install NuoDB
-
-`kubectl create namespace nuodb`
-
-## For Red Hat OpenShift only - Grant OpenShift privileges
-
 Create a new service account `nuodb`.
 
 `kubectl -n nuodb create serviceaccount nuodb`
@@ -121,16 +122,13 @@ oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuo
 oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
 ```
 
-NuoDB charts and their privilege requirements.
 
-| Charts | Privilege | Short Explanation |
-| ----- | ----------- | ------ |
-| transparent-hugepage| allowHostDirVolumePlugin: true | To mount hostPath and disable THP on host|
-| transparent-hugepage| volumes.hostPath | To mount hostPath and disable THP on host|
-| transparent-hugepage| seLinuxContext.* | To mount hostPath and disable THP on host|
-| admin, database| allowedCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
-| admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 
+# Deploying NuoDB using Helm Charts
+
+## Create a NuoDB namespace to install NuoDB
+
+`kubectl create namespace nuodb`
 
 ## Configuration Parameters
 
