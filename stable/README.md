@@ -56,17 +56,17 @@ $ mv helm /usr/local/bin
 $ mv tiller /usr/local/bin
 ```
 
-## Create a NuoDB namespace to install NuoDB
+## Create the _nuodb_ namespace to install NuoDB
 
 `kubectl create namespace nuodb`
 
-## Create the Tiller service account in the kube-system namespace 
+## Create the _tiller_ service account in the _kube-system_ namespace 
 
 ```bash
 kubectl -n kube-system create serviceaccount tiller
 ```
 
-## Give the cluster-admin role to the tiller service account
+## Assign the _cluster-admin_ role to the _tiller_ service account
 ```bash
 kubectl create clusterrolebinding tiller \
 --clusterrole cluster-admin \
@@ -77,7 +77,7 @@ Tiller is now available to all projects.
 
 ## For Kubernetes
 
-Start Tiller 
+Start Helm and Tiller 
 
 ```bash
 $ helm init --service-account tiller --tiller-namespace kube-system
@@ -86,7 +86,7 @@ $ helm init --service-account tiller --tiller-namespace kube-system
 
 ## For Red Hat OpenShift
 
-The following commands will initialize Helm locally
+### Initialize Helm locally
 
 ```bash
 $ helm init --client-only
@@ -95,12 +95,12 @@ Not installing Tiller due to 'client-only' flag having been set
 Happy Helming!
 ```
 
-### Start the Tiller server
+### Start Tiller 
 ```bash
 helm init --service-account tiller --tiller-namespace kube-system
 ```
 
-### Assign the correct SecurityContextConstraints to service account `nuodb` and `default`
+### Assign the correct SecurityContextConstraints to service account _nuodb_ and _default_
 
 ```bash
 oc apply -f deploy/nuodb-scc.yaml -n nuodb
