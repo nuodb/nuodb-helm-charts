@@ -66,7 +66,7 @@ $ mv tiller /usr/local/bin
 kubectl -n kube-system create serviceaccount tiller
 ```
 
-## Give `cluster-admin` permissions to the newly created service account
+## Give the `cluster-admin` role to the `tiller` service account
 ```bash
 kubectl create clusterrolebinding tiller \
 --clusterrole cluster-admin \
