@@ -24,37 +24,37 @@ NuoDB Helm Charts and their privilege requirements:
 | admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 
 
-## Install Helm and Tiller on your Client
+## Install Helm and Tiller
 
-There are two parts to Helm: The Helm client (`helm`) and the Helm server (`tiller`). This guide shows how to [install the client][1], and then proceeds to show two ways to install the server.
+There are two parts to Helm: The Helm client (`helm`) and the Helm server (`tiller`). 
 
 Every [release][2] of Helm provides binary releases for a variety of OSes. These binary versions can be manually downloaded and installed.
 
 1. Download your [desired version][2]
 2. Unpack it (`tar -zxvf helm-${helm-version}-linux-amd64.tgz`)
-3. Find the helm binary in the unpacked directory, and move it to its desired destination (`mv linux-amd64/helm /usr/local/bin/helm`)
-
-From there, you should be able to run the client: `helm help`.
 
 We’ll use Helm version 2.16.1, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v2.16.1.>
 
 Run the following commands to install the Helm locally on your Linux client machine:
-
 ```bash
 $ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-linux-amd64.tar.gz | tar xz
 $ cd linux-amd64
-$ mv helm /usr/local/bin
-$ mv tiller /usr/local/bin
 ```
 
 If you're running on Mac, the commands are:
-
 ```bash
 $ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-darwin-amd64.tar.gz | tar xz
 $ cd darwin-amd64
+```
+
+Move the Helm binaries to /usr/local/bin
+```
 $ mv helm /usr/local/bin
 $ mv tiller /usr/local/bin
 ```
+
+Confirm you can run the Helm client: `helm help`.
+
 
 ## Create the _nuodb_ namespace to install NuoDB
 
