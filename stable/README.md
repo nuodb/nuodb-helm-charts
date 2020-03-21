@@ -60,13 +60,13 @@ $ mv tiller /usr/local/bin
 
 `kubectl create namespace nuodb`
 
-## Create the Tiller service account in the `kube-system` namespace 
+## Create the Tiller service account in the kube-system namespace 
 
 ```bash
 kubectl -n kube-system create serviceaccount tiller
 ```
 
-## Give the `cluster-admin` role to the `tiller` service account
+## Give the cluster-admin role to the tiller service account
 ```bash
 kubectl create clusterrolebinding tiller \
 --clusterrole cluster-admin \
