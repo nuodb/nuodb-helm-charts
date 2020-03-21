@@ -62,9 +62,7 @@ $ mv tiller /usr/local/bin
 
 ## Create the _tiller_ service account in the _kube-system_ namespace 
 
-```bash
-kubectl -n kube-system create serviceaccount tiller
-```
+`kubectl -n kube-system create serviceaccount tiller`
 
 ## Assign the _cluster-admin_ role to the _tiller_ service account
 ```bash
@@ -77,9 +75,9 @@ Tiller is now available to all projects.
 
 ## For Kubernetes
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Start Helm and Tiller 
+Start Helm and Tiller 
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`$ helm init --service-account tiller --tiller-namespace kube-system`
+`$ helm init --service-account tiller --tiller-namespace kube-system`
 
 
 ## For Red Hat OpenShift
