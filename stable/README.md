@@ -98,7 +98,7 @@ Start Tiller
 helm init --service-account tiller --tiller-namespace kube-system
 ```
 
-Assign the correct SecurityContextConstraints to service account _nuodb_ and _default_
+Assign the correct SecurityContextConstraints to teh _nuodb_ and _default_ service account
 
 ```bash
 oc apply -f deploy/nuodb-scc.yaml -n nuodb
