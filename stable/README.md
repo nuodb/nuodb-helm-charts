@@ -84,7 +84,7 @@ Tiller is now available to all projects.
 
 ## For Red Hat OpenShift
 
-### Initialize Helm locally
+Initialize Helm locally
 
 ```bash
 $ helm init --client-only
@@ -93,12 +93,12 @@ Not installing Tiller due to 'client-only' flag having been set
 Happy Helming!
 ```
 
-### Start Tiller 
+Start Tiller 
 ```bash
 helm init --service-account tiller --tiller-namespace kube-system
 ```
 
-### Assign the correct SecurityContextConstraints to service account _nuodb_ and _default_
+Assign the correct SecurityContextConstraints to service account _nuodb_ and _default_
 
 ```bash
 oc apply -f deploy/nuodb-scc.yaml -n nuodb
