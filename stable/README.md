@@ -28,7 +28,7 @@ NuoDB Helm Charts and their privilege requirements:
 
 There are two parts to Helm: The Helm client (`helm`) and the Helm server (`tiller`). 
 
-Every [release][2] of Helm provides binary releases for a variety of OSes. These binary versions can be manually downloaded and installed.
+Every [release][2] of Helm provides binary releases for a variety of OSes. 
 
 1. Download your [desired version][2]
 2. Unpack it (`tar -zxvf helm-${helm-version}-linux-amd64.tgz`)
