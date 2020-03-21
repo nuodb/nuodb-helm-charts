@@ -77,11 +77,11 @@ Tiller is now available to all projects.
 
 ## For Kubernetes
 
-Start Helm and Tiller 
+    Start Helm and Tiller 
 
-```bash
-$ helm init --service-account tiller --tiller-namespace kube-system
-```
+    ```bash
+    $ helm init --service-account tiller --tiller-namespace kube-system
+    ```
 
 
 ## For Red Hat OpenShift
