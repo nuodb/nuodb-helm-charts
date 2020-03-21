@@ -81,6 +81,7 @@ Tiller is now available to all projects.
 ```bash
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$ helm init --service-account tiller --tiller-namespace kube-system
 ```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;$ helm init --service-account tiller --tiller-namespace kube-system
 
 
 ## For Red Hat OpenShift
