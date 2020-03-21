@@ -98,7 +98,7 @@ Start Tiller
 helm init --service-account tiller --tiller-namespace kube-system
 ```
 
-Assign the correct SecurityContextConstraints to teh _nuodb_ and _default_ service account
+Assign the correct SecurityContextConstraints to the _nuodb_ and _default_ service accounts
 
 ```bash
 oc apply -f deploy/nuodb-scc.yaml -n nuodb
@@ -106,7 +106,7 @@ oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuo
 oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
 ```
 
-## Check that the Helm client and Tiller server are able to communicate correctly. 
+## Confirm that the Helm client and Tiller server are able to communicate correctly. 
 
 The results should be as follows:
 
