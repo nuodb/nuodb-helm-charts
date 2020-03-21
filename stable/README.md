@@ -92,9 +92,8 @@ Happy Helming!
 ```
 
 Start Tiller 
-```bash
-helm init --service-account tiller --tiller-namespace kube-system
-```
+
+`helm init --service-account tiller --tiller-namespace kube-system`
 
 Assign the correct SecurityContextConstraints to the _nuodb_ and _default_ service accounts
 
@@ -151,9 +150,7 @@ Deploy the NuoDB Components in this order :
 See the instructions for the individual charts for deleting the applications.
 An alternative cleanup strategy is to delete the entire project:
 
-```bash
-kubectl delete namespace nuodb
-```
+`kubectl delete namespace nuodb`
 
 [1]: https://helm.sh/docs/using_helm/
 [2]: https://github.com/helm/helm/releases
