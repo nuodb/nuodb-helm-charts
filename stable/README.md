@@ -60,21 +60,27 @@ $ mv tiller /usr/local/bin
 
 `kubectl create namespace nuodb`
 
+## Create the Tiller service account in the `kube-system` namespace 
+
+```bash
+kubectl -n kube-system create serviceaccount tiller
+```
+
+## Give `cluster-admin` permissions to the newly created service account
+```bash
+kubectl create clusterrolebinding tiller \
+--clusterrole cluster-admin \
+--serviceaccount=kube-system:tiller
+```
+
+Tiller is now available to all projects.
 
 ## For Kubernetes
 
-Initialize Helm and Tiller
+Start Tiller 
 
 ```bash
-$ helm init
-```
-
-Check that the Helm client and Tiller server are able to communicate correctly by running helm version. The results should be as follows:
-
-```bash
-$ helm version
-Client: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
-Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
+$ helm init --service-account tiller --tiller-namespace kube-system
 ```
 
 
@@ -89,32 +95,9 @@ Not installing Tiller due to 'client-only' flag having been set
 Happy Helming!
 ```
 
-### Create the Tiller server account in the `kube-system` namespace 
-
-```bash
-kubectl -n kube-system create serviceaccount tiller-system
-```
-
-Give `cluster-admin` permissions to the newly created service account.
-```bash
-kubectl create clusterrolebinding tiller-system \
---clusterrole cluster-admin \
---serviceaccount=kube-system:tiller-system
-```
-
-Tiller is now available to all projects.
-
 ### Start the Tiller server
 ```bash
-helm init --service-account tiller-system --tiller-namespace kube-system
-```
-
-Check that the Helm client and Tiller server are able to communicate correctly by running helm version. The results should be as follows:
-
-```bash
-$ helm version
-Client: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
-Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
+helm init --service-account tiller --tiller-namespace kube-system
 ```
 
 ### Assign the correct SecurityContextConstraints to service account `nuodb` and `default`
@@ -123,6 +106,16 @@ Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7
 oc apply -f deploy/nuodb-scc.yaml -n nuodb
 oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuodb
 oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
+```
+
+## Check that the Helm client and Tiller server are able to communicate correctly. 
+
+The results should be as follows:
+
+```bash
+$ helm version
+Client: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
+Server: &version.Version{SemVer:"v2.14.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
 ```
 
 
