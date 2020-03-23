@@ -8,6 +8,10 @@ This chart deploys NuoDB Influx on a Kubernetes cluster using the Helm package m
 helm install nuodb/monitoring-influx [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
+## Software Version Prerequisites
+
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
+
 ## Installing the Chart
 
 ### Configuration
