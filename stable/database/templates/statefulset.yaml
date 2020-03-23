@@ -33,6 +33,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
       {{- if .Values.database.securityContext.enabled }}
       securityContext:
@@ -97,6 +98,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         - name: NAMESPACE
           valueFrom:
             fieldRef:
@@ -323,6 +328,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
       {{- if .Values.database.securityContext.enabled }}
       securityContext:
@@ -384,6 +390,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         - name: NAMESPACE
           valueFrom:
             fieldRef:

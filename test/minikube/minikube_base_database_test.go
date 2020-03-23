@@ -36,6 +36,46 @@ func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 	)
 }
 
+func verifyKubernetesAccess(t *testing.T, namespaceName string, podName string) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+
+	serviceAccountDir := "/var/run/secrets/kubernetes.io/serviceaccount"
+
+	// check namespace matches service account directory
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "cat", serviceAccountDir+"/namespace")
+	assert.NilError(t, err, output)
+	assert.Equal(t, namespaceName, output)
+
+	// get authorization token
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "cat", serviceAccountDir+"/token")
+	assert.NilError(t, err, output)
+
+	curlCmdPrefix := fmt.Sprintf("curl -s --cacert %s -H 'Authorization: Bearer %s' https://kubernetes.default.svc", serviceAccountDir+"/ca.crt", output)
+
+	// check that we can access Pods
+	url := "/api/v1/namespaces/" + namespaceName + "/pods"
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	assert.NilError(t, err, output)
+	assert.Check(t, strings.Contains(output, "\"kind\": \"PodList\""), output)
+
+	// check that we can access this Pod
+	url = "/api/v1/namespaces/" + namespaceName + "/pods/" + podName
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	assert.NilError(t, err, output)
+	assert.Check(t, strings.Contains(output, "\"kind\": \"Pod\""), output)
+
+	// check that we can access PersistentVolumeClaims
+	url = "/api/v1/namespaces/" + namespaceName + "/persistentvolumeclaims"
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	assert.Check(t, strings.Contains(output, "\"kind\": \"PersistentVolumeClaimList\""), output)
+
+	// check that we can access StatefulSets
+	url = "/apis/apps/v1/namespaces/" + namespaceName + "/statefulsets"
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	assert.Check(t, strings.Contains(output, "\"kind\": \"StatefulSetList\""), output)
+}
+
 func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseName string) {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespaceName
@@ -283,6 +323,46 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 		t.Run("verifyNuoSQL-blue", func(t *testing.T) {
 			verifyNuoSQL(t, namespaceName, admin0, "blue")
+		})
+	})
+}
+
+func TestKubernetesAccessWithinPods(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	t.Run("startDatabaseVerifyKubeAccess", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+		databaseOptions := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		}
+		databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		t.Run("verifyKubernetesAccess", func(t *testing.T) {
+			// verify that Admin Pod can invoke K8s REST APIs
+			verifyKubernetesAccess(t, namespaceName, admin0)
+
+			// verify that SM and TE Pods can invoke K8s REST APIs
+			opt := testlib.GetExtractedOptions(&databaseOptions)
+			tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+			smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+			tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+			smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+			verifyKubernetesAccess(t, namespaceName, tePodName)
+			verifyKubernetesAccess(t, namespaceName, smPodName)
 		})
 	})
 }

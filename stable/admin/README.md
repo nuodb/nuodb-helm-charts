@@ -49,7 +49,9 @@ The following tables list the configurable parameters for the `cloud` option:
 | ----- | ----------- | ------ |
 | `provider` | Cloud provider; permissible values include: `azure`, `amazon`, or `google` |`nil`|
 | `zones` | List of availability zones to deploy to |`[]`|
-| `clusterName` | logical name of the cluster. Useful in multi-cluster configs | `cluster0` |
+| `cluster.name` | logical name of the cluster. Useful in multi-cluster configs | `cluster0` |
+| `cluster.domain` | Kubernetes domain as specified during kubernetes set up. Useful in multi-cluster configs | `cluster.local` |
+| `cluster.entrypointDomain` | Kubernetes domain for the NuoDB Entrypoint Admin Process. Useful in multi-cluster configs | `cluster.local` |
 
 
 For example, for the Google Cloud:
@@ -61,7 +63,8 @@ cloud:
     - us-central1-a
     - us-central1-b
     - us-central1-c
-  clusterName: cluster0
+  cluster:
+    name: cluster0
 ```
 
 #### busybox.*
@@ -114,6 +117,8 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.tag` | NuoDB container image tag | `latest` |
 | `image.pullPolicy` | NuoDB container pull policy |`Always`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
+| `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
+| `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
 

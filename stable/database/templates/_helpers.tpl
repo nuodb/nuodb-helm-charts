@@ -12,7 +12,7 @@ and we have to allow for added suffixes including "-hotcopy" and "-NN" where NN 
 */}}
 {{- define "database.fullname" -}}
 {{- $domain := default "domain" .Values.admin.domain -}}
-{{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
+{{- $cluster := default "cluster0" .Values.cloud.cluster.name -}}
 {{- if .Values.database.fullnameOverride -}}
 {{- .Values.database.fullnameOverride | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
@@ -179,7 +179,7 @@ Return options as $key $value
 Return the hotcopy group
 */}}
 {{- define "hotcopy.group" -}}
-{{ default .Values.cloud.clusterName .Values.database.sm.hotCopy.backupGroup }}
+{{ default .Values.cloud.cluster.name .Values.database.sm.hotCopy.backupGroup }}
 {{- end -}}
 
 

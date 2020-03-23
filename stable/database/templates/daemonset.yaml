@@ -30,6 +30,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
 {{- with .Values.database.sm.nodeSelectorNoHotCopyDS }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -78,6 +79,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         - name: NAMESPACE
           valueFrom:
             fieldRef:
@@ -231,6 +236,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
 {{- with .Values.database.sm.nodeSelectorHotCopyDS }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -274,6 +280,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         - name: NAMESPACE
           valueFrom:
             fieldRef:
