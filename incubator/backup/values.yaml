@@ -15,7 +15,8 @@ cloud:
   #   - us-east-2b
   #   - us-east-2c
 
-  clusterName:
+  cluster:
+    name: cluster0
 
 nuodb:
   image:

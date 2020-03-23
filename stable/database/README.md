@@ -35,7 +35,7 @@ The following tables list the configurable parameters for the `cloud` option:
 | ----- | ----------- | ------ |
 | `provider` | Cloud provider; permissible values include: `azure`, `amazon`, or `google` |`nil`|
 | `zones` | List of availability zones to deploy to |`[]`|
-| `clusterName` | logical name of the cluster. Useful in multi-cluster configs | `cluster0` |
+| `cluster.name` | logical name of the cluster. Useful in multi-cluster configs | `cluster0` |
 
 For example, for the Google Cloud:
 
@@ -46,7 +46,8 @@ cloud:
     - us-central1-a
     - us-central1-b
     - us-central1-c
-  clusterName: cluster0
+  cluster:
+    name: cluster0
 ```
 
 #### busybox.*
@@ -99,6 +100,8 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.tag` | NuoDB container image tag | `latest` |
 | `image.pullPolicy` | NuoDB container pull policy |`Always`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
+| `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
+| `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
 
@@ -234,7 +237,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
 | `sm.hotcopy.failureHostory` | Number of failed jobs to keep | `5` |
 | `sm.hotcopy.backupDir` | Directory path where backiupsets will be stored | `/var/opt/nuodb/backup` |
-| `sm.hotcopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.clusterName }}` |
+| `sm.hotcopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
 | `sm.hotcopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
 | `sm.hotcopy.incrementalSchedule` | cron schedule for INCREMENTAL hotcopy jobs | `35 22 * * 0-5` |
 | `sm.hotcopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
