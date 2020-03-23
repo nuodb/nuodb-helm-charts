@@ -147,9 +147,7 @@ Each Helm Chart has a default values.yaml parameter file that contains configura
 Optionally, consider configuring storage classes for persistent storage use by installing the NuoDB _Storage Classes_ chart. You can also use persistent storage without using the _Storage Classes_ Chart. Existing options: 
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Install this chart and select one of the storage classes in the charts
-
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Install any other storage class and select them in the charts
-
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- Install any other storage classes and mark one as the default. No changes to the charts are required then.
 
 - **Storage Classes** ([documentation](storage-class/README.md)) 
