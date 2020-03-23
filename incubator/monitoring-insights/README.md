@@ -8,6 +8,10 @@ This chart deploys NuoDB Insights on a Kubernetes cluster using the Helm package
 helm install nuodb/monitoring-insights [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
+## Software Version Prerequisites
+
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
+
 ## Installing the Chart
 
 ### Configuration
