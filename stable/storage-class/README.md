@@ -1,6 +1,6 @@
 # NuoDB Storage Class Helm Chart
 
-This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm package manager. Existing storage options are: 
+This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm package manager. The use of this chart is optional. Existing storage options are: 
 
 - Install this chart and select one of the storage classes in the charts
 - Install any other storage class and select them in the charts
