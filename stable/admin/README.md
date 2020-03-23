@@ -8,6 +8,10 @@ This chart starts a NuoDB Admin deployment on a Kubernetes cluster using the Hel
 helm install nuodb/admin [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
+## Software Version Prerequisites
+
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
+
 ## Installing the Chart
 
 All configurable parameters for each top-level scope are detailed below, organized by scope.
