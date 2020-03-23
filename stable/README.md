@@ -9,9 +9,9 @@ This section will walk you through getting both Helm client and the Tiller serve
 
 There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
 
-## Version Prerequisites
+## Software Version Prerequisites
 
-Please visit the **[NuoDB Helm Chart main page][6]** for software version pre-requisites.
+Please visit the **[NuoDB Helm Chart main page][6]** for software version prerequisites.
 
 NuoDB Helm Charts and their privilege requirements:
 
@@ -163,5 +163,5 @@ An alternative cleanup strategy is to delete the entire project:
 [2]: https://github.com/helm/helm/releases
 [4]: #getting-started-with-helm
 [5]: #deploying-nuodb-using-helm-charts
-[6]: https://github.com/nuodb/nuodb-helm-charts
+[6]: https://github.com/nuodb/nuodb-helm-charts#software-release-requirements
 
