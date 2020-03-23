@@ -77,7 +77,9 @@ kubectl create clusterrolebinding tiller \
 
 Tiller is now available to all projects.
 
-## For Kubernetes
+## STart Tiller
+
+### For Kubernetes
 
 Start Helm and Tiller 
 
@@ -85,7 +87,7 @@ Start Helm and Tiller
 $ helm init --service-account tiller --tiller-namespace kube-system
 ```
 
-## For Red Hat OpenShift
+### For Red Hat OpenShift
 
 Initialize the Helm client
 
