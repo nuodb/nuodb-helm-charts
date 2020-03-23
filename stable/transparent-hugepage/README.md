@@ -8,6 +8,10 @@ This chart starts a Daemonset to disable transparent huge pages (THP) on the Lin
 helm install nuodb/transparent-hugepage [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
+## Software Version Prerequisites
+
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
+
 ## Installing the Chart
 
 All configurable parameters for each top-level scope are detailed below, organized by scope.
