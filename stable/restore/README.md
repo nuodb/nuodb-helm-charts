@@ -8,6 +8,10 @@ This chart starts a Job to restore a NuoDB database from an existing backup, in 
 helm install nuodb/restore [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
+## Software Version Prerequisites
+
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
+
 ### Configuration
 
 All configurable parameters for each top-level scope are detailed below, organized by scope.
