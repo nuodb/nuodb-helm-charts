@@ -77,7 +77,7 @@ kubectl create clusterrolebinding tiller \
 
 Tiller is now available to all projects.
 
-## STart Tiller
+## Start Tiller
 
 ### For Kubernetes
 
