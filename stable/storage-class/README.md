@@ -8,9 +8,11 @@ This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm
 helm install nuodb/storage-class [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
-## Installing the Chart
+## Software Version Prerequisites
 
-### Configuration
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
+
+## Installing the Chart
 
 All configurable parameters for each top-level scope are detailed below, organized by scope.
 
