@@ -12,7 +12,7 @@ helm install nuodb/restore [--name releaseName] [--set parameter] [--values myva
 
 Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
 
-### Configuration
+### Installing the Chart
 
 All configurable parameters for each top-level scope are detailed below, organized by scope.
 
