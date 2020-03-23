@@ -8,6 +8,10 @@ This chart starts a NuoDB database backup on existing NuoDB storage managers in 
 helm install nuodb/backup [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
+## Software Version Prerequisites
+
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
+
 ## Installing the Chart
 
 All values.yaml configurable parameters for each top-level scope are detailed below, organized by scope.
