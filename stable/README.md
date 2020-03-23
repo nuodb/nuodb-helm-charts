@@ -144,7 +144,12 @@ Each Helm Chart has a default values.yaml parameter file that contains configura
 
 - **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
 
-Optionally, consider configuring storage classes for persistent storage use. You can still use persistent storage without using the Storage Class Helm Chart and the NuoDB Admin and Database charts will choose a default based on what's available in your Kubernetes  environment.
+Optionally, consider configuring storage classes for persistent storage use by installing the NuoDB Storage Class chart. You can still use persistent storage without using the Storage Class Helm Chart. Existing options: 
+
+* install this chart and select one of the storage classes in the charts
+* install any other storage class and select them in the charts
+* install any other storage classes and mark one as the default. No changes to the charts are required then.
+
 
 - **Storage Classes** ([documentation](storage-class/README.md)) 
 
