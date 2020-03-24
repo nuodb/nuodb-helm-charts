@@ -1,32 +1,24 @@
 # NuoDB Storage Class Helm Chart
 
-This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm package manager.
+This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm package manager. The use of this chart is optional. Existing storage options are: 
 
-## TL;DR;
+- Install this chart and select one of the storage classes in the charts
+- Install any other storage class and select them in the charts
+- Install any other storage classes and mark one as the default. No changes to the charts are required then.
+
+## Command
 
 ```bash
-helm install nuodb/storage-class
+helm install nuodb/storage-class [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
-## Prerequisites
+## Software Version Prerequisites
 
-- Kubernetes 1.9+
-- [Tiller service account should have _storageclasses_ resource permissions in cluster scope][0]
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
 
 ## Installing the Chart
 
-### Configuration
-
-The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
-
-- values files have structure, values are scoped
-- different values files for different deployments
-- values files follow the single definition rule (no repeats)
-- global configuration exists under its own scoped section
-- each chart has its own scoped section named after it
-- cloud information is used to drive availability zones (particularly)
-
-All configurable parameters for each top-level scope is detailed below, organized by scope.
+All configurable parameters for each top-level scope are detailed below, organized by scope.
 
 #### cloud.*
 
@@ -50,113 +42,13 @@ cloud:
     - us-central1-c
 ```
 
-### Permissions
-
-This chart installs storage classes required for the operation of NuoDB.
-Since storage classes are cluster-scoped objects, in order to install the
-chart, the user installing the chart must have cluster-role permissions.
-
-There are two approaches to providing cluster-role permissions to Helm
-in order to install the chart: more secure, and less secure approaches.
-In one a separate Tiller server running in the kube-system namespace is
-configured with cluster role permissions, and that role and Tiller server
-is used to install the chart. In the second approach, the Tiller server
-within the NuoDB namespace is configured with cluster role permissions.
-The latter is a less secure approach as it grants a namespace-scoped
-Tiller permissions to jailbreak out of the current namespace and affect
-objects in other namespaces.
-
-Both approaches are documented below.
-
-#### Kube System Administrative Tiller Role
-
-The service account and role below may be used to configure an administrative
-role at cluster scope within the kube-system namespace to install the
-chart.
-
-```bash
-kubectl -n kube-system create serviceaccount tiller-system
-kubectl create clusterrolebinding tiller-system --clusterrole cluster-admin --serviceaccount=kube-system:tiller-system
-
-helm init --service-account tiller-system --tiller-namespace kube-system
-...
-```
-
-#### NuoDB Administrative Tiller Role
-
-The service account and role below may be used to configure the NuoDB
-namespace scoped Tiller server permissions to jailbreak out of the current
-namespace and affect cluster-wide objects. Less secure, but indeed an
-approach.
-
-For example:
-
-```yaml
----
-kind: ServiceAccount
-apiVersion: v1
-metadata:
-  name: tiller
----
-kind: ClusterRole
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: tiller-storage-class
-rules:
-  - apiGroups: ["storage.k8s.io"]
-    resources: ["storageclasses"]
-    verbs: ["*"]
----
-kind: Role
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: tiller-manager
-rules:
-  - apiGroups: ["", "batch", "extensions", "apps"]
-    resources: ["*"]
-    verbs: ["*"]
----
-kind: ClusterRoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: tiller-storage-class-binding
-subjects:
-- kind: ServiceAccount
-  name: tiller
-  namespace: nuodb
-roleRef:
-  kind: ClusterRole
-  name: tiller-storage-class
-  apiGroup: rbac.authorization.k8s.io
----
-kind: RoleBinding
-apiVersion: rbac.authorization.k8s.io/v1
-metadata:
-  name: tiller-manager-binding
-subjects:
-- kind: ServiceAccount
-  name: tiller
-roleRef:
-  kind: Role
-  name: tiller-manager
-  apiGroup: rbac.authorization.k8s.io
-```
-
-```bash
-# Create resources in above template
-kubectl -n nuodb create -f tiller.yaml
-
-helm init --service-account tiller --tiller-namespace nuodb
-...
-```
-
 ### Running
 
 Verify the Helm chart:
 
 ```bash
 helm install nuodb/storage-class \
-    --name storage \
+    --name storage-class \
     --debug --dry-run
 ```
 

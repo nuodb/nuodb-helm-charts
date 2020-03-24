@@ -1,33 +1,20 @@
 # NuoDB Database Helm Chart
 
-This chart starts a NuoDB database deployment on a Kubernetes cluster using the Helm package manager.
+This chart starts a NuoDB database deployment on a Kubernetes cluster using the Helm package manager. To start a second database under the same NuoDB Admin deployment, start a second database using the same instructions with a new database name. 
 
-## TL;DR;
+## Command
 
 ```bash
-helm install nuodb/database
+helm install nuodb/database [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
-## Prerequisites
+## Software Version Prerequisites
 
-- Kubernetes 1.9+
-- PV provisioner support in the underlying infrastructure (see `storage-class` chart)
-- An existing NuoDB Admin cluster has been provisioned
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
 
 ## Installing the Chart
 
-### Configuration
-
-The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
-
-- values files have structure, values are scoped
-- different values files for different deployments
-- values files follow the single definition rule (no repeats)
-- global configuration exists under its own scoped section
-- each chart has its own scoped section named after it
-- cloud information is used to drive availability zones (particularly)
-
-All configurable parameters for each top-level scope is detailed below, organized by scope.
+All configurable parameters for each top-level scope are detailed below, organized by scope.
 
 #### global.*
 
@@ -164,7 +151,7 @@ openshift:
 
 The purpose of this section is to specify the NuoDB Admin parameters.
 
-The following tables list the configurable parameters for the `admin` option of the admin chart and their default values.
+The following tables list the configurable admin parameters for a database and their default values.
 
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
@@ -182,12 +169,12 @@ The following tables list the configurable parameters for the `admin` option of 
 
 #### admin.configFiles.*
 
-The purpose of this section is to detail how to provide alternative configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
+The purpose of this section is to detail how to provide alternative configuration files for NuoDB. 
 
 There are two sets of configuration files documented:
 
-- [Admin Configuration for a Particular Host][1]
-- [Database Configuration for a Particular Host][2]
+- [Admin Configuration for a Particular Deployment][1]
+- [Database Configuration for a Particular Deployment][2]
 
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
@@ -320,14 +307,14 @@ The purpose of this section is to allow customisation of the names of the cluste
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/database -n database \
+helm install nuodb/database --name database \
     --debug --dry-run
 ```
 
 Deploy a database without backups:
 
 ```bash
-helm install nuodb/database -n database \
+helm install nuodb/database --name database \
     --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1
 ```
 

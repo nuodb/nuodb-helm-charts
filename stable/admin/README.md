@@ -1,32 +1,20 @@
 # NuoDB Admin Helm Chart
 
-This chart starts a NuoDB admin deployment on a Kubernetes cluster using the Helm package manager.
+This chart starts a NuoDB Admin deployment on a Kubernetes cluster using the Helm package manager and must be running before attempting to start a NuoDB database.
 
-## TL;DR;
+## Command
 
 ```bash
-helm install nuodb/admin
+helm install nuodb/admin [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
-## Prerequisites
+## Software Version Prerequisites
 
-- Kubernetes 1.9+
-- PV provisioner support in the underlying infrastructure (see `storage-class` chart)
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
 
 ## Installing the Chart
 
-### Configuration
-
-The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
-
-- values files have structure, values are scoped
-- different values files for different deployments
-- values files follow the single definition rule (no repeats)
-- global configuration exists under its own scoped section
-- each chart has its own scoped section named after it
-- cloud information is used to drive availability zones (particularly)
-
-All configurable parameters for each top-level scope is detailed below, organized by scope.
+All configurable parameters for each top-level scope are detailed below, organized by scope.
 
 #### global.*
 
@@ -201,12 +189,7 @@ For example, when using GlusterFS storage class, you would supply the following 
 
 #### admin.configFiles.*
 
-The purpose of this section is to detail how to provide alternate configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
-
-There are two sets of configuration files documented:
-
-- [Admin Configuration for a Particular Host][1]
-- [Database Configuration for a Particular Host][2]
+The purpose of this section is to detail how to provide alternate Admin configuration files for NuoDB. 
 
 Any file located in `admin.configFilesPath` can be replaced; the YAML key corresponds to the file name being created or replaced.
 
@@ -232,21 +215,21 @@ The purpose of this section is to allow customisation of the names of the cluste
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/admin -n admin \
+helm install nuodb/admin --name admin \
     --debug --dry-run
 ```
 
-Deploy the administration tier using volumes of the specified storage class:
+Deploy the administration tier:
 
 ```bash
-helm install nuodb/admin -n admin
+helm install nuodb/admin --name admin
 ```
 
-  **Tip**: Be patient, it will take approximately 1 minute to deploy.
+**Tip**: It will take approximately 1 minute to deploy.
 
 The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
 
-  **Tip**: List all releases using `helm list`
+**Tip**: List all releases using `helm list`
 
 Wait until the deployment completes:
 
@@ -299,8 +282,6 @@ helm del --purge admin
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
 
-[1]: #adminconfigfiles
-[2]: /stable/database/README.md#databaseconfigfiles
 [3]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Obtaining-and-Installing-NuoDB-Licenses.htm
 [4]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Host-Properties.htm
 [5]: http://doc.nuodb.com/Latest/Content/Data-Type-Mappings.htm

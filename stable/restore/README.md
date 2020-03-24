@@ -2,31 +2,19 @@
 
 This chart starts a Job to restore a NuoDB database from an existing backup, in a Kubernetes cluster using the Helm package manager.
 
-## TL;DR;
+## Command
 
 ```bash
-helm install nuodb/restore
+helm install nuodb/restore [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
-## Prerequisites
+## Software Version Prerequisites
 
-- Kubernetes 1.9+
-- An existing NuoDB Admin cluster has been provisioned
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
 
-## Installing the Chart
+### Installing the Chart
 
-### Configuration
-
-The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
-
-- values files have structure, values are scoped
-- different values files for different deployments
-- values files follow the single definition rule (no repeats)
-- global configuration exists under its own scoped section
-- each chart has its own scoped section named after it
-- cloud information is used to drive availability zones (particularly)
-
-All configurable parameters for each top-level scope is detailed below, organized by scope.
+All configurable parameters for each top-level scope are detailed below, organized by scope.
 
 #### global.*
 
@@ -209,7 +197,7 @@ Or if you are using command line parameters, the setting would be:
 If we have not set the values in `restore/values.yaml` then we can override it while installing the restore chart:
 
 ```bash
-helm install nuodb/restore -n restore \
+helm install nuodb/restore --name restore \
   ${values_option} \
   --set admin.domain=${DOMAIN_NAME} \
   --set restore.target=demoDb0 \
@@ -235,3 +223,12 @@ Verify the restore completed successfully; view the log output from the restarte
 ```bash
 Finished restoring /var/opt/nuodb/backup/20190619T101450 to /var/opt/nuodb/archive/nuodb/demo. Created archive with archive ID 8
 ```
+
+## Uninstalling the Chart
+
+To uninstall/delete the deployment:
+
+```bash
+helm del --purge restore
+```
+
