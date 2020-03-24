@@ -1,5 +1,24 @@
 # Changelog
 
+## [2.3.0](https://github.com/nuodb/nuodb-helm-charts/tree/2.3.0) (2020-03-24)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.2.0...2.3.0)
+
+**Implemented enhancements:**
+
+- Add the "watch" verb to the NuoDB role to enable the Admin to register event listeners. [\#78](https://github.com/nuodb/nuodb-helm-charts/pull/78) ([adriansuarez](https://github.com/adriansuarez))
+- Auto-configure role and service account in values files to enable NuoDB control plane synchronization with Kubernetes. [\#77](https://github.com/nuodb/nuodb-helm-charts/pull/77) ([adriansuarez](https://github.com/adriansuarez))
+- Added the use of Security Context Constraints\(SCC\) for Red Hat OpenShift deployments. [\#75](https://github.com/nuodb/nuodb-helm-charts/pull/75) ([vegichan](https://github.com/vegichan))
+- Increased engine readiness probe timeout value from 1 to 5 seconds. [\#74](https://github.com/nuodb/nuodb-helm-charts/pull/74) ([vegichan](https://github.com/vegichan))
+- Add customization to database service names to correspond to admin services. [\#62](https://github.com/nuodb/nuodb-helm-charts/pull/62) ([NikTJ777](https://github.com/NikTJ777))
+- Allow a user to override admin services suffixes to customize ClusterIP and LoadBalancer names. [\#57](https://github.com/nuodb/nuodb-helm-charts/pull/57) ([kmabda](https://github.com/kmabda))
+- Added optional persistent volumes for log collection. [\#52](https://github.com/nuodb/nuodb-helm-charts/pull/52) ([acabrele](https://github.com/acabrele))
+- Add K8S cluster domain support, enabling CNI based multi cluster configurations [\#51](https://github.com/nuodb/nuodb-helm-charts/pull/51) ([acabrele](https://github.com/acabrele))
+
+## [v2.2.0](https://github.com/nuodb/nuodb-helm-charts/tree/v2.2.0) (2020-01-27)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.2...v2.2.0)
+
 ## [v2.2](https://github.com/nuodb/nuodb-helm-charts/tree/v2.2) (2020-01-15)
 
 [Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.1...v2.2)
