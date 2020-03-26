@@ -1,0 +1,19 @@
+{{- if or (not (hasKey .Values.nuodb "addRoleBinding")) .Values.nuodb.addRoleBinding }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: nuodb-kube-inspector
+rules:
+- apiGroups:
+  - ""
+  - apps
+  resources:
+  - persistentvolumeclaims
+  - persistentvolumes
+  - pods
+  - statefulsets
+  verbs:
+  - get
+  - list
+  - watch
+{{- end }}

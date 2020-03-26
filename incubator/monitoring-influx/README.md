@@ -2,32 +2,21 @@
 
 This chart deploys NuoDB Influx on a Kubernetes cluster using the Helm package manager.
 
-## TL;DR;
+## Command
 
 ```bash
-helm install nuodb/monitoring-influx -n influx
+helm install nuodb/monitoring-influx [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
-## Prerequisites
+## Software Version Prerequisites
 
-- Kubernetes 1.9+
-- PV provisioner support in the underlying infrastructure (see `{provider}-storage.yaml`)
-- An existing NuoDB Admin cluster has been provisioned
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
 
 ## Installing the Chart
 
 ### Configuration
 
-The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
-
-- values files have structure, values are scoped
-- different values files for different deployments
-- values files follow the single definition rule (no repeats)
-- global configuration exists under its own scoped section
-- each chart has its own scoped section named after it
-- cloud information is used to drive availability zones (particularly)
-
-All configurable parameters for each top-level scope is detailed below, organized by scope.
+All configurable parameters for each top-level scope are detailed below, organized by scope.
 
 #### global.*
 
@@ -237,7 +226,7 @@ kubectl create -f stable/monitoring-influx/${cloud_provider}-storage.yaml
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/monitoring-influx -n monitoring-influx \
+helm install nuodb/monitoring-influx --name influx \
     --set influx.persistence.enabled=true \
     --set influx.persistence.storageClass=influx-data \
     --debug --dry-run
@@ -246,7 +235,7 @@ helm install nuodb/monitoring-influx -n monitoring-influx \
 Deploy the InfluxDB-based monitoring solution:
 
 ```bash
-helm install nuodb/monitoring-influx -n monitoring-influx \
+helm install nuodb/monitoring-influx --name influx \
     --set influx.persistence.enabled=true \
     --set influx.persistence.storageClass=influx-data \
     --debug --dry-run

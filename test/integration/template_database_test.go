@@ -293,14 +293,14 @@ func TestDatabaseStatefulSetVolumes(t *testing.T) {
 
 			var ss appsv1.StatefulSet
 			helm.UnmarshalK8SYaml(t, part, &ss)
-			
+
 			if strings.Contains(part, "-hotcopy") {
 				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
 				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "backup-volume"))
 				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[2].ObjectMeta.Name, "log-volume"))
 			} else {
 				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
-				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))	
+				assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
 			}
 		}
 	}

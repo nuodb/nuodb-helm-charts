@@ -33,6 +33,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
       {{- if .Values.database.securityContext.enabled }}
       securityContext:
@@ -97,6 +98,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         - name: NAMESPACE
           valueFrom:
             fieldRef:
@@ -189,7 +194,7 @@ spec:
           failureThreshold: 58
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
-          timeoutSeconds: 1
+          timeoutSeconds: 5
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}
@@ -323,6 +328,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
       {{- if .Values.database.securityContext.enabled }}
       securityContext:
@@ -384,6 +390,10 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
+        - name: POD_UID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.uid
         - name: NAMESPACE
           valueFrom:
             fieldRef:
@@ -484,7 +494,7 @@ spec:
           failureThreshold: 58
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
-          timeoutSeconds: 1
+          timeoutSeconds: 5
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}

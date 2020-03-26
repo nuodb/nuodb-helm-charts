@@ -1,12 +1,12 @@
-// +build short
+// +build long
 
 package minikube
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
-	"path/filepath"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"gotest.tools/assert"
@@ -34,18 +34,19 @@ func verifyKeystore(t *testing.T, namespace string, podName string, keystore str
 }
 
 func TestKubernetesTLS(t *testing.T) {
+	if testlib.IsOpenShiftEnvironment(t) {
+		t.Skip("TLS subPath bind does not work as expected")
+	}
+
 	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-
-	namespaceName := fmt.Sprintf("test-admin-tls-%s", randomSuffix)
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	k8s.CreateNamespace(t, kubectlOptions, namespaceName)
-
-	defer k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
+	namespaceName := fmt.Sprintf("testkubernetestls-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
-	
+
 	// create the certs and secrets...
 	tlsCommands := []string{
 		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
@@ -72,7 +73,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, namespaceName)
+	helmChartReleaseName, _ := testlib.StartAdmin(t, &options, 3, namespaceName)
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 

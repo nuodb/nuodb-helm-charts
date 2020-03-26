@@ -2,31 +2,19 @@
 
 This chart starts a Job to restore a NuoDB database from an existing backup, in a Kubernetes cluster using the Helm package manager.
 
-## TL;DR;
+## Command
 
 ```bash
-helm install nuodb/restore
+helm install nuodb/restore [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
-## Prerequisites
+## Software Version Prerequisites
 
-- Kubernetes 1.9+
-- An existing NuoDB Admin cluster has been provisioned
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
 
-## Installing the Chart
+### Installing the Chart
 
-### Configuration
-
-The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
-
-- values files have structure, values are scoped
-- different values files for different deployments
-- values files follow the single definition rule (no repeats)
-- global configuration exists under its own scoped section
-- each chart has its own scoped section named after it
-- cloud information is used to drive availability zones (particularly)
-
-All configurable parameters for each top-level scope is detailed below, organized by scope.
+All configurable parameters for each top-level scope are detailed below, organized by scope.
 
 #### global.*
 
@@ -105,7 +93,7 @@ The following tables list the configurable parameters of the backup chart and th
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
 | `admin.domain` | NuoDB admin cluster name | `domain` |
-| `admin.namespace` | OpenShift project where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
+| `admin.namespace` | Namespace where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
 | `tlsCACert.secret` | TLS CA certificate secret name | `nil` |
 | `tlsCACert.key` | TLS CA certificate secret key | `nil` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
@@ -209,7 +197,7 @@ Or if you are using command line parameters, the setting would be:
 If we have not set the values in `restore/values.yaml` then we can override it while installing the restore chart:
 
 ```bash
-helm install nuodb/restore -n restore \
+helm install nuodb/restore --name restore \
   ${values_option} \
   --set admin.domain=${DOMAIN_NAME} \
   --set restore.target=demoDb0 \
@@ -236,23 +224,11 @@ Verify the restore completed successfully; view the log output from the restarte
 Finished restoring /var/opt/nuodb/backup/20190619T101450 to /var/opt/nuodb/archive/nuodb/demo. Created archive with archive ID 8
 ```
 
-## References
+## Uninstalling the Chart
 
-1. Kubernetes Concepts: [Persistent Volumes][0]
-2. Kubernetes How To: [How to Use Preexisting Persistent Disks][1]
+To uninstall/delete the deployment:
 
-[0]: https://cloud.google.com/kubernetes-engine/docs/concepts/persistent-volumes
-[1]: https://cloud.google.com/kubernetes-engine/docs/how-to/persistent-volumes/preexisting-pd
-[2]: images/restore-workflow.png
-[3]: https://github.com/kubernetes/examples/blob/master/staging/volumes/azure_disk/README.md
-[4]: https://github.com/kubernetes/examples/blob/master/staging/volumes/azure_disk/azure.yaml
-[5]: https://kubernetes.io/docs/concepts/storage/storage-classes/#aws-ebs
-[6]: https://kubernetes.io/docs/concepts/storage/storage-classes/#azure-disk
-[7]: https://kubernetes.io/docs/concepts/storage/storage-classes/#gce-pd
-[8]: https://kubernetes.io/docs/concepts/storage/volumes/#awselasticblockstore
-[9]: https://kubernetes.io/docs/concepts/storage/volumes/#azuredisk
-[10]: https://kubernetes.io/docs/concepts/storage/volumes/#gcepersistentdisk
-[11]: https://github.com/MicrosoftDocs/azure-docs/blob/master/articles/aks/azure-disks-dynamic-pv.md
+```bash
+helm del --purge restore
+```
 
-[internal-0]: http://confluence.internal.nuodb.com/display/EN2/Restore+in+Openshift
-[internal-1]: http://confluence.internal.nuodb.com/pages/viewpage.action?pageId=34079913

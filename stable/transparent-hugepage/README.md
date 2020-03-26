@@ -1,31 +1,20 @@
 # Transparent Hugepage Helm Chart
 
-This chart starts a Daemonset to disable transparent huge pages on the Linux hosts.
+This chart starts a Daemonset to disable transparent huge pages (THP) on the Linux hosts.
 
-## TL;DR;
+## Command
 
 ```bash
-helm install nuodb/transparent-hugepage
+helm install nuodb/transparent-hugepage [--name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
-## Prerequisites
+## Software Version Prerequisites
 
-- Kubernetes 1.9+
+Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-helm-charts/#software-release-requirements)** for software version prerequisites.
 
 ## Installing the Chart
 
-### Configuration
-
-The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
-
-- values files have structure, values are scoped
-- different values files for different deployments
-- values files follow the single definition rule (no repeats)
-- global configuration exists under its own scoped section
-- each chart has its own scoped section named after it
-- cloud information is used to drive availability zones (particularly)
-
-All configurable parameters for each top-level scope is detailed below, organized by scope.
+All configurable parameters for each top-level scope are detailed below, organized by scope.
 
 #### global.*
 
@@ -134,21 +123,21 @@ Verify the Helm chart:
 
 ```bash
 helm install nuodb/transparent-hugepage \
-    --name transparent-hugepage \
+    --name thp \
     --debug --dry-run
 ```
 
-Deploy the administration tier using volumes of the specified storage class:
+Run the Helm Chart:
 
 ```bash
 helm install nuodb/transparent-hugepage \
-    --name transparent-hugepage
+    --name thp
 ```
 
-Wait until the deployment completes:
+Check the deployment status:
 
 ```bash
-helm status transparent-hugepage
+helm status thp
 ```
 
 Verify the pods are running:
@@ -172,7 +161,7 @@ The file MUST be run as root/sudo.
 To uninstall/delete the deployment:
 
 ```bash
-helm del --purge transparent-hugepage
+helm del --purge thp
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.

@@ -17,18 +17,19 @@ To enable automated notification of new releases, click the `Watch` button above
 
 | Software   | Release Requirements                           | 
 |------------|------------------------------------------------|
-| Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.15 then 1.15 and 1.14 are supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
+| Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.16 then 1.16 and 1.15 are offically supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
+| Managed Kubernetes Distributions |  OpenShift 4.x, Google GKE, Amazon EKS, Azure AKS, or Rancher RKE. Charts may also work on other Kubernetes distributions. The distributions listed here are tested regularly. |
 | Helm       |  Version 2 is supported, v2.9 or greater   |
 | NuoDB      |  Version [4.0](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
 
 ## NuoDB Helm Chart Installation
 
-The default repository for NuoDB is located at https://nuodb-charts.storage.googleapis.com/ and must be enabled.
+The default repository for NuoDB is located at https://storage.googleapis.com/nuodb-charts and must be enabled.
 
 To add the charts for your local client, run the `helm repo add` command below:
 
 ```
-helm repo add nuodb https://nuodb-charts.storage.googleapis.com/
+helm repo add nuodb https://storage.googleapis.com/nuodb-charts
 "nuodb" has been added to your repositories
 ```
 
@@ -63,20 +64,16 @@ helm install nuodb-incubator/<chart>
 
 This GitHub repository contains the source for the packaged and versioned charts released in the [`gs://nuodb-charts` Google Storage bucket](https://console.cloud.google.com/storage/browser/nuodb-charts/) (the Chart Repository).
 
-The Charts in the `stable/` directory in the master branch of this repository match the latest packaged Chart in the Chart Repository, though there may be previous versions of a Chart available in that Chart Repository.
-
-The purpose of this repository is to provide a place for maintaining and contributing official Charts, with CI processes in place for managing the releasing of Charts into the Chart Repository.
-
 The Charts in this repository are organized into two folders:
 
-* stable
-* incubator
 
-Stable Charts meet the criteria in the [technical requirements](CONTRIBUTING.md#technical-requirements).
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [stable](stable/README.md)
 
-Incubator Charts are those that do not meet these criteria. Having the incubator folder allows charts to be shared and improved on until they are ready to be moved into the stable folder. The charts in the `incubator/` directory can be found in the [`gs://nuodb-charts-incubator` Google Storage Bucket](https://console.cloud.google.com/storage/browser/nuodb-charts-incubator).
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [incubator](incubator)
 
-In order to get a Chart from incubator to stable, Chart maintainers should open a pull request that moves the chart folder.
+The charts in the `stable` directory in the master branch of this repository are the latest packaged chart in the chart repository. The purpose of this repository is to provide a place for maintaining and contributing official chart updates and enhancements into the chart repository.
+
+The charts in the `Incubator` directory are those that do not meet these criteria. Having the incubator folder allows charts to be shared and improved on until they are ready to be moved into the stable folder. The charts in the `incubator/` directory can be found in the [`gs://nuodb-charts-incubator` Google Storage Bucket](https://console.cloud.google.com/storage/browser/nuodb-charts-incubator).
 
 ## Status of the Project
 

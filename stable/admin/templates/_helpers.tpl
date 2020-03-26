@@ -13,7 +13,7 @@ If release name contains chart name it will be used as a full name.
 */}}
 {{- define "admin.fullname" -}}
 {{- $domain := default "domain" .Values.admin.domain -}}
-{{- $cluster := default "cluster0" .Values.cloud.clusterName -}}
+{{- $cluster := default "cluster0" .Values.cloud.cluster.name -}}
 {{- if .Values.admin.fullnameOverride -}}
 {{- .Values.admin.fullnameOverride | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
@@ -143,4 +143,41 @@ Import ENV vars from configMaps
 */}}
 {{- define "admin.envFrom" }}
 envFrom: [{{- range $index, $map := .Values.admin.envFrom.configMapRef }}{{if gt $index 0}},{{end}} configMapRef: { name: {{$map}} } {{ end }}]
+{{- end -}}
+
+{{/*
+Define the cluster domains
+*/}}
+{{- define "cluster.domain" -}}
+{{- .Values.cloud.cluster.domain | default "cluster.local" }}
+{{- end -}}
+
+{{- define "cluster.entrypointDomain" -}}
+{{- .Values.cloud.cluster.entrypointDomain | default (include "cluster.domain" .) }}
+{{- end -}}
+
+{{/*
+Define the fully qualified NuoDB Admin address for the domain entrypoint.
+*/}}
+{{- define "admin.entrypointFullname" -}}
+{{- $domain := default "domain" .Values.admin.domain -}}
+{{- $cluster := default "cluster0" .Values.cloud.cluster.entrypointName -}}
+{{- if .Values.admin.fullnameOverride -}}
+{{- .Values.admin.fullnameOverride | trunc 50 | trimSuffix "-" -}}
+{{- else -}}
+{{- $name := default .Chart.Name .Values.admin.nameOverride -}}
+{{- if contains $name .Release.Name -}}
+{{- printf "%s-%s-%s" .Release.Name .Values.admin.domain $cluster | trunc 50 | trimSuffix "-" -}}
+{{- else -}}
+{{- printf "%s-%s-%s-%s" .Release.Name .Values.admin.domain $cluster $name | trunc 50 | trimSuffix "-" -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{- define "nuodb.domainEntrypoint" -}}
+{{ include "admin.entrypointFullname" . }}-0.{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.entrypointDomain" . }}
+{{- end -}}
+
+{{- define "nuodb.altAddress" -}}
+$(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.domain" . }}
 {{- end -}}
