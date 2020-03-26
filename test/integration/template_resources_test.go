@@ -715,20 +715,6 @@ func TestStatefulSetServiceAccount(t *testing.T) {
 	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
 }
 
-func TestDeploymentConfigServiceAccount(t *testing.T) {
-	optionsMap := map[string]string{
-		"openshift.enabled":                 "true",
-		"openshift.enableDeploymentConfigs": "true",
-	}
-	templateNames := []string{
-		"templates/deploymentconfig.yaml",
-	}
-	expectedLines := map[string]int{
-		"      serviceAccountName: nuodb": 1,
-	}
-	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
-}
-
 func TestDaemonSetServiceAccount(t *testing.T) {
 	optionsMap := map[string]string{
 		"database.enableDaemonSet": "true",
