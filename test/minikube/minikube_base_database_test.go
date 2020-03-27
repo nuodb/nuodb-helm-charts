@@ -74,6 +74,25 @@ func verifyKubernetesAccess(t *testing.T, namespaceName string, podName string) 
 	url = "/apis/apps/v1/namespaces/" + namespaceName + "/statefulsets"
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
 	assert.Check(t, strings.Contains(output, "\"kind\": \"StatefulSetList\""), output)
+
+	// check that we can create Leases
+	url = "/apis/coordination.k8s.io/v1/namespaces/" + namespaceName + "/leases"
+	// when request data is specified without an explicit request method, POST is assumed
+	leaseName := strings.ToLower(random.UniqueId())
+	extraArgs := fmt.Sprintf(" -H 'Content-Type: application/json' -d  '{\"metadata\": {\"name\": \"%s\"}}'", leaseName)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url+extraArgs)
+	assert.Check(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
+
+	// check that we can update Leases
+	url = "/apis/coordination.k8s.io/v1/namespaces/" + namespaceName + "/leases/" + leaseName
+	// use create response as request payload, which contains the correct resourceVersion (update fails if the resourceVersion does not match)
+	extraArgs = fmt.Sprintf(" -X PUT -H 'Content-Type: application/json' -d '%s'", output)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url+extraArgs)
+	assert.Check(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
+
+	// check that we can get Leases
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	assert.Check(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
 }
 
 func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseName string) {
