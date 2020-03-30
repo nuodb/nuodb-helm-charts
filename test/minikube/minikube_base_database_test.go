@@ -70,6 +70,11 @@ func verifyKubernetesAccess(t *testing.T, namespaceName string, podName string) 
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
 	assert.Check(t, strings.Contains(output, "\"kind\": \"PersistentVolumeClaimList\""), output)
 
+	// check that we can access Deployments
+	url = "/apis/apps/v1/namespaces/" + namespaceName + "/deployments"
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	assert.Check(t, strings.Contains(output, "\"kind\": \"DeploymentList\""), output)
+
 	// check that we can access StatefulSets
 	url = "/apis/apps/v1/namespaces/" + namespaceName + "/statefulsets"
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
