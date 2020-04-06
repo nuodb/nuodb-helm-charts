@@ -6,14 +6,28 @@ metadata:
 rules:
 - apiGroups:
   - ""
-  - apps
   resources:
   - persistentvolumeclaims
-  - persistentvolumes
   - pods
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - apps
+  resources:
+  - deployments
   - statefulsets
   verbs:
   - get
   - list
   - watch
+- apiGroups:
+  - "coordination.k8s.io"
+  resources:
+  - leases
+  verbs:
+  - get
+  - create
+  - update
 {{- end }}
