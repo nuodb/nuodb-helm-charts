@@ -66,16 +66,30 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	})
 	
 	adminNames := make([]string, replicaCount)
+	var adminStatefulSet string
 
 	for i := 0; i < replicaCount; i++ {
 		if options.SetValues["admin.fullnameOverride"] != "" {
-			adminNames[i] = fmt.Sprintf("%s-%d", options.SetValues["admin.fullnameOverride"], i)
+			adminStatefulSet = fmt.Sprintf("%s", options.SetValues["admin.fullnameOverride"])
+			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 		} else if  options.SetValues["admin.nameOverride"] != "" {
-			adminNames[i] = fmt.Sprintf("%s-nuodb-cluster0-%s-%d", helmChartReleaseName, options.SetValues["admin.nameOverride"], i)
+			adminStatefulSet = fmt.Sprintf("%s-nuodb-cluster0-%s", helmChartReleaseName, options.SetValues["admin.nameOverride"])
+			adminNames[i]  = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 		} else {
-			adminNames[i] = fmt.Sprintf("%s-nuodb-cluster0-%d", helmChartReleaseName, i)
+			adminStatefulSet =  fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 		}
 	}
+
+	defer func() {
+		// collect some useful diagnostics
+		if t.Failed() {
+			options := k8s.NewKubectlOptions("", "")
+			options.Namespace = namespaceName
+			// ignore any errors. This is already failed
+			_ = k8s.RunKubectlE(t, options, "describe", "statefulset", adminStatefulSet)
+		}
+	}()
 
 	if options.SetValues["admin.fullnameOverride"] != "" {
 		AwaitNrReplicasScheduled(t, namespaceName, options.SetValues["admin.fullnameOverride"], replicaCount)
@@ -89,7 +103,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 		defer func() {
 			if t.Failed() {
 				options := k8s.NewKubectlOptions("", "")
-				options.Namespace = namespace
+				options.Namespace = namespaceName
 				// ignore any errors. This is already failed
 				_ = k8s.RunKubectlE(t, options, "describe", "pod", adminName)
 			}
