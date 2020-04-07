@@ -310,7 +310,7 @@ func AwaitPodHasVersion(t *testing.T, namespace string, podName string, expected
 		pod, err := k8s.GetPodE(t, options, podName)
 
 		if err != nil {
-			t.Logf("No pod found with name ", podName)
+			t.Logf("No pod found with name %s", podName)
 			return false
 		}
 
@@ -347,6 +347,7 @@ func VerifyAdminState(t *testing.T, namespace string, podName string) {
 
 	assert.NilError(t, err, "verifyAdminState: running show domain failed")
 	assert.Assert(t, strings.Contains(output, "ACTIVE"))
+
 }
 
 func AwaitAdminFullyConnected(t *testing.T, namespace string, podName string, numServers int) {
