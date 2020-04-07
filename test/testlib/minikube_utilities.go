@@ -287,7 +287,7 @@ func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate 
 		pod, err := findPod(t, namespace, podNameTemplate)
 
 		if err != nil {
-			t.Logf("No pod found with name ", podNameTemplate)
+			t.Logf("No pod found with name %s", podNameTemplate)
 			return false
 		}
 
