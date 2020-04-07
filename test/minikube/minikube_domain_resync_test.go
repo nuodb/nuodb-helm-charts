@@ -113,15 +113,7 @@ func TestDomainResync(t *testing.T) {
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{
-		SetValues: map[string]string{
-			// TODO: delete image overrides before pushing
-			"nuodb.image.repository":   "nuodb",
-			"nuodb.image.tag":          "latest",
-			"nuodb.image.pullPolicy":   "IfNotPresent",
-			"busybox.image.pullPolicy": "IfNotPresent",
-		},
-	}, 1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
@@ -133,11 +125,6 @@ func TestDomainResync(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    "0.25",
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			// TODO: delete image overrides before pushing
-			"nuodb.image.repository":   "nuodb",
-			"nuodb.image.tag":          "latest",
-			"nuodb.image.pullPolicy":   "IfNotPresent",
-			"busybox.image.pullPolicy": "IfNotPresent",
 		},
 	})
 
