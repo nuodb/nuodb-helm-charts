@@ -15,7 +15,22 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func getStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	assert.NilError(t, err)
+
+	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(metav1.ListOptions{})
+	assert.NilError(t, err)
+
+	return statefulSets
+}
 
 func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (archiveVolumeClaims map[string]int) {
 	options := k8s.NewKubectlOptions("", "")
@@ -117,19 +132,18 @@ func TestDomainResync(t *testing.T) {
 	// update replica count
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespaceName
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "statefulset", "-o", "jsonpath={.items[*].metadata.name}")
-	assert.NilError(t, err, output)
 
-	statefulSets := strings.Split(output, " ")
+	statefulSets := getStatefulSets(t, namespaceName).Items
 	assert.Equal(t, 3, len(statefulSets), "Expected 3 StatefulSets: Admin, SM, and hotcopy SM")
 
 	// by default the hotcopy SM replica count is 1 and regular SM count is 0
 	// scale regular SM replica count up to 1
 	smStatefulSet := ""
 	for _, statefulSet := range statefulSets {
-		if strings.HasPrefix(statefulSet, "sm-") && !strings.Contains(statefulSet, "hotcopy") {
-			k8s.RunKubectl(t, options, "scale", "statefulset", statefulSet, "--replicas=1")
-			smStatefulSet = statefulSet
+		name := statefulSet.Name
+		if strings.HasPrefix(name, "sm-") && !strings.Contains(name, "hotcopy") {
+			k8s.RunKubectl(t, options, "scale", "statefulset", name, "--replicas=1")
+			smStatefulSet = name
 		}
 	}
 	assert.Assert(t, smStatefulSet != "")
@@ -139,9 +153,10 @@ func TestDomainResync(t *testing.T) {
 	// scale hotcopy SM replica count down to 0
 	hotCopySmStatefulSet := ""
 	for _, statefulSet := range statefulSets {
-		if strings.Contains(statefulSet, "hotcopy") {
-			k8s.RunKubectl(t, options, "scale", "statefulset", statefulSet, "--replicas=0")
-			hotCopySmStatefulSet = statefulSet
+		name := statefulSet.Name
+		if strings.Contains(name, "hotcopy") {
+			k8s.RunKubectl(t, options, "scale", "statefulset", name, "--replicas=0")
+			hotCopySmStatefulSet = name
 		}
 	}
 	assert.Assert(t, hotCopySmStatefulSet != "")
