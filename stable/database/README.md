@@ -63,7 +63,7 @@ The following tables list the configurable parameters for the `busybox` option:
 | `image.registry` | busybox container registry | `docker.io` |
 | `image.repository` | busybox container image name |`busybox`|
 | `image.tag` | busybox container image tag | `latest` |
-| `image.pullPolicy` | busybox container pull policy |`Always`|
+| `image.pullPolicy` | busybox container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
@@ -86,7 +86,7 @@ busybox:
     registry: docker.io
     repository: busybox
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 ```
 
 #### nuodb.*
@@ -100,7 +100,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
 | `image.tag` | NuoDB container image tag | `latest` |
-| `image.pullPolicy` | NuoDB container pull policy |`Always`|
+| `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
 | `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
@@ -125,7 +125,7 @@ nuodb:
     registry: docker.io
     repository: nuodb/nuodb-ce
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 ```
 
 #### openshift.*
