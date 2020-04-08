@@ -4,9 +4,11 @@ package minikube
 
 import (
 	"fmt"
+	"os"
+	"testing"
+
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"testing"
 )
 
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
@@ -27,6 +29,9 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 	t.Run("verifyOrderedLicensing", func(t *testing.T) {
+		if os.Getenv("NUODB_LICENSE") == "ENTERPRISE" {
+			t.Skip("Cannot test licensing in Enterprise Edition")
+		}
 		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
 		testlib.VerifyLicensingErrorsInLog(t, namespaceName, admin0, false) // no error
 	})
@@ -60,6 +65,9 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	t.Run("verifyOrderedLicensing", func(t *testing.T) {
+		if os.Getenv("NUODB_LICENSE") == "ENTERPRISE" {
+			t.Skip("Cannot test licensing in Enterprise Edition")
+		}
 		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
 
 		// the license provided is not a valid PEM file
@@ -77,7 +85,7 @@ func TestKubernetesBasicNameOverride(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.nameOverride":     "aws-a",
+			"admin.nameOverride": "aws-a",
 		},
 	}
 
