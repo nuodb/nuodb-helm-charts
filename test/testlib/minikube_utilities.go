@@ -242,7 +242,7 @@ func findPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, 
 	}
 
 	for _, pod := range findAllPodsInSchema(t, namespace) {
-		t.Logf("Pods %s%n", pod.Name)
+		t.Logf("Pods %s\n", pod.Name)
 	}
 
 	return nil, errors.New("did not find any pod matching name")
@@ -287,7 +287,7 @@ func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate 
 		pod, err := findPod(t, namespace, podNameTemplate)
 
 		if err != nil {
-			t.Logf("No pod found with name ", podNameTemplate)
+			t.Logf("No pod found with name %s", podNameTemplate)
 			return false
 		}
 
@@ -310,7 +310,7 @@ func AwaitPodHasVersion(t *testing.T, namespace string, podName string, expected
 		pod, err := k8s.GetPodE(t, options, podName)
 
 		if err != nil {
-			t.Logf("No pod found with name ", podName)
+			t.Logf("No pod found with name %s", podName)
 			return false
 		}
 
@@ -347,6 +347,7 @@ func VerifyAdminState(t *testing.T, namespace string, podName string) {
 
 	assert.NilError(t, err, "verifyAdminState: running show domain failed")
 	assert.Assert(t, strings.Contains(output, "ACTIVE"))
+
 }
 
 func AwaitAdminFullyConnected(t *testing.T, namespace string, podName string, numServers int) {
