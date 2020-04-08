@@ -34,7 +34,7 @@ busybox:
     registry: docker.io
     repository: busybox
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
     ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
@@ -50,7 +50,7 @@ nuodb:
     registry: docker.io
     repository: nuodb/nuodb-ce
     tag: 4.0.4
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
     ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
