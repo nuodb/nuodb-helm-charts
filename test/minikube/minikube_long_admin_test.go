@@ -4,10 +4,11 @@ package minikube
 
 import (
 	"fmt"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"os"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 )
 
 func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
@@ -30,6 +31,9 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 	t.Run("verifyOrderedLicensing", func(t *testing.T) {
+		if os.Getenv("NUODB_LICENSE") == "ENTERPRISE" {
+			t.Skip("Cannot test licensing in Enterprise Edition")
+		}
 		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
 		testlib.VerifyLicensingErrorsInLog(t, namespaceName, admin0, false) // no error
 	})
