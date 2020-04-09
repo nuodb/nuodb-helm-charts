@@ -33,7 +33,7 @@ const THP_HELM_CHART_PATH = "../../stable/transparent-hugepage"
 const RESULT_DIR = "../../results"
 const INJECT_FILE = "../../versionInject.yaml"
 
-const IMPORT_ARCHIVE_URL = "http://download.nuohub.org/ce_releases/restore.bak.tz"
+const IMPORT_ARCHIVE_URL = "https://download.nuohub.org/ce_releases/restore.bak.tz"
 
 // suffix "m" for spec.containers[].resources.requests.cpu denotes "millicores",
 // and 1 CPU is equivalent to 1000m
