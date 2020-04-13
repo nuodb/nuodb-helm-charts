@@ -12,16 +12,16 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 )
 
-const YCSB_CONTOLLER_NAME = "ycsb-load"
+const YCSB_CONTROLLER_NAME = "ycsb-load"
 
 func scaleYCSB(t *testing.T, namespaceName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	kubectlOptions.Namespace = namespaceName
 
-	k8s.RunKubectl(t, kubectlOptions, "scale", "replicationcontroller", YCSB_CONTOLLER_NAME, "--replicas=1")
+	k8s.RunKubectl(t, kubectlOptions, "scale", "replicationcontroller", YCSB_CONTROLLER_NAME, "--replicas=1")
 
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, YCSB_CONTOLLER_NAME, 1)
-	testlib.AwaitNrReplicasReady(t, namespaceName, YCSB_CONTOLLER_NAME, 1)
+	testlib.AwaitNrReplicasScheduled(t, namespaceName, YCSB_CONTROLLER_NAME, 1)
+	testlib.AwaitNrReplicasReady(t, namespaceName, YCSB_CONTROLLER_NAME, 1)
 
 }
 
@@ -54,7 +54,7 @@ func TestKubernetesYCSB(t *testing.T) {
 
 	scaleYCSB(t, namespaceName)
 
-	ycsbPodName := testlib.GetPodName(t, namespaceName, YCSB_CONTOLLER_NAME)
+	ycsbPodName := testlib.GetPodName(t, namespaceName, YCSB_CONTROLLER_NAME)
 
 	// let YCSB run for a couple of seconds
 	time.Sleep(5 * time.Second)
