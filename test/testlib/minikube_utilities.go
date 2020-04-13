@@ -670,14 +670,24 @@ func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *v1.Daem
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "get", "daemonset", daemonSetName,
-		"-o", "yaml")
-	assert.NilError(t, err, "getDaemonSet: kubectl get daemonSet")
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	assert.NilError(t, err)
 
-	var object v1.DaemonSet
-	helm.UnmarshalK8SYaml(t, output, &object)
+	daemonSet, err := clientset.AppsV1().DaemonSets(namespace).Get(daemonSetName, metav1.GetOptions{})
 
-	return &object
+	return daemonSet
+}
+
+func GetReplicationController(t *testing.T, namespace string, replicationControllerName string) *corev1.ReplicationController {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	assert.NilError(t, err)
+
+	controller, err := clientset.CoreV1().ReplicationControllers(namespace).Get(replicationControllerName, metav1.GetOptions{})
+
+	return controller
 }
 
 func DeleteDatabase(t *testing.T, namespace string, dbName string, podName string) {

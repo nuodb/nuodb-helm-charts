@@ -75,16 +75,6 @@ if [ -n "${LB_POLICY}" ]; then
     LOADBALANCER_POLICY="&LBPolicy=${LB_POLICY}"
 fi
 
-. /etc/profile.d/cloud.sh
-
-: ${POD_NAME:=$(hostname)}
-: ${NODE_NAME:=$(cloud_hostname)}
-: ${NODE_ZONE:=$(cloud_zone)}
-
-LBVAR_POD_NAME="&pod=${POD_NAME}"
-LBVAR_NODE_NAME="&node=${NODE_NAME}"
-LBVAR_NODE_ZONE="&zone=${NODE_ZONE}"
-
 #check for nuo.properties file overrides
 if [ "$PEER_ADDRESS" != "" ] && [ "$DB_NAME" != "" ]; then
     AGENT_DB_NAME_VALUE="-p db.url=jdbc:com.nuodb://${PEER_ADDRESS}/${DB_NAME}?schema=${db_schema}"
@@ -92,7 +82,7 @@ if [ "$PEER_ADDRESS" != "" ] && [ "$DB_NAME" != "" ]; then
     if [ "$TE_DIRECT" == "true" ]; then
         AGENT_DB_NAME_VALUE="${AGENT_DB_NAME_VALUE}&direct=true"
     else
-        AGENT_DB_NAME_VALUE="${AGENT_DB_NAME_VALUE}${LOADBALANCER_QUERY}${LOADBALANCER_POLICY}${LBVAR_POD_NAME}${LBVAR_NODE_NAME}${LBVAR_NODE_ZONE}"
+        AGENT_DB_NAME_VALUE="${AGENT_DB_NAME_VALUE}${LOADBALANCER_QUERY}${LOADBALANCER_POLICY}"
     fi
 fi
 
