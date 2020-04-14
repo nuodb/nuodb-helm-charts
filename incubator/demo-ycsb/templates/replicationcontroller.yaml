@@ -76,6 +76,7 @@ spec:
         - { name: OPS_PER_ITERATION,   value: {{ .Values.ycsb.opsPerIteration | quote }} }
         - { name: MAX_DELAY,           value: {{ .Values.ycsb.maxDelay | quote }} }
         - { name: TE_DIRECT,           value: {{ default false .Values.ycsb.teDirect | quote }} }
+        volumeMounts:
         - name: ycsb-gen
           mountPath: /driver/ycsb_gen.sh
           subPath: ycsb_gen.sh
