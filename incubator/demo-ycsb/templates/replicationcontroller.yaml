@@ -8,7 +8,7 @@ metadata:
     release: {{ .Release.Name | quote }}
   name: {{ .Values.ycsb.loadName }}
 spec:
-  replicas: 0
+  replicas: {{ .Values.ycsb.replicas }}
   selector:
     app: ycsb-load
   template:
