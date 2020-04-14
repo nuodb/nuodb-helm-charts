@@ -83,6 +83,7 @@ The following tables list the configurable parameters of the YCSB chart and thei
 | ----- | ----------- | ------ |
 | `nameOverride` | Database name | `demo` |
 | `fullnameOverride` | Number of threads | `1` |
+| `replicas` | Number of NuoDB YCSB replicas | `0` |
 | `loadName` | Name of the activity | `ycsb-load` |
 | `workload` | YCSB workload.  Valid values are a-f. Each letter determines a different mix of read and update workload percentage generated. a= 50/50, b=95/5, c=100 read. Refer to YCSB documentation for more detail | `b` |
 | `lbPolicy` | YCSB load-balancer policy. Name of an existing load-balancer policy, that has already been created using the 'nuocmd set load-balancer' command. | `ycsb-load` |

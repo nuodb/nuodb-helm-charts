@@ -28,6 +28,10 @@ ycsb:
   # nameOverride: east
   # fullnameOverride: admin-east
 
+  # replicas
+  # Number of YCSB pods
+  replicas: 0
+
   # Use a direct TE connection
   teDirect: false
 
