@@ -7,18 +7,6 @@ metadata:
     group: nuodb
     chart: {{ template "ycsb.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ template "ycsb.fullname" . }}-cloud-profile
-data:
-{{ (.Files.Glob "files/cloud.sh").AsConfig | indent 2 }}
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  labels:
-    app: {{ template "ycsb.fullname" . }}
-    group: nuodb
-    chart: {{ template "ycsb.chart" . }}
-    release: {{ .Release.Name | quote }}
   name: {{ template "ycsb.fullname" . }}-ycsb-gen
 data:
 {{ (.Files.Glob "files/ycsb_gen.sh").AsConfig | indent 2 }}
