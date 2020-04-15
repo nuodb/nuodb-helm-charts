@@ -24,6 +24,8 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", helmChartReleaseName)
+	admin2 := fmt.Sprintf("%s-nuodb-cluster0-2", helmChartReleaseName)
 	headlessServiceName := fmt.Sprintf("nuodb")
 	clusterServiceName := fmt.Sprintf("nuodb-clusterip")
 
@@ -38,6 +40,15 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 	t.Run("verifyAdminHeadlessService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, headlessServiceName, true) })
 	t.Run("verifyAdminClusterService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, clusterServiceName, false) })
 	t.Run("verifyLBPolicy", func(t *testing.T) { verifyLBPolicy(t, namespaceName, admin0) })
-	t.Run("verifyPodKill", func(t *testing.T) { verifyPodKill(t, namespaceName, admin0, helmChartReleaseName, 3) })
-	t.Run("verifyProcessKill", func(t *testing.T) { verifyKillProcess(t, namespaceName, admin0, helmChartReleaseName, 3) })
+
+	t.Run("verifyPodKill", func(t *testing.T) {
+		verifyPodKill(t, namespaceName, admin0, helmChartReleaseName, 3)
+		verifyPodKill(t, namespaceName, admin1, helmChartReleaseName, 3)
+		verifyPodKill(t, namespaceName, admin2, helmChartReleaseName, 3)
+	})
+	t.Run("verifyProcessKill", func(t *testing.T) {
+		verifyKillProcess(t, namespaceName, admin0, helmChartReleaseName, 3)
+		verifyKillProcess(t, namespaceName, admin1, helmChartReleaseName, 3)
+		verifyKillProcess(t, namespaceName, admin2, helmChartReleaseName, 3)
+	})
 }
