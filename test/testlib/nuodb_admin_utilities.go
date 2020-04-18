@@ -13,7 +13,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-
 func getFunctionCallerName() string {
 	pc, _, _, _ := runtime.Caller(2)
 	nameFull := runtime.FuncForPC(pc).Name() // main.foo
@@ -64,7 +63,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	AddTeardown(TEARDOWN_ADMIN, func() {
 		helm.Delete(t, options, helmChartReleaseName, true)
 	})
-	
+
 	adminNames := make([]string, replicaCount)
 	var adminStatefulSet string
 
@@ -72,11 +71,11 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 		if options.SetValues["admin.fullnameOverride"] != "" {
 			adminStatefulSet = fmt.Sprintf("%s", options.SetValues["admin.fullnameOverride"])
 			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
-		} else if  options.SetValues["admin.nameOverride"] != "" {
+		} else if options.SetValues["admin.nameOverride"] != "" {
 			adminStatefulSet = fmt.Sprintf("%s-nuodb-cluster0-%s", helmChartReleaseName, options.SetValues["admin.nameOverride"])
-			adminNames[i]  = fmt.Sprintf("%s-%d", adminStatefulSet, i)
+			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 		} else {
-			adminStatefulSet =  fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+			adminStatefulSet = fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
 			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 		}
 	}
