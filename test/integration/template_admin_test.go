@@ -307,3 +307,19 @@ func TestAdminMultiClusterEnvVars(t *testing.T) {
 		assert.Check(t, strings.Contains(ss.Spec.Template.Spec.Containers[0].Env[5].Value, "$(POD_NAME).nuodb.$(NAMESPACE).svc.cluster2.local"))
 	}
 }
+
+func TestConfigDoesNotContainEmptyBlocks(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.configFiles": "null",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/configmap.yaml"})
+
+	assert.Assert(t, !strings.Contains(output, "---\n---"))
+}

@@ -73,8 +73,8 @@ data:
   NUODB_AUTO_RESTORE_TYPE: {{ default "stream" .Values.database.autoRestore.type | quote }}
   NUODB_OS_USER: {{ include "os.user" . | quote }}
   NUODB_OS_GROUP: {{ include "os.group" . | quote }}
----
 {{- if .Values.database.configFiles }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:
