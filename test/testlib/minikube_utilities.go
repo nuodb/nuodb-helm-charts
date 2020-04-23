@@ -188,6 +188,10 @@ func AwaitTillerUp(t *testing.T) {
 }
 
 func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName string, nrReplicas int) {
+	timeout := 30 * time.Second
+	if nrReplicas > 1 {
+		timeout *= time.Duration(nrReplicas)
+	}
 	Await(t, func() bool {
 		var cnt int
 		for _, pod := range findAllPodsInSchema(t, namespace) {
@@ -201,7 +205,7 @@ func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName strin
 		t.Logf("%d pods SCHEDULED for name '%s'\n", cnt, expectedName)
 
 		return cnt == nrReplicas
-	}, 30*time.Second)
+	}, timeout)
 }
 
 func AwaitNrReplicasReady(t *testing.T, namespace string, expectedName string, nrReplicas int) {
@@ -432,7 +436,6 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 	opts := GetExtractedOptions(databaseOptions)
 	AwaitDatabaseUp(t, namespace, podName, databaseName, opts.NrTePods+opts.NrSmPods)
 }
-
 
 func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName string, expectedRestartCount int32) {
 	options := k8s.NewKubectlOptions("", "")
@@ -797,7 +800,7 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 		labelString = fmt.Sprintf("%s-", labelName)
 	}
 
-	nodes := k8s.GetNodes(t , options)
+	nodes := k8s.GetNodes(t, options)
 
 	assert.Assert(t, len(nodes) > 0)
 
