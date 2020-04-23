@@ -770,3 +770,19 @@ func volumesContain(mounts []v1.Volume, expectedName string) bool {
 	}
 	return false
 }
+
+func TestDatabaseConfigDoesNotContainEmptyBlocks(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.configFiles": "null",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/configmap.yaml"})
+
+	assert.Assert(t, !strings.Contains(output, "---\n---"))
+}
