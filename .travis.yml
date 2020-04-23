@@ -6,7 +6,7 @@ os: linux
 sudo: required
 
 go:
-  - 1.12.x
+  - 1.14.x
 
 env:
   jobs:
