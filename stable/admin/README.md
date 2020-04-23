@@ -242,7 +242,7 @@ Verify the pods are running:
 ```bash
 $ kubectl get pods
 NAME                           READY     STATUS    RESTARTS   AGE
-admin-nuodb-0                  1/1       Running   0          29m
+admin-nuodb-cluster0-0         1/1       Running   0          29m
 tiller-86c4495fcc-lczdp        1/1       Running   0          5h
 ```
 
@@ -251,7 +251,7 @@ The command displays the NuoDB Pods running on the Kubernetes cluster. When comp
 Verify the connected states of the database domain:
 
 ```bash
-$ kubectl exec -it admin-nuodb-0 -- nuocmd show domain
+$ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 
 server version: 3.4.1-1-ccb6be381c, server license: Community
 server time: 2019-04-10T00:25:53.054, client token: 370d671ff18dd57a4b4bb0d146c72c8f2f256e7f
@@ -269,7 +269,7 @@ The command displays the status of NuoDB processes. The Servers section lists ad
 To scale the admin to 3 replicas, e.g., run the following command:
 
 ```bash
-kubectl scale sts admin-nuodb --replicas=3
+kubectl scale sts admin-nuodb-cluster0 --replicas=3
 ```
 
 ## Uninstalling the Chart
