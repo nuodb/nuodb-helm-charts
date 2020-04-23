@@ -300,14 +300,15 @@ func TestAdminMultiClusterEnvVars(t *testing.T) {
 		var ss appsv1.StatefulSet
 		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		var environmentals map[string]string
+		environmentals := make(map[string]string)
 
 		for _, val := range ss.Spec.Template.Spec.Containers[0].Env {
 			environmentals[val.Name] = val.Value
 		}
 
-		assert.Check(t, strings.Contains(environmentals["NUODB_DOMAIN_ENTRYPOINT"], "RELEASE-NAME-nuodb-cluster-1-admin-0.nuodb.$(NAMESPACE).svc.cluster1.local"))
-		assert.Check(t, strings.Contains(environmentals["NUODB_ALT_ADDRESS"], "$(POD_NAME).nuodb.$(NAMESPACE).svc.cluster2.local"))
+		assert.Check(t, strings.EqualFold(environmentals["NUODB_DOMAIN_ENTRYPOINT"], "RELEASE-NAME-nuodb-cluster-1-admin-0.nuodb.$(NAMESPACE).svc.cluster1.local"))
+		assert.Check(t, strings.EqualFold(environmentals["NUODB_ALT_ADDRESS"], "$(POD_NAME).nuodb.$(NAMESPACE).svc.cluster2.local"))
+
 	}
 }
 
