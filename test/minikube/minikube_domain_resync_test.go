@@ -101,6 +101,55 @@ func checkArchives(t *testing.T, namespaceName string, adminPod string, numExpec
 	return
 }
 
+func TestAdminScaleDown(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas": "2",
+		},
+	}, 2, "")
+
+	adminStatefulSet := helmChartReleaseName + "-nuodb-cluster0"
+	admin0 := adminStatefulSet + "-0"
+	admin1 := adminStatefulSet + "-1"
+
+	// scale down Admin StatefulSet
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+	k8s.RunKubectl(t, options, "scale", "statefulset", adminStatefulSet, "--replicas=1")
+
+	// wait for scaled-down Admin to show as "Disconnected"
+	testlib.Await(t, func() bool {
+		output, _ := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+			"nuocmd", "show", "domain", "--server-format", "{id} {connected_state}")
+		return strings.Contains(output, admin1+" Disconnected")
+	}, 300*time.Second)
+
+	// wait for scaled-down Admin Pod to be deleted
+	testlib.AwaitNoPods(t, namespaceName, admin1)
+
+	// commit a Raft command to confirm that remaining Admin has consensus
+	k8s.RunKubectl(t, options, "exec", admin0, "--",
+		"nuocmd", "set", "value", "--key", "testKey", "--value", "testValue", "--unconditional")
+
+	// admin1 is still in membership, though it is excluded from consensus;
+	// delete PVC to cause it to be completely removed from the membership;
+	// this should allow the Admin health-check to succeed
+	k8s.RunKubectl(t, options, "delete", "pvc", "raftlog-"+admin1)
+	k8s.RunKubectl(t, options, "exec", admin0, "--",
+		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "1", "--check-leader", "--timeout", "300")
+
+	// scale up Admin StatefulSet and make sure admin1 rejoins
+	k8s.RunKubectl(t, options, "scale", "statefulset", adminStatefulSet, "--replicas=2")
+	k8s.RunKubectl(t, options, "exec", admin0, "--",
+		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "2", "--check-leader", "--timeout", "300")
+	k8s.RunKubectl(t, options, "exec", admin1, "--",
+		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "2", "--check-leader", "--timeout", "300")
+}
+
 func TestDomainResync(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
