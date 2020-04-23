@@ -98,9 +98,9 @@ The following tables list the configurable parameters of the YCSB chart and thei
 | `image.tag` | Tag for the NuoDB Docker image | `latest` |
 | `image.pullPolicy` | Image pull policy | `Always` |
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
-| `affinity` | Affinity rules for NuoDB SM | `{}` |
-| `nodeSelector` | Node selector rules for NuoDB SM | `{}` |
-| `tolerations` | Tolerations for NuoDB SM | `[]` |
+| `affinity` | Affinity rules for NuoDB YCSB pods | `{}` |
+| `nodeSelector` | Node selector rules for NuoDB YCSB pods | `{}` |
+| `tolerations` | Tolerations for NuoDB YCSB pods | `[]` |
 
 Verify the Helm chart:
 
