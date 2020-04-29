@@ -246,11 +246,9 @@ database:
       enablePod: true
       replicas: 0
 
-    # NuoDB mem option - target maximum memory to be used by the cache
-    memoryOption: 8g
-
     ## resources
-    # k8s resouce min (request) and max (limit)
+    # k8s resource min (request) and max (limit)
+    # min is also used for the target maximum memory used by the cache (NuoDB --mem option)
     resources:
       limits:
         cpu: 8
@@ -298,9 +296,9 @@ database:
     # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
     replicas: 1
 
-    # NuoDB mem option - target maximum memory to be used by the cache
-    memoryOption: 8g
-
+    ## resources
+    # k8s resource min (request) and max (limit)
+    # min is also used for the target maximum memory used by the cache (NuoDB --mem option)
     resources:
       limits:
         cpu: 4

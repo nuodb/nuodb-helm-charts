@@ -144,12 +144,14 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
 		assert.Check(t, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0) == 8)
-		assert.Check(t, (*containers)[0].Resources.Limits.Memory().ScaledValue(resource.Giga) == 18,
-			(*containers)[0].Resources.Limits.Memory().ScaledValue(resource.Giga))
+		assert.Check(t, (*containers)[0].Resources.Limits.Memory().ScaledValue(0) == 16 * 1024 * 1024 * 1024,
+			(*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
 		assert.Check(t, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0) == 4)
-		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga) == 9,
-			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
+		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(0) == 8 * 1024 * 1024 * 1024,
+			(*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+
+		assert.Check(t, ArgContains((*containers)[0].Args, "mem 8Gi"))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&ss) {
@@ -177,7 +179,7 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 	options := &helm.Options{
 		SetValues: map[string]string{
 			"database.sm.resources.requests.cpu":    "1",
-			"database.sm.resources.requests.memory": "4G",
+			"database.sm.resources.requests.memory": "4Gi",
 			"database.sm.noHotCopy.replicas":        strconv.Itoa(noHotCopyReplicas),
 			"database.sm.hotCopy.replicas":          strconv.Itoa(hotcopyReplicas),
 		},
@@ -213,12 +215,14 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
 		assert.Check(t, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0) == 8)
-		assert.Check(t, (*containers)[0].Resources.Limits.Memory().ScaledValue(resource.Giga) == 18,
-			(*containers)[0].Resources.Limits.Memory().ScaledValue(resource.Giga))
+		assert.Check(t, (*containers)[0].Resources.Limits.Memory().ScaledValue(0) == 16 * 1024 * 1024 * 1024,
+			(*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
 		assert.Check(t, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0) == 1)
-		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga) == 4,
-			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
+		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(0) == 4 * 1024 * 1024 * 1024,
+			(*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+
+		assert.Check(t, ArgContains((*containers)[0].Args, "mem 4Gi"))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&ss) {

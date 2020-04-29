@@ -22,7 +22,6 @@ database:
       - ReadWriteOnce
     storageClass: fast-storage
   sm:
-    memoryOption: 4g
     resources:
       limits:
         cpu: 1
@@ -31,7 +30,6 @@ database:
         cpu: 1
         memory: 4Gi
   te:
-    memoryOption: 2g
     resources:
       limits:
         cpu: 1
