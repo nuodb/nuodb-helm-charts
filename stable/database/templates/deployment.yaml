@@ -53,7 +53,7 @@ spec:
           - "--servers-ready-timeout"
           - "300"
           - "--options"
-          - "mem {{ .Values.database.te.memoryOption}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
+          - "mem {{ .Values.database.te.resources.requests.memory}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
         {{- with .Values.database.te.labels }}
           - "--labels"
           - "{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}"

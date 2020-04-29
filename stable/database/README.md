@@ -250,7 +250,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotcopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create DS/SS for non-hot-copy SMs | `true` |
-| `sm.memoryOption` | SM engine memory (*future deprecation*) | `"8g"` |
 | `sm.labels` | Labels given to the SMs started | `{}` |
 | `sm.engineOptions` | Additional NuoDB engine options | `{}` |
 | `sm.resources` | Labels to apply to all resources | `{}` |
@@ -261,7 +260,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
 | `te.replicas` | TE replicas | `1` |
-| `te.memoryOption` | TE engine memory (*future deprecation*) | `"8g"` |
 | `te.labels` | Labels given to the TEs started | `""` |
 | `te.engineOptions` | Additional NuoDB engine options | `""` |
 | `te.resources` | Labels to apply to all resources | `{}` |
