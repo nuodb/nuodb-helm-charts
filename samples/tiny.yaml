@@ -45,16 +45,3 @@ backup:
     accessModes:
       - ReadWriteOnce
     storageClass: standard-storage
-
-influx:
-  persistence:
-    enabled: true
-    size: 20Gi
-    accessModes:
-      - ReadWriteOnce
-    storageClass: standard-storage
-  service:
-    type: LoadBalancer
-
-insights:
-  enabled: true
