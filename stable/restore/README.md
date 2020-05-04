@@ -157,7 +157,7 @@ The following tables list the configurable parameters of the backup chart and th
 
 ## Detailed Steps
 
-- First install Helm charts for Admin, Database, and optionally Influx.
+- First install Helm charts for Admin and Database.
 
 ### Identify the Backupset
 
