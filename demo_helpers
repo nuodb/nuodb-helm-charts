@@ -1,0 +1,21 @@
+# -*-shell-script-*-
+
+demo_clean() {
+    local PROJECTS=$(helm list --short)
+    if [ "$PROJECTS" != "" ]; then
+        helm delete --purge $PROJECTS
+    fi
+    kubectl delete pvc --all
+}
+
+start_admin() {
+    helm install --name dom stable/admin
+}
+
+start_db() {
+    helm install --name db stable/database \
+	    --set database.sm.hotCopy.enablePod=false \
+	    --set database.sm.noHotCopy.replicas=1 \
+	    --set database.sm.resources=null \
+	    --set database.te.resources=null
+}
