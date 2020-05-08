@@ -39,9 +39,9 @@ busybox:
 
 nuodb:
   image:
-    registry: docker.io
-    repository: nuodb/nuodb-ce
-    tag: 4.0.5
+    registry: registry.internal.nuodb.com
+    repository: nightly/master-centos7
+    tag: 7474
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
