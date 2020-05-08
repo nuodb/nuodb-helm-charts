@@ -539,10 +539,10 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-	testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart")
+	testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{})
 
 	smPodName0 := testlib.GetPodName(t, namespaceName, smPodName)
-	testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart")
+	testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{})
 
 	// restore database
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)

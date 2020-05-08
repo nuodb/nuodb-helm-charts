@@ -2,6 +2,7 @@ package testlib
 
 import (
 	"fmt"
+	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -111,7 +112,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 		// first await could be pulling the image from the repo
 		AwaitPodUp(t, namespaceName, adminName, 300*time.Second)
 		AddTeardown("admin", func() {
-			GetAppLog(t, namespaceName, adminName, "")
+			GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{})
 			GetAdminEventLog(t, namespaceName, adminName)
 		})
 	}

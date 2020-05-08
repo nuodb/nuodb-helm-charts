@@ -480,7 +480,7 @@ func VerifyLicenseIsCommunity(t *testing.T, namespace string, podName string) {
 }
 
 func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, expectError bool) {
-	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName))
+	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
 	assert.NilError(t, err)
 
 	fullLog := string(buf)
@@ -488,8 +488,8 @@ func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, 
 	assert.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify license"), fullLog)
 }
 
-func GetStringOccurenceInLog(t *testing.T, namespace string, podName string, expectedLogLine string) int {
-	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName))
+func GetStringOccurrenceInLog(t *testing.T, namespace string, podName string, expectedLogLine string, podLogOptions *corev1.PodLogOptions) int {
+	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, podLogOptions))
 	assert.NilError(t, err)
 
 	fullLog := string(buf)
@@ -499,7 +499,7 @@ func GetStringOccurenceInLog(t *testing.T, namespace string, podName string, exp
 }
 
 func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {
-	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName))
+	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
 	assert.NilError(t, err)
 
 	fullLog := string(buf)
@@ -594,7 +594,7 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 
 }
 
-func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string) {
+func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string, podLogOptions *corev1.PodLogOptions) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName+fileNameSuffix+".log")
 
@@ -613,20 +613,18 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 		multiWriter = io.MultiWriter(f)
 	}
 
-	_, err = io.Copy(multiWriter, getAppLogStream(t, namespace, podName))
+	_, err = io.Copy(multiWriter, getAppLogStream(t, namespace, podName, podLogOptions))
 	assert.NilError(t, err)
 }
 
-func getAppLogStream(t *testing.T, namespace string, podName string) io.ReadCloser {
+func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	assert.NilError(t, err)
 
-	podLogOpts := corev1.PodLogOptions{}
-
-	reader, err := client.CoreV1().Pods(options.Namespace).GetLogs(podName, &podLogOpts).Stream()
+	reader, err := client.CoreV1().Pods(options.Namespace).GetLogs(podName, podLogOptions).Stream()
 	assert.NilError(t, err)
 
 	return reader

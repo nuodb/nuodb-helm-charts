@@ -2,6 +2,7 @@ package testlib
 
 import (
 	"fmt"
+	v12 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
 	"testing"
@@ -10,7 +11,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type ExtractedOptions struct {
@@ -93,12 +93,13 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	// this is relevant for any tests that restart TEs/SMs
 
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
-	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "") })
-	AwaitPodStatus(t, namespaceName, tePodName, corev1.PodReady, corev1.ConditionTrue, 180*time.Second)
+
+	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{}) })
+	AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
-	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "") })
-	AwaitPodStatus(t, namespaceName, smPodName0, corev1.PodReady, corev1.ConditionTrue, 240*time.Second)
+	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{}) })
+	AwaitPodUp(t, namespaceName, smPodName0, 240*time.Second)
 
 	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
 

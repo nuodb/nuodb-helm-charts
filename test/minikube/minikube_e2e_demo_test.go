@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	v12 "k8s.io/api/core/v1"
 	"testing"
 	"time"
 
@@ -59,5 +60,5 @@ func TestKubernetesYCSB(t *testing.T) {
 	// let YCSB run for a couple of seconds
 	time.Sleep(5 * time.Second)
 
-	testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb")
+	testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb", &v12.PodLogOptions{})
 }
