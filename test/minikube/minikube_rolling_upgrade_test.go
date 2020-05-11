@@ -4,7 +4,9 @@ package minikube
 
 import (
 	"fmt"
+	v12 "k8s.io/api/core/v1"
 	"strings"
+
 	"testing"
 	"time"
 
@@ -111,7 +113,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
 
 	// get the log before the restart
-	testlib.GetAppLog(t, namespaceName, admin0, "")
+	testlib.GetAppLog(t, namespaceName, admin0, "", &v12.PodLogOptions{})
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
 
@@ -124,8 +126,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 		expectedNumberReconnects := 2
 
 		testlib.Await(t, func() bool {
-			return testlib.GetStringOccurenceInLog(t, namespaceName, admin0,
-				"Reconnected with process with connectKey") == expectedNumberReconnects
+			return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0, "Reconnected with process with connectKey", &v12.PodLogOptions{}) == expectedNumberReconnects
 		}, 30*time.Second)
 
 	})
