@@ -1,8 +1,8 @@
 # Changelog
 
-## [2.3.1](https://github.com/nuodb/nuodb-helm-charts/tree/2.3.1) (2020-05-12)
+## [v2.3.1](https://github.com/nuodb/nuodb-helm-charts/tree/v2.3.1) (2020-05-12)
 
-[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.3.0...2.3.1)
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.3.0...v2.3.1)
 
 **Fixed bugs:**
 

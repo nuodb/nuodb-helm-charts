@@ -1,4 +1,4 @@
-future-release=2.3.1
+future-release=v2.3.1
 since-tag=v2.0
 release-branch=v2.3-dev
 exclude-labels=meta,duplicate,question,invalid,wontfix,documentation
