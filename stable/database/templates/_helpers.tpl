@@ -26,10 +26,10 @@ and we have to allow for added suffixes including "-hotcopy" and "-NN" where NN 
 {{- end -}}
 
 {{/*
-Create chart name and version as used by the chart label.
+Create chart name as used by the chart label.
 */}}
 {{- define "database.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s" .Chart.Name | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
