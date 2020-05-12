@@ -1,8 +1,17 @@
 # Changelog
 
-## [2.3.0](https://github.com/nuodb/nuodb-helm-charts/tree/2.3.0) (2020-03-24)
+## [2.3.1](https://github.com/nuodb/nuodb-helm-charts/tree/2.3.1) (2020-05-12)
 
-[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.2.0...2.3.0)
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.3.0...2.3.1)
+
+**Fixed bugs:**
+
+- Fixed an issue preventing Helm Chart release upgrade [\#111](https://github.com/nuodb/nuodb-helm-charts/issues/111)
+- Removed NuodB Helm Chart version number from the release label. [\#110](https://github.com/nuodb/nuodb-helm-charts/pull/110) ([acabrele](https://github.com/acabrele))
+
+## [v2.3.0](https://github.com/nuodb/nuodb-helm-charts/tree/v2.3.0) (2020-03-24)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.2.0...v2.3.0)
 
 **Implemented enhancements:**
 
