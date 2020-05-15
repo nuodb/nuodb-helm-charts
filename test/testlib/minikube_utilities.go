@@ -252,6 +252,14 @@ func findPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, 
 	return nil, errors.New("did not find any pod matching name")
 }
 
+func GetPod(t *testing.T, namespace string, podName string) *corev1.Pod {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	return k8s.GetPod(t, options, podName)
+}
+
+
 func GetPodName(t *testing.T, namespaceName string, expectedName string) string {
 	tePod, err := findPod(t, namespaceName, expectedName)
 	assert.NilError(t, err, "No pod found with name ", expectedName)
@@ -281,6 +289,16 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 
 func AwaitPodUp(t *testing.T, namespace string, adminPodName string, timeout time.Duration) {
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
+}
+
+func AwaitPodObjectRecreated(t *testing.T, namespace string, pod *corev1.Pod, timeout time.Duration) {
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	Await(t, func() bool {
+		currentPod := k8s.GetPod(t, options, pod.Name)
+		return currentPod.UID != pod.UID
+	}, timeout)
 }
 
 func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate string, expectedVersion string, timeout time.Duration) {
