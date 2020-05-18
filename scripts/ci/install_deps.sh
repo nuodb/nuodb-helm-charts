@@ -10,6 +10,9 @@ curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${K
 wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
+# get the helm repo for upgrade testing
+helm repo add nuodb https://storage.googleapis.com/nuodb-charts
+
 if [[ -n "$REQUIRES_MINIKUBE" ]]; then
     # Download minikube.
   curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
