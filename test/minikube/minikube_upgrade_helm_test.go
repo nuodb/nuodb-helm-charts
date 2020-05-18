@@ -52,10 +52,10 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 			"nuodb.image.registry": "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": nuodbVersion,
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.resources.requests.cpu":    "250m",
+			"database.sm.resources.requests.memory": "250Mi",
+			"database.te.resources.requests.cpu":    "250m",
+			"database.te.resources.requests.memory": "250Mi",
 		},
 	}
 
