@@ -64,6 +64,7 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 	helmChartReleaseName, namespaceName := testlib.StartAdminFromHelmRepository(t, options, fromHelmVersion,1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseReleaseName := testlib.StartDatabaseFromHelmRepository(t, namespaceName, admin0, fromHelmVersion, options)
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
