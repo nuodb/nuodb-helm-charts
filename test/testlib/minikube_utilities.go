@@ -386,10 +386,16 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
-	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "database",
+	err := k8s.RunKubectlE(t, options, "exec", podName, "--", "nuocmd", "check", "database",
 		"--db-name", databaseName, "--check-running", "--check-liveness", "20",
 		"--num-processes", strconv.Itoa(numProcesses),
 		"--timeout", "300")
+
+	if err != nil {
+		_ = k8s.RunKubectlE(t, options, "exec", podName, "--", "nuocmd", "show", "domain")
+	}
+
+	assert.NilError(t, err, "Check database failed. DB not ready after 300s")
 }
 
 func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
