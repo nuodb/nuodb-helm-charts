@@ -80,7 +80,7 @@ func GenerateCustomCertificates(t *testing.T, podName string, namespaceName stri
 	}
 	finalCommands := append(prependCommands, commands...)
 	// Execute certificate generation commands
-	ExecuteCommandsInPod(t, podName, namespaceName, finalCommands)
+	ExecuteCommandsInPod(t, namespaceName, podName, finalCommands)
 }
 
 func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName string) string {
