@@ -10,9 +10,6 @@ curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${K
 wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
-# get the helm repo for upgrade testing
-helm repo add nuodb https://storage.googleapis.com/nuodb-charts
-
 if [[ -n "$REQUIRES_MINIKUBE" ]]; then
     # Download minikube.
   curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
@@ -29,6 +26,10 @@ if [[ -n "$REQUIRES_MINIKUBE" ]]; then
   helm init --service-account default
 
   kubectl version
+
+  # get the helm repo for upgrade testing
+  helm repo add nuodb https://storage.googleapis.com/nuodb-charts
+
 elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
   wget https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -O /tmp/oc.tar.gz
   tar xzf /tmp/oc.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/oc && sudo mv /tmp/oc /usr/local/bin
@@ -67,6 +68,8 @@ elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
   oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
   helm install stable/transparent-hugepage/ --namespace nuodb
 
+  # get the helm repo for upgrade testing
+  helm repo add nuodb https://storage.googleapis.com/nuodb-charts
 else
   echo "Skipping installation steps"
 fi
