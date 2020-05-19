@@ -2,6 +2,8 @@ package testlib
 
 import (
 	"fmt"
+	"github.com/gruntwork-io/gruntwork-cli/collections"
+	"gotest.tools/assert"
 	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"runtime"
@@ -15,7 +17,7 @@ import (
 )
 
 func getFunctionCallerName() string {
-	pc, _, _, _ := runtime.Caller(2)
+	pc, _, _, _ := runtime.Caller(3)
 	nameFull := runtime.FuncForPC(pc).Name() // main.foo
 	nameEnd := filepath.Ext(nameFull)        // .foo
 	name := strings.TrimPrefix(nameEnd, ".") // foo
@@ -38,11 +40,11 @@ func CreateNamespace(t *testing.T, namespaceName string) {
 	})
 }
 
-func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (helmChartReleaseName string, namespaceName string) {
+type AdminInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
+
+func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, namespace string, installStep AdminInstallationStep) (helmChartReleaseName string, namespaceName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	// Path to the helm chart we will test
-	helmChartPath := ADMIN_HELM_CHART_PATH
 	helmChartReleaseName = fmt.Sprintf("admin-%s", randomSuffix)
 
 	if namespace == "" {
@@ -59,7 +61,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	options.KubectlOptions.Namespace = namespaceName
 
 	InjectTestVersion(t, options)
-	helm.Install(t, options, helmChartPath, helmChartReleaseName)
+	installStep(t, options, helmChartReleaseName)
 
 	AddTeardown(TEARDOWN_ADMIN, func() {
 		helm.Delete(t, options, helmChartReleaseName, true)
@@ -122,4 +124,33 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	}
 
 	return
+}
+
+func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (string, string) {
+	return StartAdminTemplate(t, options, replicaCount, namespace, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
+		helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
+	})
+}
+
+func StartAdminFromHelmRepository(t *testing.T, options *helm.Options, fromHelmVersion string, replicaCount int, namespace string) (string, string) {
+	return StartAdminTemplate(t, options, replicaCount, namespace, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
+		var args []string
+
+		args = append(args, "--namespace", options.KubectlOptions.Namespace,
+			"--version", fromHelmVersion,
+			"-n", helmChartReleaseName,
+			"nuodb/admin")
+
+		// To make it easier to test, go through the keys in sorted order
+		keys := collections.Keys(options.SetValues)
+		for _, key := range keys {
+			value := options.SetValues[key]
+			argValue := fmt.Sprintf("%s=%s", key, value)
+			args = append(args, "--set", argValue)
+		}
+
+		_, err := helm.RunHelmCommandAndGetOutputE(t, options, "install",
+			args...)
+		assert.NilError(t, err)
+	})
 }

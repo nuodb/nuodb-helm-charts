@@ -2,6 +2,8 @@ package testlib
 
 import (
 	"fmt"
+	"github.com/gruntwork-io/gruntwork-cli/collections"
+	"gotest.tools/assert"
 	v12 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
@@ -62,7 +64,9 @@ func EnsureDatabaseNotRunning(t *testing.T, adminPod string, opt ExtractedOption
 	k8s.RunKubectl(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "check", "database", "--db-name", opt.DbName, "--num-processes", "0", "--timeout", "30")
 }
 
-func StartDatabase(t *testing.T, namespaceName string, adminPod string, options *helm.Options) (helmChartReleaseName string) {
+type DatabaseInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
+
+func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, options *helm.Options, installationStep DatabaseInstallationStep) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
 	InjectTestVersion(t, options)
@@ -84,7 +88,7 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 		DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
 	})
 
-	helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
+	installationStep(t, options, helmChartReleaseName)
 
 	AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, opt.NrTePods)
 	AwaitNrReplicasScheduled(t, namespaceName, smPodName, opt.NrSmPods)
@@ -104,4 +108,33 @@ func StartDatabase(t *testing.T, namespaceName string, adminPod string, options 
 	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 	return
+}
+
+func StartDatabase(t *testing.T, namespace string, adminPod string, options *helm.Options) string {
+	return StartDatabaseTemplate(t, namespace, adminPod, options, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
+		helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
+	})
+}
+
+func StartDatabaseFromHelmRepository(t *testing.T, namespace string, adminPod string, fromHelmVersion string, options *helm.Options) string {
+	return StartDatabaseTemplate(t, namespace, adminPod, options, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
+		var args []string
+
+		args = append(args, "--namespace", options.KubectlOptions.Namespace,
+			"--version", fromHelmVersion,
+			"-n", helmChartReleaseName,
+			"nuodb/database")
+
+		// To make it easier to test, go through the keys in sorted order
+		keys := collections.Keys(options.SetValues)
+		for _, key := range keys {
+			value := options.SetValues[key]
+			argValue := fmt.Sprintf("%s=%s", key, value)
+			args = append(args, "--set", argValue)
+		}
+
+		_, err := helm.RunHelmCommandAndGetOutputE(t, options, "install",
+			args...)
+		assert.NilError(t, err)
+	})
 }
