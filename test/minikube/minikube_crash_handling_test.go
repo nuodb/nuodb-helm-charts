@@ -11,6 +11,7 @@ import (
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
 	"testing"
+	"time"
 )
 
 func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName string, podName string) {
@@ -106,10 +107,10 @@ func TestPermanentLossOfAdmin(t *testing.T) {
 
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
-	stringOccurrence := testlib.GetStringOccurrenceInLog(t, namespaceName, tePodName, "Evicted by management",
-		&corev1.PodLogOptions {Previous:true})
-
-	assert.Assert(t, stringOccurrence > 0)
+	testlib.Await(t, func() bool {
+		return testlib.GetStringOccurrenceInLog(t, namespaceName, adminToKill,
+			"Reconnected with process with connectKey", &corev1.PodLogOptions{} ) >= 1
+	}, 30*time.Second)
 
 }
 
