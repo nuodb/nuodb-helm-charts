@@ -93,6 +93,10 @@ func TestPermanentLossOfAdmin(t *testing.T) {
 	adminToKill, err := GetAdminOfEnginePodE(t, namespaceName, admin0, tePodName)
 	assert.NilError(t, err)
 
+	if adminToKill == admin0 {
+		t.Skip("Can not delete storage of entry node admin-0. Abandoning test.")
+	}
+
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	kubectlOptions.Namespace = namespaceName
 
