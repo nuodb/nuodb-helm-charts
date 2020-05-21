@@ -3,6 +3,7 @@
 package minikube
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -10,6 +11,7 @@ import (
 	"gotest.tools/assert"
 	corev1 "k8s.io/api/core/v1"
 	"testing"
+	"time"
 )
 
 func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName string, podName string) {
@@ -63,3 +65,72 @@ func TestKubernetesPrintCores(t *testing.T) {
 	})
 }
 
+func TestPermanentLossOfAdmin(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t,
+		&helm.Options{SetValues: map[string]string{"admin.replicas":  "3"}},
+		3, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		},
+	})
+
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+
+	adminToKill, err := GetAdminOfEnginePodE(t, namespaceName, admin0, tePodName)
+	assert.NilError(t, err)
+
+	if adminToKill == admin0 {
+		t.Skip("Can not delete storage of entry node admin-0. Abandoning test.")
+	}
+
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions.Namespace = namespaceName
+
+	k8s.RunKubectl(t, kubectlOptions, "exec", adminToKill, "--", "rm", "-rf", "/var/opt/nuodb/admin*")
+
+	verifyPodKill(t, namespaceName, adminToKill, helmChartReleaseName, 3)
+
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
+
+	testlib.Await(t, func() bool {
+		return testlib.GetStringOccurrenceInLog(t, namespaceName, adminToKill,
+			"Reconnected with process with connectKey", &corev1.PodLogOptions{} ) >= 1
+	}, 30*time.Second)
+
+}
+
+func GetAdminOfEnginePodE(t *testing.T, namespaceName string, admin0 string, podName string) (string, error) {
+	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions.Namespace = namespaceName
+
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
+		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
+
+	assert.NilError(t, err, output)
+
+	err, objects := testlib.Unmarshal(output)
+
+	for _, obj := range objects {
+		if obj.Hostname == podName {
+			t.Logf("found %s on %s", obj.Hostname, obj.Host)
+			return obj.Host, nil
+		}
+	}
+
+	return "", errors.New("GetAdminOfEnginePodE: expected pod was not found in 'get processes'")
+}
