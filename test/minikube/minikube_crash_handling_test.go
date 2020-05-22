@@ -1,4 +1,4 @@
-// +build long
+// +build diagnostics
 
 package minikube
 
@@ -59,7 +59,6 @@ func TestKubernetesPrintCores(t *testing.T) {
 
 		testlib.RecoverCoresFromTEs(t, namespaceName, "demo")
 	})
-
 
 	t.Run("killSMWithCore", func(t *testing.T) {
 		smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")

@@ -260,6 +260,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
 | `te.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
+| `te.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
+| `te.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
 | `te.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteMany` |
 | `te.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
 | `te.logPersistence.storageClass` | Storage class for volume backing log storage | `-` |

@@ -48,7 +48,7 @@ func RecoverCoresFromTEs(t *testing.T, namespaceName string, databaseName string
 
 	AwaitPodUp(t, namespaceName, "debug-pod", 30* time.Second)
 
-	k8s.RunKubectl(t, kubectlOptions, "exec", "debug-pod", "--", "ls", "-lah", "/var/log/nuodb/crash")
+	k8s.RunKubectl(t, kubectlOptions, "exec", "debug-pod", "--", "ls", "-lah", "/var/log/nuodb/")
 
-	k8s.RunKubectl(t, kubectlOptions, "cp", "debug-pod:/var/log/nuodb/crash", targetDirPath)
+	k8s.RunKubectl(t, kubectlOptions, "cp", "debug-pod:/var/log/nuodb/", targetDirPath)
 }
