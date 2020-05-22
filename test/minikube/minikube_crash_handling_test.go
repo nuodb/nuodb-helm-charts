@@ -48,6 +48,7 @@ func TestKubernetesPrintCores(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.logPersistence.enabled": 	 "true",
 		},
 	})
 
@@ -55,6 +56,8 @@ func TestKubernetesPrintCores(t *testing.T) {
 		tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 		verifyKillAndInfoInLog(t, namespaceName, admin0, tePodName)
+
+		testlib.RecoverCoresFromTEs(t, namespaceName)
 	})
 
 
@@ -135,4 +138,63 @@ func GetAdminOfEnginePodE(t *testing.T, namespaceName string, admin0 string, pod
 	}
 
 	return "", errors.New("GetAdminOfEnginePodE: expected pod was not found in 'get processes'")
+}
+
+func TestReadWriteManyEnabledManyEngines(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    "250m",
+			"database.te.resources.requests.memory": "250Mi",
+			"database.te.logPersistence.enabled":    "true",
+			"database.te.replicas":                  "2",
+		},
+	})
+}
+
+func TestReadWriteManyMultitenancy(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "green",
+			"database.sm.resources.requests.cpu":    "250m",
+			"database.sm.resources.requests.memory": "250Mi",
+			"database.te.resources.requests.cpu":    "250m",
+			"database.te.resources.requests.memory": "250Mi",
+			"database.te.logPersistence.enabled":    "true",
+		},
+	})
+
+	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "blue",
+			"database.sm.resources.requests.cpu":    "250m",
+			"database.sm.resources.requests.memory": "250Mi",
+			"database.te.resources.requests.cpu":    "250m",
+			"database.te.resources.requests.memory": "250Mi",
+			"database.te.logPersistence.enabled":    "true",
+		},
+	})
 }

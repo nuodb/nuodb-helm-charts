@@ -282,6 +282,14 @@ database:
     # tolerationsDS: []
 
   te:
+    ## Enable persistent log volumes to retain logs when an external logging solution is not used.
+    logPersistence:
+      enabled: false
+      size: 60Gi
+      accessModes:
+        - ReadWriteMany
+      # storageClass: "-"
+
     ## Enable the Layer 4 Load balancer if required,
     ## and specify if it should provision an internal or external cloud IP address
     externalAccess: {}
