@@ -66,6 +66,8 @@ func TestKubernetesPrintCores(t *testing.T) {
 }
 
 func TestPermanentLossOfAdmin(t *testing.T) {
+	t.Skip("pod killing is flaky!")
+
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
