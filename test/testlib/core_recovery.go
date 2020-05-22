@@ -1,6 +1,7 @@
 package testlib
 
 import (
+	"fmt"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"gotest.tools/assert"
 	"os"
@@ -30,10 +31,10 @@ spec:
   volumes:
   - name: log-te-volume
     persistentVolumeClaim:
-      claimName: log-te-volume
+      claimName: %s-log-te-volume
 `
 
-func RecoverCoresFromTEs(t *testing.T, namespaceName string) {
+func RecoverCoresFromTEs(t *testing.T, namespaceName string, databaseName string) {
 	pwd, err := os.Getwd()
 	assert.NilError(t, err)
 
@@ -43,7 +44,7 @@ func RecoverCoresFromTEs(t *testing.T, namespaceName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "")
 	kubectlOptions.Namespace = namespaceName
 
-	k8s.KubectlApplyFromString(t, kubectlOptions, DEBUG_POD)
+	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(DEBUG_POD, databaseName))
 
 	AwaitPodUp(t, namespaceName, "debug-pod", 30* time.Second)
 

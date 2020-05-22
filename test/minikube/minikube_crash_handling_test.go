@@ -57,7 +57,7 @@ func TestKubernetesPrintCores(t *testing.T) {
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 		verifyKillAndInfoInLog(t, namespaceName, admin0, tePodName)
 
-		testlib.RecoverCoresFromTEs(t, namespaceName)
+		testlib.RecoverCoresFromTEs(t, namespaceName, "demo")
 	})
 
 
