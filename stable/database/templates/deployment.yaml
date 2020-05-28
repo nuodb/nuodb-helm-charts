@@ -84,6 +84,8 @@ spec:
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
           - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
           - { name: COMPONENT_NAME,      value: "te" }
+          - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.te.logPersistence.overwriteBackoff.copies | default "3" }}" }
+          - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.te.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
 {{- include "database.env" . | indent 10 }}
       {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
@@ -105,7 +107,7 @@ spec:
           subPath: {{ $key }}
         {{- end -}}
         {{- end }}
-        - name: logdir
+        - name: log-te-volume
           mountPath: /var/log/nuodb
         - name: nuote
           mountPath: /usr/local/bin/nuote
@@ -144,8 +146,13 @@ spec:
           configMap:
             name: {{ template "database.fullname" . }}-configuration
         {{- end }}
-        - name: logdir
+        - name: log-te-volume
+  {{- if not .Values.database.te.logPersistence.enabled }}
           emptyDir: {}
+        {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.database.name }}-log-te-volume
+        {{- end }}
         - name: nuote
           configMap:
             name: {{ template "database.fullname" . }}-nuote

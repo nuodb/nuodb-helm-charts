@@ -229,7 +229,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
 | `sm.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
-| `sm.logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
+| `sm.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
 | `sm.hotcopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
@@ -259,6 +259,12 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
+| `te.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
+| `te.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
+| `te.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
+| `te.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class).  This is expected to be ReadWriteMany.  Not all storage providers support this mode. | `ReadWriteMany` |
+| `te.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
+| `te.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
 | `te.replicas` | TE replicas | `1` |
 | `te.labels` | Labels given to the TEs started | `""` |
 | `te.engineOptions` | Additional NuoDB engine options | `""` |

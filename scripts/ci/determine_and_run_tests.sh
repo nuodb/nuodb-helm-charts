@@ -9,4 +9,6 @@ elif [[ $TEST_SUITE = "minikube-short"  ]]; then
   go test -timeout 50m -v ./test/minikube -tags=short
 elif [[ $TEST_SUITE = "minikube-long"  ]]; then
   go test -timeout 50m -v ./test/minikube -tags=long
+elif [[ $TEST_SUITE = "minikube-diagnostics"  ]]; then
+  go test -timeout 50m -v ./test/minikube -tags=diagnostics
 fi
