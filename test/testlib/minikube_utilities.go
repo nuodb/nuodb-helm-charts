@@ -746,6 +746,38 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 	return result, err
 }
 
+func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDBKubeConfig {
+	dumpFileName := "nuodb-dump.json"
+
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespace
+
+	pwd, err := os.Getwd()
+	assert.NilError(t, err)
+
+	targetDirPath := filepath.Join(pwd, RESULT_DIR, namespace, "k8s-dump")
+	_ = os.MkdirAll(targetDirPath, 0700)
+
+	targetFile := filepath.Join(targetDirPath, dumpFileName)
+
+	// TODO replace with nuocmd
+
+	k8s.RunKubectl(t, options,
+		"exec", podName, "--",
+		"bash", "-c",
+		"curl -k -E /etc/nuodb/keys/nuocmd.pem https://localhost:8888/api/1/diagnostics/kube > /tmp/nuodb-dump.json",
+		)
+
+	k8s.RunKubectl(t, options, "cp", podName+":/tmp/nuodb-dump.json", targetFile)
+
+	content, err := ioutil.ReadFile(targetFile)
+	assert.NilError(t, err)
+	err, unmarshalledDump := UnmarshalNuoDBKubeConfig(string(content))
+	assert.NilError(t, err)
+	assert.Equal(t, len(unmarshalledDump), 1)
+	return unmarshalledDump[0]
+}
+
 func ExecuteCommandsInPod(t *testing.T, namespaceName string, podName string, commands []string) {
 	tmpfile, err := ioutil.TempFile("", "script")
 	if err != nil {

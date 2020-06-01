@@ -1,0 +1,2869 @@
+{
+  "deployments": {
+    "te-database-vslldk-nuodb-cluster0-demo": {
+      "apiVersion": "apps/v1",
+      "kind": "Deployment",
+      "metadata": {
+        "annotations": {
+          "deployment.kubernetes.io/revision": "1"
+        },
+        "creationTimestamp": "2020-06-01T14:27:30Z",
+        "generation": 1,
+        "labels": {
+          "app": "database-vslldk-nuodb-cluster0-demo",
+          "chart": "database",
+          "database": "demo",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "database-vslldk"
+        },
+        "name": "te-database-vslldk-nuodb-cluster0-demo",
+        "namespace": "nuodb",
+        "resourceVersion": "391887",
+        "selfLink": "/apis/apps/v1/namespaces/nuodb/deployments/te-database-vslldk-nuodb-cluster0-demo",
+        "uid": "204e79e7-2bee-4424-b239-02a070b51d5f"
+      },
+      "spec": {
+        "progressDeadlineSeconds": 600,
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+          "matchLabels": {
+            "app": "database-vslldk-nuodb-cluster0-demo",
+            "component": "te"
+          }
+        },
+        "strategy": {
+          "rollingUpdate": {
+            "maxSurge": "25%",
+            "maxUnavailable": "25%"
+          },
+          "type": "RollingUpdate"
+        },
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "database-vslldk-nuodb-cluster0-demo",
+              "chart": "database",
+              "component": "te",
+              "database": "demo",
+              "domain": "nuodb",
+              "group": "nuodb",
+              "release": "database-vslldk"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "args": [
+                  "nuote",
+                  "--database-created-timeout",
+                  "300",
+                  "--servers-ready-timeout",
+                  "300",
+                  "--options",
+                  "mem 500Mi"
+                ],
+                "env": [
+                  {
+                    "name": "NODE_NAME",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "spec.nodeName"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POD_NAME",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.name"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POD_UID",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.uid"
+                      }
+                    }
+                  },
+                  {
+                    "name": "NAMESPACE",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.namespace"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DB_NAME",
+                    "value": "demo"
+                  },
+                  {
+                    "name": "NUOCMD_API_SERVER",
+                    "value": "nuodb.nuodb.svc:8888"
+                  },
+                  {
+                    "name": "PEER_ADDRESS",
+                    "value": "nuodb.nuodb.svc"
+                  },
+                  {
+                    "name": "COMPONENT_NAME",
+                    "value": "te"
+                  },
+                  {
+                    "name": "OVERWRITE_COPIES",
+                    "value": "3"
+                  },
+                  {
+                    "name": "OVERWRITE_WINDOW",
+                    "value": "120"
+                  }
+                ],
+                "envFrom": [
+                  {
+                    "configMapRef": {
+                      "name": "demo-restore"
+                    }
+                  }
+                ],
+                "image": "INTERNAL",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "te-database-vslldk-nuodb-cluster0-demo",
+                "ports": [
+                  {
+                    "containerPort": 48006,
+                    "protocol": "TCP"
+                  }
+                ],
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "readinessprobe"
+                    ]
+                  },
+                  "failureThreshold": 54,
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 5,
+                  "successThreshold": 2,
+                  "timeoutSeconds": 5
+                },
+                "resources": {
+                  "limits": {
+                    "cpu": "4",
+                    "memory": "16Gi"
+                  },
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "500Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/var/log/nuodb",
+                    "name": "log-te-volume"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/nuote",
+                    "name": "nuote",
+                    "subPath": "nuote"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/readinessprobe",
+                    "name": "readinessprobe",
+                    "subPath": "readinessprobe"
+                  }
+                ]
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "serviceAccount": "nuodb",
+            "serviceAccountName": "nuodb",
+            "terminationGracePeriodSeconds": 15,
+            "volumes": [
+              {
+                "emptyDir": {},
+                "name": "log-te-volume"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "database-vslldk-nuodb-cluster0-demo-nuote"
+                },
+                "name": "nuote"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "database-vslldk-nuodb-cluster0-demo-readinessprobe"
+                },
+                "name": "readinessprobe"
+              }
+            ]
+          }
+        }
+      },
+      "status": {
+        "availableReplicas": 1,
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-06-01T14:28:11Z",
+            "lastUpdateTime": "2020-06-01T14:28:11Z",
+            "message": "Deployment has minimum availability.",
+            "reason": "MinimumReplicasAvailable",
+            "status": "True",
+            "type": "Available"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:30Z",
+            "lastUpdateTime": "2020-06-01T14:28:11Z",
+            "message": "ReplicaSet \"te-database-vslldk-nuodb-cluster0-demo-65c4cdf487\" has successfully progressed.",
+            "reason": "NewReplicaSetAvailable",
+            "status": "True",
+            "type": "Progressing"
+          }
+        ],
+        "observedGeneration": 1,
+        "readyReplicas": 1,
+        "replicas": 1,
+        "updatedReplicas": 1
+      }
+    }
+  },
+  "pods": {
+    "sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "creationTimestamp": "2020-06-01T14:27:30Z",
+        "generateName": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy-",
+        "labels": {
+          "app": "database-vslldk-nuodb-cluster0-demo",
+          "chart": "database",
+          "component": "sm",
+          "controller-revision-hash": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy-5d559bc7d7",
+          "database": "demo",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "database-vslldk",
+          "role": "hotcopy",
+          "statefulset.kubernetes.io/pod-name": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0"
+        },
+        "name": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0",
+        "namespace": "nuodb",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "kind": "StatefulSet",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "name": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy",
+            "uid": "3f95f2a5-96f5-4d1b-9d98-23b350c4d3ed"
+          }
+        ],
+        "resourceVersion": "391907",
+        "selfLink": "/api/v1/namespaces/nuodb/pods/sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0",
+        "uid": "5dbe1a8d-0e8b-4159-8755-8289e8466c25"
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "nuosm",
+              "--servers-ready-timeout",
+              "300",
+              "--options",
+              "mem 500Mi",
+              "--labels",
+              "backup cluster0",
+              "--database-options",
+              "max-lost-archives 0 ping-timeout 60 "
+            ],
+            "env": [
+              {
+                "name": "NODE_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "spec.nodeName"
+                  }
+                }
+              },
+              {
+                "name": "POD_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.name"
+                  }
+                }
+              },
+              {
+                "name": "POD_UID",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.uid"
+                  }
+                }
+              },
+              {
+                "name": "NAMESPACE",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.namespace"
+                  }
+                }
+              },
+              {
+                "name": "DB_NAME",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "database-name",
+                    "name": "demo.nuodb.com"
+                  }
+                }
+              },
+              {
+                "name": "DB_USER",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "database-username",
+                    "name": "demo.nuodb.com"
+                  }
+                }
+              },
+              {
+                "name": "DB_PASSWORD",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "database-password",
+                    "name": "demo.nuodb.com"
+                  }
+                }
+              },
+              {
+                "name": "DATABASE_IMPORT_CREDENTIALS",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "database-import-credentials",
+                    "name": "demo.nuodb.com"
+                  }
+                }
+              },
+              {
+                "name": "DATABASE_RESTORE_CREDENTIALS",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "database-restore-credentials",
+                    "name": "demo.nuodb.com"
+                  }
+                }
+              },
+              {
+                "name": "DATABASE_BACKUP_CREDENTIALS",
+                "valueFrom": {
+                  "secretKeyRef": {
+                    "key": "database-backup-credentials",
+                    "name": "demo.nuodb.com"
+                  }
+                }
+              },
+              {
+                "name": "NUODB_DOMAIN",
+                "value": "nuodb"
+              },
+              {
+                "name": "NUOCMD_API_SERVER",
+                "value": "nuodb.nuodb.svc:8888"
+              },
+              {
+                "name": "PEER_ADDRESS",
+                "value": "nuodb.nuodb.svc"
+              },
+              {
+                "name": "NUODB_BACKUP_GROUP",
+                "value": "cluster0"
+              },
+              {
+                "name": "COMPONENT_NAME",
+                "value": "sm"
+              },
+              {
+                "name": "OVERWRITE_COPIES",
+                "value": "3"
+              },
+              {
+                "name": "OVERWRITE_WINDOW",
+                "value": "120"
+              }
+            ],
+            "envFrom": [
+              {
+                "configMapRef": {
+                  "name": "demo-restore"
+                }
+              }
+            ],
+            "image": "INTERNAL",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "sm",
+            "ports": [
+              {
+                "containerPort": 48006,
+                "protocol": "TCP"
+              }
+            ],
+            "readinessProbe": {
+              "exec": {
+                "command": [
+                  "readinessprobe"
+                ]
+              },
+              "failureThreshold": 58,
+              "initialDelaySeconds": 30,
+              "periodSeconds": 15,
+              "successThreshold": 2,
+              "timeoutSeconds": 5
+            },
+            "resources": {
+              "limits": {
+                "cpu": "8",
+                "memory": "16Gi"
+              },
+              "requests": {
+                "cpu": "250m",
+                "memory": "500Mi"
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/log/nuodb",
+                "name": "log-volume"
+              },
+              {
+                "mountPath": "/usr/local/bin/nuosm",
+                "name": "nuosm",
+                "subPath": "nuosm"
+              },
+              {
+                "mountPath": "/usr/local/bin/nuobackup",
+                "name": "nuobackup",
+                "subPath": "nuobackup"
+              },
+              {
+                "mountPath": "/usr/local/bin/readinessprobe",
+                "name": "readinessprobe",
+                "subPath": "readinessprobe"
+              },
+              {
+                "mountPath": "/var/opt/nuodb/archive",
+                "name": "archive-volume"
+              },
+              {
+                "mountPath": "/var/opt/nuodb/backup",
+                "name": "backup-volume"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "nuodb-token-8nfcx",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "hostname": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0",
+        "initContainers": [
+          {
+            "command": [
+              "chmod",
+              "770",
+              "/var/opt/nuodb/archive",
+              "var/opt/nuodb/backup",
+              "/var/log/nuodb"
+            ],
+            "image": "docker.io/busybox:latest",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "init-disk",
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/opt/nuodb/archive",
+                "name": "archive-volume"
+              },
+              {
+                "mountPath": "/var/opt/nuodb/backup",
+                "name": "backup-volume"
+              },
+              {
+                "mountPath": "/var/log/nuodb",
+                "name": "log-volume"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "nuodb-token-8nfcx",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "nodeName": "minikube",
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "nuodb",
+        "serviceAccountName": "nuodb",
+        "subdomain": "demo",
+        "terminationGracePeriodSeconds": 15,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "name": "archive-volume",
+            "persistentVolumeClaim": {
+              "claimName": "archive-volume-sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0"
+            }
+          },
+          {
+            "name": "backup-volume",
+            "persistentVolumeClaim": {
+              "claimName": "backup-volume-sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0"
+            }
+          },
+          {
+            "emptyDir": {},
+            "name": "log-volume"
+          },
+          {
+            "configMap": {
+              "defaultMode": 511,
+              "name": "database-vslldk-nuodb-cluster0-demo-nuosm"
+            },
+            "name": "nuosm"
+          },
+          {
+            "configMap": {
+              "defaultMode": 511,
+              "name": "database-vslldk-nuodb-cluster0-demo-nuobackup"
+            },
+            "name": "nuobackup"
+          },
+          {
+            "configMap": {
+              "defaultMode": 511,
+              "name": "database-vslldk-nuodb-cluster0-demo-readinessprobe"
+            },
+            "name": "readinessprobe"
+          },
+          {
+            "name": "nuodb-token-8nfcx",
+            "secret": {
+              "defaultMode": 420,
+              "secretName": "nuodb-token-8nfcx"
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-06-01T14:27:34Z",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:28:25Z",
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:28:25Z",
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:32Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "image": "INTERNAL",
+            "lastState": {},
+            "name": "sm",
+            "ready": true,
+            "restartCount": 0,
+            "state": {
+              "running": {
+                "startedAt": "2020-06-01T14:27:34Z"
+              }
+            }
+          }
+        ],
+        "hostIP": "192.168.64.26",
+        "initContainerStatuses": [
+          {
+            "image": "busybox:latest",
+            "lastState": {},
+            "name": "init-disk",
+            "ready": true,
+            "restartCount": 0,
+            "state": {
+              "terminated": {
+               "exitCode": 0,
+                "finishedAt": "2020-06-01T14:27:33Z",
+                "reason": "Completed",
+                "startedAt": "2020-06-01T14:27:33Z"
+              }
+            }
+          }
+        ],
+        "phase": "Running",
+        "podIP": "172.17.0.8",
+        "qosClass": "Burstable",
+        "startTime": "2020-06-01T14:27:32Z"
+      }
+    },
+    "admin-u7mxhy-nuodb-cluster0-0": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "creationTimestamp": "2020-06-01T14:26:35Z",
+        "generateName": "admin-u7mxhy-nuodb-cluster0-",
+        "labels": {
+          "app": "admin-u7mxhy-nuodb-cluster0",
+          "chart": "admin",
+          "component": "admin",
+          "controller-revision-hash": "admin-u7mxhy-nuodb-cluster0-65c68455db",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "admin-u7mxhy",
+          "statefulset.kubernetes.io/pod-name": "admin-u7mxhy-nuodb-cluster0-0"
+        },
+        "name": "admin-u7mxhy-nuodb-cluster0-0",
+        "namespace": "nuodb",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "kind": "StatefulSet",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "name": "admin-u7mxhy-nuodb-cluster0",
+            "uid": "6ed8305c-4a0c-4cc4-af51-a61d0fc625ac"
+          }
+        ],
+        "resourceVersion": "391672",
+        "selfLink": "/api/v1/namespaces/nuodb/pods/admin-u7mxhy-nuodb-cluster0-0",
+        "uid": "d27d8567-5878-428f-98f1-b3400da13036"
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "nuoadmin",
+              "--",
+              "pendingReconnectTimeout=60000",
+              "processLivenessCheckSec=30"
+            ],
+            "env": [
+              {
+                "name": "NODE_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "spec.nodeName"
+                  }
+                }
+              },
+              {
+                "name": "POD_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.name"
+                  }
+                }
+              },
+              {
+                "name": "POD_UID",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.uid"
+                  }
+                }
+              },
+              {
+                "name": "NAMESPACE",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.namespace"
+                  }
+                }
+              },
+              {
+                "name": "NUODB_DOMAIN_ENTRYPOINT",
+                "value": "admin-u7mxhy-nuodb-cluster0-0.nuodb.$(NAMESPACE).svc.cluster.local"
+              },
+              {
+                "name": "NUODB_ALT_ADDRESS",
+                "value": "$(POD_NAME).nuodb.$(NAMESPACE).svc.cluster.local"
+              },
+              {
+                "name": "NUODB_VARDIR",
+                "value": "/var/opt/nuodb/$(POD_NAME).$(NAMESPACE)"
+              },
+              {
+                "name": "COMPONENT_NAME",
+                "value": "admin"
+              },
+              {
+                "name": "OVERWRITE_COPIES",
+                "value": "3"
+              },
+              {
+                "name": "OVERWRITE_WINDOW",
+                "value": "120"
+              }
+            ],
+            "image": "INTERNAL",
+            "imagePullPolicy": "IfNotPresent",
+            "livenessProbe": {
+              "failureThreshold": 3,
+              "initialDelaySeconds": 30,
+              "periodSeconds": 15,
+              "successThreshold": 1,
+              "tcpSocket": {
+                "port": 8888
+              },
+              "timeoutSeconds": 1
+            },
+            "name": "admin",
+            "ports": [
+              {
+                "containerPort": 8888,
+                "protocol": "TCP"
+              },
+              {
+                "containerPort": 48004,
+                "protocol": "TCP"
+              },
+              {
+                "containerPort": 48005,
+                "protocol": "TCP"
+              }
+            ],
+            "readinessProbe": {
+              "exec": {
+                "command": [
+                  "nuodocker",
+                  "check",
+                  "servers",
+                  "--check-connected",
+                  "--check-active",
+                  "--check-leader"
+                ]
+              },
+              "failureThreshold": 30,
+              "initialDelaySeconds": 30,
+              "periodSeconds": 15,
+              "successThreshold": 2,
+              "timeoutSeconds": 1
+            },
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/log/nuodb",
+                "name": "log-volume"
+              },
+              {
+                "mountPath": "/var/opt/nuodb",
+                "name": "raftlog"
+              },
+              {
+                "mountPath": "/usr/local/bin/nuoadmin",
+                "name": "nuoadmin",
+                "subPath": "nuoadmin"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "nuodb-token-8nfcx",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "hostname": "admin-u7mxhy-nuodb-cluster0-0",
+        "initContainers": [
+          {
+            "command": [
+              "chmod",
+              "770",
+              "/var/opt/nuodb",
+              "/var/log/nuodb"
+            ],
+            "image": "docker.io/busybox:latest",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "init-disk",
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/opt/nuodb",
+                "name": "raftlog"
+              },
+              {
+                "mountPath": "/var/log/nuodb",
+                "name": "log-volume"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "nuodb-token-8nfcx",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "nodeName": "minikube",
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "nuodb",
+        "serviceAccountName": "nuodb",
+        "subdomain": "nuodb",
+        "terminationGracePeriodSeconds": 15,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "name": "raftlog",
+            "persistentVolumeClaim": {
+              "claimName": "raftlog-admin-u7mxhy-nuodb-cluster0-0"
+            }
+          },
+          {
+            "emptyDir": {},
+            "name": "log-volume"
+          },
+          {
+            "configMap": {
+              "defaultMode": 511,
+              "name": "admin-u7mxhy-nuodb-cluster0-nuoadmin"
+            },
+            "name": "nuoadmin"
+          },
+          {
+            "name": "nuodb-token-8nfcx",
+            "secret": {
+              "defaultMode": 420,
+              "secretName": "nuodb-token-8nfcx"
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-06-01T14:26:39Z",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:28Z",
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:28Z",
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:26:37Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "image": "INTERNAL",
+            "lastState": {},
+            "name": "admin",
+            "ready": true,
+            "restartCount": 0,
+            "state": {
+              "running": {
+                "startedAt": "2020-06-01T14:26:39Z"
+              }
+            }
+          }
+        ],
+        "hostIP": "192.168.64.26",
+        "initContainerStatuses": [
+          {
+            "image": "busybox:latest",
+            "lastState": {},
+            "name": "init-disk",
+            "ready": true,
+            "restartCount": 0,
+            "state": {
+              "terminated": {
+               "exitCode": 0,
+                "finishedAt": "2020-06-01T14:26:38Z",
+                "reason": "Completed",
+                "startedAt": "2020-06-01T14:26:38Z"
+              }
+            }
+          }
+        ],
+        "phase": "Running",
+        "podIP": "172.17.0.6",
+        "qosClass": "BestEffort",
+        "startTime": "2020-06-01T14:26:37Z"
+      }
+    },
+    "hotcopy-demo-job-initial-549rc": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "creationTimestamp": "2020-06-01T14:27:30Z",
+        "generateName": "hotcopy-demo-job-initial-",
+        "labels": {
+          "controller-uid": "635b8507-e406-4ecd-86b7-032d8b8b6257",
+          "job-name": "hotcopy-demo-job-initial"
+        },
+        "name": "hotcopy-demo-job-initial-549rc",
+        "namespace": "nuodb",
+        "ownerReferences": [
+          {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "name": "hotcopy-demo-job-initial",
+            "uid": "635b8507-e406-4ecd-86b7-032d8b8b6257"
+          }
+        ],
+        "resourceVersion": "391827",
+        "selfLink": "/api/v1/namespaces/nuodb/pods/hotcopy-demo-job-initial-549rc",
+        "uid": "3585094e-f2d5-4c4f-b8b1-ff76b73212f5"
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "nuobackup",
+              "--type",
+              "full",
+              "--db-name",
+              "demo",
+              "--group",
+              "cluster0",
+              "--timeout",
+              "1800",
+              "--backup-root",
+              "/var/opt/nuodb/backup"
+            ],
+            "env": [
+              {
+                "name": "NODE_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "spec.nodeName"
+                  }
+                }
+              },
+              {
+                "name": "POD_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.name"
+                  }
+                }
+              },
+              {
+                "name": "POD_UID",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.uid"
+                  }
+                }
+              },
+              {
+                "name": "NAMESPACE",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.namespace"
+                  }
+                }
+              },
+              {
+                "name": "DB_NAME",
+                "value": "demo"
+              },
+              {
+                "name": "NUOCMD_API_SERVER",
+                "value": "nuodb.nuodb.svc:8888"
+              },
+              {
+                "name": "PEER_ADDRESS",
+                "value": "nuodb.nuodb.svc"
+              },
+              {
+                "name": "TIMEOUT",
+                "value": "1800"
+              },
+              {
+                "name": "BACKUP_DIR",
+                "value": "/var/opt/nuodb/backup"
+              }
+            ],
+            "image": "INTERNAL",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "nuodb",
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/usr/local/bin/nuobackup",
+                "name": "nuobackup",
+                "subPath": "nuobackup"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "default-token-nzfdl",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "initContainers": [
+          {
+            "args": [
+              "nuocmd",
+              "--api-server",
+              "https://nuodb.nuodb.svc:8888",
+              "check",
+              "database",
+              "--db-name",
+              "demo",
+              "--check-running",
+              "--wait-forever"
+            ],
+            "image": "INTERNAL",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "wait-for-database-running",
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "default-token-nzfdl",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "nodeName": "minikube",
+        "priority": 0,
+        "restartPolicy": "Never",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "default",
+        "serviceAccountName": "default",
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "configMap": {
+              "defaultMode": 511,
+              "name": "database-vslldk-nuodb-cluster0-demo-nuobackup"
+            },
+            "name": "nuobackup"
+          },
+          {
+            "name": "default-token-nzfdl",
+            "secret": {
+              "defaultMode": 420,
+              "secretName": "default-token-nzfdl"
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-06-01T14:27:40Z",
+            "reason": "PodCompleted",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:46Z",
+            "reason": "PodCompleted",
+            "status": "False",
+            "type": "Ready"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:46Z",
+            "reason": "PodCompleted",
+            "status": "False",
+            "type": "ContainersReady"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:30Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "image": "INTERNAL",
+            "lastState": {},
+            "name": "nuodb",
+            "ready": false,
+            "restartCount": 0,
+            "state": {
+              "terminated": {
+                "exitCode": 0,
+                "finishedAt": "2020-06-01T14:27:46Z",
+                "reason": "Completed",
+                "startedAt": "2020-06-01T14:27:40Z"
+              }
+            }
+          }
+        ],
+        "hostIP": "192.168.64.26",
+        "initContainerStatuses": [
+          {
+            "image": "INTERNAL",
+            "lastState": {},
+            "name": "wait-for-database-running",
+            "ready": true,
+            "restartCount": 0,
+            "state": {
+              "terminated": {
+                "exitCode": 0,
+                "finishedAt": "2020-06-01T14:27:40Z",
+                "reason": "Completed",
+                "startedAt": "2020-06-01T14:27:31Z"
+              }
+            }
+          }
+        ],
+        "phase": "Succeeded",
+        "podIP": "172.17.0.5",
+        "qosClass": "BestEffort",
+        "startTime": "2020-06-01T14:27:30Z"
+      }
+    },
+    "te-database-vslldk-nuodb-cluster0-demo-65c4cdf487-wbzj9": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "creationTimestamp": "2020-06-01T14:27:30Z",
+        "generateName": "te-database-vslldk-nuodb-cluster0-demo-65c4cdf487-",
+        "labels": {
+          "app": "database-vslldk-nuodb-cluster0-demo",
+          "chart": "database",
+          "component": "te",
+          "database": "demo",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "pod-template-hash": "65c4cdf487",
+          "release": "database-vslldk"
+        },
+        "name": "te-database-vslldk-nuodb-cluster0-demo-65c4cdf487-wbzj9",
+        "namespace": "nuodb",
+        "ownerReferences": [
+          {
+            "apiVersion": "apps/v1",
+            "kind": "ReplicaSet",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "name": "te-database-vslldk-nuodb-cluster0-demo-65c4cdf487",
+            "uid": "eac5dc6b-554f-40ce-b34f-d907c9d9b5d0"
+          }
+        ],
+        "resourceVersion": "391883",
+        "selfLink": "/api/v1/namespaces/nuodb/pods/te-database-vslldk-nuodb-cluster0-demo-65c4cdf487-wbzj9",
+        "uid": "e2360fa0-44c5-4f3a-b62f-b44fde6bbbd1"
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "nuote",
+              "--database-created-timeout",
+              "300",
+              "--servers-ready-timeout",
+              "300",
+              "--options",
+              "mem 500Mi"
+            ],
+            "env": [
+              {
+                "name": "NODE_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "spec.nodeName"
+                  }
+                }
+              },
+              {
+                "name": "POD_NAME",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.name"
+                  }
+                }
+              },
+              {
+                "name": "POD_UID",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.uid"
+                  }
+                }
+              },
+              {
+                "name": "NAMESPACE",
+                "valueFrom": {
+                  "fieldRef": {
+                    "apiVersion": "v1",
+                    "fieldPath": "metadata.namespace"
+                  }
+                }
+              },
+              {
+                "name": "DB_NAME",
+                "value": "demo"
+              },
+              {
+                "name": "NUOCMD_API_SERVER",
+                "value": "nuodb.nuodb.svc:8888"
+              },
+              {
+                "name": "PEER_ADDRESS",
+                "value": "nuodb.nuodb.svc"
+              },
+              {
+                "name": "COMPONENT_NAME",
+                "value": "te"
+              },
+              {
+                "name": "OVERWRITE_COPIES",
+                "value": "3"
+              },
+              {
+                "name": "OVERWRITE_WINDOW",
+                "value": "120"
+              }
+            ],
+            "envFrom": [
+              {
+                "configMapRef": {
+                  "name": "demo-restore"
+                }
+              }
+            ],
+            "image": "INTERNAL",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "te-database-vslldk-nuodb-cluster0-demo",
+            "ports": [
+              {
+                "containerPort": 48006,
+                "protocol": "TCP"
+              }
+            ],
+            "readinessProbe": {
+              "exec": {
+                "command": [
+                  "readinessprobe"
+                ]
+              },
+              "failureThreshold": 54,
+              "initialDelaySeconds": 30,
+              "periodSeconds": 5,
+              "successThreshold": 2,
+              "timeoutSeconds": 5
+            },
+            "resources": {
+              "limits": {
+                "cpu": "4",
+                "memory": "16Gi"
+              },
+              "requests": {
+                "cpu": "250m",
+                "memory": "500Mi"
+              }
+            },
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/log/nuodb",
+                "name": "log-te-volume"
+              },
+              {
+                "mountPath": "/usr/local/bin/nuote",
+                "name": "nuote",
+                "subPath": "nuote"
+              },
+              {
+                "mountPath": "/usr/local/bin/readinessprobe",
+                "name": "readinessprobe",
+                "subPath": "readinessprobe"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "nuodb-token-8nfcx",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "nodeName": "minikube",
+        "priority": 0,
+        "restartPolicy": "Always",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "nuodb",
+        "serviceAccountName": "nuodb",
+        "terminationGracePeriodSeconds": 15,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "emptyDir": {},
+            "name": "log-te-volume"
+          },
+          {
+            "configMap": {
+              "defaultMode": 511,
+              "name": "database-vslldk-nuodb-cluster0-demo-nuote"
+            },
+            "name": "nuote"
+          },
+          {
+            "configMap": {
+              "defaultMode": 511,
+              "name": "database-vslldk-nuodb-cluster0-demo-readinessprobe"
+            },
+            "name": "readinessprobe"
+          },
+          {
+            "name": "nuodb-token-8nfcx",
+            "secret": {
+              "defaultMode": 420,
+              "secretName": "nuodb-token-8nfcx"
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-06-01T14:27:30Z",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:28:11Z",
+            "status": "True",
+            "type": "Ready"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:28:11Z",
+            "status": "True",
+            "type": "ContainersReady"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:30Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "image": "INTERNAL",
+            "lastState": {},
+            "name": "te-database-vslldk-nuodb-cluster0-demo",
+            "ready": true,
+            "restartCount": 0,
+            "state": {
+              "running": {
+                "startedAt": "2020-06-01T14:27:32Z"
+              }
+            }
+          }
+        ],
+        "hostIP": "192.168.64.26",
+        "phase": "Running",
+        "podIP": "172.17.0.7",
+        "qosClass": "Burstable",
+        "startTime": "2020-06-01T14:27:30Z"
+      }
+    },
+    "job-lb-policy-nearest-zs9jl": {
+      "apiVersion": "v1",
+      "kind": "Pod",
+      "metadata": {
+        "creationTimestamp": "2020-06-01T14:26:35Z",
+        "generateName": "job-lb-policy-nearest-",
+        "labels": {
+          "app": "job-lb-policy-admin-u7mxhy-nuodb-cluster0",
+          "chart": "admin",
+          "controller-uid": "64dc347d-f84c-40c2-8e5f-132a4de67c02",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "job-name": "job-lb-policy-nearest",
+          "release": "admin-u7mxhy"
+        },
+        "name": "job-lb-policy-nearest-zs9jl",
+        "namespace": "nuodb",
+        "ownerReferences": [
+          {
+            "apiVersion": "batch/v1",
+            "kind": "Job",
+            "blockOwnerDeletion": true,
+            "controller": true,
+            "name": "job-lb-policy-nearest",
+            "uid": "64dc347d-f84c-40c2-8e5f-132a4de67c02"
+          }
+        ],
+        "resourceVersion": "391653",
+        "selfLink": "/api/v1/namespaces/nuodb/pods/job-lb-policy-nearest-zs9jl",
+        "uid": "f612b5a1-bea7-46bc-8182-c9cecc7ec097"
+      },
+      "spec": {
+        "containers": [
+          {
+            "args": [
+              "nuodocker",
+              "set",
+              "load-balancer",
+              "--policy-name",
+              "nearest",
+              "--lb-query",
+              "random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))"
+            ],
+            "env": [
+              {
+                "name": "NUOCMD_API_SERVER",
+                "value": "nuodb.nuodb.svc:8888"
+              }
+            ],
+            "image": "INTERNAL",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "main",
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "default-token-nzfdl",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "dnsPolicy": "ClusterFirst",
+        "enableServiceLinks": true,
+        "initContainers": [
+          {
+            "command": [
+              "/usr/local/bin/waitscript"
+            ],
+            "env": [
+              {
+                "name": "NUOCMD_API_SERVER",
+                "value": "https://nuodb.nuodb.svc:8888"
+              }
+            ],
+            "image": "INTERNAL",
+            "imagePullPolicy": "IfNotPresent",
+            "name": "wait",
+            "resources": {},
+            "terminationMessagePath": "/dev/termination-log",
+            "terminationMessagePolicy": "File",
+            "volumeMounts": [
+              {
+                "mountPath": "/usr/local/bin/waitscript",
+                "name": "waitscript",
+                "subPath": "waitscript"
+              },
+              {
+                "mountPath": "/var/run/secrets/kubernetes.io/serviceaccount",
+                "name": "default-token-nzfdl",
+                "readOnly": true
+              }
+            ]
+          }
+        ],
+        "nodeName": "minikube",
+        "priority": 0,
+        "restartPolicy": "Never",
+        "schedulerName": "default-scheduler",
+        "securityContext": {},
+        "serviceAccount": "default",
+        "serviceAccountName": "default",
+        "terminationGracePeriodSeconds": 30,
+        "tolerations": [
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/not-ready",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          },
+          {
+            "effect": "NoExecute",
+            "key": "node.kubernetes.io/unreachable",
+            "operator": "Exists",
+            "tolerationSeconds": 300
+          }
+        ],
+        "volumes": [
+          {
+            "configMap": {
+              "defaultMode": 511,
+              "name": "waitscript"
+            },
+            "name": "waitscript"
+          },
+          {
+            "name": "default-token-nzfdl",
+            "secret": {
+              "defaultMode": 420,
+              "secretName": "default-token-nzfdl"
+            }
+          }
+        ]
+      },
+      "status": {
+        "conditions": [
+          {
+            "lastTransitionTime": "2020-06-01T14:27:14Z",
+            "reason": "PodCompleted",
+            "status": "True",
+            "type": "Initialized"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:16Z",
+            "reason": "PodCompleted",
+            "status": "False",
+            "type": "Ready"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:27:16Z",
+            "reason": "PodCompleted",
+            "status": "False",
+            "type": "ContainersReady"
+          },
+          {
+            "lastTransitionTime": "2020-06-01T14:26:35Z",
+            "status": "True",
+            "type": "PodScheduled"
+          }
+        ],
+        "containerStatuses": [
+          {
+            "image": "INTERNAL",
+            "lastState": {},
+            "name": "main",
+            "ready": false,
+            "restartCount": 0,
+            "state": {
+              "terminated": {
+                "exitCode": 0,
+                "finishedAt": "2020-06-01T14:27:15Z",
+                "reason": "Completed",
+                "startedAt": "2020-06-01T14:27:14Z"
+              }
+            }
+          }
+        ],
+        "hostIP": "192.168.64.26",
+        "initContainerStatuses": [
+          {
+            "image": "INTERNAL",
+            "lastState": {},
+            "name": "wait",
+            "ready": true,
+            "restartCount": 0,
+            "state": {
+              "terminated": {
+                "exitCode": 0,
+                "finishedAt": "2020-06-01T14:27:13Z",
+                "reason": "Completed",
+                "startedAt": "2020-06-01T14:26:36Z"
+              }
+            }
+          }
+        ],
+        "phase": "Succeeded",
+        "podIP": "172.17.0.5",
+        "qosClass": "BestEffort",
+        "startTime": "2020-06-01T14:26:35Z"
+      }
+    }
+  },
+  "volumes": {
+    "raftlog-admin-u7mxhy-nuodb-cluster0-0": {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "annotations": {
+          "control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"214cf422-9abd-11ea-89f0-421b04271a9a\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2020-06-01T14:26:35Z\",\"renewTime\":\"2020-06-01T14:27:05Z\",\"leaderTransitions\":0}",
+          "pv.kubernetes.io/bind-completed": "yes",
+          "pv.kubernetes.io/bound-by-controller": "yes",
+          "volume.beta.kubernetes.io/storage-provisioner": "k8s.io/minikube-hostpath"
+        },
+        "creationTimestamp": "2020-06-01T14:26:35Z",
+        "finalizers": [
+          "kubernetes.io/pvc-protection"
+        ],
+        "labels": {
+          "app": "admin-u7mxhy-nuodb-cluster0",
+          "chart": "admin",
+          "component": "admin",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "admin-u7mxhy"
+        },
+        "name": "raftlog-admin-u7mxhy-nuodb-cluster0-0",
+        "namespace": "nuodb",
+        "resourceVersion": "391630",
+        "selfLink": "/api/v1/namespaces/nuodb/persistentvolumeclaims/raftlog-admin-u7mxhy-nuodb-cluster0-0",
+        "uid": "d7319835-44c8-48fa-b03d-cc1b4515e9d1"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "1Gi"
+          }
+        },
+        "storageClassName": "standard",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-d7319835-44c8-48fa-b03d-cc1b4515e9d1"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "1Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    "archive-volume-sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0": {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "annotations": {
+          "control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"214cf422-9abd-11ea-89f0-421b04271a9a\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2020-06-01T14:27:30Z\",\"renewTime\":\"2020-06-01T14:28:00Z\",\"leaderTransitions\":0}",
+          "pv.kubernetes.io/bind-completed": "yes",
+          "pv.kubernetes.io/bound-by-controller": "yes",
+          "volume.beta.kubernetes.io/storage-provisioner": "k8s.io/minikube-hostpath"
+        },
+        "creationTimestamp": "2020-06-01T14:27:30Z",
+        "finalizers": [
+          "kubernetes.io/pvc-protection"
+        ],
+        "labels": {
+          "app": "database-vslldk-nuodb-cluster0-demo",
+          "chart": "database",
+          "component": "sm",
+          "database": "demo",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "database-vslldk",
+          "role": "hotcopy"
+        },
+        "name": "archive-volume-sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0",
+        "namespace": "nuodb",
+        "resourceVersion": "391867",
+        "selfLink": "/api/v1/namespaces/nuodb/persistentvolumeclaims/archive-volume-sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0",
+        "uid": "f0f247ca-54f3-45b2-8a71-afd5d871a4db"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "standard",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-f0f247ca-54f3-45b2-8a71-afd5d871a4db"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    },
+    "backup-volume-sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0": {
+      "apiVersion": "v1",
+      "kind": "PersistentVolumeClaim",
+      "metadata": {
+        "annotations": {
+          "control-plane.alpha.kubernetes.io/leader": "{\"holderIdentity\":\"214cf422-9abd-11ea-89f0-421b04271a9a\",\"leaseDurationSeconds\":15,\"acquireTime\":\"2020-06-01T14:27:30Z\",\"renewTime\":\"2020-06-01T14:28:00Z\",\"leaderTransitions\":0}",
+          "pv.kubernetes.io/bind-completed": "yes",
+          "pv.kubernetes.io/bound-by-controller": "yes",
+          "volume.beta.kubernetes.io/storage-provisioner": "k8s.io/minikube-hostpath"
+        },
+        "creationTimestamp": "2020-06-01T14:27:30Z",
+        "finalizers": [
+          "kubernetes.io/pvc-protection"
+        ],
+        "labels": {
+          "app": "database-vslldk-nuodb-cluster0-demo",
+          "chart": "database",
+          "component": "sm",
+          "database": "demo",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "database-vslldk",
+          "role": "hotcopy"
+        },
+        "name": "backup-volume-sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0",
+        "namespace": "nuodb",
+        "resourceVersion": "391868",
+        "selfLink": "/api/v1/namespaces/nuodb/persistentvolumeclaims/backup-volume-sm-database-vslldk-nuodb-cluster0-demo-hotcopy-0",
+        "uid": "2ecd3ecf-bbcf-4b0d-bea4-20f57c554402"
+      },
+      "spec": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "resources": {
+          "requests": {
+            "storage": "20Gi"
+          }
+        },
+        "storageClassName": "standard",
+        "volumeMode": "Filesystem",
+        "volumeName": "pvc-2ecd3ecf-bbcf-4b0d-bea4-20f57c554402"
+      },
+      "status": {
+        "accessModes": [
+          "ReadWriteOnce"
+        ],
+        "capacity": {
+          "storage": "20Gi"
+        },
+        "phase": "Bound"
+      }
+    }
+  },
+  "statefulSets": {
+    "admin-u7mxhy-nuodb-cluster0": {
+      "apiVersion": "apps/v1",
+      "kind": "StatefulSet",
+      "metadata": {
+        "creationTimestamp": "2020-06-01T14:26:35Z",
+        "generation": 1,
+        "labels": {
+          "app": "admin-u7mxhy-nuodb-cluster0",
+          "chart": "admin",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "admin-u7mxhy"
+        },
+        "name": "admin-u7mxhy-nuodb-cluster0",
+        "namespace": "nuodb",
+        "resourceVersion": "391675",
+        "selfLink": "/apis/apps/v1/namespaces/nuodb/statefulsets/admin-u7mxhy-nuodb-cluster0",
+        "uid": "6ed8305c-4a0c-4cc4-af51-a61d0fc625ac"
+      },
+      "spec": {
+        "podManagementPolicy": "Parallel",
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+          "matchLabels": {
+            "app": "admin-u7mxhy-nuodb-cluster0",
+            "component": "admin"
+          }
+        },
+        "serviceName": "nuodb",
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "admin-u7mxhy-nuodb-cluster0",
+              "chart": "admin",
+              "component": "admin",
+              "domain": "nuodb",
+              "group": "nuodb",
+              "release": "admin-u7mxhy"
+            },
+            "name": "admin-u7mxhy-nuodb-cluster0"
+          },
+          "spec": {
+            "containers": [
+              {
+                "args": [
+                  "nuoadmin",
+                  "--",
+                  "pendingReconnectTimeout=60000",
+                  "processLivenessCheckSec=30"
+                ],
+                "env": [
+                  {
+                    "name": "NODE_NAME",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "spec.nodeName"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POD_NAME",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.name"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POD_UID",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.uid"
+                      }
+                    }
+                  },
+                  {
+                    "name": "NAMESPACE",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.namespace"
+                      }
+                    }
+                  },
+                  {
+                    "name": "NUODB_DOMAIN_ENTRYPOINT",
+                    "value": "admin-u7mxhy-nuodb-cluster0-0.nuodb.$(NAMESPACE).svc.cluster.local"
+                  },
+                  {
+                    "name": "NUODB_ALT_ADDRESS",
+                    "value": "$(POD_NAME).nuodb.$(NAMESPACE).svc.cluster.local"
+                  },
+                  {
+                    "name": "NUODB_VARDIR",
+                    "value": "/var/opt/nuodb/$(POD_NAME).$(NAMESPACE)"
+                  },
+                  {
+                    "name": "COMPONENT_NAME",
+                    "value": "admin"
+                  },
+                  {
+                    "name": "OVERWRITE_COPIES",
+                    "value": "3"
+                  },
+                  {
+                    "name": "OVERWRITE_WINDOW",
+                    "value": "120"
+                  }
+                ],
+                "image": "INTERNAL",
+                "imagePullPolicy": "IfNotPresent",
+                "livenessProbe": {
+                  "failureThreshold": 3,
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 15,
+                  "successThreshold": 1,
+                  "tcpSocket": {
+                    "port": 8888
+                  },
+                  "timeoutSeconds": 1
+                },
+                "name": "admin",
+                "ports": [
+                  {
+                    "containerPort": 8888,
+                    "protocol": "TCP"
+                  },
+                  {
+                    "containerPort": 48004,
+                    "protocol": "TCP"
+                  },
+                  {
+                    "containerPort": 48005,
+                    "protocol": "TCP"
+                  }
+                ],
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "nuodocker",
+                      "check",
+                      "servers",
+                      "--check-connected",
+                      "--check-active",
+                      "--check-leader"
+                    ]
+                  },
+                  "failureThreshold": 30,
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 15,
+                  "successThreshold": 2,
+                  "timeoutSeconds": 1
+                },
+                "resources": {},
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/var/log/nuodb",
+                    "name": "log-volume"
+                  },
+                  {
+                    "mountPath": "/var/opt/nuodb",
+                    "name": "raftlog"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/nuoadmin",
+                    "name": "nuoadmin",
+                    "subPath": "nuoadmin"
+                  }
+                ]
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "initContainers": [
+              {
+                "command": [
+                  "chmod",
+                  "770",
+                  "/var/opt/nuodb",
+                  "/var/log/nuodb"
+                ],
+                "image": "docker.io/busybox:latest",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "init-disk",
+                "resources": {},
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/var/opt/nuodb",
+                    "name": "raftlog"
+                  },
+                  {
+                    "mountPath": "/var/log/nuodb",
+                    "name": "log-volume"
+                  }
+                ]
+              }
+            ],
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "serviceAccount": "nuodb",
+            "serviceAccountName": "nuodb",
+            "terminationGracePeriodSeconds": 15,
+            "volumes": [
+              {
+                "emptyDir": {},
+                "name": "log-volume"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "admin-u7mxhy-nuodb-cluster0-nuoadmin"
+                },
+                "name": "nuoadmin"
+              }
+            ]
+          }
+        },
+        "updateStrategy": {
+          "rollingUpdate": {
+            "partition": 0
+          },
+          "type": "RollingUpdate"
+        },
+        "volumeClaimTemplates": [
+          {
+            "apiVersion": "v1",
+            "kind": "PersistentVolumeClaim",
+            "metadata": {
+              "labels": {
+                "app": "admin-u7mxhy-nuodb-cluster0",
+                "chart": "admin",
+                "domain": "nuodb",
+                "group": "nuodb",
+                "release": "admin-u7mxhy"
+              },
+              "name": "raftlog"
+            },
+            "spec": {
+              "accessModes": [
+                "ReadWriteOnce"
+              ],
+              "resources": {
+                "requests": {
+                  "storage": "1Gi"
+                }
+              },
+              "volumeMode": "Filesystem"
+            },
+            "status": {
+              "phase": "Pending"
+            }
+          }
+        ]
+      },
+      "status": {
+        "collisionCount": 0,
+        "currentReplicas": 1,
+        "currentRevision": "admin-u7mxhy-nuodb-cluster0-65c68455db",
+        "observedGeneration": 1,
+        "readyReplicas": 1,
+        "replicas": 1,
+        "updateRevision": "admin-u7mxhy-nuodb-cluster0-65c68455db",
+        "updatedReplicas": 1
+      }
+    },
+    "sm-database-vslldk-nuodb-cluster0-demo": {
+      "apiVersion": "apps/v1",
+      "kind": "StatefulSet",
+      "metadata": {
+        "creationTimestamp": "2020-06-01T14:27:30Z",
+        "generation": 1,
+        "labels": {
+          "app": "database-vslldk-nuodb-cluster0-demo",
+          "chart": "database",
+          "database": "demo",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "database-vslldk"
+        },
+        "name": "sm-database-vslldk-nuodb-cluster0-demo",
+        "namespace": "nuodb",
+        "resourceVersion": "391697",
+        "selfLink": "/apis/apps/v1/namespaces/nuodb/statefulsets/sm-database-vslldk-nuodb-cluster0-demo",
+        "uid": "824d89a1-0f38-46cf-93ec-30043502ce66"
+      },
+      "spec": {
+        "podManagementPolicy": "Parallel",
+        "replicas": 0,
+        "revisionHistoryLimit": 10,
+        "selector": {
+          "matchLabels": {
+            "app": "database-vslldk-nuodb-cluster0-demo",
+            "component": "sm",
+            "role": "nohotcopy"
+          }
+        },
+        "serviceName": "demo",
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "database-vslldk-nuodb-cluster0-demo",
+              "chart": "database",
+              "component": "sm",
+              "database": "demo",
+              "domain": "nuodb",
+              "group": "nuodb",
+              "release": "database-vslldk",
+              "role": "nohotcopy"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "args": [
+                  "nuosm",
+                  "--servers-ready-timeout",
+                  "300",
+                  "--options",
+                  "mem 500Mi ",
+                  "--database-options",
+                  " max-lost-archives 0 ping-timeout 60"
+                ],
+                "env": [
+                  {
+                    "name": "NODE_NAME",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "spec.nodeName"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POD_NAME",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.name"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POD_UID",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.uid"
+                      }
+                    }
+                  },
+                  {
+                    "name": "NAMESPACE",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.namespace"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DB_NAME",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-name",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DB_USER",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-username",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DB_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-password",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DATABASE_IMPORT_CREDENTIALS",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-import-credentials",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DATABASE_RESTORE_CREDENTIALS",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-restore-credentials",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "NUODB_DOMAIN",
+                    "value": "nuodb"
+                  },
+                  {
+                    "name": "NUOCMD_API_SERVER",
+                    "value": "nuodb.nuodb.svc:8888"
+                  },
+                  {
+                    "name": "PEER_ADDRESS",
+                    "value": "nuodb.nuodb.svc"
+                  },
+                  {
+                    "name": "COMPONENT_NAME",
+                    "value": "sm"
+                  },
+                  {
+                    "name": "OVERWRITE_COPIES",
+                    "value": "3"
+                  },
+                  {
+                    "name": "OVERWRITE_WINDOW",
+                    "value": "120"
+                  }
+                ],
+                "envFrom": [
+                  {
+                    "configMapRef": {
+                      "name": "demo-restore"
+                    }
+                  }
+                ],
+                "image": "INTERNAL",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "sm",
+                "ports": [
+                  {
+                    "containerPort": 48006,
+                    "protocol": "TCP"
+                  }
+                ],
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "readinessprobe"
+                    ]
+                  },
+                  "failureThreshold": 58,
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 15,
+                  "successThreshold": 2,
+                  "timeoutSeconds": 5
+                },
+                "resources": {
+                  "limits": {
+                    "cpu": "8",
+                    "memory": "16Gi"
+                  },
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "500Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/var/log/nuodb",
+                    "name": "log-volume"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/nuosm",
+                    "name": "nuosm",
+                    "subPath": "nuosm"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/nuobackup",
+                    "name": "nuobackup",
+                    "subPath": "nuobackup"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/readinessprobe",
+                    "name": "readinessprobe",
+                    "subPath": "readinessprobe"
+                  },
+                  {
+                    "mountPath": "/var/opt/nuodb/archive",
+                    "name": "archive-volume"
+                  }
+                ]
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "initContainers": [
+              {
+                "command": [
+                  "chmod",
+                  "770",
+                  "/var/opt/nuodb/archive",
+                  "/var/log/nuodb"
+                ],
+                "image": "docker.io/busybox:latest",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "init-disk",
+                "resources": {},
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/var/opt/nuodb/archive",
+                    "name": "archive-volume"
+                  },
+                  {
+                    "mountPath": "/var/log/nuodb",
+                    "name": "log-volume"
+                  }
+                ]
+              }
+            ],
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "serviceAccount": "nuodb",
+            "serviceAccountName": "nuodb",
+            "terminationGracePeriodSeconds": 15,
+            "volumes": [
+              {
+                "emptyDir": {},
+                "name": "log-volume"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "database-vslldk-nuodb-cluster0-demo-nuosm"
+                },
+                "name": "nuosm"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "database-vslldk-nuodb-cluster0-demo-nuobackup"
+                },
+                "name": "nuobackup"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "database-vslldk-nuodb-cluster0-demo-readinessprobe"
+                },
+                "name": "readinessprobe"
+              }
+            ]
+          }
+        },
+        "updateStrategy": {
+          "rollingUpdate": {
+            "partition": 0
+          },
+          "type": "RollingUpdate"
+        },
+        "volumeClaimTemplates": [
+          {
+            "apiVersion": "v1",
+            "kind": "PersistentVolumeClaim",
+            "metadata": {
+              "labels": {
+                "app": "database-vslldk-nuodb-cluster0-demo",
+                "chart": "database",
+                "database": "demo",
+                "domain": "nuodb",
+                "group": "nuodb",
+                "release": "database-vslldk"
+              },
+              "name": "archive-volume"
+            },
+            "spec": {
+              "accessModes": [
+                "ReadWriteOnce"
+              ],
+              "resources": {
+                "requests": {
+                  "storage": "20Gi"
+                }
+              },
+              "volumeMode": "Filesystem"
+            },
+            "status": {
+              "phase": "Pending"
+            }
+          }
+        ]
+      },
+      "status": {
+        "collisionCount": 0,
+        "currentRevision": "sm-database-vslldk-nuodb-cluster0-demo-9b445c877",
+        "observedGeneration": 1,
+        "replicas": 0,
+        "updateRevision": "sm-database-vslldk-nuodb-cluster0-demo-9b445c877"
+      }
+    },
+    "sm-database-vslldk-nuodb-cluster0-demo-hotcopy": {
+      "apiVersion": "apps/v1",
+      "kind": "StatefulSet",
+      "metadata": {
+        "creationTimestamp": "2020-06-01T14:27:30Z",
+        "generation": 1,
+        "labels": {
+          "app": "database-vslldk-nuodb-cluster0-demo",
+          "chart": "database",
+          "database": "demo",
+          "domain": "nuodb",
+          "group": "nuodb",
+          "release": "database-vslldk"
+        },
+        "name": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy",
+        "namespace": "nuodb",
+        "resourceVersion": "391908",
+        "selfLink": "/apis/apps/v1/namespaces/nuodb/statefulsets/sm-database-vslldk-nuodb-cluster0-demo-hotcopy",
+        "uid": "3f95f2a5-96f5-4d1b-9d98-23b350c4d3ed"
+      },
+      "spec": {
+        "podManagementPolicy": "Parallel",
+        "replicas": 1,
+        "revisionHistoryLimit": 10,
+        "selector": {
+          "matchLabels": {
+            "app": "database-vslldk-nuodb-cluster0-demo",
+            "component": "sm",
+            "role": "hotcopy"
+          }
+        },
+        "serviceName": "demo",
+        "template": {
+          "metadata": {
+            "labels": {
+              "app": "database-vslldk-nuodb-cluster0-demo",
+              "chart": "database",
+              "component": "sm",
+              "database": "demo",
+              "domain": "nuodb",
+              "group": "nuodb",
+              "release": "database-vslldk",
+              "role": "hotcopy"
+            }
+          },
+          "spec": {
+            "containers": [
+              {
+                "args": [
+                  "nuosm",
+                  "--servers-ready-timeout",
+                  "300",
+                  "--options",
+                  "mem 500Mi",
+                  "--labels",
+                  "backup cluster0",
+                  "--database-options",
+                  "max-lost-archives 0 ping-timeout 60 "
+                ],
+                "env": [
+                  {
+                    "name": "NODE_NAME",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "spec.nodeName"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POD_NAME",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.name"
+                      }
+                    }
+                  },
+                  {
+                    "name": "POD_UID",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.uid"
+                      }
+                    }
+                  },
+                  {
+                    "name": "NAMESPACE",
+                    "valueFrom": {
+                      "fieldRef": {
+                        "apiVersion": "v1",
+                        "fieldPath": "metadata.namespace"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DB_NAME",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-name",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DB_USER",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-username",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DB_PASSWORD",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-password",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DATABASE_IMPORT_CREDENTIALS",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-import-credentials",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DATABASE_RESTORE_CREDENTIALS",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-restore-credentials",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "DATABASE_BACKUP_CREDENTIALS",
+                    "valueFrom": {
+                      "secretKeyRef": {
+                        "key": "database-backup-credentials",
+                        "name": "demo.nuodb.com"
+                      }
+                    }
+                  },
+                  {
+                    "name": "NUODB_DOMAIN",
+                    "value": "nuodb"
+                  },
+                  {
+                    "name": "NUOCMD_API_SERVER",
+                    "value": "nuodb.nuodb.svc:8888"
+                  },
+                  {
+                    "name": "PEER_ADDRESS",
+                    "value": "nuodb.nuodb.svc"
+                  },
+                  {
+                    "name": "NUODB_BACKUP_GROUP",
+                    "value": "cluster0"
+                  },
+                  {
+                    "name": "COMPONENT_NAME",
+                    "value": "sm"
+                  },
+                  {
+                    "name": "OVERWRITE_COPIES",
+                    "value": "3"
+                  },
+                  {
+                    "name": "OVERWRITE_WINDOW",
+                    "value": "120"
+                  }
+                ],
+                "envFrom": [
+                  {
+                    "configMapRef": {
+                      "name": "demo-restore"
+                    }
+                  }
+                ],
+                "image": "INTERNAL",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "sm",
+                "ports": [
+                  {
+                    "containerPort": 48006,
+                    "protocol": "TCP"
+                  }
+                ],
+                "readinessProbe": {
+                  "exec": {
+                    "command": [
+                      "readinessprobe"
+                    ]
+                  },
+                  "failureThreshold": 58,
+                  "initialDelaySeconds": 30,
+                  "periodSeconds": 15,
+                  "successThreshold": 2,
+                  "timeoutSeconds": 5
+                },
+                "resources": {
+                  "limits": {
+                    "cpu": "8",
+                    "memory": "16Gi"
+                  },
+                  "requests": {
+                    "cpu": "250m",
+                    "memory": "500Mi"
+                  }
+                },
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/var/log/nuodb",
+                    "name": "log-volume"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/nuosm",
+                    "name": "nuosm",
+                    "subPath": "nuosm"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/nuobackup",
+                    "name": "nuobackup",
+                    "subPath": "nuobackup"
+                  },
+                  {
+                    "mountPath": "/usr/local/bin/readinessprobe",
+                    "name": "readinessprobe",
+                    "subPath": "readinessprobe"
+                  },
+                  {
+                    "mountPath": "/var/opt/nuodb/archive",
+                    "name": "archive-volume"
+                  },
+                  {
+                    "mountPath": "/var/opt/nuodb/backup",
+                    "name": "backup-volume"
+                  }
+                ]
+              }
+            ],
+            "dnsPolicy": "ClusterFirst",
+            "initContainers": [
+              {
+                "command": [
+                  "chmod",
+                  "770",
+                  "/var/opt/nuodb/archive",
+                  "var/opt/nuodb/backup",
+                  "/var/log/nuodb"
+                ],
+                "image": "docker.io/busybox:latest",
+                "imagePullPolicy": "IfNotPresent",
+                "name": "init-disk",
+                "resources": {},
+                "terminationMessagePath": "/dev/termination-log",
+                "terminationMessagePolicy": "File",
+                "volumeMounts": [
+                  {
+                    "mountPath": "/var/opt/nuodb/archive",
+                    "name": "archive-volume"
+                  },
+                  {
+                    "mountPath": "/var/opt/nuodb/backup",
+                    "name": "backup-volume"
+                  },
+                  {
+                    "mountPath": "/var/log/nuodb",
+                    "name": "log-volume"
+                  }
+                ]
+              }
+            ],
+            "restartPolicy": "Always",
+            "schedulerName": "default-scheduler",
+            "securityContext": {},
+            "serviceAccount": "nuodb",
+            "serviceAccountName": "nuodb",
+            "terminationGracePeriodSeconds": 15,
+            "volumes": [
+              {
+                "emptyDir": {},
+                "name": "log-volume"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "database-vslldk-nuodb-cluster0-demo-nuosm"
+                },
+                "name": "nuosm"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "database-vslldk-nuodb-cluster0-demo-nuobackup"
+                },
+                "name": "nuobackup"
+              },
+              {
+                "configMap": {
+                  "defaultMode": 511,
+                  "name": "database-vslldk-nuodb-cluster0-demo-readinessprobe"
+                },
+                "name": "readinessprobe"
+              }
+            ]
+          }
+        },
+        "updateStrategy": {
+          "rollingUpdate": {
+            "partition": 0
+          },
+          "type": "RollingUpdate"
+        },
+        "volumeClaimTemplates": [
+          {
+            "apiVersion": "v1",
+            "kind": "PersistentVolumeClaim",
+            "metadata": {
+              "labels": {
+                "app": "database-vslldk-nuodb-cluster0-demo",
+                "chart": "database",
+                "database": "demo",
+                "domain": "nuodb",
+                "group": "nuodb",
+                "release": "database-vslldk"
+              },
+              "name": "archive-volume"
+            },
+            "spec": {
+              "accessModes": [
+                "ReadWriteOnce"
+              ],
+              "resources": {
+                "requests": {
+                  "storage": "20Gi"
+                }
+              },
+              "volumeMode": "Filesystem"
+            },
+            "status": {
+              "phase": "Pending"
+            }
+          },
+          {
+            "apiVersion": "v1",
+            "kind": "PersistentVolumeClaim",
+            "metadata": {
+              "labels": {
+                "app": "database-vslldk-nuodb-cluster0-demo",
+                "chart": "database",
+                "database": "demo",
+                "domain": "nuodb",
+                "group": "nuodb",
+                "release": "database-vslldk"
+              },
+              "name": "backup-volume"
+            },
+            "spec": {
+              "accessModes": [
+                "ReadWriteOnce"
+              ],
+              "resources": {
+                "requests": {
+                  "storage": "20Gi"
+                }
+              },
+              "volumeMode": "Filesystem"
+            },
+            "status": {
+              "phase": "Pending"
+            }
+          }
+        ]
+      },
+      "status": {
+        "collisionCount": 0,
+        "currentReplicas": 1,
+        "currentRevision": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy-5d559bc7d7",
+        "observedGeneration": 1,
+        "readyReplicas": 1,
+        "replicas": 1,
+        "updateRevision": "sm-database-vslldk-nuodb-cluster0-demo-hotcopy-5d559bc7d7",
+        "updatedReplicas": 1
+      }
+    }
+  }
+}
