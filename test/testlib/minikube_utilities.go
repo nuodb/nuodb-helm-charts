@@ -760,12 +760,10 @@ func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDB
 
 	targetFile := filepath.Join(targetDirPath, dumpFileName)
 
-	// TODO replace with nuocmd
-
 	k8s.RunKubectl(t, options,
 		"exec", podName, "--",
 		"bash", "-c",
-		"curl -k -E /etc/nuodb/keys/nuocmd.pem https://localhost:8888/api/1/diagnostics/kube > /tmp/nuodb-dump.json",
+		"nuocmd --show-json get kubernetes-config > /tmp/nuodb-dump.json",
 		)
 
 	k8s.RunKubectl(t, options, "cp", podName+":/tmp/nuodb-dump.json", targetFile)
