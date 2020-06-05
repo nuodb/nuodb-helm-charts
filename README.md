@@ -1,4 +1,4 @@
-<img src="https://www.nuodb.com/sites/all/themes/nuodb/logo.svg" data-canonical-src="https://www.nuodb.com/sites/all/themes/nuodb/logo.svg" width="200" height="200" />
+<img src="images/nuodb.svg" width="200" height="200" /> 
 
 # NuoDB Helm Charts
 
