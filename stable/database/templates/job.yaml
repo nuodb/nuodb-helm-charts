@@ -1,5 +1,5 @@
 {{- if .Values.database.sm.hotCopy.enablePod }}
-{{- if .Values.database.sm.hotCopy.enableBackups }}
+{{- if eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true" }}
 apiVersion: batch/v1
 kind: Job
 metadata:

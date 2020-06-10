@@ -232,7 +232,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
-| `sm.hotCopy.enableBackups` | Enable full/incremental backups | `true` |
+| `sm.hotCopy.enableBackups` | Enable full/incremental/journal backups | `true` |
 | `sm.hotcopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
 | `sm.hotcopy.timeout` | Timeout for a started hotcopy job to complete (seconds) | `1800` |
 | `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
