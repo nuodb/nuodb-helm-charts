@@ -198,6 +198,7 @@ database:
     # All time values are in seconds unless the unit is included in the name.
     hotCopy:
       enablePod: true
+      enableBackups: true
       replicas: 1
 
       # Deadline for starting a hotcopy job - if a job hasn't started in this time - give up

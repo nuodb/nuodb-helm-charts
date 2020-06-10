@@ -191,3 +191,16 @@ Import user defined ENV vars
 {{ toYaml .Values.database.env | trim }}
 {{- end }}
 {{- end -}}
+
+{{/*
+Takes a boolean as argument return it's value if it was defined or return true otherwise
+Note: Sprig's default function on an empty/not defined variable returns false, workaround
+it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
+*/}}
+{{- define "defaulttrue" -}}
+{{- if typeIs "bool" . -}}
+{{- . -}}
+{{- else -}}
+{{- default true . -}}
+{{- end -}}
+{{- end -}}
