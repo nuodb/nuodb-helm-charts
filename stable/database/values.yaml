@@ -282,6 +282,9 @@ database:
     # nodeSelectorHotCopyDS: {}
     # tolerationsDS: []
 
+    #Some clusters require longer readiness probe timeouts
+    readinessTimeoutSeconds: 5
+
   te:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
     logPersistence:
@@ -344,6 +347,9 @@ database:
   # from a previously existing backup.
   isManualVolumeProvisioning: false
   isRestore: false
+
+  #Some clusters require longer readiness probe timeouts
+  readinessTimeoutSeconds: 5
 
 openshift:
   # change this to true if you want to deploy using OpenShift proprietary features
