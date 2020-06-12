@@ -341,15 +341,15 @@ database:
     # named key/value pairs that need to be passed to the image, such as
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
+
+    #Some clusters require longer readiness probe timeouts
+    readinessTimeoutSeconds: 5
   
   enableDaemonSet: false
   # Set to true if you are using manually created volumes or restoring
   # from a previously existing backup.
   isManualVolumeProvisioning: false
   isRestore: false
-
-  #Some clusters require longer readiness probe timeouts
-  readinessTimeoutSeconds: 5
 
 openshift:
   # change this to true if you want to deploy using OpenShift proprietary features
