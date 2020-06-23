@@ -6,17 +6,16 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
-	"strconv"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/otiai10/copy"
 	"gotest.tools/assert"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const TLS_GENERATOR_POD_TEMPLATE = `---
@@ -45,7 +44,7 @@ func createTLSGeneratorPod(t *testing.T, namespaceName string, timeout time.Dura
 	k8s.KubectlApplyFromString(t, kubectlOptions, podTemplateString)
 	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, podTemplateString) })
 
-	AwaitPodStatus(t, namespaceName, podName, corev1.PodReady, corev1.ConditionTrue, timeout)
+	AwaitPodUp(t, namespaceName, podName, timeout)
 
 	return podName
 }
@@ -168,10 +167,12 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options, namespaceName st
 		helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, databaseReleaseName)
 	} else {
 		// Rolling upgrade could take a lot of time due to readiness probes.
-		// Faster approach will be to restart all PODs. A prerequsite for this 
+		// Faster approach will be to restart all PODs. A prerequisite for this
 		// is to have the same secrets update before hand.
+		adminPod := GetPod(t, namespaceName, admin0)
 		k8s.RunKubectl(t, kubectlOptions, "delete", "pod", "--selector=domain=nuodb")
-		AwaitPodPhase(t, namespaceName, admin0, corev1.PodRunning, 60*time.Second)
+		AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+		AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 		AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
 	}
 	AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
