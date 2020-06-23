@@ -296,7 +296,12 @@ func AwaitPodObjectRecreated(t *testing.T, namespace string, pod *corev1.Pod, ti
 	options.Namespace = namespace
 
 	Await(t, func() bool {
-		currentPod := k8s.GetPod(t, options, pod.Name)
+		currentPod, err := k8s.GetPodE(t, options, pod.Name)
+
+		if err != nil {
+			return false
+		}
+
 		return currentPod.UID != pod.UID
 	}, timeout)
 }
