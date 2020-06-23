@@ -9,7 +9,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"regexp"
+	"runtime"
 	"runtime/debug"
 	"strconv"
 	"strings"
@@ -159,11 +161,13 @@ func findAllPodsInSchema(t *testing.T, namespace string) []corev1.Pod {
 }
 
 func Await(t *testing.T, lmbd func() bool, timeout time.Duration) {
+	now := time.Now()
 	for timeExpired := time.After(timeout); ; {
 		select {
 		case <-timeExpired:
-			t.Log(string(debug.Stack()))
-			t.Fatal("function call timed out")
+			t.Logf("Function %s timed out", runtime.FuncForPC(reflect.ValueOf(lmbd).Pointer()).Name())
+			t.Logf("Full stack trace of caller:\n%s", string(debug.Stack()))
+			t.Fatalf("function call timed out after %f seconds. Start of await was '%s'", timeout.Seconds(), now)
 		default:
 			if lmbd() {
 				return
