@@ -178,6 +178,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
 | `serviceSuffix.balancer` | The suffix to use for the LoadBalancer service name | `balancer` |
 | `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
+| `readinessTimeoutSeconds` | Admin readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `1` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 

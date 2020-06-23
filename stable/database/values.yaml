@@ -198,6 +198,7 @@ database:
     # All time values are in seconds unless the unit is included in the name.
     hotCopy:
       enablePod: true
+      enableBackups: true
       replicas: 1
 
       # Deadline for starting a hotcopy job - if a job hasn't started in this time - give up
@@ -281,6 +282,9 @@ database:
     # nodeSelectorHotCopyDS: {}
     # tolerationsDS: []
 
+    #Some clusters require longer readiness probe timeouts
+    readinessTimeoutSeconds: 5
+
   te:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
     logPersistence:
@@ -337,6 +341,9 @@ database:
     # named key/value pairs that need to be passed to the image, such as
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
+
+    #Some clusters require longer readiness probe timeouts
+    readinessTimeoutSeconds: 5
   
   enableDaemonSet: false
   # Set to true if you are using manually created volumes or restoring

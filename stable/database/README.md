@@ -232,6 +232,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
+| `sm.hotCopy.enableBackups` | Enable full/incremental/journal backups | `true` |
 | `sm.hotcopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
 | `sm.hotcopy.timeout` | Timeout for a started hotcopy job to complete (seconds) | `1800` |
 | `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
@@ -256,6 +257,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.affinity` | Affinity rules for NuoDB SM | `{}` |
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
+| `sm.readinessTimeoutSeconds` | SM readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
@@ -279,6 +281,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.nodeSelectorNoHotCopyDS` | Node selector rules for non-hot-copy SMs (DaemonSet) | `{}` |
 | `sm.tolerationsDS` | Tolerations for SMs (DaemonSet) | `[]` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
+| `te.readinessTimeoutSeconds` | TE readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 
 #### database.configFiles.*
 
