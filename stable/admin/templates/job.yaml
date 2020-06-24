@@ -21,6 +21,18 @@ spec:
         release: {{ .Release.Name | quote }}
       name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
     spec:
+      {{- with .Values.admin.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | trim | indent 8 }}
+      {{- end }}
+{{- if .Values.admin.affinity }}
+      affinity:
+{{ tpl .Values.admin.affinity . | trim | indent 8 }}
+{{- end }}
+      {{- if .Values.admin.tolerations }}
+      tolerations:
+{{ toYaml .Values.admin.tolerations | trim | indent 8 }}
+      {{- end }}
       initContainers:
       - name: wait
         image: {{ template "nuodb.image" . }}
