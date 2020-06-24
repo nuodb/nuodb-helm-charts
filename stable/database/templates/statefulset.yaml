@@ -194,7 +194,7 @@ spec:
           failureThreshold: 58
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
-          timeoutSeconds: 5
+          timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}
@@ -369,7 +369,7 @@ spec:
           - "--servers-ready-timeout"
           - "300"
           - "--options"
-          - "mem {{ .Values.database.sm.resources.requests.memory}} {{- if .Values.database.sm.hotCopy.journalBackup.enabled }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
+          - "mem {{ .Values.database.sm.resources.requests.memory}} {{- if and (eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true") .Values.database.sm.hotCopy.journalBackup.enabled }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
           - "--labels"
           - "backup {{ include "hotcopy.group" . }} {{- include "opt.key-values" .Values.database.sm.labels }}"
 {{- with .Values.database.options}}
@@ -494,7 +494,7 @@ spec:
           failureThreshold: 58
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
-          timeoutSeconds: 5
+          timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}

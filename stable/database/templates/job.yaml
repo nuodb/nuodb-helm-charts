@@ -1,4 +1,5 @@
 {{- if .Values.database.sm.hotCopy.enablePod }}
+{{- if eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true" }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -98,4 +99,5 @@ spec:
       {{- end }}
       restartPolicy: Never
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
+{{- end }}
 {{- end }}

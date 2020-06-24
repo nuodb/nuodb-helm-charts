@@ -114,7 +114,7 @@ spec:
             command: [ "nuodocker", "check", "servers", "--check-connected", "--check-active", "--check-leader" ]
           failureThreshold: 30
           successThreshold: 2
-          timeoutSeconds: 1
+          timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb
