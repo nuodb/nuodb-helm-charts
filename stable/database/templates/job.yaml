@@ -97,7 +97,7 @@ spec:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
           defaultMode: 0440
       {{- end }}
-      restartPolicy: Never
+      restartPolicy: OnFailure
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
 {{- end }}
 {{- end }}
