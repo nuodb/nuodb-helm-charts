@@ -470,19 +470,23 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 	AwaitDatabaseUp(t, namespace, podName, databaseName, opts.NrTePods+opts.NrSmPods)
 }
 
-func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName string, expectedRestartCount int32) {
+func GetPodRestartCount(t *testing.T, namespace string, podName string) int32 {
 	options := k8s.NewKubectlOptions("", "")
 	options.Namespace = namespace
 
+	pod := k8s.GetPod(t, options, podName)
+
+	var restartCount int32
+	for _, status := range pod.Status.ContainerStatuses {
+		restartCount += status.RestartCount
+	}
+
+	return restartCount
+}
+
+func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName string, expectedRestartCount int32) {
 	Await(t, func() bool {
-		pod := k8s.GetPod(t, options, podName)
-
-		var restartCount int32
-		for _, status := range pod.Status.ContainerStatuses {
-			restartCount += status.RestartCount
-		}
-
-		return restartCount > expectedRestartCount
+		return GetPodRestartCount(t, namespace, podName) > expectedRestartCount
 	}, 30*time.Second)
 }
 
