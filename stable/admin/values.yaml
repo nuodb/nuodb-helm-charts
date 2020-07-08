@@ -82,6 +82,24 @@ admin:
   # Admin Service
   replicas: 1
 
+  # If specified and set to a value greater than 0, an initial membership
+  # consisting of server IDs <statefulset name>-0, <statefulset name>-1, ...,
+  # <statefulset name>-<n-1> is defined for all Admins. Defining this to a
+  # value larger than 1 allows a bootstrap server (e.g. <statefulset name>-0)
+  # that has to be reprovisioned from scratch to rejoin its peers when it is
+  # restarted, rather than bootstrapping a new domain consisting of itself.
+  #
+  # For multi-cluster configurations, only the Admin StatefulSet in the
+  # entrypoint cluster (i.e. the one with cloud.cluster.name equal to
+  # cloud.cluster.entrypointName) can specify bootstrapServers.
+  #
+  # For backwards-compatibility, the default value is 0 so that it is disabled
+  # by default. Changing the value of bootstrapServers on a running domain,
+  # either by reinstantiating the Helm chart with a new value or by updating
+  # the bootstrapServers label on an existing Admin StatefulSet, is illegal
+  # because the domain can only be bootstrapped once.
+  bootstrapServers: 0
+
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
 

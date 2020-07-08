@@ -3,7 +3,9 @@
 package minikube
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"strconv"
 	"strings"
 	"testing"
@@ -16,6 +18,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	appsv1 "k8s.io/api/apps/v1"
+	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -99,6 +102,86 @@ func checkArchives(t *testing.T, namespaceName string, adminPod string, numExpec
 	assert.NilError(t, err)
 	assert.Equal(t, numExpectedRemoved, len(removedArchives), output)
 	return
+}
+
+func checkInitialMembership(t assert.TestingT, configJson string, expectedSize int) {
+	type initialMembershipEntry struct {
+		Transport string `json:"transport"`
+		Version   string `json:"version"`
+	}
+	var adminConfig struct {
+		InitialMembership map[string]initialMembershipEntry `json:"initialMembership"`
+	}
+	dec := json.NewDecoder(strings.NewReader(configJson))
+	err := dec.Decode(&adminConfig)
+	if err != io.EOF {
+		assert.NilError(t, err, "Unable to deserialize admin config")
+	}
+	assert.Equal(t, expectedSize, len(adminConfig.InitialMembership))
+}
+
+func TestReprovisionAdmin0(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas":         "2",
+			"admin.bootstrapServers": "2",
+		},
+	}, 2, "")
+
+	adminStatefulSet := helmChartReleaseName + "-nuodb-cluster0"
+	admin0 := adminStatefulSet + "-0"
+	admin1 := adminStatefulSet + "-1"
+
+	// check initial membership on admin-0
+	options := k8s.NewKubectlOptions("", "")
+	options.Namespace = namespaceName
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+		"nuocmd", "--show-json", "get", "server-config", "--this-server")
+	assert.NilError(t, err, output)
+	checkInitialMembership(t, output, 2)
+
+	// check initial membership on admin-1
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--",
+		"nuocmd", "--show-json", "get", "server-config", "--this-server")
+	assert.NilError(t, err, output)
+	checkInitialMembership(t, output, 2)
+
+	// store a value in the KV store via admin-0
+	k8s.RunKubectl(t, options, "exec", admin0, "--",
+		"nuocmd", "set", "value", "--key", "testKey", "--value", "0", "--unconditional")
+
+	// save the original Pod object
+	originalPod := k8s.GetPod(t, options, admin0)
+
+	// delete Raft data and Pod for admin-0
+	k8s.RunKubectl(t, options, "exec", admin0, "--",
+		"bash", "-c", "rm $NUODB_VARDIR/raftlog")
+	k8s.RunKubectl(t, options, "delete", "pod", admin0)
+	// wait until the Pod is rescheduled
+	testlib.Await(t, func() bool {
+		newPod, e := k8s.GetPodE(t, options, admin0)
+		return e == nil && newPod.Status.Phase == v1.PodRunning && originalPod.GetUID() != newPod.GetUID()
+	}, 300*time.Second)
+
+	// make sure admin0 rejoins
+	k8s.RunKubectl(t, options, "exec", admin1, "--",
+		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "2", "--check-leader", "--timeout", "300")
+	k8s.RunKubectl(t, options, "exec", admin0, "--",
+		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "2", "--check-leader", "--timeout", "300")
+
+	// conditionally update value in the KV store via admin-0; if admin-0
+	// rejoined with admin-1 rather than bootstrapping a new domain, then it
+	// should have the current value
+	k8s.RunKubectl(t, options, "exec", admin0, "--",
+		"nuocmd", "set", "value", "--key", "testKey", "--value", "1", "--expected-value", "0")
+
+	// conditionally update value in the KV store via admin-1
+	k8s.RunKubectl(t, options, "exec", admin1, "--",
+		"nuocmd", "set", "value", "--key", "testKey", "--value", "2", "--expected-value", "1")
 }
 
 func TestAdminScaleDown(t *testing.T) {
@@ -256,14 +339,14 @@ func TestNuoDBKubeDiagnostics(t *testing.T) {
 
 	config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
 
-	assert.Check(t, func() bool {_, ok := config.Pods[admin0]; return ok}())
+	assert.Check(t, func() bool { _, ok := config.Pods[admin0]; return ok }())
 
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-	assert.Check(t, func() bool {_, ok := config.Pods[tePodName]; return ok}())
+	assert.Check(t, func() bool { _, ok := config.Pods[tePodName]; return ok }())
 
 	smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 	smPodName := testlib.GetPodName(t, namespaceName, smPodTemplate)
-	assert.Check(t, func() bool {_, ok := config.Pods[smPodName]; return ok}())
+	assert.Check(t, func() bool { _, ok := config.Pods[smPodName]; return ok }())
 
 }
