@@ -93,12 +93,13 @@ admin:
   # entrypoint cluster (i.e. the one with cloud.cluster.name equal to
   # cloud.cluster.entrypointName) can specify bootstrapServers.
   #
-  # For backwards-compatibility, the default value is 0 so that it is disabled
-  # by default. Changing the value of bootstrapServers on a running domain,
-  # either by reinstantiating the Helm chart with a new value or by updating
-  # the bootstrapServers label on an existing Admin StatefulSet, is illegal
-  # because the domain can only be bootstrapped once.
-  bootstrapServers: 0
+  # Changing the value of bootstrapServers on a existing domain, either by
+  # reinstantiating the Helm chart with a new value or by updating the
+  # bootstrapServers label on an existing Admin StatefulSet, is illegal because
+  # the domain can only be bootstrapped once. When upgrading nuodb-helm-charts
+  # from a version that does not support bootstrapServers, bootstrapServers
+  # must be set to 0.
+  bootstrapServers: 1
 
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))

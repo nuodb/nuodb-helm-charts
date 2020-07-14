@@ -18,7 +18,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -161,11 +160,10 @@ func TestReprovisionAdmin0(t *testing.T) {
 	k8s.RunKubectl(t, options, "exec", admin0, "--",
 		"bash", "-c", "rm $NUODB_VARDIR/raftlog")
 	k8s.RunKubectl(t, options, "delete", "pod", admin0)
+
 	// wait until the Pod is rescheduled
-	testlib.Await(t, func() bool {
-		newPod, e := k8s.GetPodE(t, options, admin0)
-		return e == nil && newPod.Status.Phase == v1.PodRunning && originalPod.GetUID() != newPod.GetUID()
-	}, 300*time.Second)
+	testlib.AwaitPodObjectRecreated(t, namespaceName, originalPod, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	// make sure admin0 rejoins
 	k8s.RunKubectl(t, options, "exec", admin1, "--",
