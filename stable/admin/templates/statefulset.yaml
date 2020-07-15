@@ -7,6 +7,9 @@ metadata:
     release: {{ .Release.Name | quote }}
     group: nuodb
     domain: {{ .Values.admin.domain }}
+    {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+    bootstrapServers: {{ default 0 .Values.admin.bootstrapServers | quote }}
+    {{- end }}
   name: {{ template "admin.fullname" . }}
 spec:
   serviceName: {{ .Values.admin.domain }}

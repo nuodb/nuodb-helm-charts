@@ -31,18 +31,17 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 	}, 30*time.Second)
 }
 
-
-
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"nuodb.image.registry": "docker.io",
+			"nuodb.image.registry":   "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
-			"nuodb.image.tag": OLD_RELEASE,
-			},
+			"nuodb.image.tag":        OLD_RELEASE,
+			"admin.bootstrapServers": "0",
+		},
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -74,9 +73,10 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"nuodb.image.registry": "docker.io",
+			"nuodb.image.registry":   "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
-			"nuodb.image.tag": OLD_RELEASE,
+			"nuodb.image.tag":        OLD_RELEASE,
+			"admin.bootstrapServers": "0",
 		},
 	}
 
@@ -94,8 +94,8 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"nuodb.image.registry": 				"docker.io",
-			"nuodb.image.repository": 				"nuodb/nuodb-ce",
+			"nuodb.image.registry":                  "docker.io",
+			"nuodb.image.repository":                "nuodb/nuodb-ce",
 			"nuodb.image.tag":                       OLD_RELEASE,
 		},
 	}
@@ -155,10 +155,11 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"admin.replicas":  "3",
-			"nuodb.image.registry": "docker.io",
+			"admin.replicas":         "3",
+			"admin.bootstrapServers": "0",
+			"nuodb.image.registry":   "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
-			"nuodb.image.tag": OLD_RELEASE,
+			"nuodb.image.tag":        OLD_RELEASE,
 		},
 	}
 
