@@ -484,10 +484,11 @@ func GetPodRestartCount(t *testing.T, namespace string, podName string) int32 {
 	return restartCount
 }
 
-func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName string, expectedRestartCount int32) {
+func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName string, expectedRestartCount int32,
+	timeout time.Duration) {
 	Await(t, func() bool {
 		return GetPodRestartCount(t, namespace, podName) > expectedRestartCount
-	}, 30*time.Second)
+	}, timeout)
 }
 
 func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
@@ -561,7 +562,7 @@ func KillProcess(t *testing.T, namespace string, podName string) {
 	t.Logf("Killing pid 1 in pod %s\n", podName)
 	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", "1")
 
-	AwaitPodRestartCountGreaterThan(t, namespace, podName, 0)
+	AwaitPodRestartCountGreaterThan(t, namespace, podName, 0, 30*time.Second)
 }
 
 func GetService(t *testing.T, namespaceName string, serviceName string) *corev1.Service {

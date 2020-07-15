@@ -22,7 +22,9 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 
 	// send SIGABRT
 	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", "-6", "1")
-	testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, previousCount)
+
+	// dumping core can take a long time, give it a long timeout
+	testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, previousCount, 300*time.Second)
 
 	testlib.AwaitPodUp(t, namespaceName, podName, 100*time.Second)
 	testlib.AwaitDatabaseUp(t, namespaceName, adminPodName, "demo", 2)
