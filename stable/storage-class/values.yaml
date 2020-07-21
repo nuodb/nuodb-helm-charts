@@ -15,6 +15,15 @@ storageClass:
   # Default is true for NuoDB.
   allowVolumeExpansion: true
 
+  # PersistentVolumes can have various reclaim policies, including "Retain", "Recycle", and "Delete".
+  # For dynamically provisioned PersistentVolumes, the default reclaim policy is "Delete".
+  # This means that a dynamically provisioned volume is automatically deleted
+  # when a user deletes the corresponding PersistentVolumeClaim.
+  # This automatic behavior might be inappropriate if the volume contains precious data.
+  # In the case of NuoDB, it is more appropriate to use the "Retain" policy
+  # https://kubernetes.io/docs/tasks/administer-cluster/change-pv-reclaim-policy/#why-change-reclaim-policy-of-a-persistentvolume
+  reclaimPolicy: Retain
+
   standard: {}
     # A string is expected here, i.e. "true", not true. Default is "true".
     # Note: The default in the EBS provisioner is "false".
