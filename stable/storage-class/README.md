@@ -1,6 +1,6 @@
 # NuoDB Storage Class Helm Chart
 
-This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm package manager. The use of this chart is optional. Existing storage options are: 
+This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm package manager. The use of this chart is optional. Existing storage options are:
 
 - Install this chart and select one of the storage classes in the charts
 - Install any other storage class and select them in the charts
@@ -41,6 +41,17 @@ cloud:
     - us-central1-b
     - us-central1-c
 ```
+
+#### storageClass.*
+
+The purpose of this section is to specify the storage class parameters. These parameters are applied to all storage classes created by this chart.
+
+The following tables list the configurable parameters for the `storageClass` option:
+
+| Parameter | Description | Default |
+| ----- | ----------- | ------ |
+| `allowVolumeExpansion` | Persistent Volumes can be configured to be expandable. This feature when set to true, allows the users to resize the volume by editing the corresponding PVC object. |`true`|
+| `reclaimPolicy` | PersistentVolumes can have various reclaim policies, including "Retain", "Recycle", and "Delete". For dynamically provisioned PersistentVolumes, the default reclaim policy is "Delete". This means that a dynamically provisioned volume is automatically deleted when a user deletes the corresponding PersistentVolumeClaim. |`Retain`|
 
 ### Running
 
