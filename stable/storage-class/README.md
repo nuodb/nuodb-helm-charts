@@ -51,7 +51,7 @@ The following tables list the configurable parameters for the `storageClass` opt
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
 | `allowVolumeExpansion` | Persistent Volumes can be configured to be expandable. This feature when set to true, allows the users to resize the volume by editing the corresponding PVC object. |`true`|
-| `reclaimPolicy` | PersistentVolumes can have various reclaim policies, including "Retain", "Recycle", and "Delete". For dynamically provisioned PersistentVolumes, the default reclaim policy is "Delete". This means that a dynamically provisioned volume is automatically deleted when a user deletes the corresponding PersistentVolumeClaim. |`Retain`|
+| `reclaimPolicy` | PersistentVolumes can have various reclaim policies, including "Retain", "Recycle", and "Delete". For dynamically provisioned PersistentVolumes, the default Kubernetes reclaim policy is "Delete". NuoDB changes this default to "Retain". |`Retain`|
 
 ### Running
 
