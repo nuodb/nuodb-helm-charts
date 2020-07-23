@@ -5,13 +5,14 @@ package minikube
 import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"testing"
 	"time"
 )
 
 
-func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string) {
+func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string, adminPodShouldGetRecreated bool) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -21,11 +22,12 @@ func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string)
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": nuodbVersion,
 		},
+		Version: fromHelmVersion,
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdminFromHelmRepository(t, options, fromHelmVersion,1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options,1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
@@ -37,13 +39,21 @@ func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string)
 
 	adminPod := testlib.GetPod(t, namespaceName, admin0)
 
+	// unset the version and use local
+	options.Version = ""
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = opts
+
 	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
-	testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	if adminPodShouldGetRecreated {
+		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	}
+
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 }
 
-func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion string) {
+func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion string, adminPodShouldGetRecreated bool) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -57,15 +67,16 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": "250Mi",
 		},
+		Version: fromHelmVersion,
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdminFromHelmRepository(t, options, fromHelmVersion,1, "")
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options,1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-	databaseReleaseName := testlib.StartDatabaseFromHelmRepository(t, namespaceName, admin0, fromHelmVersion, options)
+	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
@@ -77,9 +88,17 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 
 	adminPod := testlib.GetPod(t, namespaceName, admin0)
 
+	// unset the version and use local
+	options.Version = ""
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = opts
+
 	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
-	testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	if adminPodShouldGetRecreated {
+		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	}
+
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	opt := testlib.GetExtractedOptions(options)
@@ -94,12 +113,20 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 
 func TestUpgradeHelm(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "4.0.6", "2.3.1")
+		upgradeAdminTest(t, "4.0.6", "2.3.1", true)
+	})
+
+	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "4.0.6", "2.4.0", false)
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "4.0.6", "2.3.1")
+		upgradeDatabaseTest(t, "4.0.6", "2.3.1", true)
+	})
+
+	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "4.0.6", "2.4.0", false)
 	})
 }

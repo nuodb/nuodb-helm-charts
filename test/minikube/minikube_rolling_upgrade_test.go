@@ -4,6 +4,7 @@ package minikube
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	v12 "k8s.io/api/core/v1"
 	"strings"
 
@@ -13,7 +14,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"gotest.tools/assert"
+
 )
 
 const OLD_RELEASE = "4.0"
@@ -21,11 +22,10 @@ const NEW_RELEASE = "4.0.6"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {
-		options := k8s.NewKubectlOptions("", "")
-		options.Namespace = namespaceName
+		options := k8s.NewKubectlOptions("", "", namespaceName)
 
 		output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--", "nuocmd", "show", "domain")
-		assert.NilError(t, err, "verifyAllProcessesRunning: running show domain failed")
+		assert.NoError(t, err, "verifyAllProcessesRunning: running show domain failed")
 
 		return strings.Count(output, "MONITORED:RUNNING") == expectedNrProcesses
 	}, 30*time.Second)

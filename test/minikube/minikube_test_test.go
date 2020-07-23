@@ -3,6 +3,7 @@
 package minikube
 
 import (
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
 
@@ -10,7 +11,7 @@ import (
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
-	"gotest.tools/assert"
+
 )
 
 /**
@@ -32,22 +33,22 @@ func TestTeardown(t *testing.T) {
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Check(t, tdcounter == 3)
+		assert.Equal(t, 3, tdcounter)
 	})
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Check(t, tdcounter == 2)
+		assert.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Check(t, tdcounter == 1)
+		assert.Equal(t, 1, tdcounter)
 	})
 
 	testlib.Teardown("")
 
-	assert.Check(t, tdcounter == 3)
+	assert.Equal(t, 3, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -57,34 +58,34 @@ func TestNamedTeardown(t *testing.T) {
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Check(t, tdcounter == 3)
+		assert.Equal(t, 3, tdcounter)
 	})
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Check(t, tdcounter == 2)
+		assert.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Check(t, tdcounter == 1)
+		assert.Equal(t, 1, tdcounter)
 	})
 
 	testlib.AddTeardown("other", func() {
 		tdcounter++
-		assert.Check(t, tdcounter == 5)
+		assert.Equal(t, 5, tdcounter)
 	})
 
 	testlib.AddTeardown("other", func() {
 		tdcounter++
-		assert.Check(t, tdcounter == 4)
+		assert.Equal(t, 4, tdcounter)
 	})
 
 	testlib.Teardown("")
-	assert.Check(t, tdcounter == 3)
+	assert.Equal(t, 3, tdcounter)
 
 	testlib.Teardown("other")
-	assert.Check(t, tdcounter == 5)
+	assert.Equal(t, 5, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -96,10 +97,10 @@ func TestGetExtractedOptions(t *testing.T) {
 			SetValues: map[string]string{},
 		})
 
-		assert.Check(t, opt.DbName == "demo")
-		assert.Check(t, opt.NrTePods == 1)
-		assert.Check(t, opt.NrSmPods == 1)
-		assert.Check(t, opt.ClusterName == "cluster0")
+		assert.Equal(t, "demo", opt.DbName)
+		assert.Equal(t, 1, opt.NrTePods)
+		assert.Equal(t, 1, opt.NrSmPods)
+		assert.Equal(t, "cluster0", opt.ClusterName)
 	})
 
 	t.Run("overriddenOptions", func(t *testing.T) {
@@ -113,12 +114,12 @@ func TestGetExtractedOptions(t *testing.T) {
 			},
 		})
 
-		assert.Check(t, opt.DbName == "green")
-		assert.Check(t, opt.NrTePods == 2)
-		assert.Check(t, opt.NrSmHotCopyPods == 2)
-		assert.Check(t, opt.NrSmNoHotCopyPods == 2)
-		assert.Check(t, opt.NrSmPods == 4)
-		assert.Check(t, opt.ClusterName == "cluster1")
+		assert.Equal(t, "green", opt.DbName)
+		assert.Equal(t, 2, opt.NrTePods)
+		assert.Equal(t, 2, opt.NrSmHotCopyPods)
+		assert.Equal(t, 2, opt.NrSmNoHotCopyPods)
+		assert.Equal(t, 4, opt.NrSmPods)
+		assert.Equal(t, "cluster1", opt.ClusterName)
 	})
 
 }

@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"regexp"
 	"strconv"
 	"strings"
@@ -8,11 +10,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	appsv1 "k8s.io/api/apps/v1"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"gotest.tools/assert"
 )
 
 func listContains(arr []string, s string) bool {
@@ -34,27 +33,14 @@ func TestResourcesAdminDefaults(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		containers := &obj.Spec.Template.Spec.Containers
 
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		containers := &ss.Spec.Template.Spec.Containers
-
-		assert.Assert(t, len(*containers) >= 1)
-		assert.Check(t, (*containers)[0].Resources.Limits == nil)
-		assert.Check(t, (*containers)[0].Resources.Requests == nil)
+		assert.NotEmpty(t, containers)
+		assert.Nil(t, (*containers)[0].Resources.Limits)
+		assert.Nil(t, (*containers)[0].Resources.Requests)
 	}
 }
 
@@ -70,38 +56,19 @@ func TestResourcesAdminOverridden(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	partCounter := 0
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		containers := &obj.Spec.Template.Spec.Containers
 
-		if len(part) == 0 {
-			continue
-		}
+		assert.NotEmpty(t, containers)
+		assert.Nil(t, (*containers)[0].Resources.Limits)
+		assert.NotNil(t, (*containers)[0].Resources.Requests)
 
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
-
-		partCounter++
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		containers := &ss.Spec.Template.Spec.Containers
-
-		assert.Assert(t, len(*containers) >= 1)
-		assert.Check(t, (*containers)[0].Resources.Limits == nil)
-		assert.Assert(t, (*containers)[0].Resources.Requests != nil)
-
-		assert.Check(t, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0) == 1)
-		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga) == 4,
+		assert.EqualValues(t, 1, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
+		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga),
 			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
-
 	}
-
-	assert.Equal(t, partCounter, 1)
 }
 
 func TestResourcesDatabaseDefaults(t *testing.T) {
@@ -113,60 +80,40 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	partCounter := 0
 	foundBackupEnabled := false
 	foundBackupDisabled := false
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		containers := &obj.Spec.Template.Spec.Containers
 
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
-
-		partCounter += 1
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		containers := &ss.Spec.Template.Spec.Containers
-
-		assert.Assert(t, len(*containers) >= 1)
-		assert.Assert(t, (*containers)[0].Resources.Limits != nil)
-		assert.Assert(t, (*containers)[0].Resources.Requests != nil)
+		assert.NotEmpty(t, containers)
+		assert.NotNil(t, (*containers)[0].Resources.Limits)
+		assert.NotNil(t, (*containers)[0].Resources.Requests)
 
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
-		assert.Check(t, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0) == 8)
-		assert.Check(t, (*containers)[0].Resources.Limits.Memory().ScaledValue(0) == 16 * 1024 * 1024 * 1024,
-			(*containers)[0].Resources.Limits.Memory().ScaledValue(0))
+		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
+		assert.EqualValues(t, 8 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
-		assert.Check(t, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0) == 4)
-		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(0) == 8 * 1024 * 1024 * 1024,
-			(*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
+		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		assert.Check(t, ArgContains((*containers)[0].Args, "mem 8Gi"))
+		assert.True(t, ArgContains((*containers)[0].Args, "mem 8Gi"))
 
 		// make sure the replica counts are correct
-		if testlib.IsStatefulSetHotCopyEnabled(&ss) {
-			assert.Check(t, *ss.Spec.Replicas == 1)
+		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
+			assert.EqualValues(t, 1,  *obj.Spec.Replicas)
 			foundBackupEnabled = true
 		} else {
-			assert.Check(t, *ss.Spec.Replicas == 0)
+			assert.Zero(t, *obj.Spec.Replicas)
 			foundBackupDisabled = true
 		}
 	}
 
-	assert.Check(t, foundBackupEnabled)
-	assert.Check(t, foundBackupDisabled)
-
-	assert.Equal(t, partCounter, 2)
+	assert.True(t, foundBackupEnabled)
+	assert.True(t, foundBackupDisabled)
 }
 
 func TestResourcesDatabaseOverridden(t *testing.T) {
@@ -186,53 +133,40 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	partCounter := 0
+	foundBackupEnabled := false
+	foundBackupDisabled := false
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		containers := &obj.Spec.Template.Spec.Containers
 
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
-
-		partCounter += 1
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		containers := &ss.Spec.Template.Spec.Containers
-
-		assert.Assert(t, len(*containers) >= 1)
-		assert.Assert(t, (*containers)[0].Resources.Limits != nil)
-		assert.Assert(t, (*containers)[0].Resources.Requests != nil)
+		assert.NotEmpty(t, containers)
+		assert.NotNil(t, (*containers)[0].Resources.Limits)
+		assert.NotNil(t, (*containers)[0].Resources.Requests)
 
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
-		assert.Check(t, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0) == 8)
-		assert.Check(t, (*containers)[0].Resources.Limits.Memory().ScaledValue(0) == 16 * 1024 * 1024 * 1024,
-			(*containers)[0].Resources.Limits.Memory().ScaledValue(0))
+		assert.EqualValues(t, 1, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
+		assert.EqualValues(t, 4 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
-		assert.Check(t, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0) == 1)
-		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(0) == 4 * 1024 * 1024 * 1024,
-			(*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
+		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		assert.Check(t, ArgContains((*containers)[0].Args, "mem 4Gi"))
+		assert.True(t, ArgContains((*containers)[0].Args, "mem 4Gi"))
 
 		// make sure the replica counts are correct
-		if testlib.IsStatefulSetHotCopyEnabled(&ss) {
-			assert.Check(t, *ss.Spec.Replicas == int32(hotcopyReplicas))
+		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
+			assert.EqualValues(t, hotcopyReplicas, *obj.Spec.Replicas)
+			foundBackupEnabled = true
 		} else {
-			assert.Check(t, *ss.Spec.Replicas == int32(noHotCopyReplicas))
+			assert.EqualValues(t, noHotCopyReplicas, *obj.Spec.Replicas)
+			foundBackupDisabled = true
 		}
 	}
 
-	assert.Equal(t, partCounter, 2)
+	assert.True(t, foundBackupEnabled)
+	assert.True(t, foundBackupDisabled)
 }
 
 func TestPullSecretsRenderAllNuoDB(t *testing.T) {
@@ -240,17 +174,17 @@ func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 		SetValues: map[string]string{"nuodb.image.pullSecrets": "{fooBar}"},
 	}
 
-	helm.RenderTemplate(t, options, "../../stable/admin", []string{"templates/job.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/admin", []string{"templates/statefulset.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/admin", "release-name", []string{"templates/job.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/admin", "release-name", []string{"templates/statefulset.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/statefulset.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/deployment.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/cronjob.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/job.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/statefulset.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/deployment.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/cronjob.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/job.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", []string{"templates/daemonset.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", "release-name", []string{"templates/daemonset.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/restore", []string{"templates/job.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/restore", "release-name", []string{"templates/job.yaml"})
 }
 
 func TestPullSecretsRenderAllGlobal(t *testing.T) {
@@ -258,169 +192,97 @@ func TestPullSecretsRenderAllGlobal(t *testing.T) {
 		SetValues: map[string]string{"global.imagePullSecrets": "{fooBar}"},
 	}
 
-	helm.RenderTemplate(t, options, "../../stable/admin", []string{"templates/job.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/admin", []string{"templates/statefulset.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/admin", "release-name", []string{"templates/job.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/admin", "release-name", []string{"templates/statefulset.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/statefulset.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/deployment.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/cronjob.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/database", []string{"templates/job.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/statefulset.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/deployment.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/cronjob.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/job.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", []string{"templates/daemonset.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", "release-name", []string{"templates/daemonset.yaml"})
 
-	helm.RenderTemplate(t, options, "../../stable/restore", []string{"templates/job.yaml"})
+	helm.RenderTemplate(t, options, "../../stable/restore", "release-name", []string{"templates/job.yaml"})
 }
 
-func TestPingTimeoutSetStatefulSet(t *testing.T) {
+func TestPingTimeout(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
-		SetValues: map[string]string{},
+		SetValues:   map[string]string{},
 	}
 
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
+		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
 		}
+	})
 
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
+
+		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
 		}
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		containers := &ss.Spec.Template.Spec.Containers
-
-		assert.Assert(t, len(*containers) >= 1)
-
-		assert.Check(t, listContains((*containers)[0].Args, "ping-timeout"))
-	}
+	})
 }
 
-func TestPingTimeoutSetDaemonSet(t *testing.T) {
+func TestSpecificOptions(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
-		SetValues: map[string]string{"database.enableDaemonSet": "true"},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/daemonset.yaml"})
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: DaemonSet") {
-			continue
-		}
-
-		var ss appsv1.DaemonSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		containers := &ss.Spec.Template.Spec.Containers
-
-		assert.Assert(t, len(*containers) >= 1)
-
-		assert.Check(t, listContains((*containers)[0].Args, "ping-timeout"))
-	}
-}
-
-func TestSpecificOptionsDeployment(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{"database.te.engineOptions.verbose": "advanced-txn"},
-	}
-
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/deployment.yaml"})
-
-	var dep appsv1.Deployment
-	helm.UnmarshalK8SYaml(t, output, &dep)
-
-	containers := &dep.Spec.Template.Spec.Containers
-	assert.Assert(t, len(*containers) >= 1)
-	assert.Check(t, listContains((*containers)[0].Args, "advanced-txn"))
-}
-
-func TestSpecificOptionsStatefulSet(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{"database.sm.engineOptions.verbose": "advanced-txn"},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		containers := &ss.Spec.Template.Spec.Containers
-
-		assert.Assert(t, len(*containers) >= 1)
-
-		assert.Check(t, listContains((*containers)[0].Args, "advanced-txn"))
-	}
-}
-
-func TestSpecificOptionsDaemonSet(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{"database.enableDaemonSet": "true",
+		SetValues: map[string]string{
+			"database.te.engineOptions.verbose": "advanced-txn",
 			"database.sm.engineOptions.verbose": "advanced-txn",
 		},
+
 	}
 
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/daemonset.yaml"})
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
+		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
+	})
 
-		if !strings.Contains(part, "kind: DaemonSet") {
-			continue
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
+	})
 
-		var ss appsv1.DaemonSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
 
-		containers := &ss.Spec.Template.Spec.Containers
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-		assert.Assert(t, len(*containers) >= 1)
-
-		assert.Check(t, listContains((*containers)[0].Args, "advanced-txn"))
-	}
+		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
+		}
+	})
 }
 
 func TestResourcesDaemonSetsDefaults(t *testing.T) {
@@ -432,56 +294,36 @@ func TestResourcesDaemonSetsDefaults(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/daemonset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-	partCounter := 0
 	foundBackupEnabled := false
 	foundBackupDisabled := false
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
+	for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
 
-		if len(part) == 0 {
-			continue
-		}
+		containers := &obj.Spec.Template.Spec.Containers
 
-		if !strings.Contains(part, "kind: DaemonSet") {
-			continue
-		}
-
-		partCounter += 1
-
-		var ss appsv1.DaemonSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		containers := &ss.Spec.Template.Spec.Containers
-
-		assert.Assert(t, len(*containers) >= 1)
-		assert.Assert(t, (*containers)[0].Resources.Limits != nil)
-		assert.Assert(t, (*containers)[0].Resources.Requests != nil)
+		require.NotEmpty(t, containers)
+		assert.NotNil(t, (*containers)[0].Resources.Limits)
+		assert.NotNil(t, (*containers)[0].Resources.Requests)
 
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
-		assert.Check(t, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0) == 8)
-		assert.Check(t, (*containers)[0].Resources.Limits.Memory().ScaledValue(resource.Giga) == 18,
-			(*containers)[0].Resources.Limits.Memory().ScaledValue(resource.Giga))
+		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
+		assert.EqualValues(t, 8 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
-		assert.Check(t, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0) == 4)
-		assert.Check(t, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga) == 9,
-			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
+		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
+		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		if testlib.IsDaemonSetHotCopyEnabled(&ss) {
+		if testlib.IsDaemonSetHotCopyEnabled(&obj) {
 			foundBackupEnabled = true
 		} else {
 			foundBackupDisabled = true
 		}
-
 	}
 
-	assert.Check(t, foundBackupEnabled)
-	assert.Check(t, foundBackupDisabled)
-
-	assert.Equal(t, partCounter, 2)
+	assert.True(t, foundBackupEnabled)
+	assert.True(t, foundBackupDisabled)
 }
 
 func TestDatabaseBackupDisabled(t *testing.T) {
@@ -495,30 +337,11 @@ func TestDatabaseBackupDisabled(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	partCounter := 0
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
-
-		partCounter += 1
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		assert.Check(t, !testlib.IsStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		assert.False(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup enabled")
 	}
-
-	assert.Equal(t, partCounter, 1)
 }
 
 func TestDatabaseNonBackupDisabled(t *testing.T) {
@@ -532,30 +355,11 @@ func TestDatabaseNonBackupDisabled(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	partCounter := 0
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
-
-		partCounter += 1
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		assert.Check(t, testlib.IsStatefulSetHotCopyEnabled(&ss), "Found stateful set with backup enabled")
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		assert.True(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup disabled")
 	}
-
-	assert.Equal(t, partCounter, 1)
 }
 
 func TestDatabaseBackupDisabledDaemonSet(t *testing.T) {
@@ -570,31 +374,11 @@ func TestDatabaseBackupDisabledDaemonSet(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/daemonset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-	partCounter := 0
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: DaemonSet") {
-			continue
-		}
-
-		partCounter += 1
-
-		var ss appsv1.DaemonSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		assert.Check(t, !testlib.IsDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
+	for _, obj := range SplitAndRenderDaemonSet(t, output, 1) {
+		assert.False(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup enabled")
 	}
-
-	// with daemonSet
-	assert.Equal(t, partCounter, 1)
 }
 
 func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
@@ -609,31 +393,11 @@ func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/daemonset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-	partCounter := 0
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: DaemonSet") {
-			continue
-		}
-
-		partCounter += 1
-
-		var ss appsv1.DaemonSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		assert.Check(t, testlib.IsDaemonSetHotCopyEnabled(&ss), "Found daemon set with backup enabled")
+	for _, obj := range SplitAndRenderDaemonSet(t, output, 1) {
+		assert.True(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup disabled")
 	}
-
-	// with daemonSet
-	assert.Equal(t, partCounter, 1)
 }
 
 func assertExpectedLines(t *testing.T, optionsMap *map[string]string, helmChartName string, templateNames []string, expectedLines *map[string]int) {
@@ -641,12 +405,20 @@ func assertExpectedLines(t *testing.T, optionsMap *map[string]string, helmChartN
 		SetValues: *optionsMap,
 	}
 
-	output := helm.RenderTemplate(t, options, "../../stable/"+helmChartName, templateNames)
+	output, err := helm.RenderTemplateE(t, options, "../../stable/"+helmChartName, "release-name", templateNames)
+
+	if expectedLines == nil {
+		assert.Error(t, err)
+		return
+	} else {
+		assert.NoError(t, err)
+	}
+
 	actualLines := make(map[string]int)
 	// iterate through all lines of rendered output, removing any trailing spaces
 	for _, line := range regexp.MustCompile(" *\n").Split(output, -1) {
 		if count, ok := (*expectedLines)[line]; ok {
-			assert.Check(t, count != 0, "Unexpected line: "+line)
+			assert.True(t, count != 0, "Unexpected line: "+line)
 			actualLines[line]++
 		}
 	}
@@ -686,13 +458,8 @@ func TestAddRoleBindingDisabled(t *testing.T) {
 		"templates/serviceaccount.yaml",
 		"templates/statefulset.yaml",
 	}
-	expectedLines := map[string]int{
-		"kind: Role":                        0,
-		"kind: RoleBinding":                 0,
-		"kind: ServiceAccount":              1,
-		"      serviceAccountName: default": 1,
-	}
-	assertExpectedLines(t, &optionsMap, "admin", templateNames, &expectedLines)
+
+	assertExpectedLines(t, &optionsMap, "admin", templateNames, nil)
 }
 
 func TestDeploymentServiceAccount(t *testing.T) {

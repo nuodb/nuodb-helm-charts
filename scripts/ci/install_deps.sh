@@ -21,9 +21,7 @@ if [[ -n "$REQUIRES_MINIKUBE" ]]; then
   sudo chown -R travis: /home/travis/.minikube/
   kubectl cluster-info
 
-  # install helm
-  # Use default K8s service account as a workaround explained in https://github.com/helm/helm/issues/3460
-  helm init --service-account default
+  helm version
 
   kubectl version
 
@@ -54,7 +52,6 @@ elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
 
   kubectl -n kube-system create serviceaccount tiller-system
   kubectl create clusterrolebinding tiller-system --clusterrole cluster-admin --serviceaccount=kube-system:tiller-system
-  helm init --service-account tiller-system --tiller-namespace kube-system
 
   helm version
 

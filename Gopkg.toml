@@ -1,6 +1,6 @@
 [[constraint]]
   name = "github.com/gruntwork-io/terratest"
-  version = "0.18.3"
+  version = "0.28.10"
 
 [[override]]
   name = "github.com/russross/blackfriday"
@@ -8,6 +8,11 @@
 
 [[override]]
   name = "github.com/googleapis/gnostic"
+  version = "v0.4.0"
+
+# https://github.com/kubernetes/client-go/issues/656
+[[override]]
+  name = "k8s.io/klog"
   version = "v0.4.0"
 
 [prune]

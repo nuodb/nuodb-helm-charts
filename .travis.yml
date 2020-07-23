@@ -6,7 +6,7 @@ os: linux
 sudo: required
 
 go:
-  - 1.12.x
+  - 1.14.x
 
 env:
   jobs:
@@ -21,7 +21,7 @@ env:
     #- TEST_SUITE=minikube-short REQUIRES_MINISHIFT=true
     #- TEST_SUITE=minikube-long REQUIRES_MINISHIFT=true
   global:
-    - HELM_VERSION="v2.16.3"
+    - HELM_VERSION="v3.2.4"
     - DEP_VERSION=0.5.4
     - KUBERNETES_VERSION=1.15.0
     - OPENSHIFT_VERSION=3.11.0

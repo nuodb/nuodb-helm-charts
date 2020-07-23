@@ -4,6 +4,7 @@ package minikube
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -14,14 +15,14 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
-	"gotest.tools/assert"
+
 )
 
 func verifyAdminCertificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
 	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
 	for _, value := range certificateInfo["serverCertificates"].(map[string]interface{}) {
 		certSubjectName := value.(map[string]interface{})["subjectName"].(string)
-		assert.Assert(t, strings.Contains(certSubjectName, expectedDN),
+		assert.Contains(t, certSubjectName, expectedDN,
 			"`%s` not found in:\n %s", expectedDN, certSubjectName)
 	}
 }
@@ -30,14 +31,14 @@ func verifyEngineCertificates(t *testing.T, certificateInfoJSON string, expected
 	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
 	for _, value := range certificateInfo["processCertificates"].(map[string]interface{}) {
 		certIssuerName := value.(map[string]interface{})["issuerName"].(string)
-		assert.Assert(t, strings.Contains(certIssuerName, expectedDN),
+		assert.Contains(t, certIssuerName, expectedDN,
 			"`%s` not found in:\n %s", expectedDN, certIssuerName)
 	}
 }
 
 func startDomainWithTLSCertificates(t *testing.T, options *helm.Options, namespaceName string, tlsCommands []string) (string, string, string) {
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
-	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
+	assert.NoError(t, err, "Unable to find/convert admin.replicas value")
 
 	// create initial certs...
 	certGeneratorPodName, _ := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands)
@@ -118,10 +119,9 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	t.Run("verifyAdminCertificates", func(t *testing.T) {
 		verifyAdminCertificates(t, certificateInfo, expectedAdminDN)

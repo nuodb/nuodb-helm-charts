@@ -4,13 +4,14 @@ package minikube
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"gotest.tools/assert"
+
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -20,8 +21,7 @@ import (
 const ENGINE_CERTIFICATE_LOG_TEMPLATE = `Engine Certificate: Certificate #%d CN %s`
 
 func verifyKeystore(t *testing.T, namespace string, podName string, keystore string, password string, matches string) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespace
+	options := k8s.NewKubectlOptions("", "", namespace)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "certificate", "--keystore", keystore, "--store-password", password)
 	output = testlib.RemoveEmptyLines(output)
@@ -30,8 +30,8 @@ func verifyKeystore(t *testing.T, namespace string, podName string, keystore str
 	t.Log("<" + output + ">")
 	t.Log("<" + matches + ">")
 
-	assert.NilError(t, err)
-	assert.Assert(t, strings.Compare(output, matches) == 0)
+	assert.NoError(t, err)
+	assert.Equal(t, matches, output)
 }
 
 func TestKubernetesTLS(t *testing.T) {
@@ -80,7 +80,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 	t.Run("verifyKeystore", func(t *testing.T) {
 		content, err := testlib.ReadAll(filepath.Join(keysLocation, "nuoadmin.cert"))
-		assert.NilError(t, err)
+		assert.NoError(t, err)
 		verifyKeystore(t, namespaceName, admin0, testlib.KEYSTORE_FILE, testlib.SECRET_PASSWORD, string(content))
 	})
 
