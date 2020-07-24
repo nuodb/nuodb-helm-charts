@@ -5,7 +5,7 @@
 
 # Getting Started with Helm 
 
-This section will walk you through getting both Helm client and the Tiller server up and running in your environment. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
+This section will walk you through getting the Helm client installed in your environment. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
 
 There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
 
@@ -24,33 +24,31 @@ NuoDB Helm Charts and their privilege requirements:
 | admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 
 
-## Install Helm and Tiller
+## Install Helm 3
 
-There are two parts to Helm: The Helm client (`helm`) and the Helm server (`tiller`). 
+If you are interested in Helm 2, please follow the [official Helm 2 docs][7].
 
 Every [release][2] of Helm provides binary releases for a variety of OSes. 
 
 1. Download your [desired version][2]
 2. Unpack it (`tar -zxvf helm-${helm-version}-linux-amd64.tgz`)
 
-We’ll use Helm version 2.16.1, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v2.16.1.>
+We’ll use Helm version 3.2.4, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v3.2.4>.
 
 Run the following commands to install the Helm locally on your Linux client machine:
 ```bash
-$ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-linux-amd64.tar.gz | tar xz
+$ curl -s https://storage.googleapis.com/kubernetes-helm/helm-3.2.4-linux-amd64.tar.gz | tar xz
 $ cd linux-amd64
-```
-
-If you're running on Mac, the commands are:
-```bash
-$ curl -s https://storage.googleapis.com/kubernetes-helm/helm-v2.16.1-darwin-amd64.tar.gz | tar xz
-$ cd darwin-amd64
 ```
 
 Move the Helm binaries to /usr/local/bin
 ```
 $ mv helm /usr/local/bin
-$ mv tiller /usr/local/bin
+```
+
+If you're running on Mac, we recommend using the Brew Package manager.
+```
+brew install helm
 ```
 
 Confirm you can run the Helm client: `helm help`.
@@ -62,66 +60,14 @@ Confirm you can run the Helm client: `helm help`.
 kubectl create namespace nuodb
 ```
 
-## Create the _tiller_ service account in the _kube-system_ namespace 
-
-```
-kubectl -n kube-system create serviceaccount tiller
-```
-
-## Assign the _cluster-admin_ role to the _tiller_ service account
-```bash
-kubectl create clusterrolebinding tiller \
---clusterrole cluster-admin \
---serviceaccount=kube-system:tiller
-```
-
-Tiller is now available to all projects.
-
-## Start Tiller
-
-### For Kubernetes
-
-Start Helm and Tiller 
-
-```
-$ helm init --service-account tiller --tiller-namespace kube-system
-```
-
-### For Red Hat OpenShift
-
-Initialize the Helm client
-
-```bash
-$ helm init --client-only
-$HELM_HOME has been configured at /home/clusteradmin/.helm.
-Not installing Tiller due to 'client-only' flag having been set
-Happy Helming!
-```
-
-Start Tiller 
-
-```
-helm init --service-account tiller --tiller-namespace kube-system
-```
-
-Assign the correct SecurityContextConstraints to the _nuodb_ and _default_ service accounts
-
-```bash
-oc apply -f deploy/nuodb-scc.yaml -n nuodb
-oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:nuodb -n nuodb
-oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
-```
-
-## Confirm that the Helm client and Tiller server are able to communicate correctly. 
+## Confirm that the Helm client is installed correctly 
 
 The results should be as follows:
 
 ```bash
-$ helm version
-Client: &version.Version{SemVer:"v2.16.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
-Server: &version.Version{SemVer:"v2.16.1", GitCommit:"618447cbf203d147601b4b9bd7f8c37a5d39fbb4", GitTreeState:"clean"}
+helm version
+version.BuildInfo{Version:"v3.2.4", GitCommit:"0ad800ef43d3b826f31a5ad8dfbb4fe05d143688", GitTreeState:"dirty", GoVersion:"go1.14.3"}
 ```
-
 
 # Deploying NuoDB using Helm Charts
 
@@ -166,4 +112,4 @@ An alternative cleanup strategy is to delete the entire project:
 [4]: #getting-started-with-helm
 [5]: #deploying-nuodb-using-helm-charts
 [6]: https://github.com/nuodb/nuodb-helm-charts#software-release-requirements
-
+[7]: https://v2.helm.sh/docs/using_helm/

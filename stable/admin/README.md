@@ -5,7 +5,7 @@ This chart starts a NuoDB Admin deployment on a Kubernetes cluster using the Hel
 ## Command
 
 ```bash
-helm install nuodb/admin [--name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/admin [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites

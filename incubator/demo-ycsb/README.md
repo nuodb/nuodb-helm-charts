@@ -5,7 +5,7 @@ This chart deploys the NuoDB YCSB Demo on a Kubernetes cluster using the Helm pa
 ## Command
 
 ```bash
-helm install nuodb/demo-ycsb [--name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/demo-ycsb [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
