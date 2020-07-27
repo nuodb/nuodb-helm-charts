@@ -5,7 +5,7 @@ This chart starts a Daemonset to disable transparent huge pages (THP) on the Lin
 ## Command
 
 ```bash
-helm install nuodb/transparent-hugepage [--name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/transparent-hugepage [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
