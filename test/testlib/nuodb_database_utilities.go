@@ -2,8 +2,6 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/gruntwork-cli/collections"
-	"gotest.tools/assert"
 	v12 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
@@ -76,9 +74,8 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
 	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
 
 	// with Async actions which do not return a cleanup method, create the teardown(s) first
 	AddTeardown(TEARDOWN_DATABASE, func() {
@@ -112,29 +109,10 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 
 func StartDatabase(t *testing.T, namespace string, adminPod string, options *helm.Options) string {
 	return StartDatabaseTemplate(t, namespace, adminPod, options, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
-	})
-}
-
-func StartDatabaseFromHelmRepository(t *testing.T, namespace string, adminPod string, fromHelmVersion string, options *helm.Options) string {
-	return StartDatabaseTemplate(t, namespace, adminPod, options, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		var args []string
-
-		args = append(args, "--namespace", options.KubectlOptions.Namespace,
-			"--version", fromHelmVersion,
-			"-n", helmChartReleaseName,
-			"nuodb/database")
-
-		// To make it easier to test, go through the keys in sorted order
-		keys := collections.Keys(options.SetValues)
-		for _, key := range keys {
-			value := options.SetValues[key]
-			argValue := fmt.Sprintf("%s=%s", key, value)
-			args = append(args, "--set", argValue)
+		if options.Version == "" {
+			helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
+		} else {
+			helm.Install(t, options, "nuodb/database", helmChartReleaseName)
 		}
-
-		_, err := helm.RunHelmCommandAndGetOutputE(t, options, "install",
-			args...)
-		assert.NilError(t, err)
 	})
 }

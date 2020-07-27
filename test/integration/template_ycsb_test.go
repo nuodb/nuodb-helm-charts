@@ -1,10 +1,11 @@
 package integration
 
 import (
+	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 
-	"gotest.tools/assert"
+
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -19,7 +20,7 @@ func TestYcsbConfigMapRenders(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/configmap.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 
 	configMapCount := 0
 
@@ -52,13 +53,13 @@ func TestYcsbRCRenders(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/replicationcontroller.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/replicationcontroller.yaml"})
 
-	var object v1.ReplicationController
-	helm.UnmarshalK8SYaml(t, output, &object)
+	for _, obj := range SplitAndRenderReplicationController(t, output, 1) {
 
-	assert.Check(t, object.Name == "ycsb-load")
-	assert.Check(t, *object.Spec.Replicas == 0)
+		assert.Equal(t, "ycsb-load", obj.Name)
+		assert.Zero(t, *obj.Spec.Replicas)
+	}
 }
 
 func TestYcsbRCReplicas(t *testing.T) {
@@ -72,11 +73,11 @@ func TestYcsbRCReplicas(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/replicationcontroller.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/replicationcontroller.yaml"})
 
-	var object v1.ReplicationController
-	helm.UnmarshalK8SYaml(t, output, &object)
+	for _, obj := range SplitAndRenderReplicationController(t, output, 1) {
 
-	assert.Check(t, object.Name == "ycsb-load")
-	assert.Check(t, *object.Spec.Replicas == 1)
+		assert.Equal(t, "ycsb-load", obj.Name)
+		assert.EqualValues(t, 1, *obj.Spec.Replicas)
+	}
 }

@@ -2,9 +2,10 @@ package minikube
 
 import (
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/stretchr/testify/assert"
 	"testing"
 	"time"
-	"gotest.tools/assert"
+
 )
 
 func verifyAdminService(t *testing.T, namespaceName string, podName string, serviceName string, ping bool) {

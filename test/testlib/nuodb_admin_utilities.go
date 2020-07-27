@@ -2,8 +2,6 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/gruntwork-cli/collections"
-	"gotest.tools/assert"
 	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"runtime"
@@ -26,7 +24,7 @@ func getFunctionCallerName() string {
 }
 
 func CreateNamespace(t *testing.T, namespaceName string) {
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	if IsOpenShiftEnvironment(t) {
 		createOpenShiftProject(t, namespaceName)
@@ -56,7 +54,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		namespaceName = namespace
 	}
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
@@ -86,8 +84,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	defer func() {
 		// collect some useful diagnostics
 		if t.Failed() {
-			options := k8s.NewKubectlOptions("", "")
-			options.Namespace = namespaceName
+			options := k8s.NewKubectlOptions("", "", namespaceName)
 			// ignore any errors. This is already failed
 			_ = k8s.RunKubectlE(t, options, "describe", "statefulset", adminStatefulSet)
 		}
@@ -104,8 +101,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 		defer func() {
 			if t.Failed() {
-				options := k8s.NewKubectlOptions("", "")
-				options.Namespace = namespaceName
+				options := k8s.NewKubectlOptions("", "", namespaceName)
 				// ignore any errors. This is already failed
 				_ = k8s.RunKubectlE(t, options, "describe", "pod", adminName)
 			}
@@ -128,29 +124,10 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (string, string) {
 	return StartAdminTemplate(t, options, replicaCount, namespace, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
-	})
-}
-
-func StartAdminFromHelmRepository(t *testing.T, options *helm.Options, fromHelmVersion string, replicaCount int, namespace string) (string, string) {
-	return StartAdminTemplate(t, options, replicaCount, namespace, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		var args []string
-
-		args = append(args, "--namespace", options.KubectlOptions.Namespace,
-			"--version", fromHelmVersion,
-			"-n", helmChartReleaseName,
-			"nuodb/admin")
-
-		// To make it easier to test, go through the keys in sorted order
-		keys := collections.Keys(options.SetValues)
-		for _, key := range keys {
-			value := options.SetValues[key]
-			argValue := fmt.Sprintf("%s=%s", key, value)
-			args = append(args, "--set", argValue)
+		if options.Version == "" {
+			helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
+		} else {
+			helm.Install(t, options, "nuodb/admin ", helmChartReleaseName)
 		}
-
-		_, err := helm.RunHelmCommandAndGetOutputE(t, options, "install",
-			args...)
-		assert.NilError(t, err)
 	})
 }

@@ -2,7 +2,7 @@ package testlib
 
 import (
 	"fmt"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -29,19 +29,19 @@ func IsOpenShiftEnvironment(t *testing.T) bool {
 
 func createOpenShiftProject(t *testing.T, namespaceName string) {
 	output, err := exec.Command("oc", "new-project", namespaceName).Output()
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 
 	pwd, err := os.Getwd()
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	sccFilePath := filepath.Join(pwd, "..", "..", "deploy", "nuodb-scc.yaml")
 
 	output, err = exec.Command("oc", "apply", "-n", namespaceName, "-f", sccFilePath).Output()
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 
 	output, err = exec.Command("oc", "adm", "policy", "add-scc-to-user", "nuodb-scc", fmt.Sprintf("system:serviceaccount:%s:default", namespaceName)).Output()
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 
 	output, err = exec.Command("oc", "adm", "policy", "add-scc-to-user", "nuodb-scc", fmt.Sprintf("system:serviceaccount:%s:nuodb", namespaceName)).Output()
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 }

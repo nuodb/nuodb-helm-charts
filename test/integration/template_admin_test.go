@@ -1,11 +1,11 @@
 package integration
 
 import (
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 
-	"gotest.tools/assert"
-	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -20,7 +20,7 @@ func TestAdminDefaultLicense(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/configmap.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 
 	found := false
 
@@ -45,7 +45,7 @@ func TestAdminDefaultLicense(t *testing.T) {
 
 	}
 
-	assert.Assert(t, !found, "no matching config map was found")
+	assert.True(t, !found, "no matching config map was found")
 }
 
 func TestAdminLicenseCanBeSet(t *testing.T) {
@@ -58,7 +58,7 @@ func TestAdminLicenseCanBeSet(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/configmap.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/configmap.yaml"})
 
 	found := false
 
@@ -80,13 +80,13 @@ func TestAdminLicenseCanBeSet(t *testing.T) {
 
 			val, ok := object.Data["nuodb.lic"]
 
-			assert.Assert(t, ok, "license not properly set")
+			assert.True(t, ok, "license not properly set")
 			assert.Equal(t, val, licenseString)
 		}
 
 	}
 
-	assert.Assert(t, found, "no matching config map was found")
+	assert.True(t, found, "no matching config map was found")
 }
 
 func TestAdminStatefulSetVPNRenders(t *testing.T) {
@@ -102,35 +102,23 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/statefulset.yaml"})
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
 
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 
-		var object appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &object)
+		adminContainer := obj.Spec.Template.Spec.Containers[0]
 
-		adminContainer := object.Spec.Template.Spec.Containers[0]
-		assert.Check(t, adminContainer.SecurityContext.Capabilities.Add[0] == "NET_ADMIN")
-		assert.Check(t, adminContainer.EnvFrom[0].ConfigMapRef.LocalObjectReference.Name == "test-config")
-		assert.Check(t, adminContainer.Args[0] == "nuoadmin")
-		assert.Check(t, adminContainer.Args[1] == "--")
+		assert.True(t, adminContainer.EnvFrom[0].ConfigMapRef.LocalObjectReference.Name == "test-config")
+		assert.Contains(t, adminContainer.SecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
 
-		// make sure all expected admin option overrides appear in command-line
-		adminOptions := make(map[string]bool)
-		for _, option := range adminContainer.Args[2:] {
-			adminOptions[option] = true
-		}
-		assert.Check(t, adminOptions["pendingReconnectTimeout=60000"])
-		assert.Check(t, adminOptions["processLivenessCheckSec=30"])
-		assert.Check(t, adminOptions["leaderAssignmentTimeout=30000"])
+		assert.Equal(t, "nuoadmin", adminContainer.Args[0])
+		assert.Equal(t, "--", adminContainer.Args[1])
+
+		assert.Contains(t, adminContainer.Args[2:], "pendingReconnectTimeout=60000")
+		assert.Contains(t, adminContainer.Args[2:], "processLivenessCheckSec=30")
+		assert.Contains(t, adminContainer.Args[2:], "leaderAssignmentTimeout=30000")
 	}
 }
 
@@ -143,38 +131,19 @@ func TestAdminStatefulSetComponentLabel(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/statefulset.yaml"})
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		assert.Equal(t, "admin", obj.Spec.Selector.MatchLabels["component"])
 
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
+		assert.Contains(t, obj.ObjectMeta.Labels, "chart")
+		assert.Contains(t, obj.ObjectMeta.Labels, "release")
 
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
 
-		skind, ok := ss.Spec.Selector.MatchLabels["component"]
-		assert.Check(t, ok)
-		assert.Check(t, skind == "admin")
+		assert.Equal(t, "admin", obj.Spec.Template.ObjectMeta.Labels["component"])
 
-		_, ok = ss.ObjectMeta.Labels["chart"]
-		assert.Check(t, ok)
-		_, ok = ss.ObjectMeta.Labels["release"]
-		assert.Check(t, ok)
-
-		okind, ok := ss.Spec.Template.ObjectMeta.Labels["component"]
-		assert.Check(t, ok)
-		assert.Check(t, okind == "admin")
-
-		_, ok = ss.Spec.Template.ObjectMeta.Labels["chart"]
-		assert.Check(t, ok)
-		_, ok = ss.Spec.Template.ObjectMeta.Labels["release"]
-		assert.Check(t, ok)
+		assert.Contains(t, obj.Spec.Template.ObjectMeta.Labels, "chart")
+		assert.Contains(t, obj.Spec.Template.ObjectMeta.Labels, "release")
 	}
 }
 
@@ -187,15 +156,13 @@ func TestAdminClusterServiceRenders(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-clusterip.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/service-clusterip.yaml"})
 
-	var object v1.Service
-	helm.UnmarshalK8SYaml(t, output, &object)
-
-	assert.Check(t, strings.Contains(output, "kind: Service"))
-	assert.Check(t, strings.Contains(output, "name: nuodb-clusterip"))
-	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
-	assert.Check(t, !strings.Contains(output, "clusterIP: None"))
+	for _, obj := range SplitAndRenderService(t, output, 1) {
+		assert.Equal(t, "nuodb-clusterip", obj.Name)
+		assert.Equal(t, v1.ServiceTypeClusterIP,  obj.Spec.Type)
+		assert.Empty(t, obj.Spec.ClusterIP)
+	}
 }
 
 func TestAdminHeadlessServiceRenders(t *testing.T) {
@@ -207,15 +174,13 @@ func TestAdminHeadlessServiceRenders(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service-headless.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/service-headless.yaml"})
 
-	var object v1.Service
-	helm.UnmarshalK8SYaml(t, output, &object)
-
-	assert.Check(t, strings.Contains(output, "kind: Service"))
-	assert.Check(t, strings.Contains(output, "name: nuodb"))
-	assert.Check(t, strings.Contains(output, "type: ClusterIP"))
-	assert.Check(t, strings.Contains(output, "clusterIP: None"))
+	for _, obj := range SplitAndRenderService(t, output, 1) {
+		assert.Equal(t, "nuodb", obj.Name)
+		assert.Equal(t, v1.ServiceTypeClusterIP,  obj.Spec.Type)
+		assert.Equal(t, "None", obj.Spec.ClusterIP)
+	}
 }
 
 func TestAdminServiceRenders(t *testing.T) {
@@ -231,15 +196,14 @@ func TestAdminServiceRenders(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/service.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/service.yaml"})
 
-	var object v1.Service
-	helm.UnmarshalK8SYaml(t, output, &object)
-
-	assert.Check(t, strings.Contains(output, "kind: Service"))
-	assert.Check(t, strings.Contains(output, "name: nuodb-balancer"))
-	assert.Check(t, strings.Contains(output, "type: LoadBalancer"))
-	assert.Check(t, strings.Contains(output, "aws-load-balancer-internal"))
+	for _, obj := range SplitAndRenderService(t, output, 1) {
+		assert.Equal(t, "nuodb-balancer", obj.Name)
+		assert.Equal(t, v1.ServiceTypeLoadBalancer,  obj.Spec.Type)
+		assert.Empty(t, obj.Spec.ClusterIP)
+		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
+	}
 }
 
 func TestAdminStatefulSetVolumes(t *testing.T) {
@@ -251,23 +215,18 @@ func TestAdminStatefulSetVolumes(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/statefulset.yaml"})
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		vcts := make(map[string]bool)
+
+		for _, val := range obj.Spec.VolumeClaimTemplates {
+			vcts[val.ObjectMeta.Name] = true
 		}
 
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
+		assert.Contains(t, vcts, "raftlog")
+		assert.Contains(t, vcts, "log-volume")
 
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
-		assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "raftlog"))
-		assert.Check(t, strings.Contains(ss.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
 	}
 }
 
@@ -285,29 +244,18 @@ func TestAdminMultiClusterEnvVars(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/statefulset.yaml"})
 
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if !strings.Contains(part, "kind: StatefulSet") {
-			continue
-		}
-
-		var ss appsv1.StatefulSet
-		helm.UnmarshalK8SYaml(t, part, &ss)
-
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
 		environmentals := make(map[string]string)
 
-		for _, val := range ss.Spec.Template.Spec.Containers[0].Env {
+		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+		for _, val := range obj.Spec.Template.Spec.Containers[0].Env {
 			environmentals[val.Name] = val.Value
 		}
 
-		assert.Check(t, strings.EqualFold(environmentals["NUODB_DOMAIN_ENTRYPOINT"], "RELEASE-NAME-nuodb-cluster-1-admin-0.nuodb.$(NAMESPACE).svc.cluster1.local"))
-		assert.Check(t, strings.EqualFold(environmentals["NUODB_ALT_ADDRESS"], "$(POD_NAME).nuodb.$(NAMESPACE).svc.cluster2.local"))
+		assert.True(t, strings.EqualFold(environmentals["NUODB_DOMAIN_ENTRYPOINT"], "RELEASE-NAME-nuodb-cluster-1-admin-0.nuodb.$(NAMESPACE).svc.cluster1.local"))
+		assert.True(t, strings.EqualFold(environmentals["NUODB_ALT_ADDRESS"], "$(POD_NAME).nuodb.$(NAMESPACE).svc.cluster2.local"))
 
 	}
 }
@@ -323,7 +271,8 @@ func TestConfigDoesNotContainEmptyBlocks(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/configmap.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",  []string{"templates/configmap.yaml"})
 
-	assert.Assert(t, !strings.Contains(output, "---\n---"))
+
+	assert.NotContains(t, output, "---\n---")
 }

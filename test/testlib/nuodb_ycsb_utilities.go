@@ -17,9 +17,8 @@ func StartYCSBWorkload(t *testing.T, namespaceName string, options *helm.Options
 
 	helmChartReleaseName = fmt.Sprintf("ycsb-%s", randomSuffix)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
 
 	// with Async actions which do not return a cleanup method, create the teardown(s) first
 	AddTeardown(TEARDOWN_YCSB, func() {

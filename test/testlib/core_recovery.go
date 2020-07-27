@@ -3,7 +3,8 @@ package testlib
 import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -36,13 +37,12 @@ spec:
 
 func RecoverCoresFromTEs(t *testing.T, namespaceName string, databaseName string) {
 	pwd, err := os.Getwd()
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	targetDirPath := filepath.Join(pwd, RESULT_DIR, namespaceName, "cores")
 	_ = os.MkdirAll(targetDirPath, 0700)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(DEBUG_POD, databaseName))
 

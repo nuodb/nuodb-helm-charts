@@ -5,6 +5,7 @@ package minikube
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"strconv"
 	"strings"
@@ -13,7 +14,7 @@ import (
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
-	"gotest.tools/assert"
+
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -22,38 +23,36 @@ import (
 )
 
 func getStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(metav1.ListOptions{})
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	return statefulSets
 }
 
 func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (archiveVolumeClaims map[string]int) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 
 	err, objects := testlib.Unmarshal(output)
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 
 	archiveVolumeClaims = make(map[string]int)
 	for _, obj := range objects {
 		podName, ok := obj.Labels["pod-name"]
-		assert.Check(t, ok)
+		assert.True(t, ok)
 		// check that Pod exists
 		pod := k8s.GetPod(t, options, podName)
 
 		containerId, ok := obj.Labels["container-id"]
-		assert.Check(t, ok)
+		assert.True(t, ok)
 		// check that Pod has container ID
 		for _, containerStatus := range pod.Status.ContainerStatuses {
 			assert.Equal(t, "docker://"+containerId, containerStatus.ContainerID)
@@ -67,10 +66,10 @@ func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (a
 			// add mapping of PVC to archive ID
 			output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 				"nuocmd", "get", "value", "--key", "archiveVolumeClaims/"+claimName)
-			assert.NilError(t, err)
+			assert.NoError(t, err)
 
 			archiveId, err := strconv.Atoi(strings.TrimSpace(output))
-			assert.NilError(t, err)
+			assert.NoError(t, err)
 			archiveVolumeClaims[claimName] = archiveId
 		} else {
 			assert.Equal(t, "TE", obj.Type, "archive-pvc label should only be absent for TEs")
@@ -80,25 +79,24 @@ func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (a
 }
 
 func checkArchives(t *testing.T, namespaceName string, adminPod string, numExpected int, numExpectedRemoved int) (archives []testlib.NuoDBArchive, removedArchives []testlib.NuoDBArchive) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	// check archives
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "archives", "--db-name", "demo")
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 
 	err, archives = testlib.UnmarshalArchives(output)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, numExpected, len(archives), output)
 
 	// check removed archives
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "archives", "--db-name", "demo", "--removed")
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 
 	err, removedArchives = testlib.UnmarshalArchives(output)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, numExpectedRemoved, len(removedArchives), output)
 	return
 }
@@ -114,7 +112,7 @@ func checkInitialMembership(t assert.TestingT, configJson string, expectedSize i
 	dec := json.NewDecoder(strings.NewReader(configJson))
 	err := dec.Decode(&adminConfig)
 	if err != io.EOF {
-		assert.NilError(t, err, "Unable to deserialize admin config")
+		assert.NoError(t, err, "Unable to deserialize admin config")
 	}
 	assert.Equal(t, expectedSize, len(adminConfig.InitialMembership))
 }
@@ -136,17 +134,16 @@ func TestReprovisionAdmin0(t *testing.T) {
 	admin1 := adminStatefulSet + "-1"
 
 	// check initial membership on admin-0
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
 		"nuocmd", "--show-json", "get", "server-config", "--this-server")
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 	checkInitialMembership(t, output, 2)
 
 	// check initial membership on admin-1
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--",
 		"nuocmd", "--show-json", "get", "server-config", "--this-server")
-	assert.NilError(t, err, output)
+	assert.NoError(t, err, output)
 	checkInitialMembership(t, output, 2)
 
 	// store a value in the KV store via admin-0
@@ -198,8 +195,7 @@ func TestAdminScaleDown(t *testing.T) {
 	admin1 := adminStatefulSet + "-1"
 
 	// scale down Admin StatefulSet
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.RunKubectl(t, options, "scale", "statefulset", adminStatefulSet, "--replicas=1")
 
 	// wait for scaled-down Admin to show as "Disconnected"
@@ -257,11 +253,10 @@ func TestDomainResync(t *testing.T) {
 	for _, archiveId := range originalArchiveVolumeClaims {
 		originalArchiveId = archiveId
 	}
-	assert.Assert(t, originalArchiveId != -1)
+	assert.True(t, originalArchiveId != -1)
 
 	// update replica count
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	statefulSets := getStatefulSets(t, namespaceName).Items
 	assert.Equal(t, 3, len(statefulSets), "Expected 3 StatefulSets: Admin, SM, and hotcopy SM")
@@ -276,7 +271,7 @@ func TestDomainResync(t *testing.T) {
 			smStatefulSet = name
 		}
 	}
-	assert.Assert(t, smStatefulSet != "")
+	assert.True(t, smStatefulSet != "")
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
 	checkArchives(t, namespaceName, admin0, 2, 0)
 
@@ -289,7 +284,7 @@ func TestDomainResync(t *testing.T) {
 			hotCopySmStatefulSet = name
 		}
 	}
-	assert.Assert(t, hotCopySmStatefulSet != "")
+	assert.True(t, hotCopySmStatefulSet != "")
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 	// check that archive ID generated by hotcopy SM was removed
 	_, removedArchives := checkArchives(t, namespaceName, admin0, 1, 1)
@@ -337,14 +332,14 @@ func TestNuoDBKubeDiagnostics(t *testing.T) {
 
 	config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
 
-	assert.Check(t, func() bool { _, ok := config.Pods[admin0]; return ok }())
+	assert.True(t, func() bool { _, ok := config.Pods[admin0]; return ok }())
 
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-	assert.Check(t, func() bool { _, ok := config.Pods[tePodName]; return ok }())
+	assert.True(t, func() bool { _, ok := config.Pods[tePodName]; return ok }())
 
 	smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 	smPodName := testlib.GetPodName(t, namespaceName, smPodTemplate)
-	assert.Check(t, func() bool { _, ok := config.Pods[smPodName]; return ok }())
+	assert.True(t, func() bool { _, ok := config.Pods[smPodName]; return ok }())
 
 }

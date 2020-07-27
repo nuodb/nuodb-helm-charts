@@ -2,6 +2,7 @@ package testlib
 
 import (
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -15,7 +16,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/otiai10/copy"
-	"gotest.tools/assert"
+
 )
 
 const TLS_GENERATOR_POD_TEMPLATE = `---
@@ -38,8 +39,7 @@ func createTLSGeneratorPod(t *testing.T, namespaceName string, timeout time.Dura
 	podTemplateString := fmt.Sprintf(TLS_GENERATOR_POD_TEMPLATE,
 		podName, namespaceName, image)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, podTemplateString)
 	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, podTemplateString) })
@@ -58,7 +58,7 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 	}
 
 	files, err := ioutil.ReadDir(directory)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	set := make(map[string]bool)
 	for _, file := range files {
@@ -66,7 +66,7 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 		t.Logf("Found generated certificate file: %s", file.Name())
 	}
 	for _, expectedFile := range expectedFiles {
-		assert.Assert(t, set[expectedFile] == true, "Unable to find certificate file %s in path %s", expectedFile, directory)
+		assert.True(t, set[expectedFile] == true, "Unable to find certificate file %s in path %s", expectedFile, directory)
 	}
 }
 
@@ -83,16 +83,15 @@ func GenerateCustomCertificates(t *testing.T, podName string, namespaceName stri
 }
 
 func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName string) string {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	prefix := "tls-keys"
 	targetDirectory, err := ioutil.TempDir("", prefix)
-	assert.NilError(t, err, "Unable to create TMP directory with prefix ", prefix)
+	assert.NoError(t, err, "Unable to create TMP directory with prefix ", prefix)
 	AddTeardown(TEARDOWN_SECRETS, func() { os.RemoveAll(targetDirectory) })
 
 	realTargetDirectory, err := filepath.EvalSymlinks(targetDirectory)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	k8s.RunKubectl(t, options, "cp", podName+":"+CERTIFICATES_GENERATION_PATH, realTargetDirectory)
 	t.Logf("Certificate files location: %s", realTargetDirectory)
@@ -142,17 +141,16 @@ func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []str
 func RotateTLSCertificates(t *testing.T, options *helm.Options, namespaceName string,
 	adminReleaseName string, databaseReleaseName string, tlsKeysLocation string, helmUpgrade bool) {
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
-	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
+	assert.NoError(t, err, "Unable to find/convert admin.replicas value")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(tlsKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")
 	err = k8s.RunKubectlE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "add", "trusted-certificate",
 		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "60")
-	assert.NilError(t, err, "add trusted-certificate failed")
+	assert.NoError(t, err, "add trusted-certificate failed")
 
 	if helmUpgrade == true {
 		// Upgrade admin release
