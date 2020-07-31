@@ -1,6 +1,10 @@
 apiVersion: "apps/v1"
 kind: StatefulSet
 metadata:
+  annotations:
+    description: |-
+      NuoAdmin statefulset resource for NuoDB domain administration layer.
+{{- include "admin.loadBalancerConfig" . | indent 4 }}
   labels:
     app: {{ template "admin.fullname" . }}
     chart: {{ template "admin.chart" . }}

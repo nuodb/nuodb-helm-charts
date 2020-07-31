@@ -154,6 +154,11 @@ database:
     # nuodb.config: |-
     #   verbose error,flush,warn
 
+  # Load balancer configuration for database
+  lbConfig:
+    prefilter: ""
+    default: ""
+
   # ensure all values here are strings - so quote any purely numeric values
   # source should be a tar.gz or an already local backupset.
   # type either stream or backupset
