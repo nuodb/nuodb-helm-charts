@@ -105,6 +105,7 @@ admin:
   lbConfig:
     prefilter: ""
     default: ""
+    fullSync: false
     policies:
       nearest: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
   

@@ -144,8 +144,12 @@ The following tables list the configurable parameters for the `admin` option of 
 | `domain` | NuoDB admin cluster name | `nuodb` |
 | `namespace` | Namespace where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
 | `replicas` | Number of NuoDB Admin replicas | `1` |
-| `lbPolicy` | Load balancer policy name | `nil` |
-| `lbQuery` | Load balancer query | `nil` |
+| `lbConfig.prefilter` | Global load balancer prefilter expression | `nil` |
+| `lbConfig.default` | Global load balancer default query | `nil` |
+| `lbConfig.policies` | Load balancer named policies | `{ nearest: ... }` |
+| `lbConfig.fullSync` | Remove any manually created load balancer configuration | `false` |
+| `lbPolicy` | Load balancer policy name | `nearest` |
+| `lbQuery` | Load balancer query | `random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))` |
 | `externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
 | `externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `resources` | Labels to apply to all resources | `{}` |

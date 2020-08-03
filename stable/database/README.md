@@ -219,6 +219,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `securityContext.capabilities` | Enable capabilities for the container - disregards `securityContext.enabled` | `[]` |
 | `env` | Import ENV vars inside containers | `[]` |
 | `envFrom` | Import ENV vars from configMap(s) | `[]` |
+| `lbConfig.prefilter` | Database load balancer prefilter expression | `nil` |
+| `lbConfig.default` | Database load balancer default query | `nil` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |

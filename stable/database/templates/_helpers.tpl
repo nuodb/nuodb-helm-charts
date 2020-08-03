@@ -210,12 +210,12 @@ Imports per-database load balancer configuration via annotations.
 The configuration is imported only in the entrypoint cluster.
 */}}
 {{- define "database.loadBalancerConfig" -}}
-{{- if .Values.admin.lbConfig }}
+{{- if .Values.database.lbConfig }}
 {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
-{{- with .Values.admin.lbConfig.prefilter }}
+{{- with .Values.database.lbConfig.prefilter }}
 "nuodb.com/load-balancer-prefilter": {{ . | quote }}
 {{- end -}}
-{{- with .Values.admin.lbConfig.default }}
+{{- with .Values.database.lbConfig.default }}
 "nuodb.com/load-balancer-default": {{ . | quote }}
 {{- end -}}
 {{- end -}}
