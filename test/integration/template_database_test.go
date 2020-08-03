@@ -1,10 +1,11 @@
 package integration
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -97,7 +98,7 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 
 	for _, obj := range SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "demo-clusterip", obj.Name)
-		assert.Equal(t, v1.ServiceTypeClusterIP,  obj.Spec.Type)
+		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Empty(t, obj.Spec.ClusterIP)
 	}
@@ -116,9 +117,9 @@ func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 
 	for _, obj := range SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "demo", obj.Name)
-		assert.Equal(t, v1.ServiceTypeClusterIP,  obj.Spec.Type)
+		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
-		assert.Equal(t, "None",  obj.Spec.ClusterIP)
+		assert.Equal(t, "None", obj.Spec.ClusterIP)
 	}
 }
 
@@ -139,7 +140,7 @@ func TestDatabaseServiceRenders(t *testing.T) {
 
 	for _, obj := range SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "demo-balancer", obj.Name)
-		assert.Equal(t, v1.ServiceTypeLoadBalancer,  obj.Spec.Type)
+		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
 	}
@@ -155,7 +156,7 @@ func TestDatabaseStatefulSetDisabled(t *testing.T) {
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	_, err  := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 	// helm3 wont render an empty template
 	assert.Error(t, err)
@@ -515,4 +516,81 @@ func TestDatabaseConfigDoesNotContainEmptyBlocks(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 
 	assert.NotContains(t, output, "---\n---")
+}
+
+func TestLoadBalancerConfigurationRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.lbConfig.prefilter": "not(label(zone DR))",
+			"database.lbConfig.default":   "random(first(label(node ${NODE_NAME:-}) any))",
+		},
+	}
+
+	assertLoadBalancerAnnotations := func(annotations map[string]string) {
+		assert.Equal(t, options.SetValues["database.lbConfig.prefilter"], annotations["nuodb.com/load-balancer-prefilter"])
+		assert.Equal(t, options.SetValues["database.lbConfig.default"], annotations["nuodb.com/load-balancer-default"])
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+			assertLoadBalancerAnnotations(obj.Annotations)
+		}
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
+
+		objects := SplitAndRenderDaemonSet(t, output, 2)
+		// Test the TE daemonset only
+		assertLoadBalancerAnnotations(objects[0].Annotations)
+
+	})
+}
+
+func TestDefaultLoadBalancerConfigurationRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	assertLoadBalancerAnnotations := func(annotations map[string]string) {
+		assert.NotContains(t, annotations, "nuodb.com/load-balancer-prefilter")
+		assert.NotContains(t, annotations, "nuodb.com/load-balancer-default")
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+			assertLoadBalancerAnnotations(obj.Annotations)
+		}
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
+
+		objects := SplitAndRenderDaemonSet(t, output, 2)
+		// Test the TE daemonset only
+		assertLoadBalancerAnnotations(objects[0].Annotations)
+
+	})
 }

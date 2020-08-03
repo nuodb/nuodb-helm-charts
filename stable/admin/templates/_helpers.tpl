@@ -190,7 +190,7 @@ The configuration is imported only in the entrypoint cluster.
 {{- if .Values.admin.lbConfig }}
 {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
 {{- with .Values.admin.lbConfig.fullSync }}
-"nuodb.com/sync-load-balancer-config": {{ . }}
+"nuodb.com/sync-load-balancer-config": {{ . | quote }}
 {{- end -}}
 {{- with .Values.admin.lbConfig.prefilter }}
 "nuodb.com/load-balancer-prefilter": {{ . | quote }}
