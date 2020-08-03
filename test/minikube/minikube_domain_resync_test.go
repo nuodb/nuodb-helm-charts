@@ -3,6 +3,7 @@
 package minikube
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/stretchr/testify/assert"
@@ -28,7 +29,7 @@ func getStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	assert.NoError(t, err)
 
-	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(metav1.ListOptions{})
+	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(context.TODO(), metav1.ListOptions{})
 	assert.NoError(t, err)
 
 	return statefulSets
