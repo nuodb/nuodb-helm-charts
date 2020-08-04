@@ -395,7 +395,6 @@ func TestLoadBalancerConfigurationResync(t *testing.T) {
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.lbConfig.prefilter":           "not(label(zone DR))",
 			"database.lbConfig.default":             "random(first(label(node ${NODE_NAME:-}) any))",
-			"nuodb.image.tag":                       "4.2-mod",
 		},
 	}
 
