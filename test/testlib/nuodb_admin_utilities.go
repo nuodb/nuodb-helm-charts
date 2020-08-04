@@ -2,12 +2,13 @@ package testlib
 
 import (
 	"fmt"
-	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	v12 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -130,4 +131,33 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 			helm.Install(t, options, "nuodb/admin ", helmChartReleaseName)
 		}
 	})
+}
+
+func GetLoadBalancerPolicies(t *testing.T, namespaceName string, adminPod string) (map[string]NuoDBLoadBalancerPolicy, error) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "load-balancers")
+	if err == nil {
+		err, policiesMap := UnmarshalLoadBalancerPolicies(output)
+		return policiesMap, err
+	}
+	return nil, err
+}
+
+func GetLoadBalancerConfig(t *testing.T, namespaceName string, adminPod string) ([]NuoDBLoadBalancerConfig, error) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "load-balancer-config")
+	if err == nil {
+		err, configs := UnmarshalLoadBalancerConfigs(output)
+		return configs, err
+	}
+	return nil, err
+}
+
+func AwaitNrLoadBalancerPolicies(t *testing.T, namespace string, podName string, expectedNumber int) {
+	Await(t, func() bool {
+		policies, err := GetLoadBalancerPolicies(t, namespace, podName)
+		return err == nil && len(policies) == expectedNumber
+	}, 30*time.Second)
 }

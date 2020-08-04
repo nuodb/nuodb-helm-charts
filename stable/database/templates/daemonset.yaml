@@ -4,10 +4,6 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
-  annotations:
-    description: |-
-      Optional database daemonset resource for NuoDB Transaction Engines (TE).
-{{- include "database.loadBalancerConfig" . | indent 4 }}
   labels: 
     app: {{ template "database.fullname" . }}
     group: nuodb

@@ -542,20 +542,6 @@ func TestLoadBalancerConfigurationRenders(t *testing.T) {
 			assertLoadBalancerAnnotations(obj.Annotations)
 		}
 	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		objects := SplitAndRenderDaemonSet(t, output, 2)
-		// Test the TE daemonset only
-		assertLoadBalancerAnnotations(objects[0].Annotations)
-
-	})
 }
 
 func TestDefaultLoadBalancerConfigurationRenders(t *testing.T) {
@@ -578,19 +564,5 @@ func TestDefaultLoadBalancerConfigurationRenders(t *testing.T) {
 		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
 			assertLoadBalancerAnnotations(obj.Annotations)
 		}
-	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		objects := SplitAndRenderDaemonSet(t, output, 2)
-		// Test the TE daemonset only
-		assertLoadBalancerAnnotations(objects[0].Annotations)
-
 	})
 }

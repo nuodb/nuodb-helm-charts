@@ -3,18 +3,19 @@
 package minikube
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-
-
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -27,11 +28,28 @@ func getStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	assert.NoError(t, err)
-
-	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(metav1.ListOptions{})
+	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(context.TODO(), metav1.ListOptions{})
 	assert.NoError(t, err)
 
 	return statefulSets
+}
+
+func getGlobalLoadBalancerConfig(t *testing.T, loadBalancerConfigs []testlib.NuoDBLoadBalancerConfig) (*testlib.NuoDBLoadBalancerConfig, error) {
+	for _, config := range loadBalancerConfigs {
+		if config.IsGlobal {
+			return &config, nil
+		}
+	}
+	return nil, errors.New("Unable to find global load balancer configuration")
+}
+
+func getDatabaseLoadBalancerConfig(t *testing.T, dbName string, loadBalancerConfigs []testlib.NuoDBLoadBalancerConfig) (*testlib.NuoDBLoadBalancerConfig, error) {
+	for _, config := range loadBalancerConfigs {
+		if config.DbName == dbName {
+			return &config, nil
+		}
+	}
+	return nil, errors.New("Unable to find load balancer configuration for database=" + dbName)
 }
 
 func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (archiveVolumeClaims map[string]int) {
@@ -76,6 +94,55 @@ func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (a
 		}
 	}
 	return archiveVolumeClaims
+}
+
+func verifyLoadBalancer(t *testing.T, namespaceName string, adminPod string, deploymentOptions map[string]string) {
+	actualLoadBalancerConfigurations, err := testlib.GetLoadBalancerConfig(t, namespaceName, adminPod)
+	assert.NoError(t, err)
+	actualLoadBalancerPolicies, err := testlib.GetLoadBalancerPolicies(t, namespaceName, adminPod)
+	assert.NoError(t, err)
+	actualGlobalConfig, err := getGlobalLoadBalancerConfig(t, actualLoadBalancerConfigurations)
+	assert.NoError(t, err)
+	actualDatabaseConfig, err := getDatabaseLoadBalancerConfig(t, "demo", actualLoadBalancerConfigurations)
+	assert.NoError(t, err)
+
+	configuredPolicies := len(deploymentOptions)
+	for opt, val := range deploymentOptions {
+		t.Logf("Asserting deployment option %s with value %s", opt, val)
+		if strings.HasPrefix(opt, "admin.lbConfig.policies.") {
+			// Verify that named policies are configured properly
+			policyName := opt[strings.LastIndex(opt, ".")+1:]
+			actualPolicy, ok := actualLoadBalancerPolicies[policyName]
+			if assert.True(t, ok, "Unable to find named policy="+policyName) {
+				assert.Equal(t, val, actualPolicy.LbQuery)
+			}
+		} else if opt == "admin.lbConfig.prefilter" {
+			if actualGlobalConfig != nil {
+				assert.Equal(t, val, actualGlobalConfig.Prefilter)
+			}
+		} else if opt == "admin.lbConfig.default" {
+			if actualGlobalConfig != nil {
+				assert.Equal(t, val, actualGlobalConfig.DefaultLbQuery)
+			}
+		} else if opt == "database.lbConfig.prefilter" {
+			if actualDatabaseConfig != nil {
+				assert.Equal(t, val, actualDatabaseConfig.Prefilter)
+			}
+		} else if opt == "database.lbConfig.default" {
+			if actualDatabaseConfig != nil {
+				assert.Equal(t, val, actualDatabaseConfig.DefaultLbQuery)
+			}
+		} else {
+			t.Logf("Deployment option %s skipped", opt)
+			configuredPolicies--
+		}
+	}
+
+	if deploymentOptions["admin.lbConfig.fullSync"] == "true" {
+		// Verify that named policies match configured number of policies
+		t.Logf("Asserting load-balancer policies count is equal to configured policies via Helm")
+		assert.Equal(t, configuredPolicies, len(actualLoadBalancerPolicies))
+	}
 }
 
 func checkArchives(t *testing.T, namespaceName string, adminPod string, numExpected int, numExpectedRemoved int) (archives []testlib.NuoDBArchive, removedArchives []testlib.NuoDBArchive) {
@@ -308,6 +375,43 @@ func TestDomainResync(t *testing.T) {
 		checkArchives(t, namespaceName, admin0, 1, 0)
 		return true
 	}, 300*time.Second)
+}
+
+func TestLoadBalancerConfigurationResync(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.lbConfig.prefilter":              "not(label(region tiebreaker))",
+			"admin.lbConfig.default":                "random(first(label(node node1) any))",
+			"admin.lbConfig.policies.zone1":         "round_robin(first(label(zone zone1) any))",
+			"admin.lbConfig.policies.nearest":       "random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))",
+			"admin.lbConfig.fullSync":               "true",
+			"database.sm.resources.requests.cpu":    "0.25",
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    "0.25",
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.lbConfig.prefilter":           "not(label(zone DR))",
+			"database.lbConfig.default":             "random(first(label(node ${NODE_NAME:-}) any))",
+			"nuodb.image.tag":                       "4.2-mod",
+		},
+	}
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+	testlib.StartDatabase(t, namespaceName, admin0, options)
+
+	// Configure one manual policy
+	// It should be deleted after next resync
+	k8s.RunKubectl(t, k8s.NewKubectlOptions("", "", namespaceName), "exec", admin0, "--",
+		"nuocmd", "set", "load-balancer", "--policy-name", "manual", "--lb-query", "random(any)")
+
+	// Wait for at least two triggered LB syncs and check expected configuration
+	testlib.AwaitNrLoadBalancerPolicies(t, namespaceName, admin0, 6)
+	verifyLoadBalancer(t, namespaceName, admin0, options.SetValues)
 }
 
 func TestNuoDBKubeDiagnostics(t *testing.T) {
