@@ -102,6 +102,8 @@ admin:
   bootstrapServers: 1
 
   ## Global load balancer configuration for NuoAdmin
+  ## Policy names for named policies should contain lowercase alphabetical 
+  ## characters, numbers and hyphens.
   lbConfig:
     prefilter: ""
     default: ""
