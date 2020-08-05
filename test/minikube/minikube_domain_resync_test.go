@@ -34,7 +34,7 @@ func getStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList
 	return statefulSets
 }
 
-func getGlobalLoadBalancerConfig(t *testing.T, loadBalancerConfigs []testlib.NuoDBLoadBalancerConfig) (*testlib.NuoDBLoadBalancerConfig, error) {
+func getGlobalLoadBalancerConfigE(t *testing.T, loadBalancerConfigs []testlib.NuoDBLoadBalancerConfig) (*testlib.NuoDBLoadBalancerConfig, error) {
 	for _, config := range loadBalancerConfigs {
 		if config.IsGlobal {
 			return &config, nil
@@ -43,7 +43,7 @@ func getGlobalLoadBalancerConfig(t *testing.T, loadBalancerConfigs []testlib.Nuo
 	return nil, errors.New("Unable to find global load balancer configuration")
 }
 
-func getDatabaseLoadBalancerConfig(t *testing.T, dbName string, loadBalancerConfigs []testlib.NuoDBLoadBalancerConfig) (*testlib.NuoDBLoadBalancerConfig, error) {
+func getDatabaseLoadBalancerConfigE(t *testing.T, dbName string, loadBalancerConfigs []testlib.NuoDBLoadBalancerConfig) (*testlib.NuoDBLoadBalancerConfig, error) {
 	for _, config := range loadBalancerConfigs {
 		if config.DbName == dbName {
 			return &config, nil
@@ -97,13 +97,13 @@ func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (a
 }
 
 func verifyLoadBalancer(t *testing.T, namespaceName string, adminPod string, deploymentOptions map[string]string) {
-	actualLoadBalancerConfigurations, err := testlib.GetLoadBalancerConfig(t, namespaceName, adminPod)
+	actualLoadBalancerConfigurations, err := testlib.GetLoadBalancerConfigE(t, namespaceName, adminPod)
 	assert.NoError(t, err)
-	actualLoadBalancerPolicies, err := testlib.GetLoadBalancerPolicies(t, namespaceName, adminPod)
+	actualLoadBalancerPolicies, err := testlib.GetLoadBalancerPoliciesE(t, namespaceName, adminPod)
 	assert.NoError(t, err)
-	actualGlobalConfig, err := getGlobalLoadBalancerConfig(t, actualLoadBalancerConfigurations)
+	actualGlobalConfig, err := getGlobalLoadBalancerConfigE(t, actualLoadBalancerConfigurations)
 	assert.NoError(t, err)
-	actualDatabaseConfig, err := getDatabaseLoadBalancerConfig(t, "demo", actualLoadBalancerConfigurations)
+	actualDatabaseConfig, err := getDatabaseLoadBalancerConfigE(t, "demo", actualLoadBalancerConfigurations)
 	assert.NoError(t, err)
 
 	configuredPolicies := len(deploymentOptions)
@@ -377,7 +377,7 @@ func TestDomainResync(t *testing.T) {
 	}, 300*time.Second)
 }
 
-func TestLoadBalancerConfigurationResync(t *testing.T) {
+func TestLoadBalancerConfigurationFullResync(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -389,9 +389,9 @@ func TestLoadBalancerConfigurationResync(t *testing.T) {
 			"admin.lbConfig.policies.zone1":         "round_robin(first(label(zone zone1) any))",
 			"admin.lbConfig.policies.nearest":       "random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))",
 			"admin.lbConfig.fullSync":               "true",
-			"database.sm.resources.requests.cpu":    "0.25",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    "0.25",
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.lbConfig.prefilter":           "not(label(zone DR))",
 			"database.lbConfig.default":             "random(first(label(node ${NODE_NAME:-}) any))",
@@ -410,6 +410,46 @@ func TestLoadBalancerConfigurationResync(t *testing.T) {
 
 	// Wait for at least two triggered LB syncs and check expected configuration
 	testlib.AwaitNrLoadBalancerPolicies(t, namespaceName, admin0, 6)
+	verifyLoadBalancer(t, namespaceName, admin0, options.SetValues)
+}
+
+func TestLoadBalancerConfigurationResync(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.lbConfig.prefilter":              "not(label(region tiebreaker))",
+			"admin.lbConfig.policies.zone1":         "round_robin(first(label(zone zone1) any))",
+			"admin.lbConfig.policies.nearest":       "random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.lbConfig.prefilter":           "not(label(zone DR))",
+			"database.lbConfig.default":             "random(first(label(node ${NODE_NAME:-}) any))",
+		},
+	}
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+	testlib.StartDatabase(t, namespaceName, admin0, options)
+
+	// Configure one manual policy and global default expression
+	// By default "admin.lbConfig.fullSync" is set to false.
+	// Hence we are not deleting manual load balancer configuration but adding and updating existing config.
+	k8s.RunKubectl(t, k8s.NewKubectlOptions("", "", namespaceName), "exec", admin0, "--",
+		"nuocmd", "set", "load-balancer", "--policy-name", "manual", "--lb-query", "random(any)")
+	k8s.RunKubectl(t, k8s.NewKubectlOptions("", "", namespaceName), "exec", admin0, "--",
+		"nuocmd", "set", "load-balancer-config", "--default", "random(first(label(node node1) any))", "--is-global")
+
+	// Wait for at least two triggered LB syncs and check expected configuration
+	testlib.AwaitNrLoadBalancerPolicies(t, namespaceName, admin0, 7)
+	// Add manual configurations to the options so that they can be asserted
+	options.SetValues["admin.lbConfig.default"] = "random(first(label(node node1) any))"
+	options.SetValues["admin.lbConfig.policies.manual"] = "random(any)"
 	verifyLoadBalancer(t, namespaceName, admin0, options.SetValues)
 }
 

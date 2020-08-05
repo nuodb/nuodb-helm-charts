@@ -133,7 +133,7 @@ func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace
 	})
 }
 
-func GetLoadBalancerPolicies(t *testing.T, namespaceName string, adminPod string) (map[string]NuoDBLoadBalancerPolicy, error) {
+func GetLoadBalancerPoliciesE(t *testing.T, namespaceName string, adminPod string) (map[string]NuoDBLoadBalancerPolicy, error) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "load-balancers")
@@ -144,7 +144,7 @@ func GetLoadBalancerPolicies(t *testing.T, namespaceName string, adminPod string
 	return nil, err
 }
 
-func GetLoadBalancerConfig(t *testing.T, namespaceName string, adminPod string) ([]NuoDBLoadBalancerConfig, error) {
+func GetLoadBalancerConfigE(t *testing.T, namespaceName string, adminPod string) ([]NuoDBLoadBalancerConfig, error) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "load-balancer-config")
@@ -157,7 +157,7 @@ func GetLoadBalancerConfig(t *testing.T, namespaceName string, adminPod string) 
 
 func AwaitNrLoadBalancerPolicies(t *testing.T, namespace string, podName string, expectedNumber int) {
 	Await(t, func() bool {
-		policies, err := GetLoadBalancerPolicies(t, namespace, podName)
+		policies, err := GetLoadBalancerPoliciesE(t, namespace, podName)
 		return err == nil && len(policies) == expectedNumber
 	}, 30*time.Second)
 }
