@@ -159,7 +159,6 @@ database:
   lbConfig:
     prefilter: ""
     default: ""
-    fullSync: false
 
   # ensure all values here are strings - so quote any purely numeric values
   # source should be a tar.gz or an already local backupset.
