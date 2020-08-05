@@ -82,7 +82,10 @@ func TestDatabaseDaemonSetEnabled(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-	SplitAndRenderDaemonSet(t, output, 2)
+	for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+		// Assert that SM DaemonSet name starts with "sm-" as this is how NuoAdmin KAA will expect them
+		assert.True(t, strings.HasPrefix(obj.ObjectMeta.Name, "sm-"))
+	}
 }
 
 func TestDatabaseClusterServiceRenders(t *testing.T) {
@@ -176,6 +179,8 @@ func TestDatabaseStatefulSet(t *testing.T) {
 	for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
 		assert.Equal(t, "sm", obj.Spec.Selector.MatchLabels["component"])
 		assert.Equal(t, "sm", obj.Spec.Template.ObjectMeta.Labels["component"])
+		// Assert that SM StatefulSet name starts with "sm-" as this is how NuoAdmin KAA will expect them
+		assert.True(t, strings.HasPrefix(obj.ObjectMeta.Name, "sm-"))
 	}
 }
 
@@ -217,6 +222,8 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 	for _, obj := range SplitAndRenderDeployment(t, output, 1) {
 		assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
 		assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
+		// Assert that TE Deployment name starts with "te-" as this is how NuoAdmin KAA will expect them
+		assert.True(t, strings.HasPrefix(obj.ObjectMeta.Name, "te-"))
 	}
 
 }
@@ -544,7 +551,34 @@ func TestLoadBalancerConfigurationRenders(t *testing.T) {
 	})
 }
 
-func TestDefaultLoadBalancerConfigurationRenders(t *testing.T) {
+func TestDefaultLoadBalancerConfigurationRendersOnlyOnEntryPointCluster(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.cluster.name": 		   "aws0",
+			"database.lbConfig.prefilter": "not(label(zone DR))",
+			"database.lbConfig.default":   "random(first(label(node ${NODE_NAME:-}) any))",
+		},
+	}
+
+	assertLoadBalancerAnnotations := func(annotations map[string]string) {
+		assert.NotContains(t, annotations, "nuodb.com/load-balancer-prefilter")
+		assert.NotContains(t, annotations, "nuodb.com/load-balancer-default")
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+			assertLoadBalancerAnnotations(obj.Annotations)
+		}
+	})
+}
+
+func TestDefaultLoadBalancerConfigurationNotRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 

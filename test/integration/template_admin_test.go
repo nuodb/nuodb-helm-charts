@@ -321,3 +321,28 @@ func TestGlobalLoadBalancerConfigFullSyncRenders(t *testing.T) {
 		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-default")
 	}
 }
+
+func TestGlobalLoadBalancerConfigRendersOnlyOnEntryPointCluster(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.cluster.name": 			 "aws0",
+			"admin.lbConfig.fullSync": 		 "true",
+			"admin.lbConfig.prefilter":      "not(label(region tiebreaker))",
+			"admin.lbConfig.default":        "random(first(label(node ${NODE_NAME:-}) any))",
+			"admin.lbConfig.policies.zone1": "round_robin(first(label(zone zone1) any))",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		assert.NotContains(t, obj.Annotations, "nuodb.com/sync-load-balancer-config")
+		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-prefilter")
+		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-default")
+		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-policy.zone1")
+	}
+}
