@@ -204,3 +204,20 @@ it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
 {{- default true . -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Imports per-database load balancer configuration via annotations.
+The configuration is imported only in the entrypoint cluster.
+*/}}
+{{- define "database.loadBalancerConfig" -}}
+{{- if .Values.database.lbConfig }}
+{{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+{{- with .Values.database.lbConfig.prefilter }}
+"nuodb.com/load-balancer-prefilter": {{ . | quote }}
+{{- end -}}
+{{- with .Values.database.lbConfig.default }}
+"nuodb.com/load-balancer-default": {{ . | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

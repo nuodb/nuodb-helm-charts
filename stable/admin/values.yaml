@@ -101,6 +101,16 @@ admin:
   # must be set to 0.
   bootstrapServers: 1
 
+  ## Global load balancer configuration for NuoAdmin
+  ## Policy names for named policies should contain lowercase alphabetical 
+  ## characters, numbers and hyphens.
+  lbConfig:
+    prefilter: ""
+    default: ""
+    fullSync: false
+    policies:
+      nearest: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
+  
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
 

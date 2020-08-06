@@ -2,18 +2,20 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 var isOpenShift *bool
 
 func IsOpenShiftEnvironment(t *testing.T) bool {
 	if isOpenShift == nil {
-		output, err := exec.Command("oc", "status").Output()
+		// Use OpenShift if user is logged-in and session token is available
+		output, err := exec.Command("oc", "whoami", "-t").Output()
 
 		var isOs = (err == nil)
 		isOpenShift = &isOs
@@ -25,7 +27,6 @@ func IsOpenShiftEnvironment(t *testing.T) bool {
 
 	return *isOpenShift
 }
-
 
 func createOpenShiftProject(t *testing.T, namespaceName string) {
 	output, err := exec.Command("oc", "new-project", namespaceName).Output()

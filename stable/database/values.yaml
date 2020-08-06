@@ -20,6 +20,7 @@ cloud:
     # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique cluster.name.
     # The default is fine for single-cluster domains.
     name: cluster0
+    entrypointName: cluster0
 
 busybox:
   image:
@@ -153,6 +154,11 @@ database:
   configFiles: {}
     # nuodb.config: |-
     #   verbose error,flush,warn
+
+  # Load balancer configuration per database
+  lbConfig:
+    prefilter: ""
+    default: ""
 
   # ensure all values here are strings - so quote any purely numeric values
   # source should be a tar.gz or an already local backupset.

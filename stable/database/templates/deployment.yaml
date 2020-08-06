@@ -1,6 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    description: |-
+      Database deployment resource for NuoDB Transaction Engines (TE).
+{{- include "database.loadBalancerConfig" . | indent 4 }}
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
