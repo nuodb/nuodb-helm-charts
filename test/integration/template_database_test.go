@@ -82,10 +82,7 @@ func TestDatabaseDaemonSetEnabled(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-	for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
-		// Assert that SM DaemonSet name starts with "sm-" as this is how NuoAdmin KAA will expect them
-		assert.True(t, strings.HasPrefix(obj.ObjectMeta.Name, "sm-"))
-	}
+	SplitAndRenderDaemonSet(t, output, 2)
 }
 
 func TestDatabaseClusterServiceRenders(t *testing.T) {
@@ -179,8 +176,6 @@ func TestDatabaseStatefulSet(t *testing.T) {
 	for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
 		assert.Equal(t, "sm", obj.Spec.Selector.MatchLabels["component"])
 		assert.Equal(t, "sm", obj.Spec.Template.ObjectMeta.Labels["component"])
-		// Assert that SM StatefulSet name starts with "sm-" as this is how NuoAdmin KAA will expect them
-		assert.True(t, strings.HasPrefix(obj.ObjectMeta.Name, "sm-"))
 	}
 }
 
@@ -222,8 +217,6 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 	for _, obj := range SplitAndRenderDeployment(t, output, 1) {
 		assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
 		assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
-		// Assert that TE Deployment name starts with "te-" as this is how NuoAdmin KAA will expect them
-		assert.True(t, strings.HasPrefix(obj.ObjectMeta.Name, "te-"))
 	}
 
 }

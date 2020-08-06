@@ -3,7 +3,7 @@ kind: StatefulSet
 metadata:
   annotations:
     description: |-
-      NuoAdmin statefulset resource for NuoDB domain administration layer.
+      NuoAdmin statefulset resource for NuoDB Admin layer.
 {{- include "admin.loadBalancerConfig" . | indent 4 }}
   labels:
     app: {{ template "admin.fullname" . }}
