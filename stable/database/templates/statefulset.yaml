@@ -63,7 +63,7 @@ spec:
         - name: log-volume
           mountPath: /var/log/nuodb
       containers:
-      - name: sm
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
@@ -360,7 +360,7 @@ spec:
         - name: log-volume
           mountPath: /var/log/nuodb
       containers:
-      - name: sm
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
