@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io"
 	"io/ioutil"
 	"os"
@@ -20,6 +19,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 
@@ -29,21 +30,86 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+/** Lists of the teardown and diagnostic teardown funcs */
 var teardownLists = make(map[string][]func())
+var diagnosticTeardownLists = make(map[string][]func())
+
+/** Exported var - initialised from the EnvVar, but can be reset in code if desired */
+var AlwaysRunDiagnosticTeardowns = strings.EqualFold(os.Getenv(ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS), "true")
 
 /**
- * add a teardown function to the named list - for later execution
+ * add a teardown function to the named list - for deferred execution.
+ *
+ * The teardown functions are called in reverse order of insertion, by a call to Teardown(name).
+ *
+ * The typical idiom is:
+ * <pre>
+ *   testlib.AddTeardown("DATABASE", func() { ...})
+ *   // possibly more testlib.AddTeardown("DATABASE", func() { ... })
+ *   defer testlib.Teardown("DATABASE")
+ * <pre>
  */
 func AddTeardown(name string, teardownFunc func()) {
 	teardownLists[name] = append(teardownLists[name], teardownFunc)
 }
 
 /**
+ * add a diagnostic teardown func to be called before any other teardowns in the named list - to aid diagnostics/debugging.
+ * This allows a diagnostic teardown to do such things as:
+ * <ul>
+ *   <li>Generate logging and debug information immediately prior to resurce teardown
+ *   <li>call time.Sleep() to allow inspection and/or debugging of the exit state before teardown.
+ * <ul>
+ *
+ * NOTE: it is generally undesirable to add multiple diagnostic teardowns that sleep - so it would usually be best to
+ * add any Sleep() debug teardown to the innermost teardown list.
+ * Nonetheless, there are use-cases where multiple Sleep() teardowns are useful - to allow inspecting different
+ * intermediate states.
+ */
+func AddDiagnosticTeardown(name string, condition interface{}, teardownFunc func()) {
+	tdfunc := func() {
+		shouldIdoIt := AlwaysRunDiagnosticTeardowns
+
+		if !shouldIdoIt {
+			switch c := condition.(type) {
+			case *testing.T:
+				shouldIdoIt = c.Failed()
+
+			case func() bool:
+				shouldIdoIt = c()
+
+			case bool:
+				shouldIdoIt = c
+
+			default:
+				shouldIdoIt = c != nil
+			}
+		}
+
+		if shouldIdoIt {
+			teardownFunc()
+		}
+	}
+
+	diagnosticTeardownLists[name] = append(diagnosticTeardownLists[name], tdfunc)
+}
+
+/**
  * Call the stored teardown functions in the named list, in the correct order (last-in-first-out)
+ *
+ * NOTE: Any DIAGNOSTIC teardowns - those added with AddDiagnosticTeardown() for this name - are called BEFORE any other teardowns for this name.
+ *
+ * The typical use of Teardown is with a deferred call:
+ * defer testlib.Teardown("SOME NAME")
+ * See: testlib.AddTeardown(); testlib.AddDiagnosticTeardown()
  */
 func Teardown(name string) {
+	// ensure both list and diagnostic list are removed.
+	defer func() { delete(diagnosticTeardownLists, name) }()
+	defer func() { delete(teardownLists, name) }()
+
 	list := teardownLists[name]
-	delete(teardownLists, name)
+	list = append(list, diagnosticTeardownLists[name]...) // append any diagnostic funcs - so they are called FIRST
 
 	for x := len(list) - 1; x >= 0; x-- {
 		list[x]()
@@ -52,27 +118,37 @@ func Teardown(name string) {
 
 /**
 * Verify all teardownLists have been executed already; and throw an ASSERT if not.
-* Can be used to verify correct codng of a test that uses teardown.
+* Can be used to verify correct coding of a test that uses teardown - and to ensure eventual release of resources.
 *
-* NOTE: while the funcs are called in the correct order for each list, there can be
-* NO guarantee that the lists are iterated in the correct order.
+* NOTE: while the funcs are called in the correct order for each list,
+* there can be NO guarantee that the lists are iterated in the correct order.
 *
 * This function MUST NOT be used as a replacement for calling teardown() at the correct point in the code.
  */
 func VerifyTeardown(t *testing.T) {
-	remaining := len(teardownLists)
+
+	// ensure all funcs in all lists are released
+	defer func() { teardownLists = make(map[string][]func()) }()
+	defer func() { diagnosticTeardownLists = make(map[string][]func()) }()
+
+	// append each diagnostic list to the corresponding (possibly empty) teardown list
+	for name, list := range diagnosticTeardownLists {
+		teardownLists[name] = append(teardownLists[name], list...)
+	}
+
+	// release all remaining resources - this is a "best effort" as the order of iterating the map is arbitrary
+	uncleared := make([]string, 0)
 
 	// make a "best-effort" at releasing all remaining resources
-	for _, list := range teardownLists {
+	for name, list := range teardownLists {
+		uncleared = append(uncleared, name)
+
 		for x := len(list) - 1; x >= 0; x-- {
 			list[x]()
 		}
 	}
 
-	// release all funcs in all lists
-	teardownLists = make(map[string][]func())
-
-	assert.True(t, remaining == 0, "Error - %d teardownLists were left uncleared", remaining)
+	assert.Equal(t, 0, len(uncleared), "Error - %d teardownLists were left uncleared: %s", len(uncleared), uncleared)
 }
 
 func standardizeSpaces(s string) string {
@@ -271,7 +347,6 @@ func GetPod(t *testing.T, namespace string, podName string) *corev1.Pod {
 
 	return k8s.GetPod(t, options, podName)
 }
-
 
 func GetPodName(t *testing.T, namespaceName string, expectedName string) string {
 	tePod, err := findPod(t, namespaceName, expectedName)
@@ -758,7 +833,7 @@ func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDB
 		"exec", podName, "--",
 		"bash", "-c",
 		"nuocmd --show-json get kubernetes-config > /tmp/nuodb-dump.json",
-		)
+	)
 
 	k8s.RunKubectl(t, options, "cp", podName+":/tmp/nuodb-dump.json", targetFile)
 
