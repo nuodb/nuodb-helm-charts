@@ -42,7 +42,7 @@ spec:
 {{ toYaml .Values.database.te.tolerations | trim | indent 8 }}
       {{- end }}
       containers:
-      - name: te-{{ template "database.fullname" . }}
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
