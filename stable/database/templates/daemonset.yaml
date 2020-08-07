@@ -44,7 +44,7 @@ spec:
 {{ toYaml .Values.database.sm.tolerationsDS | trim | indent 8 }}
       {{- end }}          
       containers:
-      - name: sm
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
@@ -250,7 +250,7 @@ spec:
 {{ toYaml .Values.database.sm.tolerationsDS | trim | indent 8 }}
       {{- end }}
       containers:
-      - name: sm
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
