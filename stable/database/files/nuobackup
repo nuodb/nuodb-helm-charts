@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # simple script to automate backup.
 #
@@ -13,7 +13,7 @@
 # A backup can be specific to a backup-group, and the backup-groups can have different schedules.
 #
 # An optional semaphore can be specified - if the semaphore is specified, and not set in the KV store, then
-# NO backupis performed.
+# NO backup is performed.
 # This allows a cronjob to run `nuobackup` on a schedule, and conditionally perform a backup if the semaphore has been set.
 #
 # The information of recent backups in the KV store is organised as a ringbuffer.
@@ -30,10 +30,47 @@
 #   --backup-root - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
 
 # for debugging...
-[ -n "$NUODB_DEBUG" ] && set -x 
+[ "$NUODB_DEBUG" = "verbose" ] && set -x 
 
 : ${NUODB_MAX_BACKUP_HISTORY:=10}
 : ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
+
+LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuobackup.log
+
+#=======================================
+# function - log messages
+#
+function log() {
+  if [ -n "$NUODB_DEBUG" ]; then
+    echo "nuobackup $@" | tee -a $LOGFILE
+   #  curl -k -X POST -E /etc/nuodb/keys/nuocmd.pem -H "Content-type: application/json" $ap_protocol://$NUOADMIN_AP0:8888/api/1/diagnostics/log -d "{\"message\": \"nuosm $@\"}"
+  fi
+}
+
+#=======================================
+# function - trace workflow
+#
+function trace() {
+  wotIdid="$@"
+  [ -n "$1" -a -n "$NUODB_DEBUG" ] && log "trace: $wotIdid"
+}
+
+#=======================================
+# function - wrap a log file around so it doesn't grow infinitely
+#
+function wrapLogfile() {
+  logsize=$( du -sb $LOGFILE | grep -o '^ *[0-9]\+' )
+  maxlog=5000000
+  log "logsize=$logsize"
+  if [ ${logsize:=0} -gt $maxlog ]; then
+    lines=$(wc -l $LOGFILE)
+    tail -n $(( lines / 2 )) $LOGFILE > ${LOGFILE}-new
+    rm -rf $LOGFILE
+    mv $LOGFILE-new $LOGFILE
+  fi
+
+  log "log file wrapped around"
+}
 
 backup_type="full"
 db_name=$DB_NAME

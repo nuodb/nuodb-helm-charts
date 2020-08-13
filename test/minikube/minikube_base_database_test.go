@@ -19,10 +19,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-const LABEL_CLOUD = "minikube"
-const LABEL_REGION = "local"
-const LABEL_ZONE = "local-b"
-
 func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 	// populate some data
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
@@ -236,7 +232,8 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 	restore := func() {
 		testlib.InjectTestValues(t, options)
 		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
-		testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
+		defer helm.Delete(t, options, restName, true)
+		defer k8s.RunKubectl(t, kubectlOptions, "delete", "job", "restore-demo")
 
 		testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
 	}
@@ -439,6 +436,8 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
+				"database.env[0].name":                  "NUODB_DEBUG",
+				"database.env[0].value":                 "debug",
 			},
 		}
 
@@ -463,6 +462,8 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 				"database.enableDaemonSet":              "true",
 				// prevent non-backup SM from scheduling
 				"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
+				"database.env[0].name":                              "NUODB_DEBUG",
+				"database.env[0].value":                             "debug",
 			},
 		}
 
@@ -498,6 +499,8 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"backup.persistence.enabled":            "true",
 			"backup.persistence.size":               "1Gi",
 			"database.te.logPersistence.enabled":    "true",
+			"database.env[0].name":                  "NUODB_DEBUG",
+			"database.env[0].value":                 "debug",
 		},
 	}
 
@@ -580,6 +583,8 @@ func TestKubernetesImportDatabase(t *testing.T) {
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
+				"database.env[0].name":                  "NUODB_DEBUG",
+				"database.env[0].value":                 "debug",
 			},
 		})
 
@@ -603,6 +608,8 @@ func TestKubernetesImportDatabase(t *testing.T) {
 					"database.enableDaemonSet":              "true",
 					// prevent non-backup SM from scheduling
 					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
+					"database.env[0].name":                              "NUODB_DEBUG",
+					"database.env[0].value":                             "debug",
 				},
 			},
 		)

@@ -2,11 +2,11 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "database.fullname" . }}
+    app: {{ template "restore.fullname" . }}
     group: nuodb
     domain: {{ .Values.admin.domain }}
     chart: {{ template "nuodb.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ template "database.fullname" . }}-nuorestore
+  name: {{ template "restore.fullname" . }}-nuorestore
 data:
 {{ (.Files.Glob "files/nuorestore").AsConfig | indent 2 }}

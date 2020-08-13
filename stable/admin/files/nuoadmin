@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 . ${NUODB_HOME}/etc/nuodb_setup.sh
 

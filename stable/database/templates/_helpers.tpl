@@ -165,7 +165,7 @@ Import ENV vars from configMaps
    You Have Been Warned.
 */}}
 {{- define "database.envFrom" }}
-envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range $map := .Values.database.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore }, configMapRef: { name: domain-{{ .Values.admin.domain }}-env } {{- range $map := .Values.database.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
 {{- end -}}
 
 {{/*

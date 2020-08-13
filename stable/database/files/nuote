@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 export NUODB_LOGDIR=/var/log/nuodb/"${POD_NAME}"
 export NUODB_CRASHDIR="$NUODB_LOGDIR"/crash

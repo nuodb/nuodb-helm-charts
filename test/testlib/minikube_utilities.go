@@ -544,6 +544,18 @@ func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, data
 	return nil
 }
 
+func GetRestartCount(t *testing.T, podName string, options *k8s.KubectlOptions) int32 {
+	pod := k8s.GetPod(t, options, podName)
+
+	var restartCount int32
+	for _, status := range pod.Status.ContainerStatuses {
+		restartCount += status.RestartCount
+	}
+
+	return restartCount
+}
+
+// TODO remove databaseNae param - and retrieve it from extracted databaseOptions
 func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databaseName string, databaseOptions *helm.Options, restart func()) {
 	incarnation := GetDatabaseIncarnation(t, namespace, podName, databaseName)
 
@@ -575,6 +587,24 @@ func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName str
 	Await(t, func() bool {
 		return GetPodRestartCount(t, namespace, podName) > expectedRestartCount
 	}, timeout)
+}
+
+func VerifyProcessRestartFails(t *testing.T, namespace string, podName string, restart func()) {
+	AwaitProcessRestart(t, namespace, podName, restart)
+
+	pod, _ := findPod(t, namespace, podName)
+	Await(t, func() bool {
+		return strings.Contains(fmt.Sprint(pod.Status), "CrashLoopBackoff")
+	}, 120*time.Second)
+}
+
+func AwaitProcessRestart(t *testing.T, namespace string, podName string, restart func()) {
+	options := k8s.NewKubectlOptions("", "", namespace)
+	expectedRestartCount := GetRestartCount(t, podName, options)
+
+	restart()
+
+	AwaitPodRestartCountGreaterThan(t, namespace, podName, expectedRestartCount, 30*time.Second)
 }
 
 func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
@@ -754,6 +784,35 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 		fmt.Sprintf("%s/%s:%s", namespace, podName, "/var/log/nuodb/nuoadmin_event.log"),
 		filePath,
 	)
+}
+
+func GetFile(t *testing.T, namespace string, podname string, path string, filename string) error {
+	pwd, err := os.Getwd()
+	require.NoError(t, err)
+
+	fromPath := fmt.Sprintf("%s/%s:%s/%s", namespace, podname, path, filename)
+	dirPath := filepath.Join(pwd, RESULT_DIR, namespace, podname)
+	toPath := filepath.Join(dirPath, filename)
+
+	_ = os.MkdirAll(dirPath, 0700)
+
+	f, err := os.Create(toPath)
+	require.NoError(t, err)
+	defer f.Close()
+
+	options := k8s.NewKubectlOptions("", "", namespace)
+
+	err = k8s.RunKubectlE(t, options,
+		"cp",
+		fromPath,
+		toPath,
+	)
+
+	if err != nil {
+		t.Log(err)
+	}
+
+	return err
 }
 
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {

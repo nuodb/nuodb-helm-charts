@@ -42,3 +42,16 @@ metadata:
   name: {{ template "admin.fullname" . }}-nuoadmin
 data:
 {{ (.Files.Glob "files/nuoadmin").AsConfig | indent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "admin.fullname" . }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "admin.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: domain-{{ .Values.admin.domain }}-env
+data:
+  NUOADMIN_AP0: {{ template "admin.fullname" .}}-0
