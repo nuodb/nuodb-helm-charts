@@ -32,6 +32,46 @@
 # for debugging...
 [ -n "$NUODB_DEBUG" ] && set -x 
 
+ERR_ADMIN_UNAVAILABLE=71
+ERR_BACKUPSET_NOT_FOUND=72
+ERR_NO_SPACE=73
+ERR_INCORRECT_BACKUP=74
+ERR_RESTORE_FAILED=75
+
+#==========
+# get a value in the KV store
+#==========
+function getKV() {
+   # up to 10 retries
+   for retry in {1..3}; do
+      kvVal=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $1)
+      [ $? == 0 ] && return $kvVal
+      sleep 2
+   done
+
+   echo "Admin KV GET command failed after 3 retries - Admin has no LEADER?"
+   exit $ERR_ADMIN_UNAVAILABLE
+}
+
+#==========
+# set a value in the KV store
+#==========
+function setKV() {
+   # up to 10 retries
+   [ "$3" = "--unconditional" ] && cond="--unconditional" || cond="--expected-value $3"
+   for retry in {1..3}; do
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $1 --value $2 $cond
+      [ $? == 0 ] && return $2
+      sleep 2
+   done
+
+   echo "Admin KV SET command failed after 3 retries - Admin has no LEADER?"
+   exit $ERR_ADMIN_UNAVAILABLE
+}
+
+#==========
+# Main routine
+#==========
 : ${NUODB_MAX_BACKUP_HISTORY:=10}
 : ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
 
@@ -86,36 +126,35 @@ label=$(echo $label | tr '[:upper:]' '[:lower:]')
 
 # Return which group made the latest backup
 if [ "$backup_type" = "report-latest" -a "$backup_group" = "" ]; then
-   echo "$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/latest )"
+   echo "$(getKV $NUODB_BACKUP_KEY/$db_name/latest )"
    exit 0
 fi
 
 # if $semaphore is not null, then check the value in Raft
 if [ -n "$semaphore" ]; then
    if [ "$backup_group" != "" ]; then
-      gate=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $semaphore/$db_name/$backup_group)
+      gate=$(getKV $semaphore/$db_name/$backup_group)
 
       # and reset the semaphore
-      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$backup_group --value '' --expected-value "$gate"
+      setKV $semaphore/$db_name/$backup_group '' "$gate"
    else
-      gate=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $semaphore/$db_name)
+      gate=$(getKV $semaphore/$db_name)
 
       # and reset the semaphore
-      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value '' --expected-value "$gate"
+      setKV $semaphore/$db_name '' "$gate"
    fi
-
 
    if [ -z "$gate" ]; then
       echo >&2 "Semaphore $semaphore/$db_name empty - nothing to do"
       exit 0
    fi
 
-   # wait for the database to be RUNNING
-   nuocmd --api-server $NUOCMD_API_SERVER check database --db-name $db_name --check-running --wait-forever
+   # set the backup type from the semaphore value
+   backup_type=$(echo $gate | tr '[:upper:]' '[:lower:]')
 fi
 
 # find the index for the latest backup info
-latest=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest )
+latest=$(getKV $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest )
 current=$latest
 
 if [ "$backup_type" = "full" ]; then
@@ -130,11 +169,11 @@ if [ "$backup_type" = "full" ]; then
 else
    if [ -z "$latest" ]; then
       echo >&2 "No full backup has completed yet - try again later"
-      exit -1
+      exit $ERR_BACKUPSET_NOT_FOUND
    fi
 
    # retrieve the latest backupset name
-   backupset=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
+   backupset=$(getKV $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
    echo >&2 "Looking up $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} returned: $backupset"
 fi
 
@@ -142,6 +181,9 @@ if [ "$backup_type" = "report-latest" ]; then
    echo "$backupset"
    exit 0
 fi
+
+# wait for the database to be RUNNING
+nuocmd --api-server $NUOCMD_API_SERVER check database --db-name $db_name --check-running --wait-forever
 
 # call nuodocker to perform the actual backup
 nuodocker backup database \
@@ -164,16 +206,16 @@ if [ "$backup_type" = "full" ]; then
    echo >&2 "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next = $backupset"
    echo >&2 "$NUODB_BACKUP_KEY/$db_name/latest = $backup_group"
 
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/$next --value $backupset --unconditional
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $next --expected-value "$latest"
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/latest --value $backup_group --unconditional
+   setKV $NUODB_BACKUP_KEY/$db_name/${backup_group}/$next $backupset --unconditional
+   setKV $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest $next "$latest"
+   setKV $NUODB_BACKUP_KEY/$db_name/latest $backup_group --unconditional
 
    # update the list of known backup groups for this database
-   group_list="$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups)"
+   group_list="$(getKV $NUODB_BACKUP_KEY/$db_name/backup-groups)"
    if [ -z $(echo "$group_list" | grep -o $backup_group) ]; then
       new_list="$group_list $backup_group"
 
       echo >&2 "$NUODB_BACKUP_KEY/$db_name/backup-groups = $new_list"
-      nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_BACKUP_KEY/$db_name/backup-groups --value "$new_list" --expected-value "$group_list"
+      setKV $NUODB_BACKUP_KEY/$db_name/backup-groups "$new_list" "$group_list"
    fi
 fi

@@ -33,6 +33,44 @@ fi
 
 export NUOCMD DB_NAME
 
+ERR_ADMIN_UNAVAILABLE=71
+ERR_BACKUPSET_NOT_FOUND=72
+ERR_NO_SPACE=73
+ERR_INCORRECT_BACKUP=74
+ERR_RESTORE_FAILED=75
+ERR_TIMEOUT_WAITING_FOR_SM=76
+
+#==========
+# get a value in the KV store
+#==========
+function getKV() {
+   # up to 10 retries
+   for retry in {1..3}; do
+      kvVal=$( $NUOCMD get value --key $1)
+      [ $? == 0 ] && return $kvVal
+      sleep 2
+   done
+
+   echo "Admin KV GET command failed after 3 retries - Admin has no LEADER?"
+   exit $ERR_ADMIN_UNAVAILABLE
+}
+
+#==========
+# set a value in the KV store
+#==========
+function setKV() {
+   # up to 10 retries
+   [ "$3" != "--unconditional" ] && cond="--unconditional" || cond="--expected-value $3"
+   for retry in {1..3}; do
+      $NUOCMD set value --key $1 --value $2 $cond
+      [ $? == 0 ] && return $2
+      sleep 2
+   done
+
+   echo "Admin KV SET command failed after 3 retries - Admin has no LEADER?"
+   exit $ERR_ADMIN_UNAVAILABLE
+}
+
 #=======================================
 # function - report an error and exit
 #
@@ -116,7 +154,7 @@ function perform_restore() {
   # [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
 
   # clear the SM wait semaphore
-  #$NUOCMD set value --key $startup_key/$DB_NAME --value '' --unconditional
+  #setKV $startup_key/$DB_NAME '' --unconditional
 }
 
 #=============================
@@ -136,15 +174,15 @@ myArchive=$( $NUOCMD show archives --db-name $DB_NAME --archive-format "archive-
 
 # if a restore from backup has been requested, then do that now
 restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
-restore_requested="$( $NUOCMD get value --key $restore_req )"
+restore_requested="$( getKV $restore_req )"
 
 if [ -n "$restore_requested" ]; then
   credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
-  restore_credentials="$( $NUOCMD get value --key $credential_req )"
+  restore_credentials="$( getKV $credential_req )"
   [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
 
   strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
-  strip_levels="$( $NUOCMD get value --key $strip_req )"
+  strip_levels="$( getKV $strip_req )"
   [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
 fi
 
@@ -184,7 +222,7 @@ if [ "$restore_source" = ":latest" ]; then
 
     # try for 30 seconds, sleeping every 2 seconds
     for retry in {1..30..2}; do
-      sm="$($NUOCMD get value --key $first_req )"
+      sm="$(getKV $first_req )"
       [ -n "$sm" ] && break
       sleep 2
     done
@@ -203,8 +241,8 @@ fi
 if [ -n "$restore_requested" -a -n "$restore_source" ]; then
 
   # work out who is the first one in
-  $NUOCMD set value --key $first_req --value $HOSTNAME --expected-value ''
-  first_in="$( $NUOCMD get value --key $first_req )"
+  setKV $first_req "$HOSTNAME" ''
+  first_in="$( getKV $first_req )"
 
   echo "First-in = $first_in"
 
@@ -216,7 +254,7 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     # [ -z "$restore_source" ] && die -1 "There is no valid LATEST backup - restore of LATEST failed."
 
     # take ownership of the SM startup semaphore
-    $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --unconditional
+    setKV $startup_key/$DB_NAME "$HOSTNAME" --unconditional
 
     # disable all the archive metadata so that get-archive-history will not look for other SMs
     archive_ids=$( $NUOCMD get archives --db-name $DB_NAME | grep -o "id=[0-9]\+" | grep -o "[0-9]\+")
@@ -231,9 +269,9 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     perform_restore
 
     # clear/release shared state
-    # $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
-    # $NUOCMD set value --key $restore_req --value '' --expected-value $restore_requested
-    $NUOCMD set value --key $credential_req --value '' --unconditional
+    # setKV $first_req '' "$HOSTNAME"
+    # setKV $restore_req '' "$restore_requested"
+    setKV $credential_req '' --unconditional
 
 
     # any error is a fatal error
@@ -250,21 +288,27 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
   fi
 
   # wait until it's my turn to startup
-  until owner=$( $NUOCMD get value --key $startup_key/$DB_NAME ); [ "$owner" = "$HOSTNAME" -o "$NUODB_SEQUENCE_SYNC" = "false" ] ; do
+  retry_count=0
+  until owner=$( getKV $startup_key/$DB_NAME ); [ "$owner" = "$HOSTNAME" -o "$NUODB_SEQUENCE_SYNC" = "false" ] ; do
 
     # find the start-id of the SM that owns the semaphore
     owner_id=$( $NUOCMD show database --db-name $DB_NAME --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^ *SM: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
     if [ -z "$owner_id" ]; then
-      echo "Could not find start-id for starting SM on $owner - retrying..."
+      # fail after 10 retries - different retries could be for different SMs...
+      [ $(( retry_count > 9 )) ] && die $ERR_TIMEOUT_WAITING_FOR_SM "Timeout waiting to find start-id for SM $owner - safe to retry"
+
+      echo "Could not find start-id for starting SM $owner - retrying..."
+      retry_count=$(( retry_count + 1 ))
       sleep 30
       continue
     fi
 
     # wait for the starting SM to be RUNNING
-    $NUOCMD check process --start-id $owner_id --check-running --wait-forever
+    $NUOCMD check process --start-id $owner_id --check-running --timeout 600
+    [ $? != 0 ] && die $ERR_TIMEOUT_WAITING_FOR_SM "Timeout waiting for SM $owner, start-id $owner_id, to go RUNNING - safe to retry."
 
     # transfer ownership of the startup semaphore to myself
-    $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --expected-value $owner
+    setKV $startup_key/$DB_NAME "$HOSTNAME" "$owner"
   done
 
   # call nuodocker to fix the archive metadata
@@ -323,10 +367,10 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/1.atm ]; th
 fi
 
 # release the first-in semaphore
-[ -n "$first_in" ] && $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
+[ -n "$first_in" ] && setKV $first_req '' "$HOSTNAME"
 
 # clear the restore_request
-[ -n "$restore_requested" ] && $NUOCMD set value --key $restore_req --value '' --expected-value "$restore_requested"
+[ -n "$restore_requested" ] && setKV $restore_req '' "$restore_requested"
 
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then

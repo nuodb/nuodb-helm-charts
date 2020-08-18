@@ -13,6 +13,46 @@
 : ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
 : ${NUODB_RESTORE_REQUEST_PREFIX:=/nuodb/nuosm}
 
+ERR_ADMIN_UNAVAILABLE=71
+ERR_BACKUPSET_NOT_FOUND=72
+ERR_NO_SPACE=73
+ERR_INCORRECT_BACKUP=74
+ERR_RESTORE_FAILED=75
+
+#==========
+# get a value in the KV store
+#==========
+function getKV() {
+   # up to 10 retries
+   for retry in {1..3}; do
+      kvVal=$(nuocmd --api-server $NUOCMD_API_SERVER get value --key $1)
+      [ $? == 0 ] && return $kvVal
+      sleep 2
+   done
+
+   echo "Admin KV GET command failed after 3 retries - Admin has no LEADER?"
+   exit $ERR_ADMIN_UNAVAILABLE
+}
+
+#==========
+# set a value in the KV store
+#==========
+function setKV() {
+   # up to 10 retries
+   [ "$3" = "--unconditional" ] &&  cond="--unconditional" || cond="--expected-value $3"
+   for retry in {1..3}; do
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $1 --value $2 $cond
+      [ $? == 0 ] && return $2
+      sleep 2
+   done
+
+   echo "Admin KV SET command failed after 3 retries - Admin has no LEADER?"
+   exit $ERR_ADMIN_UNAVAILABLE
+}
+
+#==========
+# Main routine
+#==========
 restore_type="database"
 db_name=$DB_NAME
 semaphore="/nuobackup/semaphore"
@@ -55,24 +95,19 @@ done
 restore_type=$(echo $restore_type | tr '[:upper:]' '[:lower:]')
 auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 
-# set the persistent flag for the backup
-nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
-    --value $restore_source \
-    --unconditional
-
+# set the persistent flags for the backup
+setKV $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore $restore_source --unconditional
 if [ -n "$restore_credentials" ]; then
-    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/credentials \
-        --value $restore_credentials \
-        --unconditional
+    setKV $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/credentials $restore_credentials --unconditional
 fi
 
-
 if [ "$restore_type" = "database" ]; then
-   # Set the semaphores to create a new backupset from a full backup
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
 
-   for group in $(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
-      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$group --value "true" --unconditional
+   # Set the semaphores to create a new backupset from a full backup
+   setKV $semaphore/$db_name --value "full" --unconditional
+
+   for group in $(getKV $NUODB_BACKUP_KEY/$db_name/backup-groups); do
+      setKV $semaphore/$db_name/$group --value "full" --unconditional
    done
 
    # optionally do automatic initiation of the restore
