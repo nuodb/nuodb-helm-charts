@@ -5,6 +5,9 @@ metadata:
     description: |-
       NuoAdmin statefulset resource for NuoDB Admin layer.
 {{- include "admin.loadBalancerConfig" . | indent 4 }}
+    {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+    nuodb.com/bootstrap-servers: {{ default 0 .Values.admin.bootstrapServers | quote }}
+    {{- end }}
   labels:
     app: {{ template "admin.fullname" . }}
     chart: {{ template "admin.chart" . }}

@@ -277,6 +277,25 @@ func TestConfigDoesNotContainEmptyBlocks(t *testing.T) {
 	assert.NotContains(t, output, "---\n---")
 }
 
+func TestBootstrapServersRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.bootstrapServers": "5",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		assert.Equal(t, options.SetValues["admin.bootstrapServers"], obj.Annotations["nuodb.com/bootstrap-servers"])
+		assert.Equal(t, options.SetValues["admin.bootstrapServers"], obj.Labels["bootstrapServers"])
+	}
+}
+
 func TestGlobalLoadBalancerConfigRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
@@ -328,8 +347,8 @@ func TestGlobalLoadBalancerConfigRendersOnlyOnEntryPointCluster(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"cloud.cluster.name": 			 "aws0",
-			"admin.lbConfig.fullSync": 		 "true",
+			"cloud.cluster.name":            "aws0",
+			"admin.lbConfig.fullSync":       "true",
 			"admin.lbConfig.prefilter":      "not(label(region tiebreaker))",
 			"admin.lbConfig.default":        "random(first(label(node ${NODE_NAME:-}) any))",
 			"admin.lbConfig.policies.zone1": "round_robin(first(label(zone zone1) any))",

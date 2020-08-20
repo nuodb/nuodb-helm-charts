@@ -94,8 +94,9 @@ admin:
   # cloud.cluster.entrypointName) can specify bootstrapServers.
   #
   # Changing the value of bootstrapServers on a existing domain, either by
-  # reinstantiating the Helm chart with a new value or by updating the
-  # bootstrapServers label on an existing Admin StatefulSet, is illegal because
+  # reinstantiating the Helm chart with a new value or by updating the 
+  # corresponding nuodb.com/bootstrap-servers annotation or bootstrapServers label 
+  # on an existing Admin StatefulSet, is illegal because
   # the domain can only be bootstrapped once. When upgrading nuodb-helm-charts
   # from a version that does not support bootstrapServers, bootstrapServers
   # must be set to 0.
