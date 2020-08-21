@@ -59,7 +59,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	InjectTestVersion(t, options)
+	InjectTestValues(t, options)
 	installStep(t, options, helmChartReleaseName)
 
 	AddTeardown(TEARDOWN_ADMIN, func() {

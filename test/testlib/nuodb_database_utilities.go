@@ -2,11 +2,12 @@ package testlib
 
 import (
 	"fmt"
-	v12 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
+
+	v12 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -67,7 +68,7 @@ type DatabaseInstallationStep func(t *testing.T, options *helm.Options, helmChar
 func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, options *helm.Options, installationStep DatabaseInstallationStep) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	InjectTestVersion(t, options)
+	InjectTestValues(t, options)
 	opt := GetExtractedOptions(options)
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
@@ -95,7 +96,9 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 
-	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{}) })
+	AddTeardown(TEARDOWN_DATABASE, func() {
+		GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{})
+	})
 	AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)

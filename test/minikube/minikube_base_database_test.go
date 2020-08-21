@@ -4,10 +4,11 @@ package minikube
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
@@ -233,7 +234,7 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 	options.KubectlOptions = kubectlOptions
 
 	restore := func() {
-		testlib.InjectTestVersion(t, options)
+		testlib.InjectTestValues(t, options)
 		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
 		testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 
