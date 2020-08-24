@@ -118,9 +118,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_ADMIN, t, func() {
-		output, _ := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "pods", "-o", "wide")
-		t.Logf("All pods in namespace=%s:", namespaceName)
-		t.Logf(output)
+		k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
 	})
 
 	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
