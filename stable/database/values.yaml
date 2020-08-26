@@ -91,6 +91,7 @@ admin:
     clusterip: "clusterip"
     balancer: "balancer"
 
+
 database:
   ## Provide a name in place of prometheus-operator for `app:` labels
   ##
@@ -181,6 +182,8 @@ database:
   serviceSuffix:
     clusterip: ""
     balancer: ""
+
+  insights: "insights-db-plugin" 
 
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
@@ -357,6 +360,23 @@ database:
   isManualVolumeProvisioning: false
   isRestore: false
 
+
 openshift:
   # change this to true if you want to deploy using OpenShift proprietary features
   enabled: false
+
+insights:
+  # disable insights by setting insights.enabled=false or admin.insights="" or admin.insights=null
+  # enabled here as a super values file that works for both admin and database helm charts can set
+  # to false to disable for both helm charts.
+  enabled: true
+  image:
+    registry: docker.io
+    repository: nuodb/nuocd
+    tag: 1.0.0
+    pullPolicy: IfNotPresent
+  watcher:
+    registry: docker.io
+    repository: kiwigrid/k8s-sidecar
+    tag: latest
+    pullPolicy: IfNotPresent    

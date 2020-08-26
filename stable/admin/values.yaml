@@ -112,6 +112,9 @@ admin:
     policies:
       nearest: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
   
+  # Label for insights configuration.
+  insights: "insights-ap-plugin" 
+
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
 
@@ -223,3 +226,16 @@ admin:
 
   #Some clusters require longer readiness probe timeouts
   readinessTimeoutSeconds: 1
+
+insights:
+  enabled: true
+  image:
+    registry: docker.io
+    repository: nuodb/nuocd
+    tag: 1.0.0
+    pullPolicy: IfNotPresent
+  watcher:
+    registry: docker.io
+    repository: kiwigrid/k8s-sidecar
+    tag: latest
+    pullPolicy: IfNotPresent    
