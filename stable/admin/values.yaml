@@ -231,7 +231,6 @@ admin:
   podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
 
-
 insights:
   enabled: false
   image:
@@ -244,4 +243,3 @@ insights:
     repository: kiwigrid/k8s-sidecar
     tag: latest
     pullPolicy: IfNotPresent    
-
