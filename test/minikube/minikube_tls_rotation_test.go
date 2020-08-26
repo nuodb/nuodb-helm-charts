@@ -4,18 +4,18 @@ package minikube
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
-
 )
 
 func verifyAdminCertificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
@@ -57,7 +57,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
-	
+
 	randomSuffix := strings.ToLower(random.UniqueId())
 	namespaceName := fmt.Sprintf("testtlsrotation-%s", randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
@@ -116,10 +116,14 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	testlib.CreateSecret(t, namespaceName, testlib.CA_CERT_FILE, testlib.CA_CERT_SECRET, newTLSKeysLocation)
 	testlib.CreateSecretWithPassword(t, namespaceName, testlib.KEYSTORE_FILE, testlib.KEYSTORE_SECRET, testlib.SECRET_PASSWORD, newTLSKeysLocation)
 
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_ADMIN, t, func() {
+		k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
+	})
+
 	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
 	assert.NoError(t, err)
 

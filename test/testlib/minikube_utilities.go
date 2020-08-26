@@ -166,6 +166,15 @@ func RemoveEmptyLines(s string) string {
 	return s
 }
 
+func InjectTestValuesFile(t *testing.T, options *helm.Options) {
+	dat, err := ioutil.ReadFile(INJECT_VALUES_FILE)
+	if err != nil {
+		return
+	}
+	t.Logf("Using injected values file=%s with content:%s\n", INJECT_VALUES_FILE, string(dat))
+	options.ValuesFiles = append(options.ValuesFiles, INJECT_VALUES_FILE)
+}
+
 func InjectTestVersion(t *testing.T, options *helm.Options) {
 	dat, err := ioutil.ReadFile(INJECT_FILE)
 	if err != nil {
@@ -194,6 +203,11 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 	options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
 	options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
 	options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+}
+
+func InjectTestValues(t *testing.T, options *helm.Options) {
+	InjectTestValuesFile(t, options)
+	InjectTestVersion(t, options)
 }
 
 func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options, suggestedVersion string) string {

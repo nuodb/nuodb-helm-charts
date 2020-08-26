@@ -2,18 +2,19 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/random"
 )
 
 func StartYCSBWorkload(t *testing.T, namespaceName string, options *helm.Options) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	InjectTestVersion(t, options)
+	InjectTestValues(t, options)
 
 	helmChartReleaseName = fmt.Sprintf("ycsb-%s", randomSuffix)
 
