@@ -228,7 +228,7 @@ admin:
   readinessTimeoutSeconds: 1
 
 insights:
-  enabled: true
+  enabled: false
   image:
     registry: docker.io
     repository: nuodb/nuocd

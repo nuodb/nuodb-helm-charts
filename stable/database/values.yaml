@@ -369,7 +369,7 @@ insights:
   # disable insights by setting insights.enabled=false or admin.insights="" or admin.insights=null
   # enabled here as a super values file that works for both admin and database helm charts can set
   # to false to disable for both helm charts.
-  enabled: true
+  enabled: false
   image:
     registry: docker.io
     repository: nuodb/nuocd
