@@ -33,6 +33,10 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 		&corev1.PodLogOptions {Previous:true})
 
 	assert.Greater(t, stringOccurrence, 0, "Could not find core parsing in log file")
+
+	// check that the core was moved to a dated crash directory for managing the number of core dumps
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--", "find", "/var/log/nuodb/crash-*", "-maxdepth", "0", "-type", "d", "|", "wc", "-l")
+	assert.Equal(t, output, 1)
 }
 
 func TestKubernetesPrintCores(t *testing.T) {
