@@ -167,11 +167,16 @@ func RemoveEmptyLines(s string) string {
 }
 
 func InjectOpenShiftOverrides(t *testing.T, options *helm.Options) {
-	if options.SetValues["admin.readinessTimeoutSeconds"] != "" {
+	if !IsOpenShiftEnvironment(t) ||
+		options.SetValues["admin.readinessTimeoutSeconds"] != "" {
 		return
 	}
 
 	t.Log("Using OpenShift specific injects")
+
+	if options.SetValues == nil {
+		options.SetValues = make(map[string]string)
+	}
 
 	// OpenShift and CodeReadyContainers readiness probes are slower
 	options.SetValues["admin.readinessTimeoutSeconds"] = "5"
