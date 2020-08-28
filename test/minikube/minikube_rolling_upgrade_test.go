@@ -17,7 +17,7 @@ import (
 )
 
 const OLD_RELEASE = "4.0"
-const NEW_RELEASE = "4.0.6"
+const NEW_RELEASE = "4.0.7"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {
