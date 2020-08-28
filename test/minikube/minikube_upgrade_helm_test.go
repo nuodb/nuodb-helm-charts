@@ -113,20 +113,20 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 
 func TestUpgradeHelm(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "4.0.6", "2.3.1", true)
+		upgradeAdminTest(t, "4.0.7", "2.3.1", true)
 	})
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "4.0.6", "2.4.0", false)
+		upgradeAdminTest(t, "4.0.7", "2.4.0", false)
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "4.0.6", "2.3.1", true)
+		upgradeDatabaseTest(t, "4.0.7", "2.3.1", true)
 	})
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "4.0.6", "2.4.0", false)
+		upgradeDatabaseTest(t, "4.0.7", "2.4.0", false)
 	})
 }
