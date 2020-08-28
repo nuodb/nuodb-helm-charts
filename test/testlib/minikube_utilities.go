@@ -166,6 +166,17 @@ func RemoveEmptyLines(s string) string {
 	return s
 }
 
+func InjectOpenShiftOverrides(t *testing.T, options *helm.Options) {
+	if options.SetValues["admin.readinessTimeoutSeconds"] != "" {
+		return
+	}
+
+	t.Log("Using OpenShift specific injects")
+
+	// OpenShift and CodeReadyContainers readiness probes are slower
+	options.SetValues["admin.readinessTimeoutSeconds"] = "5"
+}
+
 func InjectTestValuesFile(t *testing.T, options *helm.Options) {
 	dat, err := ioutil.ReadFile(INJECT_VALUES_FILE)
 	if err != nil {
@@ -207,6 +218,7 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 
 func InjectTestValues(t *testing.T, options *helm.Options) {
 	InjectTestValuesFile(t, options)
+	InjectOpenShiftOverrides(t, options)
 	InjectTestVersion(t, options)
 }
 
