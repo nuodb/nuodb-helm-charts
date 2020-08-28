@@ -36,7 +36,7 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 
 	// check that the core was moved to a dated crash directory for managing the number of core dumps
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--", "sh", "-c", "'find /var/log/nuodb/crash-* -maxdepth 0 -type d | wc -l'")
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--", "sh", "-c", "'find $NUODB_LOGDIR/crash-* -maxdepth 0 -type d | wc -l'")
 	assert.NoError(t, err, output)
 	assert.Equal(t, output, 1)
 }
@@ -60,6 +60,7 @@ func TestKubernetesPrintCores(t *testing.T) {
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.logPersistence.enabled": 	 "true",
+			"database.sm.logPersistence.enabled": 	 "true",
 			"database.options.ping-timeout": 		 "0", // disable network fault handling
 		},
 	})
