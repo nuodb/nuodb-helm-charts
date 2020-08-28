@@ -97,6 +97,13 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, replicaCount)
 	}
 
+	admin0Pod := GetPod(t, namespaceName, adminNames[0])
+	if admin0Pod.Spec.Containers[0].Image == "docker.io/nuodb/nuodb-ce:4.0.7" {
+		// workaround for https://github.com/nuodb/nuodb-helm-charts/issues/140
+		output := helm.RenderTemplate(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName, []string{"templates/role.yaml"})
+		k8s.RunKubectl(t, kubectlOptions, "patch", "role", "nuodb-kube-inspector", "-p", output)
+	}
+
 	for i := 0; i < replicaCount; i++ {
 		adminName := adminNames[i] // array will be out of scope for defer
 
