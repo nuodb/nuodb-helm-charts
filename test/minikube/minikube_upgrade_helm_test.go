@@ -27,6 +27,11 @@ func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string,
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
+	testlib.AdminRolesRequirePatching = true
+	defer func() {
+		testlib.AdminRolesRequirePatching = false
+	}()
+
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options,1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
@@ -71,6 +76,11 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	testlib.AdminRolesRequirePatching = true
+	defer func() {
+		testlib.AdminRolesRequirePatching = false
+	}()
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options,1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
