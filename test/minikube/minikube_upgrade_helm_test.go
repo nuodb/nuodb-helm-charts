@@ -20,6 +20,7 @@ func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string)
 			"nuodb.image.registry": "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": nuodbVersion,
+			"admin.bootstrapServers": "0",
 		},
 	}
 
@@ -58,6 +59,7 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 			"nuodb.image.registry": "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": nuodbVersion,
+			"admin.bootstrapServers": "0",
 			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": "250Mi",
 			"database.te.resources.requests.cpu":    "250m",
