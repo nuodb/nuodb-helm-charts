@@ -103,7 +103,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 	if AdminRolesRequirePatching {
 		// workaround for https://github.com/nuodb/nuodb-helm-charts/issues/140
-		output := helm.RenderTemplate(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName, []string{"templates/role.yaml"})
+		output := helm.RenderTemplate(t, options, ADMIN_HELM_CHART_PATH, []string{"templates/role.yaml"})
 		k8s.RunKubectl(t, kubectlOptions, "patch", "role", "nuodb-kube-inspector", "-p", output)
 	}
 
