@@ -16,6 +16,8 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
+var AdminRolesRequirePatching = false
+
 func getFunctionCallerName() string {
 	pc, _, _, _ := runtime.Caller(3)
 	nameFull := runtime.FuncForPC(pc).Name() // main.foo
@@ -97,6 +99,12 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		AwaitNrReplicasScheduled(t, namespaceName, options.SetValues["admin.fullnameOverride"], replicaCount)
 	} else {
 		AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, replicaCount)
+	}
+
+	if AdminRolesRequirePatching {
+		// workaround for https://github.com/nuodb/nuodb-helm-charts/issues/140
+		output := helm.RenderTemplate(t, options, ADMIN_HELM_CHART_PATH, []string{"templates/role.yaml"})
+		k8s.RunKubectl(t, kubectlOptions, "patch", "role", "nuodb-kube-inspector", "-p", output)
 	}
 
 	for i := 0; i < replicaCount; i++ {

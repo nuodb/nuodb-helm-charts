@@ -20,12 +20,19 @@ func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string)
 			"nuodb.image.registry": "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": nuodbVersion,
+			"admin.bootstrapServers": "0",
 		},
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
+	testlib.AdminRolesRequirePatching = true
+	defer func() {
+		testlib.AdminRolesRequirePatching = false
+	}()
+
 	helmChartReleaseName, namespaceName := testlib.StartAdminFromHelmRepository(t, options, fromHelmVersion,1, "")
+
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
@@ -52,6 +59,7 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 			"nuodb.image.registry": "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": nuodbVersion,
+			"admin.bootstrapServers": "0",
 			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": "250Mi",
 			"database.te.resources.requests.cpu":    "250m",
@@ -61,7 +69,13 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
+	testlib.AdminRolesRequirePatching = true
+	defer func() {
+		testlib.AdminRolesRequirePatching = false
+	}()
+
 	helmChartReleaseName, namespaceName := testlib.StartAdminFromHelmRepository(t, options, fromHelmVersion,1, "")
+
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
@@ -94,12 +108,12 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 
 func TestUpgradeHelm(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "4.0.6", "2.3.1")
+		upgradeAdminTest(t, "4.0.7", "2.3.1")
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "4.0.6", "2.3.1")
+		upgradeDatabaseTest(t, "4.0.7", "2.3.1")
 	})
 }
