@@ -21,11 +21,17 @@ func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string,
 			"nuodb.image.registry": "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": nuodbVersion,
+			"admin.bootstrapServers": "0",
 		},
 		Version: fromHelmVersion,
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	testlib.AdminRolesRequirePatching = true
+	defer func() {
+		testlib.AdminRolesRequirePatching = false
+	}()
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options,1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
@@ -62,6 +68,7 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 			"nuodb.image.registry": "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
 			"nuodb.image.tag": nuodbVersion,
+			"admin.bootstrapServers": "0",
 			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": "250Mi",
 			"database.te.resources.requests.cpu":    "250m",
@@ -71,6 +78,11 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	testlib.AdminRolesRequirePatching = true
+	defer func() {
+		testlib.AdminRolesRequirePatching = false
+	}()
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options,1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
@@ -113,20 +125,20 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 
 func TestUpgradeHelm(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "4.0.6", "2.3.1", true)
+		upgradeAdminTest(t, "4.0.7", "2.3.1", true)
 	})
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "4.0.6", "2.4.0", false)
+		upgradeAdminTest(t, "4.0.7", "2.4.0", false)
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "4.0.6", "2.3.1", true)
+		upgradeDatabaseTest(t, "4.0.7", "2.3.1", true)
 	})
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "4.0.6", "2.4.0", false)
+		upgradeDatabaseTest(t, "4.0.7", "2.4.0", false)
 	})
 }
