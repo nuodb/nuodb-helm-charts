@@ -1,8 +1,24 @@
 # Changelog
 
-## [2.4.0](https://github.com/nuodb/nuodb-helm-charts/tree/2.4.0) (2020-07-15)
+## [2.4.1](https://github.com/nuodb/nuodb-helm-charts/tree/2.4.1) (2020-08-30)
 
-[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.3.1...2.4.0)
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.4.0...2.4.1)
+
+**Implemented enhancements:**
+
+- Added DaemonSets to list of NuoDB Kubernetes Aware Admin permissions [\#141](https://github.com/nuodb/nuodb-helm-charts/pull/141) ([vegichan](https://github.com/vegichan))
+
+**Fixed bugs:**
+
+- Forbidden!Configured service account doesn't have access. Service account may have been revoked. daemonsets.apps is forbidden [\#140](https://github.com/nuodb/nuodb-helm-charts/issues/140)
+
+**Merged pull requests:**
+
+- Bump NuoDB version to 4.0.7 \[2.4-dev branch\] [\#145](https://github.com/nuodb/nuodb-helm-charts/pull/145) ([vegichan](https://github.com/vegichan))
+
+## [v2.4.0](https://github.com/nuodb/nuodb-helm-charts/tree/v2.4.0) (2020-07-15)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.3.1...v2.4.0)
 
 **Implemented enhancements:**
 
