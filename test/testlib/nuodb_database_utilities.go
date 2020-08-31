@@ -14,6 +14,14 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
+const UPGRADE_STRATEGY = `
+spec:
+  strategy:
+    $retainKeys:
+    - type
+    type: Recreate
+`
+
 type ExtractedOptions struct {
 	NrTePods          int
 	NrSmHotCopyPods   int
@@ -128,4 +136,9 @@ func StartDatabase(t *testing.T, namespace string, adminPod string, options *hel
 			helm.Install(t, options, "nuodb/database", helmChartReleaseName)
 		}
 	})
+}
+
+func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, deploymentName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	k8s.RunKubectl(t, kubectlOptions, "patch", "deployment", deploymentName, "-p", UPGRADE_STRATEGY)
 }
