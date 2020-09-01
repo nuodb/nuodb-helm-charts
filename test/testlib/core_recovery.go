@@ -42,7 +42,7 @@ func RecoverCoresFromEngine(t *testing.T, namespaceName string, engineType strin
 	targetDirPath := filepath.Join(pwd, RESULT_DIR, namespaceName, "cores", engineType)
 	_ = os.MkdirAll(targetDirPath, 0700)
 
-  debugPodName := fmt.Sprintf("%s-debug-pod", engineType)
+	debugPodName := fmt.Sprintf("%s-debug-pod", engineType)
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(DEBUG_POD, debugPodName, pvcName))
