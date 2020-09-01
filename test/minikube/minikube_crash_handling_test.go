@@ -9,6 +9,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"github.com/stretchr/testify/assert"
+	"regexp"
 
 	corev1 "k8s.io/api/core/v1"
 	"testing"
@@ -36,9 +37,9 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 
 	// check that the core was moved to a dated crash directory for managing the number of core dumps
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--", "sh", "-c", "'find $NUODB_LOGDIR/crash-* -maxdepth 0 -type d | wc -l'")
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--", "find", "/var/log/nuodb/", "-type", "d")
 	assert.NoError(t, err, output)
-	assert.Equal(t, output, 1)
+	assert.Regexp(t, regexp.MustCompile("crash-[0-9]{8}T[0-9]{6}") ,output)
 }
 
 func TestKubernetesPrintCores(t *testing.T) {
@@ -70,13 +71,16 @@ func TestKubernetesPrintCores(t *testing.T) {
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 		verifyKillAndInfoInLog(t, namespaceName, admin0, tePodName)
 
-		testlib.RecoverCoresFromTEs(t, namespaceName, "demo")
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
 	})
 
 	t.Run("killSMWithCore", func(t *testing.T) {
 		smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 		smPodName := testlib.GetPodName(t, namespaceName, smPodTemplate)
 		verifyKillAndInfoInLog(t, namespaceName, admin0, smPodName)
+		
+		smLogPvc := fmt.Sprintf("log-volume-%s", smPodName)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "sm", smLogPvc)
 	})
 }
 

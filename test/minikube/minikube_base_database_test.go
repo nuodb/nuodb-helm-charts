@@ -507,7 +507,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() {
 		if t.Failed() {
 			testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-			testlib.RecoverCoresFromTEs(t, namespaceName, "demo")
+			testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
 		}
 	})
 
