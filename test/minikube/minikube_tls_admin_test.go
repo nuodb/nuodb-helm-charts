@@ -12,7 +12,6 @@ import (
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
@@ -35,10 +34,6 @@ func verifyKeystore(t *testing.T, namespace string, podName string, keystore str
 }
 
 func TestKubernetesTLS(t *testing.T) {
-	if testlib.IsOpenShiftEnvironment(t) {
-		t.Skip("TLS subPath bind does not work as expected")
-	}
-
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
