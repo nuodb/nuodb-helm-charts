@@ -24,7 +24,7 @@ func TestDatabaseSecretsDefault(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/secret.yaml"})
 
-	for _, obj := range SplitAndRenderSecret(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderSecret(t, output, 1) {
 		assert.Contains(t, obj.StringData, "database-name")
 		assert.Contains(t, obj.StringData, "database-password")
 		assert.Contains(t, obj.StringData, "database-username")
@@ -45,7 +45,7 @@ func TestDatabaseConfigMaps(t *testing.T) {
 
 	configs := make(map[string]bool)
 
-	for _, obj := range SplitAndRenderConfigMap(t, output, 3) {
+	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 3) {
 		for k := range obj.Data {
 			configs[k] = true
 		}
@@ -82,7 +82,7 @@ func TestDatabaseDaemonSetEnabled(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-	SplitAndRenderDaemonSet(t, output, 2)
+	testlib.SplitAndRenderDaemonSet(t, output, 2)
 }
 
 func TestDatabaseClusterServiceRenders(t *testing.T) {
@@ -96,7 +96,7 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-clusterip.yaml"})
 
-	for _, obj := range SplitAndRenderService(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "demo-clusterip", obj.Name)
 		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
@@ -115,7 +115,7 @@ func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-headless.yaml"})
 
-	for _, obj := range SplitAndRenderService(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "demo", obj.Name)
 		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
@@ -138,7 +138,7 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
 
-	for _, obj := range SplitAndRenderService(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "demo-balancer", obj.Name)
 		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
@@ -173,7 +173,7 @@ func TestDatabaseStatefulSet(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 		assert.Equal(t, "sm", obj.Spec.Selector.MatchLabels["component"])
 		assert.Equal(t, "sm", obj.Spec.Template.ObjectMeta.Labels["component"])
 	}
@@ -190,7 +190,7 @@ func TestDatabaseStatefulSetVolumes(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 		if strings.Contains(obj.Name, "-hotcopy") {
 			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
 			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "backup-volume"))
@@ -214,7 +214,7 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-	for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 		assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
 		assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
 	}
@@ -236,19 +236,19 @@ func TestDatabaseOtherOptions(t *testing.T) {
 	}
 
 	basicArgChecks := func(args []string) {
-		assert.True(t, ArgContains(args, "--keystore"))
-		assert.True(t, ArgContains(args, "/etc/nuodb/keys/nuoadmin.p12"))
+		assert.True(t, testlib.ArgContains(args, "--keystore"))
+		assert.True(t, testlib.ArgContains(args, "/etc/nuodb/keys/nuoadmin.p12"))
 	}
 
 	basicEnvChecks := func(args []v1.EnvVar) {
-		assert.True(t, EnvContains(args, "NUODOCKER_KEYSTORE_PASSWORD", "changeIt"))
+		assert.True(t, testlib.EnvContains(args, "NUODOCKER_KEYSTORE_PASSWORD", "changeIt"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
@@ -259,7 +259,7 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
@@ -274,7 +274,7 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
@@ -297,15 +297,15 @@ func TestDatabaseCustomEnv(t *testing.T) {
 				FieldPath: "status.podIP",
 			},
 		}
-		assert.True(t, EnvContainsValueFrom(args, "NUODB_ALT_ADDRESS", &expectedAltAddress))
-		assert.True(t, EnvContains(args, "CUSTOM_ENV_VAR", "CUSTOM_ENV_VAR_VALUE"))
+		assert.True(t, testlib.EnvContainsValueFrom(args, "NUODB_ALT_ADDRESS", &expectedAltAddress))
+		assert.True(t, testlib.EnvContains(args, "CUSTOM_ENV_VAR", "CUSTOM_ENV_VAR_VALUE"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
 		}
@@ -315,7 +315,7 @@ func TestDatabaseCustomEnv(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
 		}
@@ -329,7 +329,7 @@ func TestDatabaseCustomEnv(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
 		}
@@ -349,14 +349,14 @@ func TestDatabaseVPNRenders(t *testing.T) {
 
 	basicChecks := func(args []v1.Container) {
 		assert.Contains(t, args[0].SecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
-		assert.True(t, EnvFromSourceContains(args[0].EnvFrom, "test-config"))
+		assert.True(t, testlib.EnvFromSourceContains(args[0].EnvFrom, "test-config"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec.Containers)
 		}
@@ -366,7 +366,7 @@ func TestDatabaseVPNRenders(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec.Containers)
 		}
@@ -380,7 +380,7 @@ func TestDatabaseVPNRenders(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec.Containers)
 		}
@@ -404,16 +404,16 @@ func TestDatabaseLabeling(t *testing.T) {
 	}
 
 	basicChecks := func(args []string) {
-		assert.True(t, ArgContains(args, "cloud minikube"))
-		assert.True(t, ArgContains(args, "region local"))
-		assert.True(t, ArgContains(args, "zone local-b"))
+		assert.True(t, testlib.ArgContains(args, "cloud minikube"))
+		assert.True(t, testlib.ArgContains(args, "region local"))
+		assert.True(t, testlib.ArgContains(args, "zone local-b"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 		}
@@ -423,12 +423,12 @@ func TestDatabaseLabeling(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 			if testlib.IsStatefulSetHotCopyEnabled(&obj) {
-				assert.True(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
+				assert.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
 			}
 		}
 	})
@@ -441,12 +441,12 @@ func TestDatabaseLabeling(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 			if testlib.IsDaemonSetHotCopyEnabled(&obj) {
-				assert.True(t, ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
+				assert.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
 			}
 		}
 	})
@@ -463,15 +463,15 @@ func TestReadinessProbe(t *testing.T) {
 	basicChecks := func(spec v1.PodSpec) {
 		container := spec.Containers[0]
 		assert.True(t, container.ReadinessProbe != nil)
-		assert.True(t, MountContains(container.VolumeMounts, "readinessprobe"))
-		assert.True(t, VolumesContains(spec.Volumes, "readinessprobe"))
+		assert.True(t, testlib.MountContains(container.VolumeMounts, "readinessprobe"))
+		assert.True(t, testlib.VolumesContains(spec.Volumes, "readinessprobe"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec)
 		}
@@ -481,7 +481,7 @@ func TestReadinessProbe(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec)
 		}
@@ -495,7 +495,7 @@ func TestReadinessProbe(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec)
 		}
@@ -538,7 +538,7 @@ func TestLoadBalancerConfigurationRenders(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			assertLoadBalancerAnnotations(obj.Annotations)
 		}
 	})
@@ -565,7 +565,7 @@ func TestDefaultLoadBalancerConfigurationRendersOnlyOnEntryPointCluster(t *testi
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			assertLoadBalancerAnnotations(obj.Annotations)
 		}
 	})
@@ -588,7 +588,7 @@ func TestDefaultLoadBalancerConfigurationNotRenders(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			assertLoadBalancerAnnotations(obj.Annotations)
 		}
 	})

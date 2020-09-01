@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
@@ -55,7 +56,7 @@ func TestYcsbRCRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/replicationcontroller.yaml"})
 
-	for _, obj := range SplitAndRenderReplicationController(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderReplicationController(t, output, 1) {
 
 		assert.Equal(t, "ycsb-load", obj.Name)
 		assert.Zero(t, *obj.Spec.Replicas)
@@ -75,7 +76,7 @@ func TestYcsbRCReplicas(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/replicationcontroller.yaml"})
 
-	for _, obj := range SplitAndRenderReplicationController(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderReplicationController(t, output, 1) {
 
 		assert.Equal(t, "ycsb-load", obj.Name)
 		assert.EqualValues(t, 1, *obj.Spec.Replicas)
