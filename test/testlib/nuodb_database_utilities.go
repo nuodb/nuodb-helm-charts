@@ -14,6 +14,14 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
+const UPGRADE_STRATEGY = `
+spec:
+  strategy:
+    $retainKeys:
+    - type
+    type: Recreate
+`
+
 type ExtractedOptions struct {
 	NrTePods          int
 	NrSmHotCopyPods   int
@@ -71,6 +79,16 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 	InjectTestValues(t, options)
 	opt := GetExtractedOptions(options)
 
+	if IsOpenShiftEnvironment(t) {
+		THPReleaseName := fmt.Sprintf("thp-%s", randomSuffix)
+		AddTeardown(TEARDOWN_DATABASE, func() {
+			helm.Delete(t, options, THPReleaseName, true)
+		})
+		helm.Install(t, options, THP_HELM_CHART_PATH, THPReleaseName)
+
+		AwaitNrReplicasReady(t , namespaceName, THPReleaseName, 1)
+	}
+
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
 	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
@@ -118,4 +136,9 @@ func StartDatabase(t *testing.T, namespace string, adminPod string, options *hel
 			helm.Install(t, options, "nuodb/database", helmChartReleaseName)
 		}
 	})
+}
+
+func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, deploymentName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	k8s.RunKubectl(t, kubectlOptions, "patch", "deployment", deploymentName, "-p", UPGRADE_STRATEGY)
 }
