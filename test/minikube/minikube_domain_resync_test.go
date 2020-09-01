@@ -1,5 +1,7 @@
 // +build enterprise
 
+// tests in this file require NuoDB 4.0.7 or newer
+
 package minikube
 
 import (

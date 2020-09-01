@@ -17,7 +17,6 @@ import (
 )
 
 const OLD_RELEASE = "4.0"
-const NEW_RELEASE = "4.0.7"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {
@@ -56,7 +55,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
@@ -109,7 +108,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
 
-	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
 	// get the log before the restart
 	testlib.GetAppLog(t, namespaceName, admin0, "", &v12.PodLogOptions{})
@@ -138,7 +137,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	})
 
 	t.Run("upgradeDatabaseHelm", func(t *testing.T) {
-		expectedNewDatabaseVersion := testlib.GetUpgradedReleaseVersion(t, &databaseOptions, NEW_RELEASE)
+		expectedNewDatabaseVersion := testlib.GetUpgradedReleaseVersion(t, &databaseOptions)
 
 		helm.Upgrade(t, &databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
 
@@ -183,7 +182,7 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 

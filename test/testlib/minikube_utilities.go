@@ -204,7 +204,6 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 		options.SetValues["nuodb.image.tag"] != "" {
 
 		return
-
 	}
 
 	t.Log("Using injected values:\n", string(dat))
@@ -227,23 +226,13 @@ func InjectTestValues(t *testing.T, options *helm.Options) {
 	InjectTestVersion(t, options)
 }
 
-func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options, suggestedVersion string) string {
-	dat, err := ioutil.ReadFile(INJECT_FILE)
-	if err != nil {
-		options.SetValues["nuodb.image.tag"] = suggestedVersion
+func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options) string {
+	// reset all image tags
+	delete(options.SetValues, "nuodb.image.registry")
+	delete(options.SetValues, "nuodb.image.repository")
+	delete(options.SetValues, "nuodb.image.tag")
 
-	} else {
-		err, image := UnmarshalImageYAML(string(dat))
-		assert.NoError(t, err)
-
-		if options.SetValues == nil {
-			options.SetValues = make(map[string]string)
-		}
-
-		options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
-		options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
-		options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
-	}
+	InferVersionFromTemplate(t, options)
 
 	return fmt.Sprintf("%s/%s:%s", options.SetValues["nuodb.image.registry"],
 		options.SetValues["nuodb.image.repository"],
