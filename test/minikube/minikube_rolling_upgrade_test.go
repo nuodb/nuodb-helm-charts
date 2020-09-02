@@ -16,7 +16,7 @@ import (
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 )
 
-const OLD_RELEASE = "4.0"
+const OLD_RELEASE = "4.0.4"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {

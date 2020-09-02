@@ -710,7 +710,7 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 	}
 
 	for _, event := range events.Items {
-		_, err := fmt.Fprintln(multiWriter, event)
+		_, err := fmt.Fprintln(multiWriter, event.String())
 		assert.NoError(t, err)
 	}
 
