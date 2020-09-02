@@ -1,4 +1,4 @@
-// +build long
+// +build upgrade
 
 package minikube
 

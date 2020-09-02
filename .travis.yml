@@ -15,6 +15,7 @@ env:
     - TEST_SUITE=minikube-short REQUIRES_MINIKUBE=true
     - TEST_SUITE=minikube-long REQUIRES_MINIKUBE=true
     - TEST_SUITE=minikube-diagnostics REQUIRES_MINIKUBE=true
+    - TEST_SUITE=minikube-upgrade REQUIRES_MINIKUBE=true
 
     # does not work due to KVM/Virtualbox limitations of Travis
     # Minishift can not run with --vm-driver=none https://github.com/minishift/minishift/issues/2757
