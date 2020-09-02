@@ -51,10 +51,6 @@ func startDomainWithTLSCertificates(t *testing.T, options *helm.Options, namespa
 }
 
 func TestKubernetesTLSRotation(t *testing.T) {
-	if testlib.IsOpenShiftEnvironment(t) {
-		t.Skip("TLS subPath bind does not work as expected")
-	}
-
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 

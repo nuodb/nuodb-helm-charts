@@ -14,11 +14,10 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-
 )
 
 const OLD_RELEASE = "4.0"
-const NEW_RELEASE = "4.0.6"
+const NEW_RELEASE = "4.0.7"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {
@@ -92,7 +91,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 		SetValues: map[string]string{
 			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"nuodb.image.registry":                  "docker.io",
 			"nuodb.image.repository":                "nuodb/nuodb-ce",
@@ -122,6 +121,9 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+
 	t.Run("expectAllEnginesReconnect", func(t *testing.T) {
 		expectedNumberReconnects := 2
 
@@ -139,6 +141,9 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 		expectedNewDatabaseVersion := testlib.GetUpgradedReleaseVersion(t, &databaseOptions, NEW_RELEASE)
 
 		helm.Upgrade(t, &databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
+
+		// make sure that we only have 1 TE and not 2
+		testlib.SetDeploymentUpgradeStrategyToRecreate(t, namespaceName, fmt.Sprintf("te-%s-nuodb-cluster0-demo", databaseHelmChartReleaseName))
 
 		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "sm-database", expectedNewDatabaseVersion, 300*time.Second)
 		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "te-database", expectedNewDatabaseVersion, 300*time.Second)
