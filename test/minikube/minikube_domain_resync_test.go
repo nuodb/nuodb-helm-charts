@@ -1,4 +1,6 @@
-// +build enterprise
+// +build long
+
+// tests in this file require NuoDB 4.0.7 or newer
 
 package minikube
 
@@ -8,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	v12 "k8s.io/api/core/v1"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -200,6 +204,9 @@ func TestReprovisionAdmin0(t *testing.T) {
 	admin0 := adminStatefulSet + "-0"
 	admin1 := adminStatefulSet + "-1"
 
+	// get OLD logs
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+
 	// check initial membership on admin-0
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
@@ -261,6 +268,9 @@ func TestAdminScaleDown(t *testing.T) {
 	admin0 := adminStatefulSet + "-0"
 	admin1 := adminStatefulSet + "-1"
 
+	// get OLD logs
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v12.PodLogOptions{Follow: true})
+
 	// scale down Admin StatefulSet
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.RunKubectl(t, options, "scale", "statefulset", adminStatefulSet, "--replicas=1")
@@ -295,6 +305,10 @@ func TestAdminScaleDown(t *testing.T) {
 }
 
 func TestDomainResync(t *testing.T) {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
+		t.Skip("Cannot test resync without the Enterprise Edition")
+	}
+
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -451,38 +465,4 @@ func TestLoadBalancerConfigurationResync(t *testing.T) {
 	options.SetValues["admin.lbConfig.default"] = "random(first(label(node node1) any))"
 	options.SetValues["admin.lbConfig.policies.manual"] = "random(any)"
 	verifyLoadBalancer(t, namespaceName, admin0, options.SetValues)
-}
-
-func TestNuoDBKubeDiagnostics(t *testing.T) {
-	testlib.AwaitTillerUp(t)
-	defer testlib.VerifyTeardown(t)
-	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
-
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-
-	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-
-	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-		},
-	})
-
-	config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
-
-	assert.True(t, func() bool { _, ok := config.Pods[admin0]; return ok }())
-
-	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
-	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-	assert.True(t, func() bool { _, ok := config.Pods[tePodName]; return ok }())
-
-	smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
-	smPodName := testlib.GetPodName(t, namespaceName, smPodTemplate)
-	assert.True(t, func() bool { _, ok := config.Pods[smPodName]; return ok }())
-
 }

@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"regexp"
@@ -35,7 +36,7 @@ func StorageClassTemplateE(t *testing.T, options *helm.Options, expectedProvisio
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/storageclass.yaml"})
 
-	for _, obj := range SplitAndRenderStorageClass(t, output, 4) {
+	for _, obj := range testlib.SplitAndRenderStorageClass(t, output, 4) {
 		if obj.Name != "local-storage" {
 			assert.True(t, obj.Provisioner == expectedProvisioner)
 			b, err := strconv.ParseBool(options.SetValues["storageClass.allowVolumeExpansion"])
@@ -114,7 +115,7 @@ func TestStorageClassTemplateLocal(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/storageclass.yaml"})
 
-	for _, obj := range SplitAndRenderStorageClass(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStorageClass(t, output, 1) {
 		assert.EqualValues(t, "kubernetes.io/no-provisioner", obj.Provisioner)
 	}
 }
