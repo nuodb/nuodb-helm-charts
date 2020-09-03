@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	v12 "k8s.io/api/core/v1"
 	"os"
 	"strconv"
 	"strings"
@@ -203,6 +204,9 @@ func TestReprovisionAdmin0(t *testing.T) {
 	admin0 := adminStatefulSet + "-0"
 	admin1 := adminStatefulSet + "-1"
 
+	// get OLD logs
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+
 	// check initial membership on admin-0
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
@@ -263,6 +267,9 @@ func TestAdminScaleDown(t *testing.T) {
 	adminStatefulSet := helmChartReleaseName + "-nuodb-cluster0"
 	admin0 := adminStatefulSet + "-0"
 	admin1 := adminStatefulSet + "-1"
+
+	// get OLD logs
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v12.PodLogOptions{Follow: true})
 
 	// scale down Admin StatefulSet
 	options := k8s.NewKubectlOptions("", "", namespaceName)

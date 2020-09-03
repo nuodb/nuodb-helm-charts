@@ -33,7 +33,6 @@ env:
     - MINIKUBE_HOME=$HOME
     - CHANGE_MINIKUBE_NONE_USER=true
     - KUBECONFIG=$HOME/.kube/config
-    - NUODB_PRINT_TO_STDOUT=true
 
 before_install:
   - |
@@ -52,3 +51,6 @@ before_install:
 script:
   - chmod +x scripts/ci/determine_and_run_tests.sh
   - scripts/ci/determine_and_run_tests.sh
+
+addons:
+  artifacts: true

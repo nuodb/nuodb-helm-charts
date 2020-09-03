@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -522,11 +521,6 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 		assert.NoError(t, err, "Can not find diagnose archive")
 
 		k8s.RunKubectl(t, options, "cp", podName+":/tmp/"+diagnoseFile, filepath.Join(targetDirPath, diagnoseFile))
-		if shouldPrintToStdout() {
-			// The file can be recovered via xxd -r -p a.hex a.bin
-			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(targetDirPath, diagnoseFile)).CombinedOutput()
-			t.Logf("%s:\n%s", diagnoseFile, string(output))
-		}
 	}
 }
 
@@ -670,11 +664,6 @@ func PingService(t *testing.T, namespace string, serviceName string, podName str
 	assert.True(t, strings.Contains(output, "1 received"))
 }
 
-func shouldPrintToStdout() bool {
-	_, exists := os.LookupEnv("NUODB_PRINT_TO_STDOUT")
-	return exists
-}
-
 func shouldGetDiagnose() bool {
 	_, exists := os.LookupEnv("NUODB_GET_DIAGNOSE")
 	return exists
@@ -697,23 +686,17 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 
 	var opts metav1.ListOptions
 
-	events, err := client.CoreV1().Events(namespace).List(context.TODO(), opts)
+	events, err := client.CoreV1().Events(namespace).Watch(context.TODO(), opts)
 	assert.NoError(t, err)
 
-	// it is hard to recover this in Travis from the filesystem, without access to a AWS
-	// print it to stdout instead
-	var multiWriter io.Writer
-	if t.Failed() && shouldPrintToStdout() {
-		multiWriter = io.MultiWriter(f, os.Stdout)
-	} else {
-		multiWriter = io.MultiWriter(f)
-	}
+	writer := io.Writer(f)
 
-	for _, event := range events.Items {
-		_, err := fmt.Fprintln(multiWriter, event.String())
+	for event := range events.ResultChan() {
+		_, err = fmt.Fprintln(writer, event)
 		assert.NoError(t, err)
 	}
 
+	t.Log("Fully consumed k8s event log")
 }
 
 func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string, podLogOptions *corev1.PodLogOptions) {
@@ -726,17 +709,14 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 	assert.NoError(t, err)
 	defer f.Close()
 
-	// it is hard to recover this in Travis from the filesystem, without access to a AWS
-	// print it to stdout instead
-	var multiWriter io.Writer
-	if t.Failed() && shouldPrintToStdout() {
-		multiWriter = io.MultiWriter(f, os.Stdout)
-	} else {
-		multiWriter = io.MultiWriter(f)
-	}
+	writer := io.Writer(f)
 
-	_, err = io.Copy(multiWriter, getAppLogStream(t, namespace, podName, podLogOptions))
+	reader := getAppLogStream(t, namespace, podName, podLogOptions)
+	assert.NotNil(t, reader)
+	_, err = io.Copy(writer, reader)
 	assert.NoError(t, err)
+
+	t.Logf("Finished reading log file %s", filePath)
 }
 
 func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
@@ -756,7 +736,7 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	assert.NoError(t, err)
 
 	dirPath := filepath.Join(pwd, RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, "nuoadmin_event.log")
+	filePath := filepath.Join(dirPath, podName+"_nuoadmin_event.log")
 
 	_ = os.MkdirAll(dirPath, 0700)
 
@@ -766,18 +746,12 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	k8s.RunKubectl(t, options,
+	// ignore errors
+	_ = k8s.RunKubectlE(t, options,
 		"cp",
 		fmt.Sprintf("%s/%s:%s", namespace, podName, "/var/log/nuodb/nuoadmin_event.log"),
 		filePath,
 	)
-
-	if t.Failed() && shouldPrintToStdout() {
-		k8s.RunKubectl(t, options,
-			"exec", podName, "--",
-			"cat", "/var/log/nuodb/nuoadmin_event.log",
-		)
-	}
 }
 
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {

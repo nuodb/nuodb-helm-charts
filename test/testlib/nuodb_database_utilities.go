@@ -115,12 +115,14 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 
 	AddTeardown(TEARDOWN_DATABASE, func() {
-		GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{})
+		go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{Follow: true})
 	})
 	AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
-	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{}) })
+	AddTeardown(TEARDOWN_DATABASE, func() {
+		go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{Follow: true})
+	})
 	AwaitPodUp(t, namespaceName, smPodName0, 240*time.Second)
 
 	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)

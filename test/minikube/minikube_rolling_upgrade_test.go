@@ -45,8 +45,10 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
-
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
@@ -81,8 +83,10 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 	adminHelmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
-
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
@@ -109,9 +113,6 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
 
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
-
-	// get the log before the restart
-	testlib.GetAppLog(t, namespaceName, admin0, "", &v12.PodLogOptions{})
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
 
@@ -154,6 +155,8 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 }
 
 func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
+	t.Skip("4.0.7 Admin is not rolling upgradeable from pre-4.0.7")
+
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -174,6 +177,10 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", helmChartReleaseName)
 	admin2 := fmt.Sprintf("%s-nuodb-cluster0-2", helmChartReleaseName)
+
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin2, "-previous", &v12.PodLogOptions{Follow: true})
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 

@@ -7,6 +7,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	v12 "k8s.io/api/core/v1"
 	"testing"
 	"time"
 )
@@ -44,6 +45,9 @@ func upgradeAdminTest(t *testing.T,fromHelmVersion string, updateOptions *Update
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
@@ -99,6 +103,9 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
