@@ -8,7 +8,6 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -166,6 +165,22 @@ func RemoveEmptyLines(s string) string {
 	return s
 }
 
+func InjectOpenShiftOverrides(t *testing.T, options *helm.Options) {
+	if !IsOpenShiftEnvironment(t) ||
+		options.SetValues["admin.readinessTimeoutSeconds"] != "" {
+		return
+	}
+
+	t.Log("Using OpenShift specific injects")
+
+	if options.SetValues == nil {
+		options.SetValues = make(map[string]string)
+	}
+
+	// OpenShift and CodeReadyContainers readiness probes are slower
+	options.SetValues["admin.readinessTimeoutSeconds"] = "5"
+}
+
 func InjectTestValuesFile(t *testing.T, options *helm.Options) {
 	dat, err := ioutil.ReadFile(INJECT_VALUES_FILE)
 	if err != nil {
@@ -188,7 +203,6 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 		options.SetValues["nuodb.image.tag"] != "" {
 
 		return
-
 	}
 
 	t.Log("Using injected values:\n", string(dat))
@@ -207,26 +221,17 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 
 func InjectTestValues(t *testing.T, options *helm.Options) {
 	InjectTestValuesFile(t, options)
+	InjectOpenShiftOverrides(t, options)
 	InjectTestVersion(t, options)
 }
 
-func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options, suggestedVersion string) string {
-	dat, err := ioutil.ReadFile(INJECT_FILE)
-	if err != nil {
-		options.SetValues["nuodb.image.tag"] = suggestedVersion
+func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options) string {
+	// reset all image tags
+	delete(options.SetValues, "nuodb.image.registry")
+	delete(options.SetValues, "nuodb.image.repository")
+	delete(options.SetValues, "nuodb.image.tag")
 
-	} else {
-		err, image := UnmarshalImageYAML(string(dat))
-		assert.NoError(t, err)
-
-		if options.SetValues == nil {
-			options.SetValues = make(map[string]string)
-		}
-
-		options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
-		options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
-		options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
-	}
+	InferVersionFromTemplate(t, options)
 
 	return fmt.Sprintf("%s/%s:%s", options.SetValues["nuodb.image.registry"],
 		options.SetValues["nuodb.image.repository"],
@@ -516,11 +521,6 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 		assert.NoError(t, err, "Can not find diagnose archive")
 
 		k8s.RunKubectl(t, options, "cp", podName+":/tmp/"+diagnoseFile, filepath.Join(targetDirPath, diagnoseFile))
-		if shouldPrintToStdout() {
-			// The file can be recovered via xxd -r -p a.hex a.bin
-			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(targetDirPath, diagnoseFile)).CombinedOutput()
-			t.Logf("%s:\n%s", diagnoseFile, string(output))
-		}
 	}
 }
 
@@ -664,11 +664,6 @@ func PingService(t *testing.T, namespace string, serviceName string, podName str
 	assert.True(t, strings.Contains(output, "1 received"))
 }
 
-func shouldPrintToStdout() bool {
-	_, exists := os.LookupEnv("NUODB_PRINT_TO_STDOUT")
-	return exists
-}
-
 func shouldGetDiagnose() bool {
 	_, exists := os.LookupEnv("NUODB_GET_DIAGNOSE")
 	return exists
@@ -691,23 +686,17 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 
 	var opts metav1.ListOptions
 
-	events, err := client.CoreV1().Events(namespace).List(context.TODO(), opts)
+	events, err := client.CoreV1().Events(namespace).Watch(context.TODO(), opts)
 	assert.NoError(t, err)
 
-	// it is hard to recover this in Travis from the filesystem, without access to a AWS
-	// print it to stdout instead
-	var multiWriter io.Writer
-	if t.Failed() && shouldPrintToStdout() {
-		multiWriter = io.MultiWriter(f, os.Stdout)
-	} else {
-		multiWriter = io.MultiWriter(f)
-	}
+	writer := io.Writer(f)
 
-	for _, event := range events.Items {
-		_, err := fmt.Fprintln(multiWriter, event)
+	for event := range events.ResultChan() {
+		_, err = fmt.Fprintln(writer, event)
 		assert.NoError(t, err)
 	}
 
+	t.Log("Fully consumed k8s event log")
 }
 
 func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string, podLogOptions *corev1.PodLogOptions) {
@@ -720,17 +709,14 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 	assert.NoError(t, err)
 	defer f.Close()
 
-	// it is hard to recover this in Travis from the filesystem, without access to a AWS
-	// print it to stdout instead
-	var multiWriter io.Writer
-	if t.Failed() && shouldPrintToStdout() {
-		multiWriter = io.MultiWriter(f, os.Stdout)
-	} else {
-		multiWriter = io.MultiWriter(f)
-	}
+	writer := io.Writer(f)
 
-	_, err = io.Copy(multiWriter, getAppLogStream(t, namespace, podName, podLogOptions))
+	reader := getAppLogStream(t, namespace, podName, podLogOptions)
+	assert.NotNil(t, reader)
+	_, err = io.Copy(writer, reader)
 	assert.NoError(t, err)
+
+	t.Logf("Finished reading log file %s", filePath)
 }
 
 func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
@@ -750,7 +736,7 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	assert.NoError(t, err)
 
 	dirPath := filepath.Join(pwd, RESULT_DIR, namespace)
-	filePath := filepath.Join(dirPath, "nuoadmin_event.log")
+	filePath := filepath.Join(dirPath, podName+"_nuoadmin_event.log")
 
 	_ = os.MkdirAll(dirPath, 0700)
 
@@ -760,18 +746,12 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	k8s.RunKubectl(t, options,
+	// ignore errors
+	_ = k8s.RunKubectlE(t, options,
 		"cp",
 		fmt.Sprintf("%s/%s:%s", namespace, podName, "/var/log/nuodb/nuoadmin_event.log"),
 		filePath,
 	)
-
-	if t.Failed() && shouldPrintToStdout() {
-		k8s.RunKubectl(t, options,
-			"exec", podName, "--",
-			"cat", "/var/log/nuodb/nuoadmin_event.log",
-		)
-	}
 }
 
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {

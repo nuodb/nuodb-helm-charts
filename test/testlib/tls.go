@@ -5,7 +5,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -16,7 +15,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/otiai10/copy"
-
 )
 
 const TLS_GENERATOR_POD_TEMPLATE = `---
@@ -96,21 +94,9 @@ func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName s
 	k8s.RunKubectl(t, options, "cp", podName+":"+CERTIFICATES_GENERATION_PATH, realTargetDirectory)
 	t.Logf("Certificate files location: %s", realTargetDirectory)
 	AddTeardown(TEARDOWN_SECRETS, func() { BackupCerificateFilesOnTestFailure(t, namespaceName, realTargetDirectory) })
-	AddTeardown(TEARDOWN_SECRETS, func() { PrintCertificateFilesOnTestFailure(t, realTargetDirectory) })
 	verifyCertificateFiles(t, realTargetDirectory)
 
 	return realTargetDirectory
-}
-
-func PrintCertificateFilesOnTestFailure(t *testing.T, srcDirectory string) {
-	if t.Failed() && shouldPrintToStdout() {
-		files, _ := ioutil.ReadDir(srcDirectory)
-		t.Logf("Printing certificate files in %s.", srcDirectory)
-		for _, file := range files {
-			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(srcDirectory, file.Name())).CombinedOutput()
-			t.Logf("%s:\n%s", file.Name(), string(output))
-		}
-	}
 }
 
 func BackupCerificateFilesOnTestFailure(t *testing.T, namespaceName string, srcDirectory string) {

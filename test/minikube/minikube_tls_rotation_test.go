@@ -4,6 +4,7 @@ package minikube
 
 import (
 	"fmt"
+	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -51,10 +52,6 @@ func startDomainWithTLSCertificates(t *testing.T, options *helm.Options, namespa
 }
 
 func TestKubernetesTLSRotation(t *testing.T) {
-	if testlib.IsOpenShiftEnvironment(t) {
-		t.Skip("TLS subPath bind does not work as expected")
-	}
-
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -110,6 +107,13 @@ func TestKubernetesTLSRotation(t *testing.T) {
 
 	certGeneratorPodName, adminReleaseName, databaseReleaseName := startDomainWithTLSCertificates(t, &options, namespaceName, initialTLSCommands)
 
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
+	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", adminReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v12.PodLogOptions{Follow: true})
+
 	// create the new certs...
 	testlib.GenerateCustomCertificates(t, certGeneratorPodName, namespaceName, newTLSCommands)
 	newTLSKeysLocation := testlib.CopyCertificatesToControlHost(t, certGeneratorPodName, namespaceName)
@@ -122,7 +126,6 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	})
 
 	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
 	assert.NoError(t, err)

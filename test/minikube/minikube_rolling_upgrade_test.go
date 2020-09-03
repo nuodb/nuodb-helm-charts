@@ -1,4 +1,4 @@
-// +build long
+// +build upgrade
 
 package minikube
 
@@ -14,11 +14,9 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-
 )
 
-const OLD_RELEASE = "4.0"
-const NEW_RELEASE = "4.0.6"
+const OLD_RELEASE = "4.0.4"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {
@@ -47,8 +45,10 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
-
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
@@ -57,7 +57,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
@@ -83,8 +83,10 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 	adminHelmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
-
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
@@ -92,7 +94,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 		SetValues: map[string]string{
 			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"nuodb.image.registry":                  "docker.io",
 			"nuodb.image.repository":                "nuodb/nuodb-ce",
@@ -110,10 +112,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
 
-	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
-
-	// get the log before the restart
-	testlib.GetAppLog(t, namespaceName, admin0, "", &v12.PodLogOptions{})
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
 
@@ -121,6 +120,9 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
+
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 	t.Run("expectAllEnginesReconnect", func(t *testing.T) {
 		expectedNumberReconnects := 2
@@ -136,9 +138,12 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	})
 
 	t.Run("upgradeDatabaseHelm", func(t *testing.T) {
-		expectedNewDatabaseVersion := testlib.GetUpgradedReleaseVersion(t, &databaseOptions, NEW_RELEASE)
+		expectedNewDatabaseVersion := testlib.GetUpgradedReleaseVersion(t, &databaseOptions)
 
 		helm.Upgrade(t, &databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
+
+		// make sure that we only have 1 TE and not 2
+		testlib.SetDeploymentUpgradeStrategyToRecreate(t, namespaceName, fmt.Sprintf("te-%s-nuodb-cluster0-demo", databaseHelmChartReleaseName))
 
 		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "sm-database", expectedNewDatabaseVersion, 300*time.Second)
 		testlib.AwaitPodTemplateHasVersion(t, namespaceName, "te-database", expectedNewDatabaseVersion, 300*time.Second)
@@ -150,6 +155,8 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 }
 
 func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
+	t.Skip("4.0.7 Admin is not rolling upgradeable from pre-4.0.7")
+
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -171,6 +178,10 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", helmChartReleaseName)
 	admin2 := fmt.Sprintf("%s-nuodb-cluster0-2", helmChartReleaseName)
 
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin2, "-previous", &v12.PodLogOptions{Follow: true})
+
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
 	// all jobs need to be deleted before an upgrade can be performed
@@ -178,7 +189,7 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	// if we find it, this line can be removed and the test should still pass
 	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
-	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options, NEW_RELEASE)
+	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 

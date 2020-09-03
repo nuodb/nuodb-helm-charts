@@ -35,7 +35,7 @@ func TestResourcesAdminDefaults(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		containers := &obj.Spec.Template.Spec.Containers
 
 		assert.NotEmpty(t, containers)
@@ -58,7 +58,7 @@ func TestResourcesAdminOverridden(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		containers := &obj.Spec.Template.Spec.Containers
 
 		assert.NotEmpty(t, containers)
@@ -85,7 +85,7 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 	foundBackupEnabled := false
 	foundBackupDisabled := false
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		containers := &obj.Spec.Template.Spec.Containers
 
 		assert.NotEmpty(t, containers)
@@ -100,7 +100,7 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
 		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		assert.True(t, ArgContains((*containers)[0].Args, "mem 8Gi"))
+		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem 8Gi"))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
@@ -138,7 +138,7 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 	foundBackupEnabled := false
 	foundBackupDisabled := false
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		containers := &obj.Spec.Template.Spec.Containers
 
 		assert.NotEmpty(t, containers)
@@ -153,7 +153,7 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
 		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		assert.True(t, ArgContains((*containers)[0].Args, "mem 4Gi"))
+		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem 4Gi"))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
@@ -217,7 +217,7 @@ func TestPingTimeout(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
 		}
@@ -231,7 +231,7 @@ func TestPingTimeout(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
 		}
@@ -254,7 +254,7 @@ func TestSpecificOptions(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-		for _, obj := range SplitAndRenderDeployment(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
@@ -264,7 +264,7 @@ func TestSpecificOptions(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range SplitAndRenderStatefulSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
@@ -278,7 +278,7 @@ func TestSpecificOptions(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-		for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
@@ -299,7 +299,7 @@ func TestResourcesDaemonSetsDefaults(t *testing.T) {
 	foundBackupEnabled := false
 	foundBackupDisabled := false
 
-	for _, obj := range SplitAndRenderDaemonSet(t, output, 2) {
+	for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 
 		containers := &obj.Spec.Template.Spec.Containers
 
@@ -339,7 +339,7 @@ func TestDatabaseBackupDisabled(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.False(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup enabled")
 	}
 }
@@ -357,7 +357,7 @@ func TestDatabaseNonBackupDisabled(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.True(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup disabled")
 	}
 }
@@ -376,7 +376,7 @@ func TestDatabaseBackupDisabledDaemonSet(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-	for _, obj := range SplitAndRenderDaemonSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
 		assert.False(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup enabled")
 	}
 }
@@ -395,7 +395,7 @@ func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
-	for _, obj := range SplitAndRenderDaemonSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
 		assert.True(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup disabled")
 	}
 }
