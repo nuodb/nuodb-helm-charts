@@ -35,8 +35,10 @@ func CreateNamespace(t *testing.T, namespaceName string) {
 		k8s.CreateNamespace(t, kubectlOptions, namespaceName)
 	}
 
+	// this method is async
+	go GetK8sEventLog(t, namespaceName)
+
 	AddTeardown(TEARDOWN_ADMIN, func() {
-		GetK8sEventLog(t, namespaceName)
 		k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
 	})
 }
@@ -118,8 +120,14 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 		// first await could be pulling the image from the repo
 		AwaitPodUp(t, namespaceName, adminName, 300*time.Second)
-		AddTeardown("admin", func() {
-			GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{})
+
+		AddTeardown(TEARDOWN_ADMIN, func() {
+			_, err := k8s.GetPodE(t, kubectlOptions, adminName)
+			if err != nil {
+				t.Logf("Admin pod '%s' is not available and logs can not be retrieved")
+			}
+
+			go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
 			GetAdminEventLog(t, namespaceName, adminName)
 		})
 	}
