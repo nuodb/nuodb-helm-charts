@@ -127,7 +127,7 @@ admin:
       - ReadWriteOnce
     # storageClass: "-"
 
-  ## Enable persistent log volumes to retain logs when an external logging solution is not used.
+  ## Enable persistent volumes to retain logs when an external logging solution is not used.
   logPersistence:
     enabled: false
     overwriteBackoff:
@@ -223,3 +223,7 @@ admin:
 
   #Some clusters require longer readiness probe timeouts
   readinessTimeoutSeconds: 1
+
+  #These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
+  podAnnotations: {}
+    # vault.hashicorp.com/agent-inject: true
