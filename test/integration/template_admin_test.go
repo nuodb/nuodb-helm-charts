@@ -12,6 +12,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+
 )
 
 func TestAdminDefaultLicense(t *testing.T) {
@@ -363,5 +364,38 @@ func TestGlobalLoadBalancerConfigRendersOnlyOnEntryPointCluster(t *testing.T) {
 		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-prefilter")
 		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-default")
 		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-policy.zone1")
+	}
+}
+
+func TestAnnotationsRender(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.podAnnotations.key1": "value1",
+			"admin.podAnnotations.key2": "value2",
+			"admin.podAnnotations.key3\\.key3": "value3",
+			"admin.podAnnotations.key4\\.key4/key4": "value4",
+			"admin.podAnnotations.key5\\.key5/key5": "value5/value5",
+			"admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject": `"true"`,
+			"admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert": "|\n"+
+			"{{- with secret \"nuodb.com/TLS\" -}}\n"+
+			"  {{ .Data.data.tlsCACert }}\n"+
+			"{{- end }}",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key1"], obj.Annotations["key1"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key2"], obj.Annotations["key2"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key3\\.key3"], obj.Annotations["key3.key3"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key4\\.key4/key4"], obj.Annotations["key4.key4/key4"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key5\\.key5/key5"], obj.Annotations["key5.key5/key5"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Annotations["vault.hashicorp.com/agent-inject"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 	}
 }
