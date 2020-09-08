@@ -352,7 +352,7 @@ database:
     readinessTimeoutSeconds: 5
   
   #These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
-  annotations: {}
+  podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
 
   enableDaemonSet: false
