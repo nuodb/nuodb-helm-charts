@@ -389,7 +389,7 @@ func TestAnnotationsRender(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.Equal(t, options.SetValues["admin.podAnnotations.key1"], obj.Annotations["key1"])
 		assert.Equal(t, options.SetValues["admin.podAnnotations.key2"], obj.Annotations["key2"])
 		assert.Equal(t, options.SetValues["admin.podAnnotations.key3\\.key3"], obj.Annotations["key3.key3"])
