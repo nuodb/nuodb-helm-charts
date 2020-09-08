@@ -2,14 +2,16 @@ package testlib
 
 import (
 	"fmt"
+	"strings"
+	"testing"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
-	"strings"
-	"testing"
 )
 
 func ArgContains(args []string, x string) bool {
@@ -242,6 +244,27 @@ func SplitAndRenderStorageClass(t *testing.T, output string, expectedNrObjects i
 	return objects
 }
 
+func SplitAndRenderRole(t *testing.T, output string, expectedNrObjects int) []rbacv1.Role {
+	objects := make([]rbacv1.Role, 0)
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if strings.Contains(part, fmt.Sprintf("kind: %s", "Role")) {
+			var obj rbacv1.Role
+			helm.UnmarshalK8SYaml(t, part, &obj)
+
+			objects = append(objects, obj)
+		}
+	}
+
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
+
+	return objects
+}
 
 func IsStatefulSetHotCopyEnabled(ss *appsv1.StatefulSet) bool {
 	return strings.Contains(ss.Name, "hotcopy")
