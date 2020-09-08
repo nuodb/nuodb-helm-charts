@@ -108,7 +108,7 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 
 		adminContainer := obj.Spec.Template.Spec.Containers[0]
@@ -136,7 +136,7 @@ func TestAdminStatefulSetComponentLabel(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.Equal(t, "admin", obj.Spec.Selector.MatchLabels["component"])
 
 		assert.Contains(t, obj.ObjectMeta.Labels, "chart")
@@ -160,7 +160,7 @@ func TestAdminClusterServiceRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-clusterip.yaml"})
 
-	for _, obj := range SplitAndRenderService(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb-clusterip", obj.Name)
 		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
@@ -178,7 +178,7 @@ func TestAdminHeadlessServiceRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-headless.yaml"})
 
-	for _, obj := range SplitAndRenderService(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb", obj.Name)
 		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Equal(t, "None", obj.Spec.ClusterIP)
@@ -200,7 +200,7 @@ func TestAdminServiceRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
 
-	for _, obj := range SplitAndRenderService(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb-balancer", obj.Name)
 		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
@@ -219,7 +219,7 @@ func TestAdminStatefulSetVolumes(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		vcts := make(map[string]bool)
 
 		for _, val := range obj.Spec.VolumeClaimTemplates {
@@ -248,7 +248,7 @@ func TestAdminMultiClusterEnvVars(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		environmentals := make(map[string]string)
 
 		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
@@ -291,7 +291,7 @@ func TestBootstrapServersRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.Equal(t, options.SetValues["admin.bootstrapServers"], obj.Annotations["nuodb.com/bootstrap-servers"])
 		assert.Equal(t, options.SetValues["admin.bootstrapServers"], obj.Labels["bootstrapServers"])
 	}
@@ -312,7 +312,7 @@ func TestGlobalLoadBalancerConfigRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.Equal(t, options.SetValues["admin.lbConfig.prefilter"], obj.Annotations["nuodb.com/load-balancer-prefilter"])
 		assert.Equal(t, options.SetValues["admin.lbConfig.default"], obj.Annotations["nuodb.com/load-balancer-default"])
 		assert.Equal(t, options.SetValues["admin.lbConfig.policies.zone1"], obj.Annotations["nuodb.com/load-balancer-policy.zone1"])
@@ -335,7 +335,7 @@ func TestGlobalLoadBalancerConfigFullSyncRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.Equal(t, "true", obj.Annotations["nuodb.com/sync-load-balancer-config"])
 		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-prefilter")
 		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-default")
@@ -359,7 +359,7 @@ func TestGlobalLoadBalancerConfigRendersOnlyOnEntryPointCluster(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-	for _, obj := range SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.NotContains(t, obj.Annotations, "nuodb.com/sync-load-balancer-config")
 		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-prefilter")
 		assert.NotContains(t, obj.Annotations, "nuodb.com/load-balancer-default")

@@ -55,9 +55,8 @@ func TestKubernetesYCSB(t *testing.T) {
 	scaleYCSB(t, namespaceName)
 
 	ycsbPodName := testlib.GetPodName(t, namespaceName, YCSB_CONTROLLER_NAME)
+	go testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb", &v12.PodLogOptions{Follow: true})
 
 	// let YCSB run for a couple of seconds
 	time.Sleep(5 * time.Second)
-
-	testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb", &v12.PodLogOptions{})
 }

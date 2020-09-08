@@ -507,7 +507,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() {
 		if t.Failed() {
 			testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-			testlib.RecoverCoresFromTEs(t, namespaceName, "demo")
+			testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
 		}
 	})
 
@@ -539,10 +539,10 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-	testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{})
+	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	smPodName0 := testlib.GetPodName(t, namespaceName, smPodName)
-	testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{})
+	go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	// restore database
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)

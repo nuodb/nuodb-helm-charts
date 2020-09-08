@@ -9,6 +9,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 	"github.com/stretchr/testify/assert"
+	"regexp"
 
 	corev1 "k8s.io/api/core/v1"
 	"testing"
@@ -33,6 +34,12 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 		&corev1.PodLogOptions {Previous:true})
 
 	assert.Greater(t, stringOccurrence, 0, "Could not find core parsing in log file")
+
+	// check that the core was moved to a dated crash directory for managing the number of core dumps
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--", "find", "/var/log/nuodb/", "-type", "d")
+	assert.NoError(t, err, output)
+	assert.Regexp(t, regexp.MustCompile("crash-[0-9]{8}T[0-9]{6}") ,output)
 }
 
 func TestKubernetesPrintCores(t *testing.T) {
@@ -54,6 +61,7 @@ func TestKubernetesPrintCores(t *testing.T) {
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.logPersistence.enabled": 	 "true",
+			"database.sm.logPersistence.enabled": 	 "true",
 			"database.options.ping-timeout": 		 "0", // disable network fault handling
 		},
 	})
@@ -63,13 +71,16 @@ func TestKubernetesPrintCores(t *testing.T) {
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 		verifyKillAndInfoInLog(t, namespaceName, admin0, tePodName)
 
-		testlib.RecoverCoresFromTEs(t, namespaceName, "demo")
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
 	})
 
 	t.Run("killSMWithCore", func(t *testing.T) {
 		smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 		smPodName := testlib.GetPodName(t, namespaceName, smPodTemplate)
 		verifyKillAndInfoInLog(t, namespaceName, admin0, smPodName)
+		
+		smLogPvc := fmt.Sprintf("log-volume-%s", smPodName)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "sm", smLogPvc)
 	})
 }
 
@@ -200,4 +211,37 @@ func TestReadWriteManyMultitenancy(t *testing.T) {
 			"database.te.logPersistence.enabled":    "true",
 		},
 	})
+}
+
+func TestNuoDBKubeDiagnostics(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		},
+	})
+
+	config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
+
+	assert.True(t, func() bool { _, ok := config.Pods[admin0]; return ok }())
+
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+	assert.True(t, func() bool { _, ok := config.Pods[tePodName]; return ok }())
+
+	smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
+	smPodName := testlib.GetPodName(t, namespaceName, smPodTemplate)
+	assert.True(t, func() bool { _, ok := config.Pods[smPodName]; return ok }())
 }
