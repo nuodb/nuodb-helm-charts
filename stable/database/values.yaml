@@ -348,9 +348,13 @@ database:
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
 
-    #Some clusters require longer readiness probe timeouts
+    # Some clusters require longer readiness probe timeouts
     readinessTimeoutSeconds: 5
   
+  # These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
+  podAnnotations: {}
+    # vault.hashicorp.com/agent-inject: true
+
   enableDaemonSet: false
   # Set to true if you are using manually created volumes or restoring
   # from a previously existing backup.

@@ -5,6 +5,9 @@ metadata:
     description: |-
       Database deployment resource for NuoDB Transaction Engines (TE).
 {{- include "database.loadBalancerConfig" . | indent 4 }}
+    {{- if .Values.database.podAnnotations }}
+{{ toYaml .Values.database.podAnnotations | trim | indent 4}}
+    {{- end }}
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
