@@ -21,6 +21,9 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 
 	previousCount := testlib.GetPodRestartCount(t, namespaceName, podName)
 
+	// make sure to collect the old logs
+	go testlib.GetAppLog(t, namespaceName, podName, "-previous", &corev1.PodLogOptions{Follow: true})
+
 	// send SIGABRT
 	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", "-6", "1")
 
