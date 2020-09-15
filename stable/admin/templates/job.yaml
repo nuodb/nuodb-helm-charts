@@ -21,6 +21,7 @@ spec:
         release: {{ .Release.Name | quote }}
       name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
