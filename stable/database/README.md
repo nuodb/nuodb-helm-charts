@@ -5,7 +5,7 @@ This chart starts a NuoDB database deployment on a Kubernetes cluster using the 
 ## Command
 
 ```bash
-helm install nuodb/database [--name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/database [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -219,11 +219,14 @@ The following tables list the configurable parameters of the `database` chart an
 | `securityContext.capabilities` | Enable capabilities for the container - disregards `securityContext.enabled` | `[]` |
 | `env` | Import ENV vars inside containers | `[]` |
 | `envFrom` | Import ENV vars from configMap(s) | `[]` |
+| `lbConfig.prefilter` | Database load balancer prefilter expression | `nil` |
+| `lbConfig.default` | Database load balancer default query | `nil` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
+| `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
 | `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `sm.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |

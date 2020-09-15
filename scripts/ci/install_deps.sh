@@ -21,9 +21,13 @@ if [[ -n "$REQUIRES_MINIKUBE" ]]; then
   sudo chown -R travis: /home/travis/.minikube/
   kubectl cluster-info
 
-  # install helm
-  # Use default K8s service account as a workaround explained in https://github.com/helm/helm/issues/3460
-  helm init --service-account default
+  # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
+  # after pods have been re-created which causes problems with inter pod communicataion.
+  # Set CoreDNS TTL to 0 so that DNS entries are not cached. 
+  kubectl get cm coredns -n kube-system -o yaml | sed -e 's/ttl [0-9]*$/ttl 0/' | kubectl apply -n kube-system -f -
+  kubectl delete pods -l k8s-app=kube-dns -n kube-system
+
+  helm version
 
   kubectl version
 
@@ -54,7 +58,6 @@ elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
 
   kubectl -n kube-system create serviceaccount tiller-system
   kubectl create clusterrolebinding tiller-system --clusterrole cluster-admin --serviceaccount=kube-system:tiller-system
-  helm init --service-account tiller-system --tiller-namespace kube-system
 
   helm version
 

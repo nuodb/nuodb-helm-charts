@@ -3,7 +3,8 @@ package testlib
 import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -14,7 +15,7 @@ const DEBUG_POD = `
 apiVersion: v1
 kind: Pod
 metadata:
-  name: debug-pod
+  name: %s
   labels:
     app: nuodb
     group: nuodb
@@ -26,29 +27,29 @@ spec:
       command: [ "/bin/sh", "-c", "--" ]
       args: [ "while true; do sleep 30; done;" ]
       volumeMounts:
-      - name: log-te-volume
+      - name: log-volume
         mountPath: /var/log/nuodb
   volumes:
-  - name: log-te-volume
+  - name: log-volume
     persistentVolumeClaim:
-      claimName: %s-log-te-volume
+      claimName: %s
 `
 
-func RecoverCoresFromTEs(t *testing.T, namespaceName string, databaseName string) {
+func RecoverCoresFromEngine(t *testing.T, namespaceName string, engineType string, pvcName string) {
 	pwd, err := os.Getwd()
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
-	targetDirPath := filepath.Join(pwd, RESULT_DIR, namespaceName, "cores")
+	targetDirPath := filepath.Join(pwd, RESULT_DIR, namespaceName, "cores", engineType)
 	_ = os.MkdirAll(targetDirPath, 0700)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	debugPodName := fmt.Sprintf("%s-debug-pod", engineType)
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
-	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(DEBUG_POD, databaseName))
+	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(DEBUG_POD, debugPodName, pvcName))
 
-	AwaitPodUp(t, namespaceName, "debug-pod", 30* time.Second)
+	AwaitPodUp(t, namespaceName, debugPodName, 30* time.Second)
 
-	k8s.RunKubectl(t, kubectlOptions, "exec", "debug-pod", "--", "ls", "-lah", "/var/log/nuodb/")
+	k8s.RunKubectl(t, kubectlOptions, "exec", debugPodName, "--", "ls", "-lah", "/var/log/nuodb/")
 
-	k8s.RunKubectl(t, kubectlOptions, "cp", "debug-pod:/var/log/nuodb/", targetDirPath)
+	k8s.RunKubectl(t, kubectlOptions, "cp", debugPodName+":/var/log/nuodb/", targetDirPath)
 }

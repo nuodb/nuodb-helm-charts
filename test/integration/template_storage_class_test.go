@@ -2,16 +2,15 @@ package integration
 
 import (
 	"fmt"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"regexp"
 	"strconv"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"gotest.tools/assert"
-	storagev1 "k8s.io/api/storage/v1"
 )
 
 func init() {
@@ -35,53 +34,36 @@ func StorageClassTemplateE(t *testing.T, options *helm.Options, expectedProvisio
 	options.SetValues["storageClass.allowVolumeExpansion"] = fmt.Sprintf("%t", rand.Float32() < 0.5)
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/storageclass.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/storageclass.yaml"})
 
-	partCounter := 0
-	storageClasses := make([]storagev1.StorageClass, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
-		}
-
-		partCounter += 1
-
-		var sc1 storagev1.StorageClass
-		helm.UnmarshalK8SYaml(t, part, &sc1)
-		storageClasses = append(storageClasses, sc1)
-		
-		if !strings.Contains(part, "local-storage") {
-			assert.Check(t, sc1.Provisioner == expectedProvisioner)
+	for _, obj := range testlib.SplitAndRenderStorageClass(t, output, 4) {
+		if obj.Name != "local-storage" {
+			assert.True(t, obj.Provisioner == expectedProvisioner)
 			b, err := strconv.ParseBool(options.SetValues["storageClass.allowVolumeExpansion"])
-			assert.NilError(t, err)
-			assert.Check(t, *sc1.AllowVolumeExpansion == b)
+			assert.NoError(t, err)
+			assert.EqualValues(t, b, *obj.AllowVolumeExpansion)
 
 			// Validate encrypted and iopsPerGB. Amazon-only!
 			re := regexp.MustCompile("(\\w+)-storage")
-			values := re.FindStringSubmatch(sc1.ObjectMeta.Name)
-			assert.Check(t, len(values) == 2)
+			values := re.FindStringSubmatch(obj.ObjectMeta.Name)
+			assert.Equal(t, 2, len(values))
 			class := values[1]
 			classes := []string{"fast", "manual"}
 			if Contains(classes, class) {
 				encKey := fmt.Sprintf("storageClass.%s.encrypted", class)
 				if enc, ok := options.SetValues[encKey]; ok {
-					assert.Check(t, sc1.Parameters["encrypted"] == enc)
+					assert.EqualValues(t, enc, obj.Parameters["encrypted"])
 				}
 				iopsKey := fmt.Sprintf("storageClass.%s.iopsPerGB", class)
 				if iops, ok := options.SetValues[iopsKey]; ok {
-					assert.Check(t, sc1.Parameters["iopsPerGB"] == iops)
+					assert.EqualValues(t, iops, obj.Parameters["iopsPerGB"])
 				}
 			}
 		} else {
 			// Validate local-storage is always created
-			assert.Check(t, sc1.Provisioner == "kubernetes.io/no-provisioner")
+			assert.EqualValues(t, "kubernetes.io/no-provisioner", obj.Provisioner)
 		}
 	}
-
-	assert.Equal(t, partCounter, 4)
 }
 
 func TestStorageClassTemplateAzure(t *testing.T) {
@@ -123,39 +105,17 @@ func TestStorageClassTemplateGcp(t *testing.T) {
 	StorageClassTemplateE(t, options, expectedProvisioner)
 }
 
+
 func TestStorageClassTemplateLocal(t *testing.T) {
-
-	options := &helm.Options{
-	}
-
-	expectedProvisioner := "kubernetes.io/no-provisioner"
+	options := &helm.Options{}
 
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/storage-class"
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, []string{"templates/storageclass.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/storageclass.yaml"})
 
-	partCounter := 0
-	storageClasses := make([]storagev1.StorageClass, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-
-		if len(part) == 0 {
-			continue
-		}
-
-		partCounter += 1
-
-		var sc1 storagev1.StorageClass
-		helm.UnmarshalK8SYaml(t, part, &sc1)
-		storageClasses = append(storageClasses, sc1)
-		
-		if strings.Contains(part, "local-storage") {
-			assert.Check(t, sc1.Provisioner == expectedProvisioner)
-		}
+	for _, obj := range testlib.SplitAndRenderStorageClass(t, output, 1) {
+		assert.EqualValues(t, "kubernetes.io/no-provisioner", obj.Provisioner)
 	}
-
-	assert.Equal(t, partCounter, 2)
 }

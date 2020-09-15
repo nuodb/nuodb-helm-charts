@@ -2,18 +2,25 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/gruntwork-cli/collections"
-	"gotest.tools/assert"
-	v12 "k8s.io/api/core/v1"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	v12 "k8s.io/api/core/v1"
+
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 )
+
+const UPGRADE_STRATEGY = `
+spec:
+  strategy:
+    $retainKeys:
+    - type
+    type: Recreate
+`
 
 type ExtractedOptions struct {
 	NrTePods          int
@@ -69,16 +76,25 @@ type DatabaseInstallationStep func(t *testing.T, options *helm.Options, helmChar
 func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, options *helm.Options, installationStep DatabaseInstallationStep) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	InjectTestVersion(t, options)
+	InjectTestValues(t, options)
 	opt := GetExtractedOptions(options)
+
+	if IsOpenShiftEnvironment(t) {
+		THPReleaseName := fmt.Sprintf("thp-%s", randomSuffix)
+		AddTeardown(TEARDOWN_DATABASE, func() {
+			helm.Delete(t, options, THPReleaseName, true)
+		})
+		helm.Install(t, options, THP_HELM_CHART_PATH, THPReleaseName)
+
+		AwaitNrReplicasReady(t , namespaceName, THPReleaseName, 1)
+	}
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
 	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
 
 	// with Async actions which do not return a cleanup method, create the teardown(s) first
 	AddTeardown(TEARDOWN_DATABASE, func() {
@@ -98,11 +114,15 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 
-	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{}) })
+	AddTeardown(TEARDOWN_DATABASE, func() {
+		go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{Follow: true})
+	})
 	AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
-	AddTeardown(TEARDOWN_DATABASE, func() { GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{}) })
+	AddTeardown(TEARDOWN_DATABASE, func() {
+		go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{Follow: true})
+	})
 	AwaitPodUp(t, namespaceName, smPodName0, 240*time.Second)
 
 	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
@@ -112,29 +132,15 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 
 func StartDatabase(t *testing.T, namespace string, adminPod string, options *helm.Options) string {
 	return StartDatabaseTemplate(t, namespace, adminPod, options, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
+		if options.Version == "" {
+			helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
+		} else {
+			helm.Install(t, options, "nuodb/database", helmChartReleaseName)
+		}
 	})
 }
 
-func StartDatabaseFromHelmRepository(t *testing.T, namespace string, adminPod string, fromHelmVersion string, options *helm.Options) string {
-	return StartDatabaseTemplate(t, namespace, adminPod, options, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		var args []string
-
-		args = append(args, "--namespace", options.KubectlOptions.Namespace,
-			"--version", fromHelmVersion,
-			"-n", helmChartReleaseName,
-			"nuodb/database")
-
-		// To make it easier to test, go through the keys in sorted order
-		keys := collections.Keys(options.SetValues)
-		for _, key := range keys {
-			value := options.SetValues[key]
-			argValue := fmt.Sprintf("%s=%s", key, value)
-			args = append(args, "--set", argValue)
-		}
-
-		_, err := helm.RunHelmCommandAndGetOutputE(t, options, "install",
-			args...)
-		assert.NilError(t, err)
-	})
+func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, deploymentName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	k8s.RunKubectl(t, kubectlOptions, "patch", "deployment", deploymentName, "-p", UPGRADE_STRATEGY)
 }

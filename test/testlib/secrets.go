@@ -4,13 +4,14 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"gotest.tools/assert"
+
 )
 
 const TLS_SECRET_PASSWORD_YAML_TEMPLATE = `---
@@ -84,13 +85,12 @@ func verifySecretFields(t *testing.T, namespaceName string, secretName string, f
 	secret := GetSecret(t, namespaceName, secretName)
 	for _, field := range fields {
 		_, ok := secret.Data[field]
-		assert.Check(t, ok)
+		assert.True(t, ok)
 	}
 }
 
 func CreateSecret(t *testing.T, namespaceName string, certName string, secretName string, keyDir string) {
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	if keyDir == "" {
 		keyDir = filepath.Join("..", "..", "keys")
@@ -98,7 +98,7 @@ func CreateSecret(t *testing.T, namespaceName string, certName string, secretNam
 	keyFile := filepath.Join(keyDir, certName)
 
 	secretString, err := createSecretDecl(keyFile, namespaceName, secretName, certName)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, secretString)
 	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, secretString) })
@@ -108,8 +108,7 @@ func CreateSecret(t *testing.T, namespaceName string, certName string, secretNam
 }
 
 func CreateSecretWithPassword(t *testing.T, namespaceName string, certName string, secretName string, password string, keyDir string) {
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	if keyDir == "" {
 		keyDir = filepath.Join("..", "..", "keys")
@@ -117,7 +116,7 @@ func CreateSecretWithPassword(t *testing.T, namespaceName string, certName strin
 	keyFile := filepath.Join(keyDir, certName)
 
 	secretString, err := createSecretPassDecl(keyFile, namespaceName, secretName, certName, password)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, secretString)
 	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, secretString) })

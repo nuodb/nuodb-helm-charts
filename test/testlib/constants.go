@@ -33,6 +33,7 @@ const YCSB_HELM_CHART_PATH = "../../incubator/demo-ycsb"
 
 const RESULT_DIR = "../../results"
 const INJECT_FILE = "../../versionInject.yaml"
+const INJECT_VALUES_FILE = "../../valuesInject.yaml"
 
 const IMPORT_ARCHIVE_URL = "https://download.nuohub.org/ce_releases/restore.bak.tz"
 
@@ -42,3 +43,5 @@ const MINIMAL_VIABLE_ENGINE_CPU = "500m"
 const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
 
 const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
+
+const ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS = "ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS"

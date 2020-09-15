@@ -20,6 +20,7 @@ cloud:
     # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique cluster.name.
     # The default is fine for single-cluster domains.
     name: cluster0
+    entrypointName: cluster0
 
 busybox:
   image:
@@ -41,7 +42,7 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.0.5
+    tag: 4.0.7
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -153,6 +154,11 @@ database:
   configFiles: {}
     # nuodb.config: |-
     #   verbose error,flush,warn
+
+  # Load balancer configuration per database
+  lbConfig:
+    prefilter: ""
+    default: ""
 
   # ensure all values here are strings - so quote any purely numeric values
   # source should be a tar.gz or an already local backupset.
@@ -342,9 +348,13 @@ database:
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
 
-    #Some clusters require longer readiness probe timeouts
+    # Some clusters require longer readiness probe timeouts
     readinessTimeoutSeconds: 5
   
+  # These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
+  podAnnotations: {}
+    # vault.hashicorp.com/agent-inject: true
+
   enableDaemonSet: false
   # Set to true if you are using manually created volumes or restoring
   # from a previously existing backup.

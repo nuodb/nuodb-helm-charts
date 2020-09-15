@@ -5,12 +5,13 @@ export NUODB_CRASHDIR="$NUODB_LOGDIR"/crash
 mkdir -p $NUODB_CRASHDIR
 
 # attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
-if [ -f $NUODB_CRASHDIR/* ]; then
-  crashcount=$(find $NUODB_LOGDIR/crash-* -type d -cmin -$OVERWRITE_WINDOW ! -path . | wc -l)
-  if [ $crashcount -lt $OVERWRITE_COPIES ]; then
+crashcount=$(find $NUODB_CRASHDIR/core* -maxdepth 0 ! -type d 2>/dev/null | wc -l)
+if [ $crashcount -ge 1 ]; then
+  retainedcrashcount=$(find $NUODB_LOGDIR/crash-* -maxdepth 0 -type d -cmin -$OVERWRITE_WINDOW 2>/dev/null | wc -l)
+  if [ $retainedcrashcount -lt $OVERWRITE_COPIES ]; then
     crashbackupdir="$NUODB_LOGDIR/crash-$( date +%Y%m%dT%H%M%S )/"
     mkdir $crashbackupdir
-    mv $NUODB_CRASHDIR/* $crashbackupdir
+    mv $NUODB_CRASHDIR/core* $crashbackupdir
   fi
 fi
 

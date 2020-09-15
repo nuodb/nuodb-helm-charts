@@ -16,8 +16,7 @@ import (
 const YCSB_CONTROLLER_NAME = "ycsb-load"
 
 func scaleYCSB(t *testing.T, namespaceName string) {
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	k8s.RunKubectl(t, kubectlOptions, "scale", "replicationcontroller", YCSB_CONTROLLER_NAME, "--replicas=1")
 
@@ -56,9 +55,8 @@ func TestKubernetesYCSB(t *testing.T) {
 	scaleYCSB(t, namespaceName)
 
 	ycsbPodName := testlib.GetPodName(t, namespaceName, YCSB_CONTROLLER_NAME)
+	go testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb", &v12.PodLogOptions{Follow: true})
 
 	// let YCSB run for a couple of seconds
 	time.Sleep(5 * time.Second)
-
-	testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb", &v12.PodLogOptions{})
 }

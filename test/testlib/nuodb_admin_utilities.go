@@ -2,19 +2,20 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/gruntwork-cli/collections"
-	"gotest.tools/assert"
-	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 	"time"
 
+	v12 "k8s.io/api/core/v1"
+
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 )
+
+var AdminRolesRequirePatching = false
 
 func getFunctionCallerName() string {
 	pc, _, _, _ := runtime.Caller(3)
@@ -26,7 +27,7 @@ func getFunctionCallerName() string {
 }
 
 func CreateNamespace(t *testing.T, namespaceName string) {
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	if IsOpenShiftEnvironment(t) {
 		createOpenShiftProject(t, namespaceName)
@@ -34,8 +35,10 @@ func CreateNamespace(t *testing.T, namespaceName string) {
 		k8s.CreateNamespace(t, kubectlOptions, namespaceName)
 	}
 
+	// this method is async
+	go GetK8sEventLog(t, namespaceName)
+
 	AddTeardown(TEARDOWN_ADMIN, func() {
-		GetK8sEventLog(t, namespaceName)
 		k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
 	})
 }
@@ -56,11 +59,11 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		namespaceName = namespace
 	}
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
 	options.KubectlOptions.Namespace = namespaceName
 
-	InjectTestVersion(t, options)
+	InjectTestValues(t, options)
 	installStep(t, options, helmChartReleaseName)
 
 	AddTeardown(TEARDOWN_ADMIN, func() {
@@ -86,8 +89,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	defer func() {
 		// collect some useful diagnostics
 		if t.Failed() {
-			options := k8s.NewKubectlOptions("", "")
-			options.Namespace = namespaceName
+			options := k8s.NewKubectlOptions("", "", namespaceName)
 			// ignore any errors. This is already failed
 			_ = k8s.RunKubectlE(t, options, "describe", "statefulset", adminStatefulSet)
 		}
@@ -99,13 +101,18 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, replicaCount)
 	}
 
+	if AdminRolesRequirePatching {
+		// workaround for https://github.com/nuodb/nuodb-helm-charts/issues/140
+		output := helm.RenderTemplate(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName, []string{"templates/role.yaml"})
+		k8s.RunKubectl(t, kubectlOptions, "patch", "role", "nuodb-kube-inspector", "-p", output)
+	}
+
 	for i := 0; i < replicaCount; i++ {
 		adminName := adminNames[i] // array will be out of scope for defer
 
 		defer func() {
 			if t.Failed() {
-				options := k8s.NewKubectlOptions("", "")
-				options.Namespace = namespaceName
+				options := k8s.NewKubectlOptions("", "", namespaceName)
 				// ignore any errors. This is already failed
 				_ = k8s.RunKubectlE(t, options, "describe", "pod", adminName)
 			}
@@ -113,8 +120,14 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 		// first await could be pulling the image from the repo
 		AwaitPodUp(t, namespaceName, adminName, 300*time.Second)
-		AddTeardown("admin", func() {
-			GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{})
+
+		AddTeardown(TEARDOWN_ADMIN, func() {
+			_, err := k8s.GetPodE(t, kubectlOptions, adminName)
+			if err != nil {
+				t.Logf("Admin pod '%s' is not available and logs can not be retrieved")
+			}
+
+			go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
 			GetAdminEventLog(t, namespaceName, adminName)
 		})
 	}
@@ -128,29 +141,39 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (string, string) {
 	return StartAdminTemplate(t, options, replicaCount, namespace, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
+		if options.Version == "" {
+			helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
+		} else {
+			helm.Install(t, options, "nuodb/admin ", helmChartReleaseName)
+		}
 	})
 }
 
-func StartAdminFromHelmRepository(t *testing.T, options *helm.Options, fromHelmVersion string, replicaCount int, namespace string) (string, string) {
-	return StartAdminTemplate(t, options, replicaCount, namespace, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		var args []string
+func GetLoadBalancerPoliciesE(t *testing.T, namespaceName string, adminPod string) (map[string]NuoDBLoadBalancerPolicy, error) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "load-balancers")
+	if err == nil {
+		err, policiesMap := UnmarshalLoadBalancerPolicies(output)
+		return policiesMap, err
+	}
+	return nil, err
+}
 
-		args = append(args, "--namespace", options.KubectlOptions.Namespace,
-			"--version", fromHelmVersion,
-			"-n", helmChartReleaseName,
-			"nuodb/admin")
+func GetLoadBalancerConfigE(t *testing.T, namespaceName string, adminPod string) ([]NuoDBLoadBalancerConfig, error) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "load-balancer-config")
+	if err == nil {
+		err, configs := UnmarshalLoadBalancerConfigs(output)
+		return configs, err
+	}
+	return nil, err
+}
 
-		// To make it easier to test, go through the keys in sorted order
-		keys := collections.Keys(options.SetValues)
-		for _, key := range keys {
-			value := options.SetValues[key]
-			argValue := fmt.Sprintf("%s=%s", key, value)
-			args = append(args, "--set", argValue)
-		}
-
-		_, err := helm.RunHelmCommandAndGetOutputE(t, options, "install",
-			args...)
-		assert.NilError(t, err)
-	})
+func AwaitNrLoadBalancerPolicies(t *testing.T, namespace string, podName string, expectedNumber int) {
+	Await(t, func() bool {
+		policies, err := GetLoadBalancerPoliciesE(t, namespace, podName)
+		return err == nil && len(policies) == expectedNumber
+	}, 30*time.Second)
 }

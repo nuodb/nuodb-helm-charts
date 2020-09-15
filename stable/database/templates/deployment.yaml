@@ -1,6 +1,13 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    description: |-
+      Database deployment resource for NuoDB Transaction Engines (TE).
+{{- include "database.loadBalancerConfig" . | indent 4 }}
+    {{- if .Values.database.podAnnotations }}
+{{ toYaml .Values.database.podAnnotations | trim | indent 4}}
+    {{- end }}
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
@@ -42,7 +49,7 @@ spec:
 {{ toYaml .Values.database.te.tolerations | trim | indent 8 }}
       {{- end }}
       containers:
-      - name: te-{{ template "database.fullname" . }}
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}

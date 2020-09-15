@@ -181,3 +181,28 @@ Define the fully qualified NuoDB Admin address for the domain entrypoint.
 {{- define "nuodb.altAddress" -}}
 $(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.domain" . }}
 {{- end -}}
+
+{{/*
+Imports NuoAdmin global load balancer configuration via annotations.
+The configuration is imported only in the entrypoint cluster.
+*/}}
+{{- define "admin.loadBalancerConfig" -}}
+{{- if .Values.admin.lbConfig }}
+{{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+{{- with .Values.admin.lbConfig.fullSync }}
+"nuodb.com/sync-load-balancer-config": {{ . | quote }}
+{{- end -}}
+{{- with .Values.admin.lbConfig.prefilter }}
+"nuodb.com/load-balancer-prefilter": {{ . | quote }}
+{{- end -}}
+{{- with .Values.admin.lbConfig.default }}
+"nuodb.com/load-balancer-default": {{ . | quote }}
+{{- end -}}
+{{- with .Values.admin.lbConfig.policies }}
+{{- range $opt, $val := . }}
+"nuodb.com/load-balancer-policy.{{ $opt }}": {{ $val | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}

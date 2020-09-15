@@ -1,32 +1,53 @@
-// +build long
+// +build upgrade
 
 package minikube
 
 import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	v12 "k8s.io/api/core/v1"
 	"testing"
 	"time"
 )
 
+type UpdateOptions struct {
+	adminPodShouldGetRecreated bool
+	adminRolesRequirePatching bool
+	adminBootstrapServersOverrideRequired bool
+}
 
-func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string) {
+
+func upgradeAdminTest(t *testing.T,fromHelmVersion string, updateOptions *UpdateOptions) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"nuodb.image.registry": "docker.io",
-			"nuodb.image.repository": "nuodb/nuodb-ce",
-			"nuodb.image.tag": nuodbVersion,
 		},
+		Version: fromHelmVersion,
+	}
+	testlib.InferVersionFromTemplate(t, options)
+
+	if updateOptions.adminBootstrapServersOverrideRequired {
+		options.SetValues["admin.bootstrapServers"] = "0"
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdminFromHelmRepository(t, options, fromHelmVersion,1, "")
+	if updateOptions.adminRolesRequirePatching {
+		testlib.AdminRolesRequirePatching = true
+		testlib.AddTeardown(testlib.TEARDOWN_ADMIN, func() {
+			testlib.AdminRolesRequirePatching = false
+		})
+	}
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
@@ -37,35 +58,57 @@ func upgradeAdminTest(t *testing.T, nuodbVersion string, fromHelmVersion string)
 
 	adminPod := testlib.GetPod(t, namespaceName, admin0)
 
+	// unset the version and use local
+	options.Version = ""
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = opts
+
 	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
-	testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	if updateOptions.adminPodShouldGetRecreated {
+		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	}
+
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 }
 
-func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion string) {
+func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *UpdateOptions) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"nuodb.image.registry": "docker.io",
-			"nuodb.image.repository": "nuodb/nuodb-ce",
-			"nuodb.image.tag": nuodbVersion,
+			"admin.bootstrapServers":                "0",
 			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": "250Mi",
 			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": "250Mi",
 		},
+		Version: fromHelmVersion,
+	}
+	testlib.InferVersionFromTemplate(t, options)
+
+	if updateOptions.adminBootstrapServersOverrideRequired {
+		options.SetValues["admin.bootstrapServers"] = "0"
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdminFromHelmRepository(t, options, fromHelmVersion,1, "")
+	if updateOptions.adminRolesRequirePatching {
+		testlib.AdminRolesRequirePatching = true
+		testlib.AddTeardown(testlib.TEARDOWN_ADMIN, func() {
+			testlib.AdminRolesRequirePatching = false
+		})
+	}
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-	databaseReleaseName := testlib.StartDatabaseFromHelmRepository(t, namespaceName, admin0, fromHelmVersion, options)
+	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 
@@ -77,9 +120,17 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 
 	adminPod := testlib.GetPod(t, namespaceName, admin0)
 
+	// unset the version and use local
+	options.Version = ""
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = opts
+
 	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
-	testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	if updateOptions.adminPodShouldGetRecreated {
+		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	}
+
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	opt := testlib.GetExtractedOptions(options)
@@ -92,14 +143,45 @@ func upgradeDatabaseTest(t *testing.T, nuodbVersion string, fromHelmVersion stri
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 }
 
+
 func TestUpgradeHelm(t *testing.T) {
-	t.Run("NuoDB405_From231_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "4.0.5", "2.3.1")
+	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t,"2.3.1", &UpdateOptions{
+			adminPodShouldGetRecreated: true,
+			adminRolesRequirePatching:true,
+			adminBootstrapServersOverrideRequired: true,
+		})
+	})
+
+	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "2.4.0", &UpdateOptions{
+			adminRolesRequirePatching:true,
+		})
+	})
+
+	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "2.4.1", &UpdateOptions{
+		})
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
-	t.Run("NuoDB405_From231_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "4.0.5", "2.3.1")
+	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t,"2.3.1", &UpdateOptions{
+			adminPodShouldGetRecreated: true,
+			adminRolesRequirePatching:true,
+			adminBootstrapServersOverrideRequired: true,
+		})
+	})
+
+	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "2.4.0", &UpdateOptions{
+			adminRolesRequirePatching:true,
+		})
+	})
+
+	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "2.4.1", &UpdateOptions{
+		})
 	})
 }

@@ -4,6 +4,12 @@
 apiVersion: apps/v1
 kind: DaemonSet
 metadata:
+  annotations:
+    description: |-
+      Database deployment resource for NuoDB Storage Engines (SM).
+    {{- if .Values.database.podAnnotations }}
+{{ toYaml .Values.database.podAnnotations | trim | indent 4}}
+    {{- end }}
   labels: 
     app: {{ template "database.fullname" . }}
     group: nuodb
@@ -44,7 +50,7 @@ spec:
 {{ toYaml .Values.database.sm.tolerationsDS | trim | indent 8 }}
       {{- end }}          
       containers:
-      - name: sm
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
@@ -250,7 +256,7 @@ spec:
 {{ toYaml .Values.database.sm.tolerationsDS | trim | indent 8 }}
       {{- end }}
       containers:
-      - name: sm
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
