@@ -102,8 +102,11 @@ function perform_restore() {
 
   # restore request is a URL - so retrieve the backup using curl
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
-    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
-    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR
+    [ -n "$restore_credentials" -a "$restore_credentials" != ":" ] && curl_creds="--user '$restore_credentials'"
+    [ -n "$curl_creds" ] && curl_opts="--user '**'"
+
+    echo "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
+    curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $DB_DIR
 
     chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
   else
@@ -300,8 +303,11 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/1.atm ]; th
     fi
     
     # download the source
-    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $auto_download_dir"
-    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $auto_download_dir
+    [ -n "$restore_credentials" -a "$restore_credentials" != ":" ] && curl_creds="--user '$restore_credentials'"
+    [ -n "$curl_creds" ] && curl_opts="--user '**'"
+
+    echo "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $auto_download_dir"
+    curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $auto_download_dir
 
     chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
 
