@@ -699,7 +699,7 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 	t.Log("Fully consumed k8s event log")
 }
 
-func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string, podLogOptions *corev1.PodLogOptions) {
+func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string, podLogOptions *corev1.PodLogOptions) string {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName+fileNameSuffix+".log")
 
@@ -717,6 +717,8 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 	assert.NoError(t, err)
 
 	t.Logf("Finished reading log file %s", filePath)
+
+	return filePath
 }
 
 func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
