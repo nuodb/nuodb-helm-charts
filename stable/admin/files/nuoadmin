@@ -35,6 +35,16 @@ if [ $crashcount -ge 1 ]; then
   fi
 fi
 
+# diagnostics for admin state - relies on NUOCMD_API_SERVER being set
+raftlog=$NUODB_VARDIR/raftlog
+if [ -f "$raftlog" ]; then
+  cp $raftlog $NUODB_LOGDIR/raftlog.save
+  diag_file=$NUODB_LOGDIR/nuoadmin-diagnostic-state.txt
+  nuocmd capture domain-state --output $diag_file
+  echo "=====" >> $diag_file
+  nuocmd show domain --server-format '{id}: {log_term} {log_index} {commit_index}' >> $diag_file
+fi
+
 exec nuodocker start admin \
      --server-id "$NUODB_SERVERID" --alt-address "$NUODB_ALT_ADDRESS" --admin-port "$NUODB_ADMIN_PORT" \
      --domain-entrypoint "$NUODB_DOMAIN_ENTRYPOINT" --bootstrap-server-id "$NUODB_BOOTSTRAP_SERVERID" \
