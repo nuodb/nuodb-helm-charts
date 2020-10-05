@@ -632,7 +632,41 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+		}
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
+			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+		}
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
 			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
 			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
 			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
