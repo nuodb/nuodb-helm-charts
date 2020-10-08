@@ -219,22 +219,10 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 	options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
 }
 
-func InjectSSLMode(t *testing.T, options *helm.Options) {
-	if options.SetValues == nil {
-		options.SetValues = make(map[string]string)
-	}
-	if options.SetValues["admin.options.ssl"] == "" && options.SetValues["admin.tlsKeyStore.key"] == "" {
-		// Starting from NuoDB 4.2, default TLS keys won't be shipped in the image.
-		// Disable SSL if server keystore is not provided or SSL mode is not explicitly specified
-		options.SetValues["admin.options.ssl"] = "false"
-	}
-}
-
 func InjectTestValues(t *testing.T, options *helm.Options) {
 	InjectTestValuesFile(t, options)
 	InjectOpenShiftOverrides(t, options)
 	InjectTestVersion(t, options)
-	InjectSSLMode(t, options)
 }
 
 func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options) string {
