@@ -4,36 +4,46 @@ package minikube
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	v12 "k8s.io/api/core/v1"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	v12 "k8s.io/api/core/v1"
 )
 
 type UpdateOptions struct {
-	adminPodShouldGetRecreated bool
-	adminRolesRequirePatching bool
+	adminPodShouldGetRecreated            bool
+	adminRolesRequirePatching             bool
 	adminBootstrapServersOverrideRequired bool
 }
 
-
-func upgradeAdminTest(t *testing.T,fromHelmVersion string, updateOptions *UpdateOptions) {
+func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *UpdateOptions) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := &helm.Options{
-		SetValues: map[string]string{
-		},
-		Version: fromHelmVersion,
+		SetValues: map[string]string{},
+		Version:   fromHelmVersion,
 	}
 	testlib.InferVersionFromTemplate(t, options)
 
 	if updateOptions.adminBootstrapServersOverrideRequired {
 		options.SetValues["admin.bootstrapServers"] = "0"
 	}
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("upgradeadmintest-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
 
+	// Enable TLS during upgrade because the older versions of helm charts have
+	// hardcodded instances of "https://" in LB policy job and NuoDB 4.2+ image
+	// doesn't contain pregenerated keys
+	testlib.GenerateAndSetTLSKeys(t, options, namespaceName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 	if updateOptions.adminRolesRequirePatching {
@@ -43,7 +53,7 @@ func upgradeAdminTest(t *testing.T,fromHelmVersion string, updateOptions *Update
 		})
 	}
 
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
+	helmChartReleaseName, _ := testlib.StartAdmin(t, options, 1, namespaceName)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	// get the OLD log
@@ -91,7 +101,16 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 	if updateOptions.adminBootstrapServersOverrideRequired {
 		options.SetValues["admin.bootstrapServers"] = "0"
 	}
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("upgradedatabasetest-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
 
+	// Enable TLS during upgrade because the older versions of helm charts have
+	// hardcodded instances of "https://" in LB policy job and NuoDB 4.2+ image
+	// doesn't contain pregenerated keys
+	testlib.GenerateAndSetTLSKeys(t, options, namespaceName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 	if updateOptions.adminRolesRequirePatching {
@@ -101,7 +120,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 		})
 	}
 
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, "")
+	helmChartReleaseName, _ := testlib.StartAdmin(t, options, 1, namespaceName)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	// get the OLD log
@@ -143,45 +162,42 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 }
 
-
 func TestUpgradeHelm(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t,"2.3.1", &UpdateOptions{
-			adminPodShouldGetRecreated: true,
-			adminRolesRequirePatching:true,
+		upgradeAdminTest(t, "2.3.1", &UpdateOptions{
+			adminPodShouldGetRecreated:            true,
+			adminRolesRequirePatching:             true,
 			adminBootstrapServersOverrideRequired: true,
 		})
 	})
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
 		upgradeAdminTest(t, "2.4.0", &UpdateOptions{
-			adminRolesRequirePatching:true,
+			adminRolesRequirePatching: true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "2.4.1", &UpdateOptions{
-		})
+		upgradeAdminTest(t, "2.4.1", &UpdateOptions{})
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t,"2.3.1", &UpdateOptions{
-			adminPodShouldGetRecreated: true,
-			adminRolesRequirePatching:true,
+		upgradeDatabaseTest(t, "2.3.1", &UpdateOptions{
+			adminPodShouldGetRecreated:            true,
+			adminRolesRequirePatching:             true,
 			adminBootstrapServersOverrideRequired: true,
 		})
 	})
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
 		upgradeDatabaseTest(t, "2.4.0", &UpdateOptions{
-			adminRolesRequirePatching:true,
+			adminRolesRequirePatching: true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "2.4.1", &UpdateOptions{
-		})
+		upgradeDatabaseTest(t, "2.4.1", &UpdateOptions{})
 	})
 }
