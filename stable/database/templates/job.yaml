@@ -20,7 +20,7 @@ spec:
         args:
         - "nuocmd"
         - "--api-server"
-        - "https://{{ template "admin.address" . }}:8888"
+        - "{{ template "admin.address" . }}:8888"
         - "check"
         - "database"
         - "--db-name"

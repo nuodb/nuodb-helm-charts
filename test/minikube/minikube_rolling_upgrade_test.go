@@ -4,15 +4,17 @@ package minikube
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/stretchr/testify/assert"
 	v12 "k8s.io/api/core/v1"
-	"strings"
 
 	"testing"
 	"time"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 )
 
@@ -170,9 +172,19 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 		},
 	}
 
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("rollingupgradeadminminorversion-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
+
+	// Enable TLS during upgrade because the older versions of helm charts have
+	// hardcodded instances of "https://" in LB policy job and NuoDB 4.2+ image
+	// doesn't contain pregenerated keys
+	testlib.GenerateAndSetTLSKeys(t, &options, namespaceName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
+	helmChartReleaseName, _ := testlib.StartAdmin(t, &options, 3, namespaceName)
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", helmChartReleaseName)
