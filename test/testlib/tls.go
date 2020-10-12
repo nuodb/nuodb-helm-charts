@@ -2,7 +2,6 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -160,4 +161,25 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options, namespaceName st
 		AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
 	}
 	AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
+}
+
+func GenerateAndSetTLSKeys(t *testing.T, options *helm.Options, namespaceName string) {
+	tlsCommands := []string{
+		"export DEFAULT_PASSWORD='" + SECRET_PASSWORD + "'",
+		"setup-keys.sh",
+	}
+	GenerateTLSConfiguration(t, namespaceName, tlsCommands)
+	if options.SetValues == nil {
+		options.SetValues = make(map[string]string)
+	}
+	options.SetValues["admin.tlsCACert.secret"] = CA_CERT_SECRET
+	options.SetValues["admin.tlsCACert.key"] = CA_CERT_FILE
+	options.SetValues["admin.tlsKeyStore.secret"] = KEYSTORE_SECRET
+	options.SetValues["admin.tlsKeyStore.key"] = KEYSTORE_FILE
+	options.SetValues["admin.tlsKeyStore.password"] = SECRET_PASSWORD
+	options.SetValues["admin.tlsTrustStore.secret"] = TRUSTSTORE_SECRET
+	options.SetValues["admin.tlsTrustStore.key"] = TRUSTSTORE_FILE
+	options.SetValues["admin.tlsTrustStore.password"] = SECRET_PASSWORD
+	options.SetValues["admin.tlsClientPEM.secret"] = NUOCMD_SECRET
+	options.SetValues["admin.tlsClientPEM.key"] = NUOCMD_FILE
 }
