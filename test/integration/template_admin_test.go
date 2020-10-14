@@ -367,7 +367,7 @@ func TestGlobalLoadBalancerConfigRendersOnlyOnEntryPointCluster(t *testing.T) {
 	}
 }
 
-func TestAnnotationsRender(t *testing.T) {
+func TestAdminPodAnnotationsRender(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
 
@@ -390,12 +390,12 @@ func TestAnnotationsRender(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
-		assert.Equal(t, options.SetValues["admin.podAnnotations.key1"], obj.Annotations["key1"])
-		assert.Equal(t, options.SetValues["admin.podAnnotations.key2"], obj.Annotations["key2"])
-		assert.Equal(t, options.SetValues["admin.podAnnotations.key3\\.key3"], obj.Annotations["key3.key3"])
-		assert.Equal(t, options.SetValues["admin.podAnnotations.key4\\.key4/key4"], obj.Annotations["key4.key4/key4"])
-		assert.Equal(t, options.SetValues["admin.podAnnotations.key5\\.key5/key5"], obj.Annotations["key5.key5/key5"])
-		assert.Equal(t, options.SetValues["admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Annotations["vault.hashicorp.com/agent-inject"])
-		assert.Equal(t, options.SetValues["admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
+		assert.Equal(t, options.SetValues["admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 	}
 }
