@@ -116,19 +116,40 @@ spec:
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
           {{- end}}
-        livenessProbe:
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          tcpSocket:
-            port: 8888
+        # startupProbe:
+        #   initialDelaySeconds: 60
+        #   periodSeconds: 30
+        #   failureThreshold: 20
+        #   timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
+        #   exec:
+        #     command:
+        #       - bash
+        #       - -c
+        #       - nuodocker check servers --check-connected --check-active --check-leader; retval=$?; echo "startupProbe returned $retval" >> /var/log/nuodb/nuoadmin_event.log; exit $retval
+        # livenessProbe:
+        #   initialDelaySeconds: 30
+        #   periodSeconds: 15
+        #   failureThreshold: 3
+        #   timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
+        #   exec:
+        #     command:
+        #       - bash
+        #       - -c
+        #       - exit 0
+              # - nuodocker check servers; retval=$?; echo "livenessProbe returned $retval" >> /var/log/nuodb/nuoadmin_event.log; exit $retval
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
-          exec:
-            command: [ "nuodocker", "check", "servers", "--check-connected", "--check-active", "--check-leader" ]
           failureThreshold: 30
           successThreshold: 2
           timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
+          exec:
+            command:
+              - bash
+              - -c
+              - msg=`nuodocker check servers --check-connected --check-active --check-leader`; retval=$?; echo "$(date) readinessProbe returned $msg - exit $retval" | tee -a /var/log/nuodb/nuoadmin_event.log; exit $retval
+            # - echo "readinessProbe returning 0" >> /var/log/nuodb/nuoadmin_event.log
+            # - nuodocker get server-config --this-server; retval=$?; echo "readinessProbe returned $retval" >> /var/log/nuodb/nuoadmin_event.log; exit $retval
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb

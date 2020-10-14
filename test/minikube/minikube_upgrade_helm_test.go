@@ -79,7 +79,7 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *Updat
 		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
 	}
 
-	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 500*time.Second)
 }
 
 func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *UpdateOptions) {
@@ -150,7 +150,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
 	}
 
-	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 500*time.Second)
 
 	opt := testlib.GetExtractedOptions(options)
 
