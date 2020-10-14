@@ -7,9 +7,6 @@ metadata:
   annotations:
     description: |-
       Database deployment resource for NuoDB Storage Engines (SM).
-    {{- if .Values.database.podAnnotations }}
-{{ toYaml .Values.database.podAnnotations | trim | indent 4}}
-    {{- end }}
   labels: 
     app: {{ template "database.fullname" . }}
     group: nuodb
@@ -26,6 +23,10 @@ spec:
       role: nohotcopy
   template:
     metadata:
+      {{- if .Values.database.podAnnotations }}
+      annotations:
+{{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
+      {{- end }}
       labels:
         app: {{ template "database.fullname" . }}
         component: sm
@@ -261,6 +262,10 @@ spec:
       role: hotcopy
   template:
     metadata:
+      {{- if .Values.database.podAnnotations }}
+      annotations:
+{{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
+      {{- end }}
       labels:
         app: {{ template "database.fullname" . }}
         component: sm
