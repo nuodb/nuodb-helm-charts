@@ -24,9 +24,9 @@ env:
   global:
     - HELM_VERSION="v3.2.4"
     - DEP_VERSION=0.5.4
-    - KUBERNETES_VERSION=1.15.0
+    - KUBERNETES_VERSION=1.18.0
     - OPENSHIFT_VERSION=3.11.0
-    - MINIKUBE_VERSION=1.2.0
+    - MINIKUBE_VERSION=1.10.1
     - MINISHIFT_VERSION=1.34.2
     - MINIKUBE_WANTUPDATENOTIFICATION=false
     - MINIKUBE_WANTREPORTERRORPROMPT=false
@@ -45,6 +45,7 @@ before_install:
     fi
   - sudo apt-get update
   - sudo apt-get install socat
+  - sudo apt-get install conntrack
   - chmod +x scripts/ci/install_deps.sh
   - scripts/ci/install_deps.sh
 
