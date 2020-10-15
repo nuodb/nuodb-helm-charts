@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/require"
 
 	v1 "k8s.io/api/core/v1"
@@ -25,9 +25,9 @@ func TestDatabaseSecretsDefault(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/secret.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderSecret(t, output, 1) {
-		assert.Contains(t, obj.StringData, "database-name")
-		assert.Contains(t, obj.StringData, "database-password")
-		assert.Contains(t, obj.StringData, "database-username")
+		require.Contains(t, obj.StringData, "database-name")
+		require.Contains(t, obj.StringData, "database-password")
+		require.Contains(t, obj.StringData, "database-username")
 	}
 
 }
@@ -51,9 +51,9 @@ func TestDatabaseConfigMaps(t *testing.T) {
 		}
 	}
 
-	assert.Contains(t, configs, "nuosm")
-	assert.Contains(t, configs, "nuote")
-	assert.Contains(t, configs, "readinessprobe")
+	require.Contains(t, configs, "nuosm")
+	require.Contains(t, configs, "nuote")
+	require.Contains(t, configs, "readinessprobe")
 }
 
 func TestDatabaseDaemonSetDisabled(t *testing.T) {
@@ -68,7 +68,7 @@ func TestDatabaseDaemonSetDisabled(t *testing.T) {
 	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
 	// helm3 wont render an empty template
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestDatabaseDaemonSetEnabled(t *testing.T) {
@@ -97,10 +97,10 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-clusterip.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
-		assert.Equal(t, "demo-clusterip", obj.Name)
-		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
-		assert.Equal(t, "te", obj.Spec.Selector["component"])
-		assert.Empty(t, obj.Spec.ClusterIP)
+		require.Equal(t, "demo-clusterip", obj.Name)
+		require.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
+		require.Equal(t, "te", obj.Spec.Selector["component"])
+		require.Empty(t, obj.Spec.ClusterIP)
 	}
 }
 
@@ -116,10 +116,10 @@ func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-headless.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
-		assert.Equal(t, "demo", obj.Name)
-		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
-		assert.Equal(t, "te", obj.Spec.Selector["component"])
-		assert.Equal(t, "None", obj.Spec.ClusterIP)
+		require.Equal(t, "demo", obj.Name)
+		require.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
+		require.Equal(t, "te", obj.Spec.Selector["component"])
+		require.Equal(t, "None", obj.Spec.ClusterIP)
 	}
 }
 
@@ -139,10 +139,10 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
-		assert.Equal(t, "demo-balancer", obj.Name)
-		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
-		assert.Equal(t, "te", obj.Spec.Selector["component"])
-		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
+		require.Equal(t, "demo-balancer", obj.Name)
+		require.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		require.Equal(t, "te", obj.Spec.Selector["component"])
+		require.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
 	}
 
 }
@@ -159,7 +159,7 @@ func TestDatabaseStatefulSetDisabled(t *testing.T) {
 	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 	// helm3 wont render an empty template
-	assert.Error(t, err)
+	require.Error(t, err)
 }
 
 func TestDatabaseStatefulSet(t *testing.T) {
@@ -174,8 +174,8 @@ func TestDatabaseStatefulSet(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
-		assert.Equal(t, "sm", obj.Spec.Selector.MatchLabels["component"])
-		assert.Equal(t, "sm", obj.Spec.Template.ObjectMeta.Labels["component"])
+		require.Equal(t, "sm", obj.Spec.Selector.MatchLabels["component"])
+		require.Equal(t, "sm", obj.Spec.Template.ObjectMeta.Labels["component"])
 	}
 }
 
@@ -192,12 +192,12 @@ func TestDatabaseStatefulSetVolumes(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 		if strings.Contains(obj.Name, "-hotcopy") {
-			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
-			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "backup-volume"))
-			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[2].ObjectMeta.Name, "log-volume"))
+			require.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
+			require.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "backup-volume"))
+			require.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[2].ObjectMeta.Name, "log-volume"))
 		} else {
-			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
-			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
+			require.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "archive-volume"))
+			require.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
 		}
 	}
 
@@ -215,8 +215,8 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
-		assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
-		assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
+		require.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
+		require.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
 	}
 
 }
@@ -236,12 +236,12 @@ func TestDatabaseOtherOptions(t *testing.T) {
 	}
 
 	basicArgChecks := func(args []string) {
-		assert.True(t, testlib.ArgContains(args, "--keystore"))
-		assert.True(t, testlib.ArgContains(args, "/etc/nuodb/keys/nuoadmin.p12"))
+		require.True(t, testlib.ArgContains(args, "--keystore"))
+		require.True(t, testlib.ArgContains(args, "/etc/nuodb/keys/nuoadmin.p12"))
 	}
 
 	basicEnvChecks := func(args []v1.EnvVar) {
-		assert.True(t, testlib.EnvContains(args, "NUODOCKER_KEYSTORE_PASSWORD", "changeIt"))
+		require.True(t, testlib.EnvContains(args, "NUODOCKER_KEYSTORE_PASSWORD", "changeIt"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -297,8 +297,8 @@ func TestDatabaseCustomEnv(t *testing.T) {
 				FieldPath: "status.podIP",
 			},
 		}
-		assert.True(t, testlib.EnvContainsValueFrom(args, "NUODB_ALT_ADDRESS", &expectedAltAddress))
-		assert.True(t, testlib.EnvContains(args, "CUSTOM_ENV_VAR", "CUSTOM_ENV_VAR_VALUE"))
+		require.True(t, testlib.EnvContainsValueFrom(args, "NUODB_ALT_ADDRESS", &expectedAltAddress))
+		require.True(t, testlib.EnvContains(args, "CUSTOM_ENV_VAR", "CUSTOM_ENV_VAR_VALUE"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -348,8 +348,8 @@ func TestDatabaseVPNRenders(t *testing.T) {
 	}
 
 	basicChecks := func(args []v1.Container) {
-		assert.Contains(t, args[0].SecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
-		assert.True(t, testlib.EnvFromSourceContains(args[0].EnvFrom, "test-config"))
+		require.Contains(t, args[0].SecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+		require.True(t, testlib.EnvFromSourceContains(args[0].EnvFrom, "test-config"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -404,9 +404,9 @@ func TestDatabaseLabeling(t *testing.T) {
 	}
 
 	basicChecks := func(args []string) {
-		assert.True(t, testlib.ArgContains(args, "cloud minikube"))
-		assert.True(t, testlib.ArgContains(args, "region local"))
-		assert.True(t, testlib.ArgContains(args, "zone local-b"))
+		require.True(t, testlib.ArgContains(args, "cloud minikube"))
+		require.True(t, testlib.ArgContains(args, "region local"))
+		require.True(t, testlib.ArgContains(args, "zone local-b"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -428,7 +428,7 @@ func TestDatabaseLabeling(t *testing.T) {
 			basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 			if testlib.IsStatefulSetHotCopyEnabled(&obj) {
-				assert.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
+				require.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
 			}
 		}
 	})
@@ -446,7 +446,7 @@ func TestDatabaseLabeling(t *testing.T) {
 			basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
 
 			if testlib.IsDaemonSetHotCopyEnabled(&obj) {
-				assert.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
+				require.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
 			}
 		}
 	})
@@ -462,9 +462,9 @@ func TestReadinessProbe(t *testing.T) {
 
 	basicChecks := func(spec v1.PodSpec) {
 		container := spec.Containers[0]
-		assert.True(t, container.ReadinessProbe != nil)
-		assert.True(t, testlib.MountContains(container.VolumeMounts, "readinessprobe"))
-		assert.True(t, testlib.VolumesContains(spec.Volumes, "readinessprobe"))
+		require.True(t, container.ReadinessProbe != nil)
+		require.True(t, testlib.MountContains(container.VolumeMounts, "readinessprobe"))
+		require.True(t, testlib.VolumesContains(spec.Volumes, "readinessprobe"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -515,7 +515,7 @@ func TestDatabaseConfigDoesNotContainEmptyBlocks(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 
-	assert.NotContains(t, output, "---\n---")
+	require.NotContains(t, output, "---\n---")
 }
 
 func TestLoadBalancerConfigurationRenders(t *testing.T) {
@@ -529,9 +529,9 @@ func TestLoadBalancerConfigurationRenders(t *testing.T) {
 		},
 	}
 
-	assertLoadBalancerAnnotations := func(annotations map[string]string) {
-		assert.Equal(t, options.SetValues["database.lbConfig.prefilter"], annotations["nuodb.com/load-balancer-prefilter"])
-		assert.Equal(t, options.SetValues["database.lbConfig.default"], annotations["nuodb.com/load-balancer-default"])
+	requireLoadBalancerAnnotations := func(annotations map[string]string) {
+		require.Equal(t, options.SetValues["database.lbConfig.prefilter"], annotations["nuodb.com/load-balancer-prefilter"])
+		require.Equal(t, options.SetValues["database.lbConfig.default"], annotations["nuodb.com/load-balancer-default"])
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -539,7 +539,7 @@ func TestLoadBalancerConfigurationRenders(t *testing.T) {
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
-			assertLoadBalancerAnnotations(obj.Annotations)
+			requireLoadBalancerAnnotations(obj.Annotations)
 		}
 	})
 }
@@ -556,9 +556,9 @@ func TestDefaultLoadBalancerConfigurationRendersOnlyOnEntryPointCluster(t *testi
 		},
 	}
 
-	assertLoadBalancerAnnotations := func(annotations map[string]string) {
-		assert.NotContains(t, annotations, "nuodb.com/load-balancer-prefilter")
-		assert.NotContains(t, annotations, "nuodb.com/load-balancer-default")
+	requireLoadBalancerAnnotations := func(annotations map[string]string) {
+		require.NotContains(t, annotations, "nuodb.com/load-balancer-prefilter")
+		require.NotContains(t, annotations, "nuodb.com/load-balancer-default")
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -566,7 +566,7 @@ func TestDefaultLoadBalancerConfigurationRendersOnlyOnEntryPointCluster(t *testi
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
-			assertLoadBalancerAnnotations(obj.Annotations)
+			requireLoadBalancerAnnotations(obj.Annotations)
 		}
 	})
 }
@@ -579,9 +579,9 @@ func TestDefaultLoadBalancerConfigurationNotRenders(t *testing.T) {
 		SetValues: map[string]string{},
 	}
 
-	assertLoadBalancerAnnotations := func(annotations map[string]string) {
-		assert.NotContains(t, annotations, "nuodb.com/load-balancer-prefilter")
-		assert.NotContains(t, annotations, "nuodb.com/load-balancer-default")
+	requireLoadBalancerAnnotations := func(annotations map[string]string) {
+		require.NotContains(t, annotations, "nuodb.com/load-balancer-prefilter")
+		require.NotContains(t, annotations, "nuodb.com/load-balancer-default")
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -589,7 +589,7 @@ func TestDefaultLoadBalancerConfigurationNotRenders(t *testing.T) {
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
-			assertLoadBalancerAnnotations(obj.Annotations)
+			requireLoadBalancerAnnotations(obj.Annotations)
 		}
 	})
 }
@@ -618,13 +618,13 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
-			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 		}
 	})
 
@@ -633,13 +633,13 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
-			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 		}
 	})
 
@@ -648,13 +648,13 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
-			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 		}
 	})
 
@@ -667,13 +667,13 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
-			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 		}
 	})
 
@@ -686,13 +686,13 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
+			require.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
+			require.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 		}
 	})
 }

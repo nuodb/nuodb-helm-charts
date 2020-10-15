@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 
@@ -32,22 +32,22 @@ func TestTeardown(t *testing.T) {
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Equal(t, 3, tdcounter)
+		require.Equal(t, 3, tdcounter)
 	})
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.Teardown("")
 
-	assert.Equal(t, 3, tdcounter)
+	require.Equal(t, 3, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -57,34 +57,34 @@ func TestNamedTeardown(t *testing.T) {
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Equal(t, 3, tdcounter)
+		require.Equal(t, 3, tdcounter)
 	})
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AddTeardown("", func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.AddTeardown("other", func() {
 		tdcounter++
-		assert.Equal(t, 5, tdcounter)
+		require.Equal(t, 5, tdcounter)
 	})
 
 	testlib.AddTeardown("other", func() {
 		tdcounter++
-		assert.Equal(t, 4, tdcounter)
+		require.Equal(t, 4, tdcounter)
 	})
 
 	testlib.Teardown("")
-	assert.Equal(t, 3, tdcounter)
+	require.Equal(t, 3, tdcounter)
 
 	testlib.Teardown("other")
-	assert.Equal(t, 5, tdcounter)
+	require.Equal(t, 5, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -95,22 +95,22 @@ func TestUnconditionalDiagnosticTeardown(t *testing.T) {
 
 	testlib.AddDiagnosticTeardown("name", true, func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 3, tdcounter)
+		require.Equal(t, 3, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.Teardown("name")
 
-	assert.Equal(t, 3, tdcounter)
+	require.Equal(t, 3, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -120,22 +120,22 @@ func TestSkippedDiagnosticTeardown(t *testing.T) {
 	tdcounter := 0
 
 	testlib.AddDiagnosticTeardown("name", false, func() {
-		assert.FailNow(t, "This diagnostic teardown should not have been run")
+		require.FailNow(t, "This diagnostic teardown should not have been run")
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.Teardown("name")
 
-	assert.Equal(t, 2, tdcounter)
+	require.Equal(t, 2, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -146,22 +146,22 @@ func TestUnconditionalFuncDiagnosticTeardown(t *testing.T) {
 
 	testlib.AddDiagnosticTeardown("name", func() bool { return true }, func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 3, tdcounter)
+		require.Equal(t, 3, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.Teardown("name")
 
-	assert.Equal(t, 3, tdcounter)
+	require.Equal(t, 3, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -171,22 +171,22 @@ func TestSkippedFuncDiagnosticTeardown(t *testing.T) {
 	tdcounter := 0
 
 	testlib.AddDiagnosticTeardown("name", func() bool { return false }, func() {
-		assert.FailNow(t, "This diagnostic teardown should not have been run")
+		require.FailNow(t, "This diagnostic teardown should not have been run")
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.Teardown("name")
 
-	assert.Equal(t, 2, tdcounter)
+	require.Equal(t, 2, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -199,24 +199,24 @@ func TestTFailedDiagnosticTeardown(t *testing.T) {
 
 	testlib.AddDiagnosticTeardown("name", tt, func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 3, tdcounter)
+		require.Equal(t, 3, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	tt.Fail()
 
 	testlib.Teardown("name")
 
-	assert.Equal(t, 3, tdcounter)
+	require.Equal(t, 3, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -226,22 +226,22 @@ func TestTNotFailedDiagnosticTeardown(t *testing.T) {
 	tdcounter := 0
 
 	testlib.AddDiagnosticTeardown("name", t, func() {
-		assert.FailNow(t, "This diagnostic teardown should not have been called since T has not failed")
+		require.FailNow(t, "This diagnostic teardown should not have been called since T has not failed")
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.Teardown("name")
 
-	assert.Equal(t, 2, tdcounter)
+	require.Equal(t, 2, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -251,22 +251,22 @@ func TestNilDiagnosticTeardown(t *testing.T) {
 	tdcounter := 0
 
 	testlib.AddDiagnosticTeardown("name", nil, func() {
-		assert.FailNow(t, "Diagnostic teardown should not be run if the conditional is nil")
+		require.FailNow(t, "Diagnostic teardown should not be run if the conditional is nil")
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.Teardown("name")
 
-	assert.Equal(t, 2, tdcounter)
+	require.Equal(t, 2, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -277,17 +277,17 @@ func TestUnconditionalEnvVarDiagnosticTeardown(t *testing.T) {
 
 	testlib.AddDiagnosticTeardown("name", false, func() {
 		tdcounter++
-		assert.Equal(t, 1, tdcounter)
+		require.Equal(t, 1, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 3, tdcounter)
+		require.Equal(t, 3, tdcounter)
 	})
 
 	testlib.AddTeardown("name", func() {
 		tdcounter++
-		assert.Equal(t, 2, tdcounter)
+		require.Equal(t, 2, tdcounter)
 	})
 
 	testlib.AlwaysRunDiagnosticTeardowns = true
@@ -295,7 +295,7 @@ func TestUnconditionalEnvVarDiagnosticTeardown(t *testing.T) {
 
 	testlib.Teardown("name")
 
-	assert.Equal(t, 3, tdcounter)
+	require.Equal(t, 3, tdcounter)
 
 	testlib.VerifyTeardown(t)
 }
@@ -307,10 +307,10 @@ func TestGetExtractedOptions(t *testing.T) {
 			SetValues: map[string]string{},
 		})
 
-		assert.Equal(t, "demo", opt.DbName)
-		assert.Equal(t, 1, opt.NrTePods)
-		assert.Equal(t, 1, opt.NrSmPods)
-		assert.Equal(t, "cluster0", opt.ClusterName)
+		require.Equal(t, "demo", opt.DbName)
+		require.Equal(t, 1, opt.NrTePods)
+		require.Equal(t, 1, opt.NrSmPods)
+		require.Equal(t, "cluster0", opt.ClusterName)
 	})
 
 	t.Run("overriddenOptions", func(t *testing.T) {
@@ -324,12 +324,12 @@ func TestGetExtractedOptions(t *testing.T) {
 			},
 		})
 
-		assert.Equal(t, "green", opt.DbName)
-		assert.Equal(t, 2, opt.NrTePods)
-		assert.Equal(t, 2, opt.NrSmHotCopyPods)
-		assert.Equal(t, 2, opt.NrSmNoHotCopyPods)
-		assert.Equal(t, 4, opt.NrSmPods)
-		assert.Equal(t, "cluster1", opt.ClusterName)
+		require.Equal(t, "green", opt.DbName)
+		require.Equal(t, 2, opt.NrTePods)
+		require.Equal(t, 2, opt.NrSmHotCopyPods)
+		require.Equal(t, 2, opt.NrSmNoHotCopyPods)
+		require.Equal(t, 4, opt.NrSmPods)
+		require.Equal(t, "cluster1", opt.ClusterName)
 	})
 
 }

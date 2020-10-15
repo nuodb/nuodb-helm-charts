@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -85,7 +85,7 @@ func verifySecretFields(t *testing.T, namespaceName string, secretName string, f
 	secret := GetSecret(t, namespaceName, secretName)
 	for _, field := range fields {
 		_, ok := secret.Data[field]
-		assert.True(t, ok)
+		require.True(t, ok)
 	}
 }
 
@@ -98,7 +98,7 @@ func CreateSecret(t *testing.T, namespaceName string, certName string, secretNam
 	keyFile := filepath.Join(keyDir, certName)
 
 	secretString, err := createSecretDecl(keyFile, namespaceName, secretName, certName)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, secretString)
 	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, secretString) })
@@ -116,7 +116,7 @@ func CreateSecretWithPassword(t *testing.T, namespaceName string, certName strin
 	keyFile := filepath.Join(keyDir, certName)
 
 	secretString, err := createSecretPassDecl(keyFile, namespaceName, secretName, certName, password)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, secretString)
 	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, secretString) })

@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -116,7 +116,7 @@ func Teardown(name string) {
 }
 
 /**
-* Verify all teardownLists have been executed already; and throw an ASSERT if not.
+* Verify all teardownLists have been executed already; and throw an require if not.
 * Can be used to verify correct coding of a test that uses teardown - and to ensure eventual release of resources.
 *
 * NOTE: while the funcs are called in the correct order for each list,
@@ -147,7 +147,7 @@ func VerifyTeardown(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, 0, len(uncleared), "Error - %d teardownLists were left uncleared: %s", len(uncleared), uncleared)
+	require.Equal(t, 0, len(uncleared), "Error - %d teardownLists were left uncleared: %s", len(uncleared), uncleared)
 }
 
 func standardizeSpaces(s string) string {
@@ -208,7 +208,7 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 	t.Log("Using injected values:\n", string(dat))
 
 	err, image := UnmarshalImageYAML(string(dat))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	if options.SetValues == nil {
 		options.SetValues = make(map[string]string)
@@ -276,7 +276,7 @@ func Await(t *testing.T, lmbd func() bool, timeout time.Duration) {
 
 func AwaitTillerUp(t *testing.T) {
 	version, err := helm.RunHelmCommandAndGetOutputE(t, &helm.Options{}, "version", "--short")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Logf("Using Helm %s", version)
 
@@ -369,7 +369,7 @@ func GetPod(t *testing.T, namespace string, podName string) *corev1.Pod {
 
 func GetPodName(t *testing.T, namespaceName string, expectedName string) string {
 	tePod, err := findPod(t, namespaceName, expectedName)
-	assert.NoError(t, err, "No pod found with name ", expectedName)
+	require.NoError(t, err, "No pod found with name ", expectedName)
 
 	return tePod.Name
 }
@@ -387,7 +387,7 @@ func AwaitPodStatus(t *testing.T, namespace string, podName string, condition co
 func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.PodPhase, timeout time.Duration) {
 	Await(t, func() bool {
 		pod, err := findPod(t, namespace, podName)
-		assert.NoError(t, err, "awaitPodPhase: could not find pod with name matching ", podName)
+		require.NoError(t, err, "awaitPodPhase: could not find pod with name matching ", podName)
 
 		return pod.Status.Phase == phase
 	}, timeout)
@@ -472,8 +472,8 @@ func VerifyAdminState(t *testing.T, namespace string, podName string) {
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "domain")
 
-	assert.NoError(t, err, "verifyAdminState: running show domain failed")
-	assert.True(t, strings.Contains(output, "ACTIVE"))
+	require.NoError(t, err, "verifyAdminState: running show domain failed")
+	require.True(t, strings.Contains(output, "ACTIVE"))
 
 }
 
@@ -498,7 +498,7 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 		_ = k8s.RunKubectlE(t, options, "exec", podName, "--", "nuocmd", "show", "domain")
 	}
 
-	assert.NoError(t, err, "Check database failed. DB not ready after 300s")
+	require.NoError(t, err, "Check database failed. DB not ready after 300s")
 }
 
 func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
@@ -506,7 +506,7 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 		options := k8s.NewKubectlOptions("", "", namespace)
 
 		pwd, err := os.Getwd()
-		assert.NoError(t, err)
+		require.NoError(t, err)
 
 		targetDirPath := filepath.Join(pwd, RESULT_DIR, namespace, "diagnose")
 		_ = os.MkdirAll(targetDirPath, 0700)
@@ -518,7 +518,7 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 		k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "get", "diagnose-info",
 			"--include-cores", "--output-dir", "/tmp")
 		diagnoseFile, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", "ls -1 /tmp | grep diagnose-")
-		assert.NoError(t, err, "Can not find diagnose archive")
+		require.NoError(t, err, "Can not find diagnose archive")
 
 		k8s.RunKubectl(t, options, "cp", podName+":/tmp/"+diagnoseFile, filepath.Join(targetDirPath, diagnoseFile))
 	}
@@ -528,10 +528,10 @@ func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, data
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "--show-json", "get", "databases")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	err, databases := UnmarshalDatabase(output)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	for _, db := range databases {
 		if db.Name == databaseName {
@@ -581,37 +581,37 @@ func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "get", "load-balancers")
-	assert.NoError(t, err, "VerifyPolicyInstalled: ", podName)
-	assert.True(t, strings.Contains(output, "LoadBalancerPolicy"))
+	require.NoError(t, err, "VerifyPolicyInstalled: ", podName)
+	require.True(t, strings.Contains(output, "LoadBalancerPolicy"))
 }
 
 func VerifyLicenseFile(t *testing.T, namespace string, podName string, expectedLicense string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "cat", "/etc/nuodb/nuodb.lic")
-	assert.NoError(t, err, "verifyLicenseFile: exec cat nuodb.lic")
-	assert.Equal(t, output, expectedLicense)
+	require.NoError(t, err, "verifyLicenseFile: exec cat nuodb.lic")
+	require.Equal(t, output, expectedLicense)
 }
 
 func VerifyLicenseIsCommunity(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "domain")
-	assert.NoError(t, err)
-	assert.True(t, strings.Contains(output, "server license: Community"), output)
+	require.NoError(t, err)
+	require.True(t, strings.Contains(output, "server license: Community"), output)
 }
 
 func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, expectError bool) {
 	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fullLog := string(buf)
 
-	assert.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify license"), fullLog)
+	require.Equal(t, expectError, strings.Contains(fullLog, "Unable to verify license"), fullLog)
 }
 
 func GetStringOccurrenceInLog(t *testing.T, namespace string, podName string, expectedLogLine string, podLogOptions *corev1.PodLogOptions) int {
 	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, podLogOptions))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fullLog := string(buf)
 
@@ -621,11 +621,11 @@ func GetStringOccurrenceInLog(t *testing.T, namespace string, podName string, ex
 
 func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {
 	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	fullLog := string(buf)
 
-	assert.True(t, strings.Contains(standardizeSpaces(fullLog), expectedLogLine),
+	require.True(t, strings.Contains(standardizeSpaces(fullLog), expectedLogLine),
 		"`%s` not found in:\n %s", expectedLogLine, fullLog)
 }
 
@@ -633,8 +633,8 @@ func KillAdminPod(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "delete", "pod", podName)
-	assert.NoError(t, err, "killAdminPod: delete pod returned an error")
-	assert.True(t, strings.Contains(output, "deleted"), "`deleted` not found in %s", output)
+	require.NoError(t, err, "killAdminPod: delete pod returned an error")
+	require.True(t, strings.Contains(output, "deleted"), "`deleted` not found in %s", output)
 }
 
 func KillProcess(t *testing.T, namespace string, podName string) {
@@ -660,8 +660,8 @@ func PingService(t *testing.T, namespace string, serviceName string, podName str
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--",
 		"ping", fullServiceName, "-c", "1",
 	)
-	assert.NoError(t, err)
-	assert.True(t, strings.Contains(output, "1 received"))
+	require.NoError(t, err)
+	require.True(t, strings.Contains(output, "1 received"))
 }
 
 func shouldGetDiagnose() bool {
@@ -676,24 +676,24 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 	_ = os.MkdirAll(dirPath, 0700)
 
 	f, err := os.Create(filePath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer f.Close()
 
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	var opts metav1.ListOptions
 
 	events, err := client.CoreV1().Events(namespace).Watch(context.TODO(), opts)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	writer := io.Writer(f)
 
 	for event := range events.ResultChan() {
 		_, err = fmt.Fprintln(writer, event)
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	t.Log("Fully consumed k8s event log")
@@ -706,15 +706,15 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 	_ = os.MkdirAll(dirPath, 0700)
 
 	f, err := os.Create(filePath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer f.Close()
 
 	writer := io.Writer(f)
 
 	reader := getAppLogStream(t, namespace, podName, podLogOptions)
-	assert.NotNil(t, reader)
+	require.NotNil(t, reader)
 	_, err = io.Copy(writer, reader)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Logf("Finished reading log file %s", filePath)
 
@@ -725,17 +725,17 @@ func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptio
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	reader, err := client.CoreV1().Pods(options.Namespace).GetLogs(podName, podLogOptions).Stream(context.TODO())
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return reader
 }
 
 func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	pwd, err := os.Getwd()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	dirPath := filepath.Join(pwd, RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName+"_nuoadmin_event.log")
@@ -743,7 +743,7 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	_ = os.MkdirAll(dirPath, 0700)
 
 	f, err := os.Create(filePath)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	defer f.Close()
 
 	options := k8s.NewKubectlOptions("", "", namespace)
@@ -766,7 +766,7 @@ func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *v1.Daem
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	daemonSet, err := clientset.AppsV1().DaemonSets(namespace).Get(context.TODO(), daemonSetName, metav1.GetOptions{})
 
@@ -777,7 +777,7 @@ func GetReplicationController(t *testing.T, namespace string, replicationControl
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	controller, err := clientset.CoreV1().ReplicationControllers(namespace).Get(context.TODO(), replicationControllerName, metav1.GetOptions{})
 
@@ -807,7 +807,7 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 		fmt.Sprintf("echo \"%s;\" | /opt/nuodb/bin/nuosql --user dba --password secret %s", sql, databaseName),
 	)
 
-	assert.NoError(t, err, "runSQL: error trying to run ", sql)
+	require.NoError(t, err, "runSQL: error trying to run ", sql)
 
 	return result, err
 }
@@ -818,7 +818,7 @@ func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDB
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	pwd, err := os.Getwd()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	targetDirPath := filepath.Join(pwd, RESULT_DIR, namespace, "k8s-dump")
 	_ = os.MkdirAll(targetDirPath, 0700)
@@ -834,32 +834,32 @@ func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDB
 	k8s.RunKubectl(t, options, "cp", podName+":/tmp/nuodb-dump.json", targetFile)
 
 	content, err := ioutil.ReadFile(targetFile)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err, unmarshalledDump := UnmarshalNuoDBKubeConfig(string(content))
-	assert.NoError(t, err)
-	assert.Equal(t, len(unmarshalledDump), 1)
+	require.NoError(t, err)
+	require.Equal(t, len(unmarshalledDump), 1)
 	return unmarshalledDump[0]
 }
 
 func ExecuteCommandsInPod(t *testing.T, namespaceName string, podName string, commands []string) {
 	tmpfile, err := ioutil.TempFile("", "script")
 	if err != nil {
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	defer os.Remove(tmpfile.Name()) // clean up
 
 	if _, err := tmpfile.WriteString("set -ev" + "\n"); err != nil {
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	for _, item := range commands {
 		if _, err := tmpfile.WriteString(item + "\n"); err != nil {
-			assert.NoError(t, err)
+			require.NoError(t, err)
 		}
 	}
 	if err := tmpfile.Close(); err != nil {
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	options := k8s.NewKubectlOptions("", "", namespaceName)
@@ -868,13 +868,13 @@ func ExecuteCommandsInPod(t *testing.T, namespaceName string, podName string, co
 	k8s.RunKubectl(t, options, "cp", tmpfile.Name(), podName+":/tmp")
 	k8s.RunKubectl(t, options, "exec", podName, "--", "chmod", "a+x", "/tmp/"+filepath.Base(tmpfile.Name()))
 	err = k8s.RunKubectlE(t, options, "exec", podName, "--", "sh", "/tmp/"+filepath.Base(tmpfile.Name()))
-	assert.NoError(t, err, "executeCommandsInPod: Script returned error.")
+	require.NoError(t, err, "executeCommandsInPod: Script returned error.")
 }
 
 func UnmarshalJSONObject(t *testing.T, stringJSON string) map[string]interface{} {
 	var results map[string]interface{}
 	err := json.Unmarshal([]byte(stringJSON), &results)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	return results
 }
 
@@ -886,21 +886,21 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options,
 		"exec", podName, "--", "nuocmd", "set", "value", "--key", "test/minikube", "--value", "testVal", "--unconditional",
 	)
-	assert.NoError(t, err, "Could not set KV value")
+	require.NoError(t, err, "Could not set KV value")
 	elapsed := time.Since(start)
 
-	assert.True(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV set took longer than 2s: %s", elapsed))
+	require.True(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV set took longer than 2s: %s", elapsed))
 
 	start = time.Now()
 	output, err = k8s.RunKubectlAndGetOutputE(t, options,
 		"exec", podName, "--", "nuocmd", "get", "value", "--key", "test/minikube",
 	)
-	assert.NoError(t, err, "Could not get KV value")
+	require.NoError(t, err, "Could not get KV value")
 	elapsed = time.Since(start)
 
-	assert.True(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
+	require.True(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
 
-	assert.True(t, output == "testVal", fmt.Sprintf("KV get returned the wrong value: %s", output))
+	require.True(t, output == "testVal", fmt.Sprintf("KV get returned the wrong value: %s", output))
 }
 
 func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue string) {
@@ -916,10 +916,10 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 
 	nodes := k8s.GetNodes(t, options)
 
-	assert.True(t, len(nodes) > 0)
+	require.True(t, len(nodes) > 0)
 
 	for _, node := range nodes {
 		err := k8s.RunKubectlE(t, options, "label", "node", node.Name, labelString, "--overwrite")
-		assert.NoError(t, err, "Labeling node %s with '%s' failed", node.Name, labelString)
+		require.NoError(t, err, "Labeling node %s with '%s' failed", node.Name, labelString)
 	}
 }

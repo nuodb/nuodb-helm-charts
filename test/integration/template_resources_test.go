@@ -1,7 +1,7 @@
 package integration
 
 import (
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/require"
 	"regexp"
 	"strconv"
@@ -38,9 +38,9 @@ func TestResourcesAdminDefaults(t *testing.T) {
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		containers := &obj.Spec.Template.Spec.Containers
 
-		assert.NotEmpty(t, containers)
-		assert.Nil(t, (*containers)[0].Resources.Limits)
-		assert.Nil(t, (*containers)[0].Resources.Requests)
+		require.NotEmpty(t, containers)
+		require.Nil(t, (*containers)[0].Resources.Limits)
+		require.Nil(t, (*containers)[0].Resources.Requests)
 	}
 }
 
@@ -61,12 +61,12 @@ func TestResourcesAdminOverridden(t *testing.T) {
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		containers := &obj.Spec.Template.Spec.Containers
 
-		assert.NotEmpty(t, containers)
-		assert.Nil(t, (*containers)[0].Resources.Limits)
-		assert.NotNil(t, (*containers)[0].Resources.Requests)
+		require.NotEmpty(t, containers)
+		require.Nil(t, (*containers)[0].Resources.Limits)
+		require.NotNil(t, (*containers)[0].Resources.Requests)
 
-		assert.EqualValues(t, 1, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga),
+		require.EqualValues(t, 1, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
+		require.EqualValues(t, 4, (*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga),
 			(*containers)[0].Resources.Requests.Memory().ScaledValue(resource.Giga))
 	}
 }
@@ -88,32 +88,32 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		containers := &obj.Spec.Template.Spec.Containers
 
-		assert.NotEmpty(t, containers)
-		assert.NotNil(t, (*containers)[0].Resources.Limits)
-		assert.NotNil(t, (*containers)[0].Resources.Requests)
+		require.NotEmpty(t, containers)
+		require.NotNil(t, (*containers)[0].Resources.Limits)
+		require.NotNil(t, (*containers)[0].Resources.Requests)
 
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
-		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 8 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+		require.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
+		require.EqualValues(t, 8 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
-		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
+		require.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
+		require.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem 8Gi"))
+		require.True(t, testlib.ArgContains((*containers)[0].Args, "mem 8Gi"))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
-			assert.EqualValues(t, 1,  *obj.Spec.Replicas)
+			require.EqualValues(t, 1,  *obj.Spec.Replicas)
 			foundBackupEnabled = true
 		} else {
-			assert.Zero(t, *obj.Spec.Replicas)
+			require.Zero(t, *obj.Spec.Replicas)
 			foundBackupDisabled = true
 		}
 	}
 
-	assert.True(t, foundBackupEnabled)
-	assert.True(t, foundBackupDisabled)
+	require.True(t, foundBackupEnabled)
+	require.True(t, foundBackupDisabled)
 }
 
 func TestResourcesDatabaseOverridden(t *testing.T) {
@@ -141,32 +141,32 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		containers := &obj.Spec.Template.Spec.Containers
 
-		assert.NotEmpty(t, containers)
-		assert.NotNil(t, (*containers)[0].Resources.Limits)
-		assert.NotNil(t, (*containers)[0].Resources.Requests)
+		require.NotEmpty(t, containers)
+		require.NotNil(t, (*containers)[0].Resources.Limits)
+		require.NotNil(t, (*containers)[0].Resources.Requests)
 
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
-		assert.EqualValues(t, 1, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 4 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+		require.EqualValues(t, 1, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
+		require.EqualValues(t, 4 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
-		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
+		require.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
+		require.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem 4Gi"))
+		require.True(t, testlib.ArgContains((*containers)[0].Args, "mem 4Gi"))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
-			assert.EqualValues(t, hotcopyReplicas, *obj.Spec.Replicas)
+			require.EqualValues(t, hotcopyReplicas, *obj.Spec.Replicas)
 			foundBackupEnabled = true
 		} else {
-			assert.EqualValues(t, noHotCopyReplicas, *obj.Spec.Replicas)
+			require.EqualValues(t, noHotCopyReplicas, *obj.Spec.Replicas)
 			foundBackupDisabled = true
 		}
 	}
 
-	assert.True(t, foundBackupEnabled)
-	assert.True(t, foundBackupDisabled)
+	require.True(t, foundBackupEnabled)
+	require.True(t, foundBackupDisabled)
 }
 
 func TestPullSecretsRenderAllNuoDB(t *testing.T) {
@@ -219,7 +219,7 @@ func TestPingTimeout(t *testing.T) {
 
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
+			require.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
 		}
 	})
 
@@ -233,7 +233,7 @@ func TestPingTimeout(t *testing.T) {
 
 		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
+			require.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
 		}
 	})
 }
@@ -256,7 +256,7 @@ func TestSpecificOptions(t *testing.T) {
 
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
+			require.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
 	})
 
@@ -266,7 +266,7 @@ func TestSpecificOptions(t *testing.T) {
 
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
+			require.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
 	})
 
@@ -280,7 +280,7 @@ func TestSpecificOptions(t *testing.T) {
 
 		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
+			require.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
 	})
 }
@@ -304,16 +304,16 @@ func TestResourcesDaemonSetsDefaults(t *testing.T) {
 		containers := &obj.Spec.Template.Spec.Containers
 
 		require.NotEmpty(t, containers)
-		assert.NotNil(t, (*containers)[0].Resources.Limits)
-		assert.NotNil(t, (*containers)[0].Resources.Requests)
+		require.NotNil(t, (*containers)[0].Resources.Limits)
+		require.NotNil(t, (*containers)[0].Resources.Requests)
 
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
-		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 8 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+		require.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
+		require.EqualValues(t, 8 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
-		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
+		require.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
+		require.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
 		if testlib.IsDaemonSetHotCopyEnabled(&obj) {
 			foundBackupEnabled = true
@@ -322,8 +322,8 @@ func TestResourcesDaemonSetsDefaults(t *testing.T) {
 		}
 	}
 
-	assert.True(t, foundBackupEnabled)
-	assert.True(t, foundBackupDisabled)
+	require.True(t, foundBackupEnabled)
+	require.True(t, foundBackupDisabled)
 }
 
 func TestDatabaseBackupDisabled(t *testing.T) {
@@ -340,7 +340,7 @@ func TestDatabaseBackupDisabled(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
-		assert.False(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup enabled")
+		require.False(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup enabled")
 	}
 }
 
@@ -358,7 +358,7 @@ func TestDatabaseNonBackupDisabled(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
-		assert.True(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup disabled")
+		require.True(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup disabled")
 	}
 }
 
@@ -377,7 +377,7 @@ func TestDatabaseBackupDisabledDaemonSet(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
-		assert.False(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup enabled")
+		require.False(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup enabled")
 	}
 }
 
@@ -396,11 +396,11 @@ func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
-		assert.True(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup disabled")
+		require.True(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup disabled")
 	}
 }
 
-func assertExpectedLines(t *testing.T, optionsMap *map[string]string, helmChartName string, templateNames []string, expectedLines *map[string]int) {
+func requireExpectedLines(t *testing.T, optionsMap *map[string]string, helmChartName string, templateNames []string, expectedLines *map[string]int) {
 	options := &helm.Options{
 		SetValues: *optionsMap,
 	}
@@ -408,23 +408,23 @@ func assertExpectedLines(t *testing.T, optionsMap *map[string]string, helmChartN
 	output, err := helm.RenderTemplateE(t, options, "../../stable/"+helmChartName, "release-name", templateNames)
 
 	if expectedLines == nil {
-		assert.Error(t, err)
+		require.Error(t, err)
 		return
 	} else {
-		assert.NoError(t, err)
+		require.NoError(t, err)
 	}
 
 	actualLines := make(map[string]int)
 	// iterate through all lines of rendered output, removing any trailing spaces
 	for _, line := range regexp.MustCompile(" *\n").Split(output, -1) {
 		if count, ok := (*expectedLines)[line]; ok {
-			assert.True(t, count != 0, "Unexpected line: "+line)
+			require.True(t, count != 0, "Unexpected line: "+line)
 			actualLines[line]++
 		}
 	}
 
 	for line, cnt := range *expectedLines {
-		assert.Equal(t, cnt, actualLines[line], "Unexpected number of occurrences of "+line)
+		require.Equal(t, cnt, actualLines[line], "Unexpected number of occurrences of "+line)
 	}
 }
 
@@ -443,7 +443,7 @@ func TestAddRoleBindingEnabled(t *testing.T) {
 		"kind: ServiceAccount":            1,
 		"      serviceAccountName: nuodb": 1,
 	}
-	assertExpectedLines(t, &optionsMap, "admin", templateNames, &expectedLines)
+	requireExpectedLines(t, &optionsMap, "admin", templateNames, &expectedLines)
 }
 
 func TestAddRoleBindingDisabled(t *testing.T) {
@@ -459,7 +459,7 @@ func TestAddRoleBindingDisabled(t *testing.T) {
 		"templates/statefulset.yaml",
 	}
 
-	assertExpectedLines(t, &optionsMap, "admin", templateNames, nil)
+	requireExpectedLines(t, &optionsMap, "admin", templateNames, nil)
 }
 
 func TestDeploymentServiceAccount(t *testing.T) {
@@ -470,7 +470,7 @@ func TestDeploymentServiceAccount(t *testing.T) {
 	expectedLines := map[string]int{
 		"      serviceAccountName: nuodb": 1,
 	}
-	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
+	requireExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
 }
 
 func TestStatefulSetServiceAccount(t *testing.T) {
@@ -483,7 +483,7 @@ func TestStatefulSetServiceAccount(t *testing.T) {
 		"kind: StatefulSet":               2,
 		"      serviceAccountName: nuodb": 2,
 	}
-	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
+	requireExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
 }
 
 func TestDaemonSetServiceAccount(t *testing.T) {
@@ -498,5 +498,5 @@ func TestDaemonSetServiceAccount(t *testing.T) {
 		"kind: DaemonSet":                 2,
 		"      serviceAccountName: nuodb": 2,
 	}
-	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
+	requireExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
 }

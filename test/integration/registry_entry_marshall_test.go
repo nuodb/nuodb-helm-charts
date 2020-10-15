@@ -2,7 +2,7 @@ package integration
 
 import (
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"testing"
 )
@@ -18,9 +18,9 @@ func TestRegistryEntryUnmarshal(t *testing.T) {
 
 	err, object := testlib.UnmarshalImageYAML(s)
 
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	assert.True(t, object.Nuodb.Image.Registry == "local")
-	assert.True(t, object.Nuodb.Image.Repository == "master")
-	assert.True(t, object.Nuodb.Image.Tag == "latest")
+	require.True(t, object.Nuodb.Image.Registry == "local")
+	require.True(t, object.Nuodb.Image.Repository == "master")
+	require.True(t, object.Nuodb.Image.Tag == "latest")
 }

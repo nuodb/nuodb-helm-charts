@@ -18,7 +18,7 @@ import (
 
 	v12 "k8s.io/api/core/v1"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
@@ -32,9 +32,9 @@ func getStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(context.TODO(), metav1.ListOptions{})
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	return statefulSets
 }
@@ -62,40 +62,40 @@ func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (a
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
-	assert.NoError(t, err, output)
+	require.NoError(t, err, output)
 
 	err, objects := testlib.Unmarshal(output)
-	assert.NoError(t, err, output)
+	require.NoError(t, err, output)
 
 	archiveVolumeClaims = make(map[string]int)
 	for _, obj := range objects {
 		podName, ok := obj.Labels["pod-name"]
-		assert.True(t, ok)
+		require.True(t, ok)
 		// check that Pod exists
 		pod := k8s.GetPod(t, options, podName)
 
 		containerId, ok := obj.Labels["container-id"]
-		assert.True(t, ok)
+		require.True(t, ok)
 		// check that Pod has container ID
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			assert.Equal(t, "docker://"+containerId, containerStatus.ContainerID)
+			require.Equal(t, "docker://"+containerId, containerStatus.ContainerID)
 		}
 
 		claimName, ok := obj.Labels["archive-pvc"]
 		if ok {
-			assert.Equal(t, "SM", obj.Type, "archive-pvc label should only be present for SMs")
+			require.Equal(t, "SM", obj.Type, "archive-pvc label should only be present for SMs")
 			// check that PVC exists
 			k8s.RunKubectl(t, options, "get", "pvc", claimName)
 			// add mapping of PVC to archive ID
 			output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 				"nuocmd", "get", "value", "--key", "archiveVolumeClaims/"+claimName)
-			assert.NoError(t, err)
+			require.NoError(t, err)
 
 			archiveId, err := strconv.Atoi(strings.TrimSpace(output))
-			assert.NoError(t, err)
+			require.NoError(t, err)
 			archiveVolumeClaims[claimName] = archiveId
 		} else {
-			assert.Equal(t, "TE", obj.Type, "archive-pvc label should only be absent for TEs")
+			require.Equal(t, "TE", obj.Type, "archive-pvc label should only be absent for TEs")
 		}
 	}
 	return archiveVolumeClaims
@@ -103,39 +103,39 @@ func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (a
 
 func verifyLoadBalancer(t *testing.T, namespaceName string, adminPod string, deploymentOptions map[string]string) {
 	actualLoadBalancerConfigurations, err := testlib.GetLoadBalancerConfigE(t, namespaceName, adminPod)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	actualLoadBalancerPolicies, err := testlib.GetLoadBalancerPoliciesE(t, namespaceName, adminPod)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	actualGlobalConfig, err := getGlobalLoadBalancerConfigE(t, actualLoadBalancerConfigurations)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	actualDatabaseConfig, err := getDatabaseLoadBalancerConfigE(t, "demo", actualLoadBalancerConfigurations)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	configuredPolicies := len(deploymentOptions)
 	for opt, val := range deploymentOptions {
-		t.Logf("Asserting deployment option %s with value %s", opt, val)
+		t.Logf("requireing deployment option %s with value %s", opt, val)
 		if strings.HasPrefix(opt, "admin.lbConfig.policies.") {
 			// Verify that named policies are configured properly
 			policyName := opt[strings.LastIndex(opt, ".")+1:]
 			actualPolicy, ok := actualLoadBalancerPolicies[policyName]
-			if assert.True(t, ok, "Unable to find named policy="+policyName) {
-				assert.Equal(t, val, actualPolicy.LbQuery)
+			if require.True(t, ok, "Unable to find named policy="+policyName) {
+				require.Equal(t, val, actualPolicy.LbQuery)
 			}
 		} else if opt == "admin.lbConfig.prefilter" {
 			if actualGlobalConfig != nil {
-				assert.Equal(t, val, actualGlobalConfig.Prefilter)
+				require.Equal(t, val, actualGlobalConfig.Prefilter)
 			}
 		} else if opt == "admin.lbConfig.default" {
 			if actualGlobalConfig != nil {
-				assert.Equal(t, val, actualGlobalConfig.DefaultLbQuery)
+				require.Equal(t, val, actualGlobalConfig.DefaultLbQuery)
 			}
 		} else if opt == "database.lbConfig.prefilter" {
 			if actualDatabaseConfig != nil {
-				assert.Equal(t, val, actualDatabaseConfig.Prefilter)
+				require.Equal(t, val, actualDatabaseConfig.Prefilter)
 			}
 		} else if opt == "database.lbConfig.default" {
 			if actualDatabaseConfig != nil {
-				assert.Equal(t, val, actualDatabaseConfig.DefaultLbQuery)
+				require.Equal(t, val, actualDatabaseConfig.DefaultLbQuery)
 			}
 		} else {
 			t.Logf("Deployment option %s skipped", opt)
@@ -145,8 +145,8 @@ func verifyLoadBalancer(t *testing.T, namespaceName string, adminPod string, dep
 
 	if deploymentOptions["admin.lbConfig.fullSync"] == "true" {
 		// Verify that named policies match configured number of policies
-		t.Logf("Asserting load-balancer policies count is equal to configured policies via Helm")
-		assert.Equal(t, configuredPolicies, len(actualLoadBalancerPolicies))
+		t.Logf("requireing load-balancer policies count is equal to configured policies via Helm")
+		require.Equal(t, configuredPolicies, len(actualLoadBalancerPolicies))
 	}
 }
 
@@ -156,24 +156,24 @@ func checkArchives(t *testing.T, namespaceName string, adminPod string, numExpec
 	// check archives
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "archives", "--db-name", "demo")
-	assert.NoError(t, err, output)
+	require.NoError(t, err, output)
 
 	err, archives = testlib.UnmarshalArchives(output)
-	assert.NoError(t, err)
-	assert.Equal(t, numExpected, len(archives), output)
+	require.NoError(t, err)
+	require.Equal(t, numExpected, len(archives), output)
 
 	// check removed archives
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "archives", "--db-name", "demo", "--removed")
-	assert.NoError(t, err, output)
+	require.NoError(t, err, output)
 
 	err, removedArchives = testlib.UnmarshalArchives(output)
-	assert.NoError(t, err)
-	assert.Equal(t, numExpectedRemoved, len(removedArchives), output)
+	require.NoError(t, err)
+	require.Equal(t, numExpectedRemoved, len(removedArchives), output)
 	return
 }
 
-func checkInitialMembership(t assert.TestingT, configJson string, expectedSize int) {
+func checkInitialMembership(t require.TestingT, configJson string, expectedSize int) {
 	type initialMembershipEntry struct {
 		Transport string `json:"transport"`
 		Version   string `json:"version"`
@@ -184,9 +184,9 @@ func checkInitialMembership(t assert.TestingT, configJson string, expectedSize i
 	dec := json.NewDecoder(strings.NewReader(configJson))
 	err := dec.Decode(&adminConfig)
 	if err != io.EOF {
-		assert.NoError(t, err, "Unable to deserialize admin config")
+		require.NoError(t, err, "Unable to deserialize admin config")
 	}
-	assert.Equal(t, expectedSize, len(adminConfig.InitialMembership))
+	require.Equal(t, expectedSize, len(adminConfig.InitialMembership))
 }
 
 func TestReprovisionAdmin0(t *testing.T) {
@@ -212,13 +212,13 @@ func TestReprovisionAdmin0(t *testing.T) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
 		"nuocmd", "--show-json", "get", "server-config", "--this-server")
-	assert.NoError(t, err, output)
+	require.NoError(t, err, output)
 	checkInitialMembership(t, output, 2)
 
 	// check initial membership on admin-1
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--",
 		"nuocmd", "--show-json", "get", "server-config", "--this-server")
-	assert.NoError(t, err, output)
+	require.NoError(t, err, output)
 	checkInitialMembership(t, output, 2)
 
 	// store a value in the KV store via admin-0
@@ -330,18 +330,18 @@ func TestDomainResync(t *testing.T) {
 	})
 
 	originalArchiveVolumeClaims := verifyProcessLabels(t, namespaceName, admin0)
-	assert.Equal(t, 1, len(originalArchiveVolumeClaims))
+	require.Equal(t, 1, len(originalArchiveVolumeClaims))
 	originalArchiveId := -1
 	for _, archiveId := range originalArchiveVolumeClaims {
 		originalArchiveId = archiveId
 	}
-	assert.True(t, originalArchiveId != -1)
+	require.True(t, originalArchiveId != -1)
 
 	// update replica count
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	statefulSets := getStatefulSets(t, namespaceName).Items
-	assert.Equal(t, 3, len(statefulSets), "Expected 3 StatefulSets: Admin, SM, and hotcopy SM")
+	require.Equal(t, 3, len(statefulSets), "Expected 3 StatefulSets: Admin, SM, and hotcopy SM")
 
 	// by default the hotcopy SM replica count is 1 and regular SM count is 0
 	// scale regular SM replica count up to 1
@@ -353,7 +353,7 @@ func TestDomainResync(t *testing.T) {
 			smStatefulSet = name
 		}
 	}
-	assert.True(t, smStatefulSet != "")
+	require.True(t, smStatefulSet != "")
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
 	checkArchives(t, namespaceName, admin0, 2, 0)
 
@@ -366,11 +366,11 @@ func TestDomainResync(t *testing.T) {
 			hotCopySmStatefulSet = name
 		}
 	}
-	assert.True(t, hotCopySmStatefulSet != "")
+	require.True(t, hotCopySmStatefulSet != "")
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 	// check that archive ID generated by hotcopy SM was removed
 	_, removedArchives := checkArchives(t, namespaceName, admin0, 1, 1)
-	assert.Equal(t, originalArchiveId, removedArchives[0].Id)
+	require.Equal(t, originalArchiveId, removedArchives[0].Id)
 
 	// scale hotcopy SM replica count back up to 1; the removed archive ID should be resurrected
 	k8s.RunKubectl(t, options, "scale", "statefulset", hotCopySmStatefulSet, "--replicas=1")
@@ -462,7 +462,7 @@ func TestLoadBalancerConfigurationResync(t *testing.T) {
 
 	// Wait for at least two triggered LB syncs and check expected configuration
 	testlib.AwaitNrLoadBalancerPolicies(t, namespaceName, admin0, 7)
-	// Add manual configurations to the options so that they can be asserted
+	// Add manual configurations to the options so that they can be requireed
 	options.SetValues["admin.lbConfig.default"] = "random(first(label(node node1) any))"
 	options.SetValues["admin.lbConfig.policies.manual"] = "random(any)"
 	verifyLoadBalancer(t, namespaceName, admin0, options.SetValues)

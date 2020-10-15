@@ -3,7 +3,7 @@ package testlib
 import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"os"
 	"path/filepath"
@@ -37,7 +37,7 @@ spec:
 
 func RecoverCoresFromEngine(t *testing.T, namespaceName string, engineType string, pvcName string) {
 	pwd, err := os.Getwd()
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	targetDirPath := filepath.Join(pwd, RESULT_DIR, namespaceName, "cores", engineType)
 	_ = os.MkdirAll(targetDirPath, 0700)

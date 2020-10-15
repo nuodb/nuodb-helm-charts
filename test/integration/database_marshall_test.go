@@ -2,7 +2,7 @@ package integration
 
 import (
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"testing"
 )
@@ -21,14 +21,14 @@ func TestDatabaseUnmarshal(t *testing.T) {
 
 	err, objects := testlib.UnmarshalDatabase(s)
 
-	assert.NoError(t, err)
-	assert.Equal(t, len(objects), 1)
+	require.NoError(t, err)
+	require.Equal(t, len(objects), 1)
 
 	obj := objects[0]
 
-	assert.True(t, obj.Name == "demo")
-	assert.True(t, obj.State == "NOT_RUNNING")
-	assert.True(t, obj.Incarnation.Major == 1)
-	assert.True(t, obj.Incarnation.Minor == 2)
+	require.True(t, obj.Name == "demo")
+	require.True(t, obj.State == "NOT_RUNNING")
+	require.True(t, obj.Incarnation.Major == 1)
+	require.True(t, obj.Incarnation.Minor == 2)
 
 }

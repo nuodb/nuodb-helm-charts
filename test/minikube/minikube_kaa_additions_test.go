@@ -11,7 +11,7 @@ import (
 
 	v12 "k8s.io/api/core/v1"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
@@ -24,16 +24,16 @@ import (
 func modifyKubeInspectorRoleInPlace(t *testing.T, modificationFunc func(role *rbacv1.Role)) {
 	inspectorRoleFile := filepath.Join(testlib.ADMIN_HELM_CHART_PATH, "templates", "role.yaml")
 	originalData, err := ioutil.ReadFile(inspectorRoleFile)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	testlib.AddTeardown(testlib.TEARDOWN_ADMIN, func() { ioutil.WriteFile(inspectorRoleFile, originalData, 0644) })
 
 	output := helm.RenderTemplate(t, &helm.Options{}, testlib.ADMIN_HELM_CHART_PATH, "release-name", []string{"templates/role.yaml"})
 	roles := testlib.SplitAndRenderRole(t, output, 1)
 	modificationFunc(&roles[0])
 	roleBytes, err := yaml.Marshal(&roles[0])
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	err = ioutil.WriteFile(inspectorRoleFile, roleBytes, 0644)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	out, _ := ioutil.ReadFile(inspectorRoleFile)
 	t.Log("Modified roles file:\n" + string(out))
 }
@@ -87,8 +87,8 @@ func TestKaaLimitedPermissions(t *testing.T) {
 	adminStatefulSet := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
 	teDeployment := fmt.Sprintf("te-%s-nuodb-cluster0-demo", databaseHelmChartReleaseName)
 	config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
-	assert.True(t, func() bool { _, ok := config.StatefulSets[adminStatefulSet]; return ok }())
-	assert.True(t, func() bool { _, ok := config.Deployments[teDeployment]; return ok }())
-	assert.True(t, len(config.Volumes) == 0)
-	assert.True(t, len(config.Pods) == 0)
+	require.True(t, func() bool { _, ok := config.StatefulSets[adminStatefulSet]; return ok }())
+	require.True(t, func() bool { _, ok := config.Deployments[teDeployment]; return ok }())
+	require.True(t, len(config.Volumes) == 0)
+	require.True(t, len(config.Pods) == 0)
 }

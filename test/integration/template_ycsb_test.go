@@ -2,7 +2,7 @@ package integration
 
 import (
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"strings"
 	"testing"
 
@@ -42,7 +42,7 @@ func TestYcsbConfigMapRenders(t *testing.T) {
 
 	}
 
-	assert.Equal(t, 3, configMapCount)
+	require.Equal(t, 3, configMapCount)
 }
 
 func TestYcsbRCRenders(t *testing.T) {
@@ -58,8 +58,8 @@ func TestYcsbRCRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderReplicationController(t, output, 1) {
 
-		assert.Equal(t, "ycsb-load", obj.Name)
-		assert.Zero(t, *obj.Spec.Replicas)
+		require.Equal(t, "ycsb-load", obj.Name)
+		require.Zero(t, *obj.Spec.Replicas)
 	}
 }
 
@@ -78,7 +78,7 @@ func TestYcsbRCReplicas(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderReplicationController(t, output, 1) {
 
-		assert.Equal(t, "ycsb-load", obj.Name)
-		assert.EqualValues(t, 1, *obj.Spec.Replicas)
+		require.Equal(t, "ycsb-load", obj.Name)
+		require.EqualValues(t, 1, *obj.Spec.Replicas)
 	}
 }
