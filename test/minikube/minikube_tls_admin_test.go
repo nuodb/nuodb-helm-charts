@@ -4,7 +4,7 @@ package minikube
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"strings"
@@ -29,8 +29,8 @@ func verifyKeystore(t *testing.T, namespace string, podName string, keystore str
 	t.Log("<" + output + ">")
 	t.Log("<" + matches + ">")
 
-	assert.NoError(t, err)
-	assert.Equal(t, matches, output)
+	require.NoError(t, err)
+	require.Equal(t, matches, output)
 }
 
 func TestKubernetesTLS(t *testing.T) {
@@ -75,7 +75,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 	t.Run("verifyKeystore", func(t *testing.T) {
 		content, err := testlib.ReadAll(filepath.Join(keysLocation, "nuoadmin.cert"))
-		assert.NoError(t, err)
+		require.NoError(t, err)
 		verifyKeystore(t, namespaceName, admin0, testlib.KEYSTORE_FILE, testlib.SECRET_PASSWORD, string(content))
 	})
 

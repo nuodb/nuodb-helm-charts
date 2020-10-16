@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	v12 "k8s.io/api/core/v1"
 
 	"testing"
@@ -25,7 +25,7 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 		options := k8s.NewKubectlOptions("", "", namespaceName)
 
 		output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--", "nuocmd", "show", "domain")
-		assert.NoError(t, err, "verifyAllProcessesRunning: running show domain failed")
+		require.NoError(t, err, "verifyAllProcessesRunning: running show domain failed")
 
 		return strings.Count(output, "MONITORED:RUNNING") == expectedNrProcesses
 	}, 30*time.Second)
