@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -57,7 +57,7 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 	}
 
 	files, err := ioutil.ReadDir(directory)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	set := make(map[string]bool)
 	for _, file := range files {
@@ -65,7 +65,7 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 		t.Logf("Found generated certificate file: %s", file.Name())
 	}
 	for _, expectedFile := range expectedFiles {
-		assert.True(t, set[expectedFile] == true, "Unable to find certificate file %s in path %s", expectedFile, directory)
+		require.True(t, set[expectedFile] == true, "Unable to find certificate file %s in path %s", expectedFile, directory)
 	}
 }
 
@@ -86,11 +86,11 @@ func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName s
 
 	prefix := "tls-keys"
 	targetDirectory, err := ioutil.TempDir("", prefix)
-	assert.NoError(t, err, "Unable to create TMP directory with prefix ", prefix)
+	require.NoError(t, err, "Unable to create TMP directory with prefix ", prefix)
 	AddTeardown(TEARDOWN_SECRETS, func() { os.RemoveAll(targetDirectory) })
 
 	realTargetDirectory, err := filepath.EvalSymlinks(targetDirectory)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	k8s.RunKubectl(t, options, "cp", podName+":"+CERTIFICATES_GENERATION_PATH, realTargetDirectory)
 	t.Logf("Certificate files location: %s", realTargetDirectory)
@@ -131,13 +131,13 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options, namespaceName st
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
-	assert.NoError(t, err, "Unable to find/convert admin.replicas value")
+	require.NoError(t, err, "Unable to find/convert admin.replicas value")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(tlsKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")
 	err = k8s.RunKubectlE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "add", "trusted-certificate",
 		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "60")
-	assert.NoError(t, err, "add trusted-certificate failed")
+	require.NoError(t, err, "add trusted-certificate failed")
 
 	if helmUpgrade == true {
 		// Upgrade admin release

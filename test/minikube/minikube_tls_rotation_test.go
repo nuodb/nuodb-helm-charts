@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
 
@@ -23,7 +23,7 @@ func verifyAdminCertificates(t *testing.T, certificateInfoJSON string, expectedD
 	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
 	for _, value := range certificateInfo["serverCertificates"].(map[string]interface{}) {
 		certSubjectName := value.(map[string]interface{})["subjectName"].(string)
-		assert.Contains(t, certSubjectName, expectedDN,
+		require.Contains(t, certSubjectName, expectedDN,
 			"`%s` not found in:\n %s", expectedDN, certSubjectName)
 	}
 }
@@ -32,14 +32,14 @@ func verifyEngineCertificates(t *testing.T, certificateInfoJSON string, expected
 	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
 	for _, value := range certificateInfo["processCertificates"].(map[string]interface{}) {
 		certIssuerName := value.(map[string]interface{})["issuerName"].(string)
-		assert.Contains(t, certIssuerName, expectedDN,
+		require.Contains(t, certIssuerName, expectedDN,
 			"`%s` not found in:\n %s", expectedDN, certIssuerName)
 	}
 }
 
 func startDomainWithTLSCertificates(t *testing.T, options *helm.Options, namespaceName string, tlsCommands []string) (string, string, string) {
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
-	assert.NoError(t, err, "Unable to find/convert admin.replicas value")
+	require.NoError(t, err, "Unable to find/convert admin.replicas value")
 
 	// create initial certs...
 	certGeneratorPodName, _ := testlib.GenerateTLSConfiguration(t, namespaceName, tlsCommands)
@@ -128,7 +128,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
 
 	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
 	t.Run("verifyAdminCertificates", func(t *testing.T) {
 		verifyAdminCertificates(t, certificateInfo, expectedAdminDN)
