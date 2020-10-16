@@ -77,4 +77,6 @@ while [ `date +%s` -lt $endrun ]; do
 
         $kn exec -it $apzero nuocmd show domain
     done
+
+    sleep 60
 done
