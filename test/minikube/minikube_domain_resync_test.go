@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/assert"
 	"io"
 	"os"
 	"strconv"
@@ -118,7 +119,7 @@ func verifyLoadBalancer(t *testing.T, namespaceName string, adminPod string, dep
 			// Verify that named policies are configured properly
 			policyName := opt[strings.LastIndex(opt, ".")+1:]
 			actualPolicy, ok := actualLoadBalancerPolicies[policyName]
-			if require.True(t, ok, "Unable to find named policy="+policyName) {
+			if assert.True(t, ok, "Unable to find named policy="+policyName) {
 				require.Equal(t, val, actualPolicy.LbQuery)
 			}
 		} else if opt == "admin.lbConfig.prefilter" {

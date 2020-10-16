@@ -3,7 +3,7 @@ package integration
 import (
 	"fmt"
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -38,30 +38,30 @@ func StorageClassTemplateE(t *testing.T, options *helm.Options, expectedProvisio
 
 	for _, obj := range testlib.SplitAndRenderStorageClass(t, output, 4) {
 		if obj.Name != "local-storage" {
-			require.True(t, obj.Provisioner == expectedProvisioner)
+			assert.True(t, obj.Provisioner == expectedProvisioner)
 			b, err := strconv.ParseBool(options.SetValues["storageClass.allowVolumeExpansion"])
-			require.NoError(t, err)
-			require.EqualValues(t, b, *obj.AllowVolumeExpansion)
+			assert.NoError(t, err)
+			assert.EqualValues(t, b, *obj.AllowVolumeExpansion)
 
 			// Validate encrypted and iopsPerGB. Amazon-only!
 			re := regexp.MustCompile("(\\w+)-storage")
 			values := re.FindStringSubmatch(obj.ObjectMeta.Name)
-			require.Equal(t, 2, len(values))
+			assert.Equal(t, 2, len(values))
 			class := values[1]
 			classes := []string{"fast", "manual"}
 			if Contains(classes, class) {
 				encKey := fmt.Sprintf("storageClass.%s.encrypted", class)
 				if enc, ok := options.SetValues[encKey]; ok {
-					require.EqualValues(t, enc, obj.Parameters["encrypted"])
+					assert.EqualValues(t, enc, obj.Parameters["encrypted"])
 				}
 				iopsKey := fmt.Sprintf("storageClass.%s.iopsPerGB", class)
 				if iops, ok := options.SetValues[iopsKey]; ok {
-					require.EqualValues(t, iops, obj.Parameters["iopsPerGB"])
+					assert.EqualValues(t, iops, obj.Parameters["iopsPerGB"])
 				}
 			}
 		} else {
 			// Validate local-storage is always created
-			require.EqualValues(t, "kubernetes.io/no-provisioner", obj.Provisioner)
+			assert.EqualValues(t, "kubernetes.io/no-provisioner", obj.Provisioner)
 		}
 	}
 }
@@ -116,6 +116,6 @@ func TestStorageClassTemplateLocal(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/storageclass.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderStorageClass(t, output, 1) {
-		require.EqualValues(t, "kubernetes.io/no-provisioner", obj.Provisioner)
+		assert.EqualValues(t, "kubernetes.io/no-provisioner", obj.Provisioner)
 	}
 }
