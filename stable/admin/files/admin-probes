@@ -1,0 +1,55 @@
+#!/bin/bash
+
+#
+#  k8s probes for nuodb AP
+#
+
+startedFile="/tmp/started.flag"
+
+# default probe type is "readiness"
+probeType=${1:-readiness}
+
+threshold=${2:-1}
+
+# if probeType is "readiness" and there is NO "startedFile" file, then perform a "startup" probe
+[ "$probeType" = "readiness" -a ! -f $startedFile ] && probeType="startup"
+
+thresholdFile=/tmp/$probeType-threshold.count
+
+# initialise the threshold file to 0
+[ ! -f $thresholdFile ] && echo "0" > $thresholdFile
+
+case "$probeType" in
+    "startup" )
+        msg=$( nuocmd check servers --check-connected --check-active --check-leader )
+        retval=$?
+    ;;
+
+    "readiness" )
+        msg=$( nuocmd get server-config --this-server )
+        retval=$?
+    ;;
+
+    "liveness" )
+        msg=$( nuocmd check servers )
+        retval=$?
+    ;;
+esac
+
+# Success! increment threshold count,
+if [ $retval = 0 ]; then
+    count=$(( $(cat $thresholdFile) + 1 ))
+
+    # update the count in thresholdFile
+    echo $count > $thresholdFile
+else
+    count=0
+    echo "$count" > $thresholdFile
+fi
+
+# if we've crossed the threshold, then we've started!
+[ "$probeType" = "startup" -a $count -ge $threshold ] && echo count > $startedFile
+
+echo "$probeType returned '$msg' - exit $retval" | tee -a /var/log/nuodb/nuoadmin_events.log
+
+exit $retval

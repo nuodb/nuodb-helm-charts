@@ -119,13 +119,13 @@ spec:
         livenessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
-          tcpSocket:
-            port: 8888
+          exec:
+            command: [ "admin-probes", "liveness" ]
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
           exec:
-            command: [ "nuodocker", "check", "servers", "--check-connected", "--check-active", "--check-leader" ]
+            command: [ "admin-probes", "readiness", "2" ]
           failureThreshold: 30
           successThreshold: 2
           timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
@@ -144,6 +144,9 @@ spec:
         - name: nuoadmin
           mountPath: /usr/local/bin/nuoadmin
           subPath: nuoadmin
+        - name: admin-probes
+          mountPath: /usr/local/bin/admin-probes
+          subPath: admin-probes
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert
           mountPath: /etc/nuodb/keys/ca.cert
@@ -202,6 +205,10 @@ spec:
       - name: nuoadmin
         configMap:
           name: {{ template "admin.fullname" . }}-nuoadmin
+          defaultMode: 0777
+      - name: admin-probes
+        configMap:
+          name: {{ template "admin.fullname" . }}-admin-probes
           defaultMode: 0777
   volumeClaimTemplates:
   - metadata:
