@@ -9,19 +9,21 @@ set -e
 
 : ${KUBE_NAMESPACE:=nuodb}
 
+match="$2"
+
 ##### wait for an event #####
 function wait_for() {
    sleepTime=2
 
    LOOP_RETRY=$(( ${3:-30}/sleepTime ))
 
-   echo "waiting for $1 == $2..."
+   [ "$match" = "-" ] && "waiting for $1 to return success (0)" || echo "waiting for $1 == $match..."
 
-   until current=$($1); [ "$current" = "$2" ]; do
-      echo "waitfor: found=$current"
+   until current=$($1); [ "$current" = "$match" ] || [ "$match" = "-" -a $? = 0 ]; do
+      [ "$match" = "-" ] && echo "waitfor: found=$current" || echo "waitfor: $1 failed"
 
       if [ $((LOOP_RETRY--)) == 0 ]; then
-         echo "waitfor: timed out on $1 == $2"
+         [ "$match" = "-" ] && echo "waitfor: timed out on $1 == $2" || echo "waitfor: timed out on $1 success"
          echo "current = $current"
 
          for ap in $aplist; do
@@ -68,8 +70,9 @@ while [ `date +%s` -lt $endrun ]; do
     for ap in $aplist; do
         $kn delete pod $ap
 
-        #wait_for "$kn exec -it $ap -- nuocmd check servers" "" 60
-        wait_for "$get_state" "$initial_state" 60
+        wait_for "$kn get pod/$ap | grep -o 1/1" "1/1" 120
+        #wait_for "$kn exec -it $ap -- nuocmd check servers --check-active --check-connected --check-leader" "-" 120
+        #wait_for "$get_state" "$initial_state" 60
 
         for ap in $aplist; do
             $kn exec -it $ap -- nuocmd get servers
