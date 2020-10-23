@@ -202,39 +202,10 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
-{{- if and .Values.database.insights .Values.insights.enabled }}
-      - name: insights
-        image: {{ template "insights.image" . }}
-        imagePullPolicy: {{ .Values.insights.image.pullPolicy }}
-        tty: true
-        volumeMounts:
-        - mountPath: /etc/telegraf/telegraf.d/
-          name: insights-config
-        - name: log-volume
-          mountPath: /var/log/nuodb
-      - name: insights-config
-        image: {{ template "insights.watcher" . }}
-        imagePullPolicy: {{ .Values.insights.watcher.pullPolicy }}
-        env:
-        - name: LABEL
-          value: {{ .Values.database.insights | quote }}
-        - name: FOLDER
-          value: /etc/telegraf/telegraf.d/
-        - name: REQ_URL
-          value: http://0.0.0.0:5000/reload
-        volumeMounts:
-        - name: insights-config
-          mountPath: /etc/telegraf/telegraf.d/
-        - name: log-volume
-          mountPath: /var/log/nuodb
-      shareProcessNamespace: true
-{{- end }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
-      {{- if and .Values.database.insights .Values.insights.enabled }}
-      - name: insights-config
-        emptyDir: {}
-      {{- end }}
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.database.configFiles }}
       - name: configurations
         configMap:
@@ -540,39 +511,10 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
-{{- if and .Values.database.insights .Values.insights.enabled }}
-      - name: insights
-        image: {{ template "insights.image" . }}
-        imagePullPolicy: {{ .Values.insights.image.pullPolicy }}
-        tty: true
-        volumeMounts:
-        - mountPath: /etc/telegraf/telegraf.d/
-          name: insights-config
-        - name: log-volume
-          mountPath: /var/log/nuodb
-      - name: insights-config
-        image: {{ template "insights.watcher" . }}
-        imagePullPolicy: {{ .Values.insights.watcher.pullPolicy }}
-        env:
-        - name: LABEL
-          value: {{ .Values.database.insights | quote }}
-        - name: FOLDER
-          value: /etc/telegraf/telegraf.d/
-        - name: REQ_URL
-          value: http://0.0.0.0:5000/reload
-        volumeMounts:
-        - name: insights-config
-          mountPath: /etc/telegraf/telegraf.d/
-        - name: log-volume
-          mountPath: /var/log/nuodb
-      shareProcessNamespace: true
-{{- end }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
-      {{- if and .Values.database.insights .Values.insights.enabled }}
-      - name: insights-config
-        emptyDir: {}
-      {{- end }}
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.database.configFiles }}
       - name: configurations
         configMap:
