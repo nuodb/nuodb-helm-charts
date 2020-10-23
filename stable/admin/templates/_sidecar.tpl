@@ -45,6 +45,7 @@ Also, we can't use a single if because lazy evaluation is not an option
 {{- end -}}
 
 {{- define "nuodb.sidecar" -}}
+{{- if $.Values.insights }}
 {{- if and $.Values.insights.enabled $.Values.admin.insights }}
 - name: insights
   image: {{ template "insights.image" . }}
@@ -72,11 +73,14 @@ Also, we can't use a single if because lazy evaluation is not an option
     mountPath: /var/log/nuodb
 shareProcessNamespace: true
 {{- end }}
+{{- end }}
 {{- end -}}
 
 {{- define "nuodb.sidecar.volumes" -}}
+{{- if .Values.insights }}
 {{- if and .Values.admin.insights .Values.insights.enabled }}
 - name: insights-config
   emptyDir: {}
+{{- end }}
 {{- end }}
 {{- end -}}

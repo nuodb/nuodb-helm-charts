@@ -1,4 +1,5 @@
 {{- define "nuodb.sidecar" -}}
+{{- if .Values.insights }}
 {{- if and .Values.insights.enabled .Values.database.insights }}
 - name: insights
   image: {{ template "insights.image" . }}
@@ -26,12 +27,15 @@
     mountPath: /var/log/nuodb
 shareProcessNamespace: true
 {{- end }}
+{{- end }}
 {{- end -}}
 
 {{- define "nuodb.sidecar.volumes" -}}
-{{- if and .Values.database.insights .Values.insights.enabled }}
+{{- if .Values.insights }}
+{{- if and .Values.insights.enabled .Values.database.insights }}
 - name: insights-config
   emptyDir: {}
+{{- end }}
 {{- end }}
 {{- end -}}
 
