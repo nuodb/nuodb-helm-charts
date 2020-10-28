@@ -242,4 +242,4 @@ insights:
     registry: docker.io
     repository: kiwigrid/k8s-sidecar
     tag: latest
-    pullPolicy: IfNotPresent    
+    pullPolicy: IfNotPresent
