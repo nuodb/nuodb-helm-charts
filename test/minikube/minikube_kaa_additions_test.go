@@ -123,7 +123,7 @@ func TestKaaRolebindingDisabled(t *testing.T) {
 			"Not registering event listeners: service account unauthorized for resource 'leases'", &v12.PodLogOptions{}) == 1
 	}, 30*time.Second)
 
-	// Verify that no resources are avaialble via KKA
+	// Verify that no resources are avaialble via KAA
 	config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
 	require.True(t, len(config.StatefulSets) == 0)
 	require.True(t, len(config.Deployments) == 0)
