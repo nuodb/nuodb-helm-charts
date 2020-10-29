@@ -108,15 +108,6 @@ func TestKaaRolebindingDisabled(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
-	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-		},
-	})
-
 	// Verify that KAA won't start due to limited mandatory permissions
 	testlib.Await(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
@@ -126,7 +117,6 @@ func TestKaaRolebindingDisabled(t *testing.T) {
 	// Verify that no resources are avaialble via KAA
 	config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
 	require.True(t, len(config.StatefulSets) == 0)
-	require.True(t, len(config.Deployments) == 0)
 	require.True(t, len(config.Volumes) == 0)
 	require.True(t, len(config.Pods) == 0)
 }
