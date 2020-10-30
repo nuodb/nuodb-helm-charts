@@ -183,7 +183,8 @@ database:
     clusterip: ""
     balancer: ""
 
-  insights: "insights-db-plugin" 
+  # Label for insights configuration.
+  insightsPluginsLabel: "insights-db-plugin" 
 
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.

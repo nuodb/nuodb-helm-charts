@@ -113,7 +113,7 @@ admin:
       nearest: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
   
   # Label for insights configuration.
-  insights: "insights-ap-plugin" 
+  insightsPluginsLabel: "insights-ap-plugin" 
 
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))

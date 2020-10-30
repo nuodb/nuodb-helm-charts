@@ -46,7 +46,7 @@ Also, we can't use a single if because lazy evaluation is not an option
 
 {{- define "nuodb.sidecar" -}}
 {{- if $.Values.insights }}
-{{- if and $.Values.insights.enabled $.Values.admin.insights }}
+{{- if and $.Values.insights.enabled $.Values.admin.insightsPluginsLabel }}
 - name: insights
   image: {{ template "insights.image" . }}
   imagePullPolicy: {{ $.Values.insights.image.pullPolicy }}
@@ -61,7 +61,7 @@ Also, we can't use a single if because lazy evaluation is not an option
   imagePullPolicy: {{ $.Values.insights.watcher.pullPolicy }}
   env:
   - name: LABEL
-    value: {{ $.Values.admin.insights | quote }}
+    value: {{ $.Values.admin.insightsPluginsLabel | quote }}
   - name: FOLDER
     value: /etc/telegraf/telegraf.d/
   - name: REQ_URL
@@ -78,7 +78,7 @@ shareProcessNamespace: true
 
 {{- define "nuodb.sidecar.volumes" -}}
 {{- if .Values.insights }}
-{{- if and .Values.admin.insights .Values.insights.enabled }}
+{{- if and .Values.admin.insightsPluginsLabel .Values.insights.enabled }}
 - name: insights-config
   emptyDir: {}
 {{- end }}

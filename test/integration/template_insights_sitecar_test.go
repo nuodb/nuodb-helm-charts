@@ -15,8 +15,8 @@ import (
 
 func checkSidecarContainers(t *testing.T, containers []v1.Container, options *helm.Options, chartPath string) {
 	assert.NotEmpty(t, containers)
-	adminPluginsLabel, adminPluginsLabelOK := options.SetValues["admin.insights"]
-	databasePluginsLabel, databasePluginsLabelOK := options.SetValues["database.insights"]
+	adminPluginsLabel, adminPluginsLabelOK := options.SetValues["admin.insightsPluginsLabel"]
+	databasePluginsLabel, databasePluginsLabelOK := options.SetValues["database.insightsPluginsLabel"]
 	found := 0
 
 	for _, container := range containers {
@@ -44,12 +44,12 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 			if chartPath == testlib.ADMIN_HELM_CHART_PATH {
 				assert.Contains(t, container.Env, v1.EnvVar{
 					Name:  "LABEL",
-					Value: options.SetValues["admin.insights"],
+					Value: adminPluginsLabel,
 				})
 			} else {
 				assert.Contains(t, container.Env, v1.EnvVar{
 					Name:  "LABEL",
-					Value: options.SetValues["database.insights"],
+					Value: databasePluginsLabel,
 				})
 			}
 		} else {
@@ -81,8 +81,8 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 
 func checkSpecVolumes(t *testing.T, volumes []v1.Volume, options *helm.Options, chartPath string) {
 	assert.NotEmpty(t, volumes)
-	adminPluginsLabel, adminPluginsLabelOK := options.SetValues["admin.insights"]
-	databasePluginsLabel, databasePluginsLabelOK := options.SetValues["database.insights"]
+	adminPluginsLabel, adminPluginsLabelOK := options.SetValues["admin.insightsPluginsLabel"]
+	databasePluginsLabel, databasePluginsLabelOK := options.SetValues["database.insightsPluginsLabel"]
 	found := false
 	for _, volume := range volumes {
 		if volume.Name == "insights-config" {
@@ -155,15 +155,15 @@ func TestInsightsSidecarsEnabled(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":            "true",
-			"admin.insights":              "admin-plugin-label",
-			"database.insights":           "database-plugin-label",
-			"insights.image.registry":     "docker.io",
-			"insights.image.repository":   "nuodb/nuocd",
-			"insights.image.tag":          "1.0.0",
-			"insights.watcher.registry":   "docker.io",
-			"insights.watcher.repository": "kiwigrid/k8s-sidecar",
-			"insights.watcher.tag":        "latest",
+			"insights.enabled":              "true",
+			"admin.insightsPluginsLabel":    "admin-plugin-label",
+			"database.insightsPluginsLabel": "database-plugin-label",
+			"insights.image.registry":       "docker.io",
+			"insights.image.repository":     "nuodb/nuocd",
+			"insights.image.tag":            "1.0.0",
+			"insights.watcher.registry":     "docker.io",
+			"insights.watcher.repository":   "kiwigrid/k8s-sidecar",
+			"insights.watcher.tag":          "latest",
 		},
 	}
 	executeSidecarTests(t, options)
@@ -173,15 +173,15 @@ func TestInsightsSidecarsDisabled(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":            "false",
-			"admin.insights":              "admin-plugin-label",
-			"database.insights":           "database-plugin-label",
-			"insights.image.registry":     "docker.io",
-			"insights.image.repository":   "nuodb/nuocd",
-			"insights.image.tag":          "1.0.0",
-			"insights.watcher.registry":   "docker.io",
-			"insights.watcher.repository": "kiwigrid/k8s-sidecar",
-			"insights.watcher.tag":        "latest",
+			"insights.enabled":              "false",
+			"admin.insightsPluginsLabel":    "admin-plugin-label",
+			"database.insightsPluginsLabel": "database-plugin-label",
+			"insights.image.registry":       "docker.io",
+			"insights.image.repository":     "nuodb/nuocd",
+			"insights.image.tag":            "1.0.0",
+			"insights.watcher.registry":     "docker.io",
+			"insights.watcher.repository":   "kiwigrid/k8s-sidecar",
+			"insights.watcher.tag":          "latest",
 		},
 	}
 	executeSidecarTests(t, options)
@@ -191,15 +191,15 @@ func TestInsightsSidecarsAdminPluginLabelUnset(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":            "true",
-			"admin.insights":              "",
-			"database.insights":           "database-plugin-label",
-			"insights.image.registry":     "docker.io",
-			"insights.image.repository":   "nuodb/nuocd",
-			"insights.image.tag":          "1.0.0",
-			"insights.watcher.registry":   "docker.io",
-			"insights.watcher.repository": "kiwigrid/k8s-sidecar",
-			"insights.watcher.tag":        "latest",
+			"insights.enabled":              "true",
+			"admin.insightsPluginsLabel":    "",
+			"database.insightsPluginsLabel": "database-plugin-label",
+			"insights.image.registry":       "docker.io",
+			"insights.image.repository":     "nuodb/nuocd",
+			"insights.image.tag":            "1.0.0",
+			"insights.watcher.registry":     "docker.io",
+			"insights.watcher.repository":   "kiwigrid/k8s-sidecar",
+			"insights.watcher.tag":          "latest",
 		},
 	}
 	executeSidecarTests(t, options)
@@ -209,15 +209,15 @@ func TestInsightsSidecarsDatabasePluginLabelUnset(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":            "true",
-			"admin.insights":              "admin-plugin-label",
-			"database.insights":           "",
-			"insights.image.registry":     "docker.io",
-			"insights.image.repository":   "nuodb/nuocd",
-			"insights.image.tag":          "1.0.0",
-			"insights.watcher.registry":   "docker.io",
-			"insights.watcher.repository": "kiwigrid/k8s-sidecar",
-			"insights.watcher.tag":        "latest",
+			"insights.enabled":              "true",
+			"admin.insightsPluginsLabel":    "admin-plugin-label",
+			"database.insightsPluginsLabel": "",
+			"insights.image.registry":       "docker.io",
+			"insights.image.repository":     "nuodb/nuocd",
+			"insights.image.tag":            "1.0.0",
+			"insights.watcher.registry":     "docker.io",
+			"insights.watcher.repository":   "kiwigrid/k8s-sidecar",
+			"insights.watcher.tag":          "latest",
 		},
 	}
 	executeSidecarTests(t, options)
@@ -227,15 +227,15 @@ func TestInsightsSidecarsBothPluginLabelsUnset(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":            "true",
-			"admin.insights":              "",
-			"database.insights":           "",
-			"insights.image.registry":     "docker.io",
-			"insights.image.repository":   "nuodb/nuocd",
-			"insights.image.tag":          "1.0.0",
-			"insights.watcher.registry":   "docker.io",
-			"insights.watcher.repository": "kiwigrid/k8s-sidecar",
-			"insights.watcher.tag":        "latest",
+			"insights.enabled":              "true",
+			"admin.insightsPluginsLabel":    "",
+			"database.insightsPluginsLabel": "",
+			"insights.image.registry":       "docker.io",
+			"insights.image.repository":     "nuodb/nuocd",
+			"insights.image.tag":            "1.0.0",
+			"insights.watcher.registry":     "docker.io",
+			"insights.watcher.repository":   "kiwigrid/k8s-sidecar",
+			"insights.watcher.tag":          "latest",
 		},
 	}
 	executeSidecarTests(t, options)
