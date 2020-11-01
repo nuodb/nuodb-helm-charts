@@ -111,9 +111,6 @@ admin:
     fullSync: false
     policies:
       nearest: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
-  
-  # Label for insights configuration.
-  insightsPluginsLabel: "insights-ap-plugin" 
 
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
@@ -241,5 +238,21 @@ insights:
   watcher:
     registry: docker.io
     repository: kiwigrid/k8s-sidecar
-    tag: latest
+    tag: 0.1.259
     pullPolicy: IfNotPresent
+  plugins:
+    ## nuocollector compatible plugins specific for admin services
+    # admin: {}
+    admin:
+      logs: |-
+        [[inputs.tail]]
+          files = ["/var/log/nuodb/nuoadmin*.log"]
+          from_beginning = true
+          name_override= "logfile"
+          data_format = "grok"
+          grok_patterns= [ "%{CUSTOM_LOGLINE}" ]
+          grok_custom_patterns = '''
+          CUSTOM_LOGLINE %{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.000-0700"}%{SPACE}(?:%{LOGLEVEL:loglevel:tag}%{SPACE}(?:%{NOTSPACE:logger:tag}%{SPACE})?)?%{GREEDYDATA:message}
+          '''
+          [inputs.tail.tags]
+              db_tag = "nuolog"

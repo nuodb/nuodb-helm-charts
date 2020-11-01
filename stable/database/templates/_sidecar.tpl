@@ -1,6 +1,6 @@
 {{- define "nuodb.sidecar" -}}
 {{- if .Values.insights }}
-{{- if and .Values.insights.enabled .Values.database.insightsPluginsLabel }}
+{{- if .Values.insights.enabled }}
 - name: insights
   image: {{ template "insights.image" . }}
   imagePullPolicy: {{ .Values.insights.image.pullPolicy }}
@@ -15,7 +15,7 @@
   imagePullPolicy: {{ .Values.insights.watcher.pullPolicy }}
   env:
   - name: LABEL
-    value: {{ .Values.database.insightsPluginsLabel | quote }}
+    value: "nuodb.com/nuocollector-plugin in ({{ template "database.fullname" $ }}, insights)"
   - name: FOLDER
     value: /etc/telegraf/telegraf.d/
   - name: REQ_URL
@@ -32,7 +32,7 @@ shareProcessNamespace: true
 
 {{- define "nuodb.sidecar.volumes" -}}
 {{- if .Values.insights }}
-{{- if and .Values.insights.enabled .Values.database.insightsPluginsLabel }}
+{{- if .Values.insights.enabled }}
 - name: insights-config
   emptyDir: {}
 {{- end }}

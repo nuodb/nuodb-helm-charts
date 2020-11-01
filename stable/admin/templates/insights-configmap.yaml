@@ -1,0 +1,28 @@
+
+{{- if $.Values.insights }}
+{{- if $.Values.insights.enabled }}
+{{- if $.Values.insights.plugins }}
+{{- if $.Values.insights.plugins.admin }}
+{{- range $pluginName, $content := .Values.insights.plugins.admin }}
+{{- if $content }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "admin.fullname" $ }}
+    group: nuodb
+    domain: {{ $.Values.admin.domain }}
+    chart: {{ template "admin.chart" $ }}
+    release: {{ $.Release.Name | quote }}
+    "nuodb.com/nuocollector-plugin": {{ template "admin.fullname" $ }}
+  name: nuocollector-{{ template "admin.fullname" $ }}-{{ $pluginName }}
+data:
+  {{ $pluginName }}.conf: |-
+    {{- tpl $content $ | nindent 4}}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
