@@ -24,6 +24,7 @@ const TEARDOWN_DATABASE = "database"
 const TEARDOWN_RESTORE = "database"
 const TEARDOWN_SECRETS = "secrets"
 const TEARDOWN_YCSB = "ycsb"
+const TEARDOWN_INSIGHTS = "insights"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"

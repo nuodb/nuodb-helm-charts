@@ -89,10 +89,35 @@ func checkSpecVolumes(t *testing.T, volumes []v1.Volume, options *helm.Options, 
 	}
 }
 
-func checkConfigMap(t *testing.T, cm v1.ConfigMap, options *helm.Options, chartPath string) {
-	parts := strings.Split(cm.Name, "-")
-	assert.Greater(t, len(parts), 1)
-	pluginName := parts[len(parts)-1]
+func checkPluginsRendered(t *testing.T, configMaps []v1.ConfigMap, options *helm.Options, chartPath string, expectedNrPlugins int) {
+	found := 0
+	for _, cm := range configMaps {
+		if labelValue, ok := cm.Labels["nuodb.com/nuocollector-plugin"]; ok {
+			found++
+			if chartPath == testlib.ADMIN_HELM_CHART_PATH {
+				assert.Equal(t, "release-name-nuodb-cluster0-admin", labelValue)
+			} else {
+				assert.Equal(t, "release-name-nuodb-cluster0-demo-database", labelValue)
+			}
+			parts := strings.Split(cm.Name, "-")
+			assert.Greater(t, len(parts), 1)
+			pluginName := parts[len(parts)-1]
+			var expectedData string
+			ok := false
+			if chartPath == testlib.ADMIN_HELM_CHART_PATH {
+				expectedData, ok = options.SetValues["insights.plugins.admin."+pluginName]
+			} else {
+				expectedData, ok = options.SetValues["insights.plugins.database."+pluginName]
+			}
+			if ok {
+				// Check content only for plugins specified in options
+				assert.NotEmpty(t, expectedData)
+				assert.True(t, ok)
+				assert.Equal(t, expectedData, cm.Data[pluginName+".conf"])
+			}
+		}
+	}
+	assert.Equal(t, expectedNrPlugins, found)
 }
 
 func executeSidecarTests(t *testing.T, options *helm.Options) {
@@ -194,25 +219,22 @@ func TestInsightsPluginsRendered(t *testing.T) {
 	}
 
 	t.Run("testAdminPlugins", func(t *testing.T) {
-		// Run RenderTemplate to render the template and inspect admin statefulset
+		// Run RenderTemplate to render the template and inspect admin insights configMaps
 		helmChartPath := testlib.ADMIN_HELM_CHART_PATH
-		output := helm.RenderTemplate(t, options, testlib.ADMIN_HELM_CHART_PATH, "release-name", []string{"templates/insights-configmap.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
-			t.Logf("Inspecting admin plugin: %s", obj.Name)
-			checkConfigMap(t, obj, options, helmChartPath)
-		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/insights-configmap.yaml"})
+		configMaps := testlib.SplitAndRenderConfigMap(t, output, 1)
+		// Check that default and custom plugins are rendered
+		checkPluginsRendered(t, configMaps, options, helmChartPath, 2)
 	})
 
 	t.Run("testDatabaseStatefulsetSidecars", func(t *testing.T) {
-		// Run RenderTemplate to render the template and inspect database statefulset
+		// Run RenderTemplate to render the template and inspect database insights configMaps
 		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/insights-configmap.yaml"})
+		configMaps := testlib.SplitAndRenderConfigMap(t, output, 1)
+		// Check that default and custom plugins are rendered
+		checkPluginsRendered(t, configMaps, options, helmChartPath, 5)
 
-		for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
-			t.Logf("Inspecting database plugin: %s", obj.Name)
-			checkConfigMap(t, obj, options, helmChartPath)
-		}
 	})
 
 }

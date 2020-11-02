@@ -619,6 +619,19 @@ func GetStringOccurrenceInLog(t *testing.T, namespace string, podName string, ex
 
 }
 
+func GetRegexOccurrenceInLog(t *testing.T, namespace string, podName string, expectedLogLine string, podLogOptions *corev1.PodLogOptions) int {
+	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, podLogOptions))
+	require.NoError(t, err)
+
+	fullLog := string(buf)
+	pattern := regexp.MustCompile(expectedLogLine)
+	matches := pattern.FindAllStringIndex(fullLog, -1)
+	if matches == nil {
+		return 0
+	}
+	return len(matches)
+}
+
 func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {
 	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
 	require.NoError(t, err)
@@ -726,6 +739,15 @@ func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptio
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
+
+	if podLogOptions.Container == "" {
+		// Select first container if not specified; otherwise the GetLogs method will fail if there are sidecars
+		pod, err := client.CoreV1().Pods(options.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		require.NoError(t, err)
+		require.Greater(t, len(pod.Spec.Containers), 0)
+		podLogOptions.Container = pod.Spec.Containers[0].Name
+		t.Logf("Multiple containers found in pod %s. Getting logs from container %s.", podName, podLogOptions.Container)
+	}
 
 	reader, err := client.CoreV1().Pods(options.Namespace).GetLogs(podName, podLogOptions).Stream(context.TODO())
 	require.NoError(t, err)

@@ -12,6 +12,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
 )
 
 const UPGRADE_STRATEGY = `
@@ -86,7 +87,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		})
 		helm.Install(t, options, THP_HELM_CHART_PATH, THPReleaseName)
 
-		AwaitNrReplicasReady(t , namespaceName, THPReleaseName, 1)
+		AwaitNrReplicasReady(t, namespaceName, THPReleaseName, 1)
 	}
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
@@ -143,4 +144,45 @@ func StartDatabase(t *testing.T, namespace string, adminPod string, options *hel
 func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, deploymentName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.RunKubectl(t, kubectlOptions, "patch", "deployment", deploymentName, "-p", UPGRADE_STRATEGY)
+}
+
+func PopulateDBWithQuickstart(t *testing.T, namespaceName string, adminPod string) {
+	// populate some data
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+
+	k8s.RunKubectl(t, opts,
+		"exec", adminPod, "--",
+		"/opt/nuodb/bin/nuosql",
+		"--user", "dba",
+		"--password", "secret",
+		"demo",
+		"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
+	)
+	k8s.RunKubectl(t, opts,
+		"exec", adminPod, "--",
+		"/opt/nuodb/bin/nuosql",
+		"--user", "dba",
+		"--password", "secret",
+		"demo",
+		"--file", "/opt/nuodb/samples/quickstart/sql/Players.sql",
+	)
+	// Suppress output if no error
+	output, err := k8s.RunKubectlAndGetOutputE(t, opts,
+		"exec", adminPod, "--",
+		"/opt/nuodb/bin/nuosql",
+		"--user", "dba",
+		"--password", "secret",
+		"demo",
+		"--file", "/opt/nuodb/samples/quickstart/sql/Scoring.sql",
+	)
+	require.NoError(t, err, output)
+
+	k8s.RunKubectl(t, opts,
+		"exec", adminPod, "--",
+		"/opt/nuodb/bin/nuosql",
+		"--user", "dba",
+		"--password", "secret",
+		"demo",
+		"--file", "/opt/nuodb/samples/quickstart/sql/Teams.sql",
+	)
 }
