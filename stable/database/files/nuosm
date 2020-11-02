@@ -265,7 +265,12 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     fi
 
     # wait for the starting SM to be RUNNING
-    $NUOCMD check process --start-id $owner_id --check-running --wait-forever
+    $NUOCMD check process --start-id $owner_id --check-running --timeout 600
+    if [ $? != 0 ]; then
+      echo "Timeout waiting for SM to go RUNNING - owner $owner, start-id $owner_id - retrying."
+      sleep 30
+      continue
+    fi
 
     # transfer ownership of the startup semaphore to myself
     $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --expected-value $owner
