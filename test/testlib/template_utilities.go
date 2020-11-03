@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -85,7 +85,7 @@ func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int)
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
@@ -107,7 +107,7 @@ func SplitAndRenderDaemonSet(t *testing.T, output string, expectedNrObjects int)
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
@@ -129,7 +129,7 @@ func SplitAndRenderDeployment(t *testing.T, output string, expectedNrObjects int
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
@@ -151,7 +151,7 @@ func SplitAndRenderReplicationController(t *testing.T, output string, expectedNr
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
@@ -173,7 +173,7 @@ func SplitAndRenderSecret(t *testing.T, output string, expectedNrObjects int) []
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
@@ -195,7 +195,7 @@ func SplitAndRenderService(t *testing.T, output string, expectedNrObjects int) [
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
@@ -217,7 +217,7 @@ func SplitAndRenderStatefulSet(t *testing.T, output string, expectedNrObjects in
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
@@ -239,7 +239,7 @@ func SplitAndRenderStorageClass(t *testing.T, output string, expectedNrObjects i
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
@@ -261,7 +261,7 @@ func SplitAndRenderRole(t *testing.T, output string, expectedNrObjects int) []rb
 		}
 	}
 
-	assert.GreaterOrEqual(t, len(objects), expectedNrObjects)
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
 
 	return objects
 }
