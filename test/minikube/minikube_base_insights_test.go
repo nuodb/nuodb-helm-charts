@@ -126,6 +126,7 @@ func TestInsightsMetricsCollection(t *testing.T) {
 
 	// DB-32319: Enable TLS because NuoDB 4.2+ image doesn't contain pregenerated keys
 	// and it looks like nuocollector have problem with downgrading gracefully to HTTP
+	// Remove this once DB-32319 is fixed
 	randomSuffix := strings.ToLower(random.UniqueId())
 	namespaceName := fmt.Sprintf("insightsmetricscollection-%s", randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
@@ -166,7 +167,7 @@ func TestInsightsMetricsCollection(t *testing.T) {
 		})
 	})
 
-	t.Run("startDatabaseStatefulSetMultiTenant", func(t *testing.T) {
+	t.Run("startDatabaseMultiTenant", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
 		greenDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
@@ -213,11 +214,16 @@ func TestInsightsMetricsCollection(t *testing.T) {
 
 		createOutputFilePlugin(t, namespaceName)
 		defer testlib.Teardown(testlib.TEARDOWN_INSIGHTS)
-		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "green")
-		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "blue")
-		t.Run("verifyMetricsCollection", func(t *testing.T) {
+
+		t.Run("verifyMetricsCollectionForAdmin", func(t *testing.T) {
 			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
+		})
+		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "green")
+		t.Run("verifyMetricsCollectionForGreen", func(t *testing.T) {
 			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", greenDatabaseRealeaseName, "cluster0", "green"), "green")
+		})
+		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "blue")
+		t.Run("verifyMetricsCollectionForBlue", func(t *testing.T) {
 			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", blueDatabaseRealeaseName, "cluster0", "blue"), "blue")
 		})
 	})
