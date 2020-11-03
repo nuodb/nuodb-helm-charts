@@ -34,7 +34,7 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 				options.SetValues["insights.watcher.tag"]))
 			assert.Contains(t, container.Env, v1.EnvVar{
 				Name:  "FOLDER",
-				Value: "/etc/telegraf/telegraf.d/",
+				Value: "/etc/telegraf/telegraf.d/dynamic/",
 			})
 			assert.Contains(t, container.Env, v1.EnvVar{
 				Name:  "REQ_URL",
@@ -57,7 +57,7 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 		}
 		assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
 			Name:      "insights-config",
-			MountPath: "/etc/telegraf/telegraf.d/",
+			MountPath: "/etc/telegraf/telegraf.d/dynamic/",
 		})
 		assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
 			Name:      "log-volume",
@@ -224,7 +224,7 @@ func TestInsightsPluginsRendered(t *testing.T) {
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/insights-configmap.yaml"})
 		configMaps := testlib.SplitAndRenderConfigMap(t, output, 1)
 		// Check that default and custom plugins are rendered
-		checkPluginsRendered(t, configMaps, options, helmChartPath, 2)
+		checkPluginsRendered(t, configMaps, options, helmChartPath, 1)
 	})
 
 	t.Run("testDatabaseStatefulsetSidecars", func(t *testing.T) {
@@ -233,7 +233,7 @@ func TestInsightsPluginsRendered(t *testing.T) {
 		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/insights-configmap.yaml"})
 		configMaps := testlib.SplitAndRenderConfigMap(t, output, 1)
 		// Check that default and custom plugins are rendered
-		checkPluginsRendered(t, configMaps, options, helmChartPath, 5)
+		checkPluginsRendered(t, configMaps, options, helmChartPath, 1)
 
 	})
 

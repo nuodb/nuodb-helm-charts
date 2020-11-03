@@ -310,6 +310,25 @@ The purpose of this section is to allow customisation of the names of the cluste
 | `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
 | `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
 
+#### insights.*
+
+The purpose of this section is to specify the NuoDB monitoring parameters.
+
+The following tables list the configurable parameters for the `insights` option of the admin chart and their default values.
+
+| Parameter | Description | Default |
+| ----- | ----------- | ------ |
+| `enabled` | Whether to enable NuoDB monitoring using sidecar containers |`false`|
+| `image.registry` | NuoDB collector container registry | `docker.io` |
+| `image.repository` | NuoDB collector container image name |`nuodb/nuodb-collector`|
+| `image.tag` | NuoDB collector container image tag | `1.0.1` |
+| `image.pullPolicy` | NuoDB collector container pull policy |`IfNotPresent`|
+| `watcher.registry` | ConfigMap watcher container registry | `docker.io` |
+| `watcher.repository` | ConfigMap watcher container image name |`kiwigrid/k8s-sidecar`|
+| `watcher.tag` | ConfigMap watcher container image tag | `0.1.259` |
+| `watcher.pullPolicy` | ConfigMap watcher container pull policy |`IfNotPresent`|
+| `plugins.database` | NuoDB collector additional plugins for database services |`{}`|
+
 ### Running
 
 Verify the Helm chart:

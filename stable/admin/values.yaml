@@ -233,7 +233,7 @@ insights:
   image:
     registry: docker.io
     repository: nuodb/nuodb-collector
-    tag: 1.0.0
+    tag: 1.0.1
     pullPolicy: IfNotPresent
   watcher:
     registry: docker.io
@@ -242,17 +242,4 @@ insights:
     pullPolicy: IfNotPresent
   plugins:
     ## nuocollector compatible plugins specific for admin services
-    # admin: {}
-    admin:
-      logs: |-
-        [[inputs.tail]]
-          files = ["/var/log/nuodb/nuoadmin*.log"]
-          from_beginning = true
-          name_override= "logfile"
-          data_format = "grok"
-          grok_patterns= [ "%{CUSTOM_LOGLINE}" ]
-          grok_custom_patterns = '''
-          CUSTOM_LOGLINE %{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.000-0700"}%{SPACE}(?:%{LOGLEVEL:loglevel:tag}%{SPACE}(?:%{NOTSPACE:logger:tag}%{SPACE})?)?%{GREEDYDATA:message}
-          '''
-          [inputs.tail.tags]
-              db_tag = "nuolog"
+    admin: {}

@@ -6,7 +6,7 @@
   imagePullPolicy: {{ .Values.insights.image.pullPolicy }}
   tty: true
   volumeMounts:
-  - mountPath: /etc/telegraf/telegraf.d/
+  - mountPath: /etc/telegraf/telegraf.d/dynamic/
     name: insights-config
   - name: log-volume
     mountPath: /var/log/nuodb
@@ -17,12 +17,12 @@
   - name: LABEL
     value: "nuodb.com/nuocollector-plugin in ({{ template "database.fullname" $ }}, insights)"
   - name: FOLDER
-    value: /etc/telegraf/telegraf.d/
+    value: /etc/telegraf/telegraf.d/dynamic/
   - name: REQ_URL
     value: http://127.0.0.1:5000/reload
   volumeMounts:
   - name: insights-config
-    mountPath: /etc/telegraf/telegraf.d/
+    mountPath: /etc/telegraf/telegraf.d/dynamic/
   - name: log-volume
     mountPath: /var/log/nuodb
 shareProcessNamespace: true

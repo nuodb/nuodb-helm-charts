@@ -1,9 +1,10 @@
-// +build short
+// +build long
 
 package minikube
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/random"
 	v12 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -33,6 +35,8 @@ func createOutputFilePlugin(t *testing.T, namespaceName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.KubectlApplyFromString(t, kubectlOptions, FILE_PLUGIN_CONFIGMAP)
 	testlib.AddTeardown(testlib.TEARDOWN_INSIGHTS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, FILE_PLUGIN_CONFIGMAP) })
+	// Wait a bit so that the insights-config sidecar refresh the Telegraf configuration
+	time.Sleep(3 * time.Second)
 }
 
 func checkInsightsMetricsLine(t *testing.T, namespaceName string, podName string,
@@ -89,7 +93,7 @@ func verifyCollectionForDatabase(t *testing.T, namespaceName string, app string,
 		t.Logf("Searching string '%s' in pod %s logs", message, pod.Name)
 		testlib.Await(t, func() bool {
 			return checkInsightsMetricsLine(t, namespaceName, pod.Name, message, 1)
-		}, 60*time.Second)
+		}, 120*time.Second)
 	}
 }
 
@@ -104,13 +108,33 @@ func TestInsightsMetricsCollection(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			// Load custom user plugin for the admin
+			"insights.plugins.admin.log": `
+[[inputs.tail]]
+  files = ["/var/log/nuodb/nuoadmin*.log"]
+  from_beginning = true
+  name_override= "logfile"
+  data_format = "grok"
+  grok_patterns= [ "%{CUSTOM_LOGLINE}" ]
+  grok_custom_patterns = '''
+  CUSTOM_LOGLINE %{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.000-0700"}%{SPACE}(?:%{LOGLEVEL:loglevel:tag}%{SPACE}(?:%{NOTSPACE:logger:tag}%{SPACE})?)?%{GREEDYDATA:message}
+  '''
+  [inputs.tail.tags]
+    db_tag = "nuolog"`,
 		},
 	}
 
-	defer testlib.Teardown(testlib.TEARDOWN_INSIGHTS)
+	// DB-32319: Enable TLS because NuoDB 4.2+ image doesn't contain pregenerated keys
+	// and it looks like nuocollector have problem with downgrading gracefully to HTTP
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("insightsmetricscollection-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
+	testlib.GenerateAndSetTLSKeys(t, &options, namespaceName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	adminReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+	adminReleaseName, _ := testlib.StartAdmin(t, &options, 1, namespaceName)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
@@ -118,58 +142,84 @@ func TestInsightsMetricsCollection(t *testing.T) {
 
 		databaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 		createOutputFilePlugin(t, namespaceName)
-		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0)
+		defer testlib.Teardown(testlib.TEARDOWN_INSIGHTS)
+		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "demo")
 		t.Run("verifyMetricsCollection", func(t *testing.T) {
 			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
 			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseRealeaseName, "cluster0", "demo"), "demo")
 		})
 	})
-	/*
-		t.Run("startDatabaseDaemonSet", func(t *testing.T) {
-			defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-			options.SetValues["database.enableDaemonSet"] = "true"
-			databaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
-			createOutputFilePlugin(t, namespaceName)
-			testlib.PopulateCreateDBData(t, namespaceName, admin0)
-			t.Run("verifyMetricsCollection", func(t *testing.T) {
-				verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
-				verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseRealeaseName, "cluster0", "demo"), "demo")
-			})
+	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+		options.SetValues["database.enableDaemonSet"] = "true"
+		// Start only hotcopy SM daemonset
+		options.SetValues["database.sm.noHotCopy.enablePod"] = "false"
+		databaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
+
+		createOutputFilePlugin(t, namespaceName)
+		defer testlib.Teardown(testlib.TEARDOWN_INSIGHTS)
+		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "demo")
+		t.Run("verifyMetricsCollection", func(t *testing.T) {
+			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
+			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseRealeaseName, "cluster0", "demo"), "demo")
+		})
+	})
+
+	t.Run("startDatabaseStatefulSetMultiTenant", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+		greenDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"insights.enabled":                      "true",
+				"database.name":                         "green",
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"admin.tlsCACert.secret":                testlib.CA_CERT_SECRET,
+				"admin.tlsCACert.key":                   testlib.CA_CERT_FILE,
+				"admin.tlsKeyStore.secret":              testlib.KEYSTORE_SECRET,
+				"admin.tlsKeyStore.key":                 testlib.KEYSTORE_FILE,
+				"admin.tlsKeyStore.password":            testlib.SECRET_PASSWORD,
+				"admin.tlsTrustStore.secret":            testlib.TRUSTSTORE_SECRET,
+				"admin.tlsTrustStore.key":               testlib.TRUSTSTORE_FILE,
+				"admin.tlsTrustStore.password":          testlib.SECRET_PASSWORD,
+				"admin.tlsClientPEM.secret":             testlib.NUOCMD_SECRET,
+				"admin.tlsClientPEM.key":                testlib.NUOCMD_FILE,
+			},
 		})
 
-		t.Run("startDatabaseStatefulSetMultiTenant", func(t *testing.T) {
-			defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-
-			greenDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-				SetValues: map[string]string{
-					"insights.enabled":                      "true",
-					"database.name":                         "green",
-					"database.sm.resources.requests.cpu":    "250m",
-					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-					"database.te.resources.requests.cpu":    "250m",
-					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				},
-			})
-
-			blueDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-				SetValues: map[string]string{
-					"insights.enabled":                      "true",
-					"database.name":                         "blue",
-					"database.sm.resources.requests.cpu":    "250m",
-					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-					"database.te.resources.requests.cpu":    "250m",
-					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				},
-			})
-
-			createOutputFilePlugin(t, namespaceName)
-			testlib.PopulateCreateDBData(t, namespaceName, admin0)
-			t.Run("verifyMetricsCollection", func(t *testing.T) {
-				verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
-				verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", greenDatabaseRealeaseName, "cluster0", "green"), "green")
-				verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", blueDatabaseRealeaseName, "cluster0", "blue"), "blue")
-			})
+		blueDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"insights.enabled":                      "true",
+				"database.name":                         "blue",
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"admin.tlsCACert.secret":                testlib.CA_CERT_SECRET,
+				"admin.tlsCACert.key":                   testlib.CA_CERT_FILE,
+				"admin.tlsKeyStore.secret":              testlib.KEYSTORE_SECRET,
+				"admin.tlsKeyStore.key":                 testlib.KEYSTORE_FILE,
+				"admin.tlsKeyStore.password":            testlib.SECRET_PASSWORD,
+				"admin.tlsTrustStore.secret":            testlib.TRUSTSTORE_SECRET,
+				"admin.tlsTrustStore.key":               testlib.TRUSTSTORE_FILE,
+				"admin.tlsTrustStore.password":          testlib.SECRET_PASSWORD,
+				"admin.tlsClientPEM.secret":             testlib.NUOCMD_SECRET,
+				"admin.tlsClientPEM.key":                testlib.NUOCMD_FILE,
+			},
 		})
-	*/
+
+		createOutputFilePlugin(t, namespaceName)
+		defer testlib.Teardown(testlib.TEARDOWN_INSIGHTS)
+		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "green")
+		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "blue")
+		t.Run("verifyMetricsCollection", func(t *testing.T) {
+			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
+			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", greenDatabaseRealeaseName, "cluster0", "green"), "green")
+			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", blueDatabaseRealeaseName, "cluster0", "blue"), "blue")
+		})
+	})
+
 }

@@ -12,7 +12,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/stretchr/testify/require"
 )
 
 const UPGRADE_STRATEGY = `
@@ -146,7 +145,7 @@ func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, 
 	k8s.RunKubectl(t, kubectlOptions, "patch", "deployment", deploymentName, "-p", UPGRADE_STRATEGY)
 }
 
-func PopulateDBWithQuickstart(t *testing.T, namespaceName string, adminPod string) {
+func PopulateDBWithQuickstart(t *testing.T, namespaceName string, adminPod string, dbName string) {
 	// populate some data
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 
@@ -155,7 +154,7 @@ func PopulateDBWithQuickstart(t *testing.T, namespaceName string, adminPod strin
 		"/opt/nuodb/bin/nuosql",
 		"--user", "dba",
 		"--password", "secret",
-		"demo",
+		dbName,
 		"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
 	)
 	k8s.RunKubectl(t, opts,
@@ -163,26 +162,16 @@ func PopulateDBWithQuickstart(t *testing.T, namespaceName string, adminPod strin
 		"/opt/nuodb/bin/nuosql",
 		"--user", "dba",
 		"--password", "secret",
-		"demo",
+		dbName,
 		"--file", "/opt/nuodb/samples/quickstart/sql/Players.sql",
 	)
-	// Suppress output if no error
-	output, err := k8s.RunKubectlAndGetOutputE(t, opts,
-		"exec", adminPod, "--",
-		"/opt/nuodb/bin/nuosql",
-		"--user", "dba",
-		"--password", "secret",
-		"demo",
-		"--file", "/opt/nuodb/samples/quickstart/sql/Scoring.sql",
-	)
-	require.NoError(t, err, output)
-
+	// Skipping Scoring.sql as it is taking long time to load
 	k8s.RunKubectl(t, opts,
 		"exec", adminPod, "--",
 		"/opt/nuodb/bin/nuosql",
 		"--user", "dba",
 		"--password", "secret",
-		"demo",
+		dbName,
 		"--file", "/opt/nuodb/samples/quickstart/sql/Teams.sql",
 	)
 }

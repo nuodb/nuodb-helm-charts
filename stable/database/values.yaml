@@ -375,7 +375,7 @@ insights:
   image:
     registry: docker.io
     repository: nuodb/nuodb-collector
-    tag: 1.0.0
+    tag: 1.0.1
     pullPolicy: IfNotPresent
   watcher:
     registry: docker.io
@@ -384,61 +384,4 @@ insights:
     pullPolicy: IfNotPresent
   plugins:
     ## nuocollector compatible plugins specific for database services
-    # database: {}
-    database:
-      metrics: |-
-        [[inputs.execd]]
-          command = [ "python", "/opt/nuocd/nuodb_adminquery.py", "-i", "0", "metrics" ]
-          signal = "none"
-          restart_delay = "10s"
-          data_format = "influx"
-          [inputs.execd.tags]
-            db_tag = "nuodb"
-      msgtrace: |-
-        [[inputs.execd]]
-          command = [ "python", "/opt/nuocd/nuodb_adminquery.py", "-i", "30", "msgtrace" ]
-          signal = "none"
-          restart_delay = "10s"
-          data_format = "csv"
-          csv_column_names = [ "time", "id",      "nodeId", "listenerId", "startId", "host",   "pid",    "dbname", "timedelta", "totalSumStalls", "msg_trace_metric", "numStalls","totalTimeStalls","maxStallTime" ]
-          csv_column_types = [ "int" , "string" , "string", "string",     "string",  "string", "string", "string", "int",       "int",            "string",           "int",      "int",            "int" ]
-          csv_comment = "#"
-          csv_tag_columns = [ "id", "startId", "nodeId", "listenerId", "host", "dbname", "msg_trace_metric"]
-          csv_timestamp_column = "time"
-          csv_timestamp_format = "unix"
-          fielddrop = ["time", "pid", "path"]
-          name_override = "nuodb_msgtrace"
-          [inputs.execd.tags]
-            db_tag = "nuodb_internal"
-      synctrace: |-
-        [[inputs.execd]]
-          command = [ "python", "/opt/nuocd/nuodb_adminquery.py", "-i", "30", "synctrace" ]
-          signal = "none"
-          restart_delay = "10s"
-          data_format = "csv"
-          csv_column_names = [ "time", "id",      "startId", "host",  "pid",    "dbname", "timedelta","totalSumStalls","sync_trace_metric",    "numLocks", "numUnlocks", "numStalls","totalTimeStalls", "maxStallTime" ]
-          csv_column_types = [ "int" , "string" , "string", "string", "string", "string", "int",      "int",           "string",  "int",      "int",        "int",      "int", "int" ]
-          csv_comment = "#"
-          csv_tag_columns = [ "startId", "id", "host", "dbname", "sync_trace_metric"]
-          csv_timestamp_column = "time"
-          csv_timestamp_format = "unix"
-          fielddrop = ["time", "pid"]
-          name_override = "nuodb_synctrace"
-          [inputs.execd.tags]
-            db_tag = "nuodb_internal"
-      threads: |-
-        [[inputs.execd]]
-          command = [ "python", "/opt/nuocd/nuodb_threads.py" ]
-          signal = "none"
-          restart_delay = "10s"
-          data_format = "csv"
-          csv_column_names = [ "host", "pid", "threadid", "state", "exe", "lcpu", "utime", "stime", "ttime", "minf", "maxf", "time" ]
-          csv_column_types = [ "string", "string", "string", "string", "string", "int", "float", "float", "float", "int", "int", "int" ]
-          csv_comment = "#"
-          csv_tag_columns = [ "host", "state", "exe" ]
-          csv_timestamp_column = "time"
-          csv_timestamp_format = "unix_us"
-          fielddrop = ["time"]
-          name_override = "nuodb_thread"
-          [inputs.execd.tags]
-            db_tag = "nuodb_internal"
+    database: {}
