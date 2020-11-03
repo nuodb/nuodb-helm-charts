@@ -4,7 +4,6 @@ package minikube
 
 import (
 	"fmt"
-	"strings"
 	"testing"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
 	v12 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -124,18 +122,8 @@ func TestInsightsMetricsCollection(t *testing.T) {
 		},
 	}
 
-	// DB-32319: Enable TLS because NuoDB 4.2+ image doesn't contain pregenerated keys
-	// and it looks like nuocollector have problem with downgrading gracefully to HTTP
-	// Remove this once DB-32319 is fixed
-	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("insightsmetricscollection-%s", randomSuffix)
-	testlib.CreateNamespace(t, namespaceName)
-	testlib.GenerateAndSetTLSKeys(t, &options, namespaceName)
-
-	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-
-	adminReleaseName, _ := testlib.StartAdmin(t, &options, 1, namespaceName)
+	adminReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, namespaceName)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
@@ -178,16 +166,6 @@ func TestInsightsMetricsCollection(t *testing.T) {
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    "250m",
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"admin.tlsCACert.secret":                testlib.CA_CERT_SECRET,
-				"admin.tlsCACert.key":                   testlib.CA_CERT_FILE,
-				"admin.tlsKeyStore.secret":              testlib.KEYSTORE_SECRET,
-				"admin.tlsKeyStore.key":                 testlib.KEYSTORE_FILE,
-				"admin.tlsKeyStore.password":            testlib.SECRET_PASSWORD,
-				"admin.tlsTrustStore.secret":            testlib.TRUSTSTORE_SECRET,
-				"admin.tlsTrustStore.key":               testlib.TRUSTSTORE_FILE,
-				"admin.tlsTrustStore.password":          testlib.SECRET_PASSWORD,
-				"admin.tlsClientPEM.secret":             testlib.NUOCMD_SECRET,
-				"admin.tlsClientPEM.key":                testlib.NUOCMD_FILE,
 			},
 		})
 
@@ -199,16 +177,6 @@ func TestInsightsMetricsCollection(t *testing.T) {
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    "250m",
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"admin.tlsCACert.secret":                testlib.CA_CERT_SECRET,
-				"admin.tlsCACert.key":                   testlib.CA_CERT_FILE,
-				"admin.tlsKeyStore.secret":              testlib.KEYSTORE_SECRET,
-				"admin.tlsKeyStore.key":                 testlib.KEYSTORE_FILE,
-				"admin.tlsKeyStore.password":            testlib.SECRET_PASSWORD,
-				"admin.tlsTrustStore.secret":            testlib.TRUSTSTORE_SECRET,
-				"admin.tlsTrustStore.key":               testlib.TRUSTSTORE_FILE,
-				"admin.tlsTrustStore.password":          testlib.SECRET_PASSWORD,
-				"admin.tlsClientPEM.secret":             testlib.NUOCMD_SECRET,
-				"admin.tlsClientPEM.key":                testlib.NUOCMD_FILE,
 			},
 		})
 
