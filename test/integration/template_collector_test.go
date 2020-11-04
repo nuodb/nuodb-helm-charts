@@ -20,18 +20,18 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 
 	for _, container := range containers {
 		t.Logf("Inspecting container %s in chart %s", container.Name, chartPath)
-		if container.Name == "insights" {
+		if container.Name == "nuocollector" {
 			found++
 			assert.Equal(t, container.Image, fmt.Sprintf("%s/%s:%s",
-				options.SetValues["insights.image.registry"],
-				options.SetValues["insights.image.repository"],
-				options.SetValues["insights.image.tag"]))
-		} else if container.Name == "insights-config" {
+				options.SetValues["nuocollector.image.registry"],
+				options.SetValues["nuocollector.image.repository"],
+				options.SetValues["nuocollector.image.tag"]))
+		} else if container.Name == "nuocollector-config" {
 			found++
 			assert.Equal(t, container.Image, fmt.Sprintf("%s/%s:%s",
-				options.SetValues["insights.watcher.registry"],
-				options.SetValues["insights.watcher.repository"],
-				options.SetValues["insights.watcher.tag"]))
+				options.SetValues["nuocollector.watcher.registry"],
+				options.SetValues["nuocollector.watcher.repository"],
+				options.SetValues["nuocollector.watcher.tag"]))
 			assert.Contains(t, container.Env, v1.EnvVar{
 				Name:  "FOLDER",
 				Value: "/etc/telegraf/telegraf.d/dynamic/",
@@ -56,7 +56,7 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 			continue
 		}
 		assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
-			Name:      "insights-config",
+			Name:      "nuocollector-config",
 			MountPath: "/etc/telegraf/telegraf.d/dynamic/",
 		})
 		assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
@@ -66,7 +66,7 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 	}
 
 	expectedContainersCount := 0
-	if options.SetValues["insights.enabled"] == "true" {
+	if options.SetValues["nuocollector.enabled"] == "true" {
 		expectedContainersCount = 2
 	}
 	assert.Equal(t, expectedContainersCount, found)
@@ -76,16 +76,16 @@ func checkSpecVolumes(t *testing.T, volumes []v1.Volume, options *helm.Options, 
 	assert.NotEmpty(t, volumes)
 	found := false
 	for _, volume := range volumes {
-		if volume.Name == "insights-config" {
+		if volume.Name == "nuocollector-config" {
 			found = true
 			// Check that empty dir is mounted
 			assert.NotNil(t, volume.EmptyDir)
 		}
 	}
-	if options.SetValues["insights.enabled"] == "true" {
-		assert.True(t, found)
+	if options.SetValues["nuocollector.enabled"] == "true" {
+		assert.True(t, found, "nuocollector-config should be declared as volume")
 	} else {
-		assert.False(t, found)
+		assert.False(t, found, "nuocollector-config is declared as volume with nuocollector disabled")
 	}
 }
 
@@ -105,14 +105,13 @@ func checkPluginsRendered(t *testing.T, configMaps []v1.ConfigMap, options *helm
 			var expectedData string
 			ok := false
 			if chartPath == testlib.ADMIN_HELM_CHART_PATH {
-				expectedData, ok = options.SetValues["insights.plugins.admin."+pluginName]
+				expectedData, ok = options.SetValues["nuocollector.plugins.admin."+pluginName]
 			} else {
-				expectedData, ok = options.SetValues["insights.plugins.database."+pluginName]
+				expectedData, ok = options.SetValues["nuocollector.plugins.database."+pluginName]
 			}
 			if ok {
 				// Check content only for plugins specified in options
 				assert.NotEmpty(t, expectedData)
-				assert.True(t, ok)
 				assert.Equal(t, expectedData, cm.Data[pluginName+".conf"])
 			}
 		}
@@ -171,66 +170,66 @@ func executeSidecarTests(t *testing.T, options *helm.Options) {
 	})
 }
 
-func TestInsightsSidecarsEnabled(t *testing.T) {
+func TestNuoDBCollectorSidecarsEnabled(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":            "true",
-			"insights.image.registry":     "docker.io",
-			"insights.image.repository":   "nuodb/nuocd",
-			"insights.image.tag":          "1.0.0",
-			"insights.watcher.registry":   "docker.io",
-			"insights.watcher.repository": "kiwigrid/k8s-sidecar",
-			"insights.watcher.tag":        "latest",
+			"nuocollector.enabled":            "true",
+			"nuocollector.image.registry":     "docker.io",
+			"nuocollector.image.repository":   "nuodb/nuocd",
+			"nuocollector.image.tag":          "1.0.0",
+			"nuocollector.watcher.registry":   "docker.io",
+			"nuocollector.watcher.repository": "kiwigrid/k8s-sidecar",
+			"nuocollector.watcher.tag":        "latest",
 		},
 	}
 	executeSidecarTests(t, options)
 }
 
-func TestInsightsSidecarsDisabled(t *testing.T) {
+func TestNuoDBCollectorSidecarsDisabled(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":            "false",
-			"insights.image.registry":     "docker.io",
-			"insights.image.repository":   "nuodb/nuocd",
-			"insights.image.tag":          "1.0.0",
-			"insights.watcher.registry":   "docker.io",
-			"insights.watcher.repository": "kiwigrid/k8s-sidecar",
-			"insights.watcher.tag":        "latest",
+			"nuocollector.enabled":            "false",
+			"nuocollector.image.registry":     "docker.io",
+			"nuocollector.image.repository":   "nuodb/nuocd",
+			"nuocollector.image.tag":          "1.0.0",
+			"nuocollector.watcher.registry":   "docker.io",
+			"nuocollector.watcher.repository": "kiwigrid/k8s-sidecar",
+			"nuocollector.watcher.tag":        "latest",
 		},
 	}
 	executeSidecarTests(t, options)
 }
 
-func TestInsightsPluginsRendered(t *testing.T) {
+func TestNuoDBCollectorPluginsRendered(t *testing.T) {
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":               "true",
-			"insights.image.registry":        "docker.io",
-			"insights.image.repository":      "nuodb/nuocd",
-			"insights.image.tag":             "1.0.0",
-			"insights.watcher.registry":      "docker.io",
-			"insights.watcher.repository":    "kiwigrid/k8s-sidecar",
-			"insights.watcher.tag":           "latest",
-			"insights.plugins.admin.file":    "[[outputs.file]]\nfiles = [\"/var/log/nuodb/metrics.log\"]\ndata_format = \"json\"",
-			"insights.plugins.database.file": "[[outputs.file]]\nfiles = [\"/var/log/nuodb/metrics.log\"]\ndata_format = \"json\"",
+			"nuocollector.enabled":               "true",
+			"nuocollector.image.registry":        "docker.io",
+			"nuocollector.image.repository":      "nuodb/nuocd",
+			"nuocollector.image.tag":             "1.0.0",
+			"nuocollector.watcher.registry":      "docker.io",
+			"nuocollector.watcher.repository":    "kiwigrid/k8s-sidecar",
+			"nuocollector.watcher.tag":           "latest",
+			"nuocollector.plugins.admin.file":    "[[outputs.file]]\nfiles = [\"/var/log/nuodb/metrics.log\"]\ndata_format = \"json\"",
+			"nuocollector.plugins.database.file": "[[outputs.file]]\nfiles = [\"/var/log/nuodb/metrics.log\"]\ndata_format = \"json\"",
 		},
 	}
 
 	t.Run("testAdminPlugins", func(t *testing.T) {
-		// Run RenderTemplate to render the template and inspect admin insights configMaps
+		// Run RenderTemplate to render the template and inspect admin nuocollector configMaps
 		helmChartPath := testlib.ADMIN_HELM_CHART_PATH
-		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/insights-configmap.yaml"})
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/nuocollector-configmap.yaml"})
 		configMaps := testlib.SplitAndRenderConfigMap(t, output, 1)
 		// Check that default and custom plugins are rendered
 		checkPluginsRendered(t, configMaps, options, helmChartPath, 1)
 	})
 
 	t.Run("testDatabaseStatefulsetSidecars", func(t *testing.T) {
-		// Run RenderTemplate to render the template and inspect database insights configMaps
+		// Run RenderTemplate to render the template and inspect database nuocollector configMaps
 		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
-		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/insights-configmap.yaml"})
+		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/nuocollector-configmap.yaml"})
 		configMaps := testlib.SplitAndRenderConfigMap(t, output, 1)
 		// Check that default and custom plugins are rendered
 		checkPluginsRendered(t, configMaps, options, helmChartPath, 1)

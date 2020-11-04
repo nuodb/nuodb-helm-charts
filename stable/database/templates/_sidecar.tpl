@@ -1,18 +1,18 @@
 {{- define "nuodb.sidecar" -}}
-{{- if .Values.insights }}
-{{- if .Values.insights.enabled }}
-- name: insights
-  image: {{ template "insights.image" . }}
-  imagePullPolicy: {{ .Values.insights.image.pullPolicy }}
+{{- if .Values.nuocollector }}
+{{- if .Values.nuocollector.enabled }}
+- name: nuocollector
+  image: {{ template "nuocollector.image" . }}
+  imagePullPolicy: {{ .Values.nuocollector.image.pullPolicy }}
   tty: true
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
-    name: insights-config
+    name: nuocollector-config
   - name: log-volume
     mountPath: /var/log/nuodb
-- name: insights-config
-  image: {{ template "insights.watcher" . }}
-  imagePullPolicy: {{ .Values.insights.watcher.pullPolicy }}
+- name: nuocollector-config
+  image: {{ template "nuocollector.watcher" . }}
+  imagePullPolicy: {{ .Values.nuocollector.watcher.pullPolicy }}
   env:
   - name: LABEL
     value: "nuodb.com/nuocollector-plugin in ({{ template "database.fullname" $ }}, insights)"
@@ -21,7 +21,7 @@
   - name: REQ_URL
     value: http://127.0.0.1:5000/reload
   volumeMounts:
-  - name: insights-config
+  - name: nuocollector-config
     mountPath: /etc/telegraf/telegraf.d/dynamic/
   - name: log-volume
     mountPath: /var/log/nuodb
@@ -31,21 +31,21 @@ shareProcessNamespace: true
 {{- end -}}
 
 {{- define "nuodb.sidecar.volumes" -}}
-{{- if .Values.insights }}
-{{- if .Values.insights.enabled }}
-- name: insights-config
+{{- if .Values.nuocollector }}
+{{- if .Values.nuocollector.enabled }}
+- name: nuocollector-config
   emptyDir: {}
 {{- end }}
 {{- end }}
 {{- end -}}
 
 {{/*
-Return the proper insights image name
+Return the proper NuoDB Collector image name
 */}}
-{{- define "insights.image" -}}
-{{- $registryName := .Values.insights.image.registry -}}
-{{- $repositoryName := .Values.insights.image.repository -}}
-{{- $tag := .Values.insights.image.tag | toString -}}
+{{- define "nuocollector.image" -}}
+{{- $registryName := .Values.nuocollector.image.registry -}}
+{{- $repositoryName := .Values.nuocollector.image.repository -}}
+{{- $tag := .Values.nuocollector.image.tag | toString -}}
 {{/*
 Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
 but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
@@ -63,12 +63,12 @@ Also, we can't use a single if because lazy evaluation is not an option
 {{- end -}}
 
 {{/*
-Return the proper insights image name
+Return the proper NuoDB Collector configuration watcher image name
 */}}
-{{- define "insights.watcher" -}}
-{{- $registryName := .Values.insights.watcher.registry -}}
-{{- $repositoryName := .Values.insights.watcher.repository -}}
-{{- $tag := .Values.insights.watcher.tag | toString -}}
+{{- define "nuocollector.watcher" -}}
+{{- $registryName := .Values.nuocollector.watcher.registry -}}
+{{- $repositoryName := .Values.nuocollector.watcher.repository -}}
+{{- $tag := .Values.nuocollector.watcher.tag | toString -}}
 {{/*
 Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
 but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.

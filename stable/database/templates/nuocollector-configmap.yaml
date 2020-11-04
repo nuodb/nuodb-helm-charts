@@ -1,9 +1,8 @@
 
-{{- if $.Values.insights }}
-{{- if $.Values.insights.enabled }}
-{{- if $.Values.insights.plugins }}
-{{- if $.Values.insights.plugins.database }}
-{{- range $pluginName, $content := .Values.insights.plugins.database }}
+{{- if $.Values.nuocollector }}
+{{- if and $.Values.nuocollector.enabled $.Values.nuocollector.plugins }}
+{{- if $.Values.nuocollector.plugins.database }}
+{{- range $pluginName, $content := .Values.nuocollector.plugins.database }}
 {{- if $content }}
 ---
 apiVersion: v1
@@ -20,7 +19,6 @@ metadata:
 data:
   {{ $pluginName }}.conf: |-
     {{- tpl $content $ | nindent 4}}
-{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

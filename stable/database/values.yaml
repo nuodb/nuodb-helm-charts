@@ -367,15 +367,13 @@ openshift:
   # change this to true if you want to deploy using OpenShift proprietary features
   enabled: false
 
-insights:
-  # disable insights by setting insights.enabled=false or admin.insights="" or admin.insights=null
-  # enabled here as a super values file that works for both admin and database helm charts can set
-  # to false to disable for both helm charts.
+nuocollector:
+  # Enable NuoDB Collector by setting nuocollector.enabled=true
   enabled: false
   image:
     registry: docker.io
     repository: nuodb/nuodb-collector
-    tag: 1.0.1
+    tag: 1.1.0
     pullPolicy: IfNotPresent
   watcher:
     registry: docker.io
@@ -383,5 +381,5 @@ insights:
     tag: 0.1.259
     pullPolicy: IfNotPresent
   plugins:
-    ## nuocollector compatible plugins specific for database services
+    ## NuoDB Collector compatible plugins specific for database services
     database: {}

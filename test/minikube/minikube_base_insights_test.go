@@ -33,13 +33,13 @@ func createOutputFilePlugin(t *testing.T, namespaceName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.KubectlApplyFromString(t, kubectlOptions, FILE_PLUGIN_CONFIGMAP)
 	testlib.AddTeardown(testlib.TEARDOWN_INSIGHTS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, FILE_PLUGIN_CONFIGMAP) })
-	// Wait a bit so that the insights-config sidecar refresh the Telegraf configuration
+	// Wait a bit so that the nuocollector-config sidecar refresh the Telegraf configuration
 	time.Sleep(3 * time.Second)
 }
 
 func checkInsightsMetricsLine(t *testing.T, namespaceName string, podName string,
 	expectedLine string, minOccurances int) bool {
-	count := testlib.GetRegexOccurrenceInLog(t, namespaceName, podName, expectedLine, &v12.PodLogOptions{Container: "insights"})
+	count := testlib.GetRegexOccurrenceInLog(t, namespaceName, podName, expectedLine, &v12.PodLogOptions{Container: "nuocollector"})
 	if count >= minOccurances {
 		t.Logf("Found %d occurances of '%s' in pod %s log", count, expectedLine, podName)
 		return true
@@ -101,13 +101,13 @@ func TestInsightsMetricsCollection(t *testing.T) {
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"insights.enabled":                      "true",
+			"nuocollector.enabled":                  "true",
 			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			// Load custom user plugin for the admin
-			"insights.plugins.admin.log": `
+			"nuocollector.plugins.admin.log": `
 [[inputs.tail]]
   files = ["/var/log/nuodb/nuoadmin*.log"]
   from_beginning = true
@@ -123,7 +123,7 @@ func TestInsightsMetricsCollection(t *testing.T) {
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-	adminReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, namespaceName)
+	adminReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
@@ -156,11 +156,12 @@ func TestInsightsMetricsCollection(t *testing.T) {
 	})
 
 	t.Run("startDatabaseMultiTenant", func(t *testing.T) {
+		t.Skip("Skipping long running insights multitenant test")
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
 		greenDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{
-				"insights.enabled":                      "true",
+				"nuocollector.enabled":                  "true",
 				"database.name":                         "green",
 				"database.sm.resources.requests.cpu":    "250m",
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
@@ -171,7 +172,7 @@ func TestInsightsMetricsCollection(t *testing.T) {
 
 		blueDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{
-				"insights.enabled":                      "true",
+				"nuocollector.enabled":                  "true",
 				"database.name":                         "blue",
 				"database.sm.resources.requests.cpu":    "250m",
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,

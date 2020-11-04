@@ -228,12 +228,12 @@ admin:
   podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
 
-insights:
+nuocollector:
   enabled: false
   image:
     registry: docker.io
     repository: nuodb/nuodb-collector
-    tag: 1.0.1
+    tag: 1.1.0
     pullPolicy: IfNotPresent
   watcher:
     registry: docker.io
@@ -241,5 +241,5 @@ insights:
     tag: 0.1.259
     pullPolicy: IfNotPresent
   plugins:
-    ## nuocollector compatible plugins specific for admin services
+    ## NuoDB Collector compatible plugins specific for admin services
     admin: {}
