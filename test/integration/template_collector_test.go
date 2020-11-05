@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	v1 "k8s.io/api/core/v1"
 
@@ -15,7 +16,7 @@ import (
 )
 
 func checkSidecarContainers(t *testing.T, containers []v1.Container, options *helm.Options, chartPath string) {
-	assert.NotEmpty(t, containers)
+	require.NotEmpty(t, containers)
 	found := 0
 
 	for _, container := range containers {
@@ -73,7 +74,7 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 }
 
 func checkSpecVolumes(t *testing.T, volumes []v1.Volume, options *helm.Options, chartPath string) {
-	assert.NotEmpty(t, volumes)
+	require.NotEmpty(t, volumes)
 	found := false
 	for _, volume := range volumes {
 		if volume.Name == "nuocollector-config" {

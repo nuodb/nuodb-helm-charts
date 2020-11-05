@@ -256,6 +256,15 @@ func findAllPodsInSchema(t *testing.T, namespace string) []corev1.Pod {
 	return k8s.ListPods(t, options, filter)
 }
 
+func findAdminOrEngineContainer(containers []corev1.Container) *corev1.Container {
+	for _, container := range containers {
+		if container.Name == "admin" || container.Name == "engine" {
+			return &container
+		}
+	}
+	return nil
+}
+
 func Await(t *testing.T, lmbd func() bool, timeout time.Duration) {
 	now := time.Now()
 	for timeExpired := time.After(timeout); ; {
@@ -745,7 +754,11 @@ func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptio
 		pod, err := client.CoreV1().Pods(options.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
 		require.NoError(t, err)
 		require.Greater(t, len(pod.Spec.Containers), 0)
-		podLogOptions.Container = pod.Spec.Containers[0].Name
+		container := findAdminOrEngineContainer(pod.Spec.Containers)
+		if container == nil {
+			container = &pod.Spec.Containers[0]
+		}
+		podLogOptions.Container = container.Name
 		t.Logf("Multiple containers found in pod %s. Getting logs from container %s.", podName, podLogOptions.Container)
 	}
 
