@@ -226,7 +226,7 @@ The following tables list the configurable parameters for the `nuocollector` opt
 | `enabled` | Whether to enable NuoDB monitoring using sidecar containers |`false`|
 | `image.registry` | NuoDB Collector container registry | `docker.io` |
 | `image.repository` | NuoDB Collector container image name |`nuodb/nuodb-collector`|
-| `image.tag` | NuoDB Collector container image tag | `1.0.1` |
+| `image.tag` | NuoDB Collector container image tag | `1.1.0` |
 | `image.pullPolicy` | NuoDB Collector container pull policy |`IfNotPresent`|
 | `watcher.registry` | ConfigMap watcher container registry | `docker.io` |
 | `watcher.repository` | ConfigMap watcher container image name |`kiwigrid/k8s-sidecar`|

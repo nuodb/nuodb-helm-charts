@@ -53,7 +53,7 @@ func verifyCollectionForAdmin(t *testing.T, namespaceName string, app string) {
 		LabelSelector: fmt.Sprintf("app=%s,component=admin", app),
 	})
 	for _, pod := range pods {
-		// Verfy that logfile nuocollector input plugin is collecting and outputing data to stdout
+		// Verify that logfile nuocollector input plugin is collecting and outputting data to stdout
 		message := "logfile,db_tag=nuolog,host=" + pod.Name
 		t.Logf("Searching string '%s' in pod %s logs", message, pod.Name)
 		testlib.Await(t, func() bool {
@@ -68,25 +68,25 @@ func verifyCollectionForDatabase(t *testing.T, namespaceName string, app string,
 		LabelSelector: fmt.Sprintf("app=%s,database=%s,component in (sm, te)", app, dbName),
 	})
 	for _, pod := range pods {
-		// Verfy that monitor nuocollector input plugin is collecting and outputing data to stdout
+		// Verify that monitor nuocollector input plugin is collecting and outputting data to stdout
 		message := fmt.Sprintf("[^,]+,db=%s,db_tag=nuodb,host=%s", dbName, pod.Name)
 		t.Logf("Searching string '%s' in pod %s logs", message, pod.Name)
 		testlib.Await(t, func() bool {
 			return checkMetricsLine(t, namespaceName, pod.Name, message, 1)
 		}, 600*time.Second)
-		// Verfy that nuodb_thread nuocollector input plugin is collecting and outputing data to stdout
+		// Verify that nuodb_thread nuocollector input plugin is collecting and outputting data to stdout
 		message = "nuodb_thread,db_tag=nuodb_internal,exe=[^,]+,host=" + pod.Name
 		t.Logf("Searching string '%s' in pod %s logs", message, pod.Name)
 		testlib.Await(t, func() bool {
 			return checkMetricsLine(t, namespaceName, pod.Name, message, 1)
 		}, 60*time.Second)
-		// Verfy that nuodb_msgtrace nuocollector input plugin is collecting and outputing data to stdout
+		// Verify that nuodb_msgtrace nuocollector input plugin is collecting and outputting data to stdout
 		message = fmt.Sprintf("nuodb_msgtrace,db_tag=nuodb_internal,dbname=%s,host=%s", dbName, pod.Name)
 		t.Logf("Searching string '%s' in pod %s logs", message, pod.Name)
 		testlib.Await(t, func() bool {
 			return checkMetricsLine(t, namespaceName, pod.Name, message, 1)
 		}, 60*time.Second)
-		// Verfy that nuodb_synctrace nuocollector input plugin is collecting and outputing data to stdout
+		// Verify that nuodb_synctrace nuocollector input plugin is collecting and outputting data to stdout
 		message = fmt.Sprintf("nuodb_synctrace,db_tag=nuodb_internal,dbname=%s,host=%s", dbName, pod.Name)
 		t.Logf("Searching string '%s' in pod %s logs", message, pod.Name)
 		testlib.Await(t, func() bool {
