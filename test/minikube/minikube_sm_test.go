@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/stretchr/testify/assert"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -236,8 +237,11 @@ func TestKubernetesRestartSM(t *testing.T) {
 
 func healDatabase(t *testing.T, namespaceName string, podName string, adminName string, databaseOptions *helm.Options) {
 	opts := testlib.GetExtractedOptions(databaseOptions)
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	restoreArchive(t, namespaceName, podName, "archive", ":latest")
+	err := k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "--", "nuocmd", "shutdown", "database", "--db-name", opts.DbName)
+	assert.NoError(t, err, "'nuocmd shutdown database' failed")
 	testlib.AwaitDatabaseUp(t, namespaceName, adminName, opts.DbName, opts.NrTePods+opts.NrSmPods)
 }
 

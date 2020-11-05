@@ -97,10 +97,13 @@ function wrapLogfile() {
     tail -n $(( lines / 2 )) $LOGFILE > ${LOGFILE}-new
     rm -rf $LOGFILE
     mv $LOGFILE-new $LOGFILE
+    log "(nuosm) log file wrapped around"
   fi
-
-  log "(nuosm) log file wrapped around"
 }
+
+#=======================================
+# function to get a value from the KV store
+#
 
 #=======================================
 # function to perform archive restore

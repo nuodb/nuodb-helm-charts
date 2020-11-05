@@ -47,9 +47,8 @@ function wrapLogfile() {
     tail -n $(( lines / 2 )) $LOGFILE > ${LOGFILE}-new
     rm -rf $LOGFILE
     mv $LOGFILE-new $LOGFILE
+    log "(nuorestore) log file wrapped around"
   fi
-
-  log "(nuorestore) log file wrapped around"
 }
 
 restore_type="database"
@@ -96,6 +95,7 @@ auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 
 # set the persistent flag for the backup
 log "restore_type=$restore_type; writing $restore_source to $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore"
+
 nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
     --value $restore_source \
     --unconditional
