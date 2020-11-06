@@ -562,7 +562,9 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 	restart()
 
 	Await(t, func() bool {
-		return GetDatabaseIncarnation(t, namespace, podName, databaseName).Major > incarnation.Major
+		newIncarnation := GetDatabaseIncarnation(t, namespace, podName, databaseName)
+		t.Log("incarnation ->", newIncarnation)
+		return newIncarnation.Major > incarnation.Major
 	}, 300*time.Second)
 
 	opts := GetExtractedOptions(databaseOptions)
@@ -860,15 +862,11 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 
 	// secrets := getSecret(t, namespace, databaseName)
 
-	result, err = k8s.RunKubectlAndGetOutputE(t, options,
+	return k8s.RunKubectlAndGetOutputE(t, options,
 		"exec", podName, "--",
 		"bash", "-c",
 		fmt.Sprintf("echo \"%s;\" | /opt/nuodb/bin/nuosql --user dba --password secret %s", sql, databaseName),
 	)
-
-	require.NoError(t, err, "runSQL: error trying to run ", sql)
-
-	return result, err
 }
 
 func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDBKubeConfig {

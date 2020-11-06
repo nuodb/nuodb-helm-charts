@@ -236,6 +236,10 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		defer k8s.RunKubectl(t, kubectlOptions, "delete", "job", "restore-demo")
 
 		testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
+		podName := testlib.GetPodName(t, namespaceName, "restore-demo-")
+		if restoreLog, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "logs", podName); err != nil {
+			t.Log(restoreLog)
+		}
 	}
 
 	testlib.AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
