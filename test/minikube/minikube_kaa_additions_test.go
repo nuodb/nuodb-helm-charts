@@ -92,3 +92,31 @@ func TestKaaLimitedPermissions(t *testing.T) {
 	require.True(t, len(config.Volumes) == 0)
 	require.True(t, len(config.Pods) == 0)
 }
+
+func TestKaaRolebindingDisabled(t *testing.T) {
+	// This test requires NuoDB 4.2+ or 4.1.2+
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{
+		SetValues: map[string]string{
+			"nuodb.addRoleBinding": "false",
+		},
+	}, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	// Verify that KAA won't start due to limited mandatory permissions
+	testlib.Await(t, func() bool {
+		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
+			"Not registering event listeners: service account unauthorized for resource 'leases'", &v12.PodLogOptions{}) == 1
+	}, 30*time.Second)
+
+	// Verify that no resources are avaialble via KAA
+	config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
+	require.True(t, len(config.StatefulSets) == 0)
+	require.True(t, len(config.Volumes) == 0)
+	require.True(t, len(config.Pods) == 0)
+}
