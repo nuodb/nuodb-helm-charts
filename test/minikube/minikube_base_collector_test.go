@@ -132,7 +132,12 @@ func TestMetricsCollection(t *testing.T) {
 		databaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 		createOutputFilePlugin(t, namespaceName)
 		defer testlib.Teardown(testlib.TEARDOWN_COLLECTOR)
-		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "demo")
+		defer testlib.Teardown(testlib.TEARDOWN_YCSB)
+		testlib.StartYCSBWorkload(t, namespaceName, &helm.Options{
+			SetValues: map[string]string{
+				"ycsb.replicas": "1",
+			},
+		})
 		t.Run("verifyMetricsCollection", func(t *testing.T) {
 			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
 			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseRealeaseName, "cluster0", "demo"), "demo")
@@ -148,53 +153,15 @@ func TestMetricsCollection(t *testing.T) {
 
 		createOutputFilePlugin(t, namespaceName)
 		defer testlib.Teardown(testlib.TEARDOWN_COLLECTOR)
-		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "demo")
+		defer testlib.Teardown(testlib.TEARDOWN_YCSB)
+		testlib.StartYCSBWorkload(t, namespaceName, &helm.Options{
+			SetValues: map[string]string{
+				"ycsb.replicas": "1",
+			},
+		})
 		t.Run("verifyMetricsCollection", func(t *testing.T) {
 			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
 			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseRealeaseName, "cluster0", "demo"), "demo")
 		})
 	})
-
-	t.Run("startDatabaseMultiTenant", func(t *testing.T) {
-		t.Skip("Skipping long running NuoDB Collector multitenant test")
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-
-		greenDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-			SetValues: map[string]string{
-				"nuocollector.enabled":                  "true",
-				"database.name":                         "green",
-				"database.sm.resources.requests.cpu":    "250m",
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    "250m",
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			},
-		})
-
-		blueDatabaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-			SetValues: map[string]string{
-				"nuocollector.enabled":                  "true",
-				"database.name":                         "blue",
-				"database.sm.resources.requests.cpu":    "250m",
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    "250m",
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			},
-		})
-
-		createOutputFilePlugin(t, namespaceName)
-		defer testlib.Teardown(testlib.TEARDOWN_COLLECTOR)
-
-		t.Run("verifyMetricsCollectionForAdmin", func(t *testing.T) {
-			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
-		})
-		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "green")
-		t.Run("verifyMetricsCollectionForGreen", func(t *testing.T) {
-			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", greenDatabaseRealeaseName, "cluster0", "green"), "green")
-		})
-		testlib.PopulateDBWithQuickstart(t, namespaceName, admin0, "blue")
-		t.Run("verifyMetricsCollectionForBlue", func(t *testing.T) {
-			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", blueDatabaseRealeaseName, "cluster0", "blue"), "blue")
-		})
-	})
-
 }
