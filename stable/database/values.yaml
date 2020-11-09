@@ -91,6 +91,7 @@ admin:
     clusterip: "clusterip"
     balancer: "balancer"
 
+
 database:
   ## Provide a name in place of prometheus-operator for `app:` labels
   ##
@@ -361,6 +362,24 @@ database:
   isManualVolumeProvisioning: false
   isRestore: false
 
+
 openshift:
   # change this to true if you want to deploy using OpenShift proprietary features
   enabled: false
+
+nuocollector:
+  # Enable NuoDB Collector by setting nuocollector.enabled=true
+  enabled: false
+  image:
+    registry: docker.io
+    repository: nuodb/nuodb-collector
+    tag: 1.1.0
+    pullPolicy: IfNotPresent
+  watcher:
+    registry: docker.io
+    repository: kiwigrid/k8s-sidecar
+    tag: 0.1.259
+    pullPolicy: IfNotPresent
+  plugins:
+    ## NuoDB Collector compatible plugins specific for database services
+    database: {}

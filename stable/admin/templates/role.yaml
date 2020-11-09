@@ -9,6 +9,7 @@ rules:
   resources:
   - persistentvolumeclaims
   - pods
+  - configmaps
   verbs:
   - get
   - list

@@ -164,8 +164,10 @@ spec:
           mountPath: /etc/nuodb/keys/nuocmd.pem
           subPath: {{ .Values.admin.tlsClientPEM.key }}
         {{- end }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert
         secret:

@@ -168,8 +168,10 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: 5
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       - name: log-volume
         emptyDir: {}
       - name: nuosm
@@ -380,8 +382,10 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{-  include "nuodb.sidecar.volumes" . | nindent 6 }}
       - name: log-volume
         emptyDir: {}
       - name: nuosm

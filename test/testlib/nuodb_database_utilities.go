@@ -86,7 +86,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		})
 		helm.Install(t, options, THP_HELM_CHART_PATH, THPReleaseName)
 
-		AwaitNrReplicasReady(t , namespaceName, THPReleaseName, 1)
+		AwaitNrReplicasReady(t, namespaceName, THPReleaseName, 1)
 	}
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)

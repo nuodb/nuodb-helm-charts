@@ -111,7 +111,7 @@ admin:
     fullSync: false
     policies:
       nearest: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
-  
+
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
 
@@ -227,3 +227,19 @@ admin:
   # These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
+
+nuocollector:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: nuodb/nuodb-collector
+    tag: 1.1.0
+    pullPolicy: IfNotPresent
+  watcher:
+    registry: docker.io
+    repository: kiwigrid/k8s-sidecar
+    tag: 0.1.259
+    pullPolicy: IfNotPresent
+  plugins:
+    ## NuoDB Collector compatible plugins specific for admin services
+    admin: {}

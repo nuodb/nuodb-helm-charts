@@ -115,7 +115,7 @@ spec:
           subPath: {{ $key }}
         {{- end -}}
         {{- end }}
-        - name: log-te-volume
+        - name: log-volume
           mountPath: /var/log/nuodb
         - name: nuote
           mountPath: /usr/local/bin/nuote
@@ -147,14 +147,16 @@ spec:
           # the TE becomes unready if it does not start within 5 minutes = 30s + 5s*54
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+        {{- include "nuodb.sidecar.volumes" . | nindent 8 }}
         {{- if .Values.database.configFiles }}
         - name: configurations
           configMap:
             name: {{ template "database.fullname" . }}-configuration
         {{- end }}
-        - name: log-te-volume
+        - name: log-volume
   {{- if not .Values.database.te.logPersistence.enabled }}
           emptyDir: {}
         {{- else }}
