@@ -146,7 +146,7 @@ func executeSidecarTests(t *testing.T, options *helm.Options) {
 	})
 
 	t.Run("testDatabaseDeploymentSidecars", func(t *testing.T) {
-		// Run RenderTemplate to render the template and inspect database statefulset
+		// Run RenderTemplate to render the template and inspect database deployment
 		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/deployment.yaml"})
 

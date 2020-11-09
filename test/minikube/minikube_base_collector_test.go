@@ -129,7 +129,7 @@ func TestMetricsCollection(t *testing.T) {
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-		databaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
+		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 		createOutputFilePlugin(t, namespaceName)
 		defer testlib.Teardown(testlib.TEARDOWN_COLLECTOR)
 		defer testlib.Teardown(testlib.TEARDOWN_YCSB)
@@ -140,7 +140,7 @@ func TestMetricsCollection(t *testing.T) {
 		})
 		t.Run("verifyMetricsCollection", func(t *testing.T) {
 			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
-			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseRealeaseName, "cluster0", "demo"), "demo")
+			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseReleaseName, "cluster0", "demo"), "demo")
 		})
 	})
 
@@ -149,7 +149,7 @@ func TestMetricsCollection(t *testing.T) {
 		options.SetValues["database.enableDaemonSet"] = "true"
 		// Start only hotcopy SM daemonset
 		options.SetValues["database.sm.noHotCopy.enablePod"] = "false"
-		databaseRealeaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
+		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
 		createOutputFilePlugin(t, namespaceName)
 		defer testlib.Teardown(testlib.TEARDOWN_COLLECTOR)
@@ -161,7 +161,7 @@ func TestMetricsCollection(t *testing.T) {
 		})
 		t.Run("verifyMetricsCollection", func(t *testing.T) {
 			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
-			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseRealeaseName, "cluster0", "demo"), "demo")
+			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseReleaseName, "cluster0", "demo"), "demo")
 		})
 	})
 }
