@@ -11,7 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func listContains(arr []string, s string) bool {
