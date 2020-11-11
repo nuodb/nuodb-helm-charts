@@ -29,7 +29,7 @@ func StartYCSBWorkload(t *testing.T, namespaceName string, options *helm.Options
 	if options.Version == "" {
 		helm.Install(t, options, YCSB_HELM_CHART_PATH, helmChartReleaseName)
 	} else {
-		helm.Install(t, options, "nuodb/demo-ycsb ", helmChartReleaseName)
+		helm.Install(t, options, "nuodb-incubator/demo-ycsb ", helmChartReleaseName)
 	}
 
 	Await(t, func() bool {
