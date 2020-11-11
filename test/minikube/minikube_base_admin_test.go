@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {

@@ -12,7 +12,7 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func checkSidecarContainers(t *testing.T, containers []v1.Container, options *helm.Options, chartPath string) {
