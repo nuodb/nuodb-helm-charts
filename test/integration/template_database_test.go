@@ -10,7 +10,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestDatabaseSecretsDefault(t *testing.T) {
