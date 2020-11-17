@@ -159,6 +159,13 @@ spec:
           mountPath: /etc/nuodb/keys/nuoadmin.p12
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
+        {{- if .Values.database.tde }}
+        {{- if and .Values.database.tde.enabled .Values.database.tde.targetPassword }}
+        - name: tde-passwords-volume
+          mountPath: {{ default "/etc/nuodb/tde" .Values.database.tde.filesMountPath }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -206,6 +213,13 @@ spec:
         secret:
           secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
+      {{- end }}
+      {{- if .Values.database.tde }}
+      {{- if and .Values.database.tde.enabled .Values.database.tde.targetPassword }}
+      - name: tde-passwords-volume
+        secret:
+          secretName: {{ template "database.fullname" . }}-tde
+      {{- end }}
       {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
@@ -331,6 +345,7 @@ spec:
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: NUDOB_ARCHIVEDIR,    value: "/var/opt/nuodb/archive/${NODE_NAME}" }
         - { name: COMPONENT_NAME,      value: "sm" }
+        - { name: NUODB_TDE_FILES_PATH, value: "{{ .Values.database.tde.filesMountPath | default "/etc/nuodb/tde"}}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -372,6 +387,13 @@ spec:
         - name: tls-keystore
           mountPath: /etc/nuodb/keys/nuoadmin.p12
           subPath: {{ .Values.admin.tlsKeyStore.key }}
+        {{- end }}
+        {{- if .Values.database.tde }}
+        {{- if and .Values.database.tde.enabled .Values.database.tde.targetPassword }}
+        - name: tde-passwords-volume
+          mountPath: {{ default "/etc/nuodb/tde" .Values.database.tde.filesMountPath }}
+          readOnly: true
+        {{- end }}
         {{- end }}
         readinessProbe:
           initialDelaySeconds: 30
@@ -423,6 +445,13 @@ spec:
         secret:
           secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
+      {{- end }}
+      {{- if .Values.database.tde }}
+      {{- if and .Values.database.tde.enabled .Values.database.tde.targetPassword }}
+      - name: tde-passwords-volume
+        secret:
+          secretName: {{ template "database.fullname" . }}-tde
+      {{- end }}
       {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always

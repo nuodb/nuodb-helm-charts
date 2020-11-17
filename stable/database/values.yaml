@@ -156,6 +156,17 @@ database:
     # nuodb.config: |-
     #   verbose error,flush,warn
 
+  # Transparent Data Encryption (TDE)
+  tde:
+    enabled: false
+    # Database target TDE password which should be set as effective
+    targetPassword: ""
+    # Current database TDE password, if TDE is already enabled
+    currentPassword: ""
+    # Previous passwords needed to decrypt any archive or backupset in the domain
+    historicalPasswords: []
+    filesMountPath: "/etc/nuodb/tde"
+
   # Load balancer configuration per database
   lbConfig:
     prefilter: ""

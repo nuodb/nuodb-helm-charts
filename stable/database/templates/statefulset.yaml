@@ -144,6 +144,7 @@ spec:
         - { name: COMPONENT_NAME,      value: "sm" }
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
+        - { name: NUODB_TDE_FILES_PATH, value: "{{ .Values.database.tde.filesMountPath | default "/etc/nuodb/tde"}}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -171,6 +172,9 @@ spec:
         - name: nuobackup
           mountPath: /usr/local/bin/nuobackup
           subPath: nuobackup
+        - name: nuotde
+          mountPath: /usr/local/bin/nuotde
+          subPath: nuotde
         - name: readinessprobe
           mountPath: /usr/local/bin/readinessprobe
           subPath: readinessprobe
@@ -191,6 +195,13 @@ spec:
           mountPath: /etc/nuodb/keys/nuoadmin.p12
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
+        {{- if .Values.database.tde }}
+        {{- if and .Values.database.tde.enabled .Values.database.tde.targetPassword }}
+        - name: tde-passwords-volume
+          mountPath: {{ default "/etc/nuodb/tde" .Values.database.tde.filesMountPath }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
@@ -203,6 +214,7 @@ spec:
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
       {{- include "nuodb.sidecar" . | nindent 6 }}
+      {{- include "tde.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
@@ -215,6 +227,13 @@ spec:
       - name: log-volume
         emptyDir: {}
       {{- end }}
+      {{- if .Values.database.tde }}
+      {{- if and .Values.database.tde.enabled .Values.database.tde.targetPassword }}
+      - name: tde-passwords-volume
+        secret:
+          secretName: {{ template "database.fullname" . }}-tde
+      {{- end }}
+      {{- end }}
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm
@@ -222,6 +241,10 @@ spec:
       - name: nuobackup
         configMap:
           name: {{ template "database.fullname" . }}-nuobackup
+          defaultMode: 0777
+      - name: nuotde
+        configMap:
+          name: {{ template "database.fullname" . }}-nuotde
           defaultMode: 0777
       - name: readinessprobe
         configMap:
@@ -451,6 +474,7 @@ spec:
         - { name: COMPONENT_NAME,      value: "sm" }
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
+        - { name: NUODB_TDE_FILES_PATH, value: "{{ .Values.database.tde.filesMountPath | default "/etc/nuodb/tde"}}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -478,6 +502,9 @@ spec:
         - name: nuobackup
           mountPath: /usr/local/bin/nuobackup
           subPath: nuobackup
+        - name: nuotde
+          mountPath: /usr/local/bin/nuotde
+          subPath: nuotde
         - name: readinessprobe
           mountPath: /usr/local/bin/readinessprobe
           subPath: readinessprobe
@@ -500,6 +527,13 @@ spec:
           mountPath: /etc/nuodb/keys/nuoadmin.p12
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
+        {{- if .Values.database.tde }}
+        {{- if and .Values.database.tde.enabled .Values.database.tde.targetPassword }}
+        - name: tde-passwords-volume
+          mountPath: {{ default "/etc/nuodb/tde" .Values.database.tde.filesMountPath }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
@@ -512,6 +546,7 @@ spec:
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
       {{- include "nuodb.sidecar" . | nindent 6 }}
+      {{- include "tde.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
@@ -531,6 +566,10 @@ spec:
       - name: nuobackup
         configMap:
           name: {{ template "database.fullname" . }}-nuobackup
+          defaultMode: 0777
+      - name: nuotde
+        configMap:
+          name: {{ template "database.fullname" . }}-nuotde
           defaultMode: 0777
       - name: readinessprobe
         configMap:
@@ -553,6 +592,13 @@ spec:
         secret:
           secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
+      {{- end }}
+      {{- if .Values.database.tde }}
+      {{- if and .Values.database.tde.enabled .Values.database.tde.targetPassword }}
+      - name: tde-passwords-volume
+        secret:
+          secretName: {{ template "database.fullname" . }}-tde
+      {{- end }}
       {{- end }}
   volumeClaimTemplates:
   - metadata:

@@ -110,7 +110,18 @@ function perform_restore() {
 
     chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
   else
-    $NUODB_BINDIR/nuoarchive restore --restore-dir $DB_DIR $NUODB_BACKUPDIR/$restore_source
+    tde_passwords=$(nuotde get)
+    if [ $? -eq 0 ]; then
+      # TDE is enabled; use one of the provided passwords to restore the backup
+      for pass in ${tde_passwords}; do
+        $NUODB_BINDIR/nuoarchive restore --restore-dir $DB_DIR $NUODB_BACKUPDIR/$restore_source <<<"${pass}"
+        if [ $? -eq 0 ]; then
+          break
+        fi
+      done
+    else
+      $NUODB_BINDIR/nuoarchive restore --restore-dir $DB_DIR $NUODB_BACKUPDIR/$restore_source
+    fi
   fi
 
   # # call nuodocker to fix the archive metadata

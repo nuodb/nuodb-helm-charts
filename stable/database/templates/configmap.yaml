@@ -47,6 +47,19 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "database.chart" . }}
     release: {{ .Release.Name | quote }}
+  name: {{ template "database.fullname" . }}-nuotde
+data:
+{{ (.Files.Glob "files/nuotde").AsConfig | indent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "database.fullname" . }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "database.chart" . }}
+    release: {{ .Release.Name | quote }}
   name: {{ template "database.fullname" . }}-readinessprobe
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}

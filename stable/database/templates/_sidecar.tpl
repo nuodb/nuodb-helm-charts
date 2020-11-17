@@ -30,6 +30,47 @@ shareProcessNamespace: true
 {{- end }}
 {{- end -}}
 
+{{- define "tde.sidecar" -}}
+{{- if .Values.database.tde }}
+{{- if .Values.database.tde.enabled }}
+- name: tdemonitor
+  image: {{ template "nuodb.image" . }}
+  imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+  args:
+    - "nuotde"
+    - "update"
+    - "--monitor"
+  env:
+  - name: DB_NAME
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.database.name }}.nuodb.com
+        key: database-name
+  - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+  - { name: NUODB_TDE_FILES_PATH, value: "{{ .Values.database.tde.filesMountPath | default "/etc/nuodb/tde"}}" }
+  volumeMounts:
+  - name: nuotde
+    mountPath: /usr/local/bin/nuotde
+    subPath: nuotde
+  {{- if .Values.admin.tlsCACert }}
+  - name: tls-ca-cert
+    mountPath: /etc/nuodb/keys/ca.cert
+    subPath: {{ .Values.admin.tlsCACert.key }}
+  {{- end }}
+  {{- if .Values.admin.tlsClientPEM }}
+  - name: tls-client-pem
+    mountPath: /etc/nuodb/keys/nuocmd.pem
+    subPath: {{ .Values.admin.tlsClientPEM.key }}
+  {{- end }}
+  {{- if .Values.database.tde.targetPassword }}
+  - name: tde-passwords-volume
+    mountPath: {{ default "/etc/nuodb/tde" .Values.database.tde.filesMountPath }}
+    readOnly: true
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
 {{- define "nuodb.sidecar.volumes" -}}
 {{- if .Values.nuocollector }}
 {{- if .Values.nuocollector.enabled }}
