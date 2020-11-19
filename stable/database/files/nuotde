@@ -1,0 +1,229 @@
+#!/bin/sh
+#
+# Simple script used to set Transperant Data Encryption (TDE) passwords in NuoAdmin
+#
+# Example usage:
+#   nuotde get|update --db-name <db-name> [--monitor] [--interval 20] [--timeout 30]
+# args are:
+#   --db-name  - name of the database
+#   --monitor  - monitor the database TDE passwords file for changes
+#   --interval - monitoring interval in seconds, if --monitor is set. Defaut is 20.
+#   --timeout  - client commands timeout in seconds. Defaut is 30.
+
+# for debugging...
+[ -n "$NUODB_DEBUG" ] && set -x 
+
+: ${NUODB_TDE_FILES_PATH:=/etc/nuodb/tde}
+
+db_name=$DB_NAME
+command=""
+monitor=""
+interval=20
+timeout=30
+
+function is_tde_supported() {
+   output=$(nuocmd --api-server ${NUOCMD_API_SERVER} update data-encryption --help 2>&1)
+   if [ $? -ne 0 ] && echo "${output}" | grep -q "invalid choice: 'data-encryption'"; then
+      # Client utilities doesn't have TDE support. This means that most
+      # probably TDE sidecar is enabled when deploying NuoDB version < 4.1
+      return 1
+   fi
+   return 0
+}
+
+function is_current_password() {
+   existing_passwords=""
+   if [ -n "${config_historicalPasswords}" ]; then
+      existing_passwords=" --existing-passwords ${config_historicalPasswords}"
+   fi
+   # Use "update" vs "check" to enforce the historicalPasswords
+   output=$(nuocmd --api-server ${NUOCMD_API_SERVER} update data-encryption \
+            --db-name "${config_database}" \
+            --current-password "${config_targetPassword}" \
+            --new-password "${config_targetPassword}" \
+            ${existing_passwords} 2>&1)
+   if [ $? -ne 0 ] && echo "${output}" | grep -q "Unable to verify password"; then
+      return 1
+   fi
+   return 0
+}
+
+function check_data_encryption() {
+   nuocmd --api-server ${NUOCMD_API_SERVER} check data-encryption \
+      --db-name ${config_database} \
+      --password "${config_targetPassword}"
+}
+
+function update_data_encryption() {
+   existing_passwords=""
+   if [ -n "${config_historicalPasswords}" ]; then
+      existing_passwords=" --existing-passwords ${config_historicalPasswords}"
+   fi
+   # Make sure that there is a leader to commit the command and all admins are connected
+   nuocmd check servers --check-leader --check-connected --timeout ${timeout}
+   rc=$?
+   if [ $rc -eq 0 ]; then
+      if [ -n "${config_currentPassword}" ]; then
+         # Perform rotation
+         nuocmd --api-server ${NUOCMD_API_SERVER} update data-encryption \
+            --db-name "${config_database}" \
+            --current-password "${config_currentPassword}" \
+            --new-password "${config_targetPassword}" \
+            ${existing_passwords}
+         rc=$?
+      else
+         # Set initial password
+         nuocmd --api-server ${NUOCMD_API_SERVER} update data-encryption \
+            --db-name "${config_database}" \
+            --new-password "${config_targetPassword}" \
+            --is-initial-password \
+            ${existing_passwords}
+         rc=$?
+      fi
+   fi
+   return $rc
+}
+
+function update_tde_passwords() {
+   # Add random delay to prevent all sedecars to update the password at the same time
+   sleep $[ ( $RANDOM % 10 ) + 1 ]
+   read_tde_file "${config_file}"
+   # Check if TDE password verifier has already been updated in NuoAdmin
+   if ! is_current_password; then
+      # Ensure that the TDE password is updated and propagated to all engines
+      propagated=1
+      while [ $propagated -ne 0 ] ; do
+         read_tde_file "${config_file}"
+         # Perform the update only if all archives are RUNNING so that the new password
+         # is propagated to all SMs
+         if nuocmd --api-server ${NUOCMD_API_SERVER} check database \
+            --db-name ${config_database} \
+            --check-running \
+            --timeout $[ ( $RANDOM % 10 ) + 1 ] 2>/dev/null; then
+            if is_current_password; then
+               output=$(check_data_encryption 2>&1)
+               propagated=$?
+            else
+               echo "INFO: Setting TDE password for database ${config_database}"
+               output=$(update_data_encryption 2>&1)
+               propagated=$?
+            fi
+            if [ $propagated -ne 0 ]; then 
+               echo "WARN: Enforsing TDE password failed: ${output}"
+            else
+               echo "INFO: TDE password for database ${config_database} successfully updated"
+            fi
+         else
+            echo "WARN: Database ${config_database} is not in RUNNING state."
+         fi
+      done
+   else
+      echo "INFO: Target TDE password already set in NuoAdmin. Nothing to do"
+   fi
+}
+
+function poll_file_for_changes() {
+   filePath="$1"
+   if [ ! -f "${filePath}" ]; then
+      return 1
+   fi
+   # It's better to use inotifywait, however, it's no available in the image
+   # Kubernetes creates symblinks for secrets so
+   # it's no possible to monitor the file modification time
+   md5sum="$(md5sum ${filePath} 2>/dev/null | cut -f1 -d' ')"
+   while [ "${md5sum}" == "$(md5sum ${filePath} 2>/dev/null | cut -f1 -d' ')" ]; do
+      sleep ${interval}
+   done
+   echo "INFO: File ${filePath} modification detected"
+   return 0
+}
+
+function error() {
+   message="$1"
+   rc="$2"
+   if [ -z "${rc}" ]; then
+      rc=1
+   fi
+   echo "ERROR: ${message}" 1>&2
+   exit $rc
+}
+
+function read_tde_file() {
+   filePath="$1"
+   if [ ! -f "${filePath}" ]; then
+      return 1
+   fi
+   # TDE password files content is using the following format:
+   #   database=<database-name>
+   #   targetPassword=<target-password>
+   #   currentPassword=<current-password>
+   #   historicalPasswords=<historical-password-1> <historical-password-2> <historical-password-N>
+   while IFS='=' read -r key value
+   do
+      key=$(echo $key | tr '.' '_')
+      eval "config_${key}"=\${value}
+   done < "$filePath"
+   return 0
+}
+
+# Main
+command="$1"
+shift
+
+while [ $# -gt 0 ];
+do
+    opt="$1";
+    shift;
+    case "$opt" in
+         "--db-name" )
+           db_name="$1"; shift;;
+         "--db-name="* )
+           db_name="${opt#*=}";;
+         "--monitor" )
+           monitor="true"; shift;;
+         "--interval" )
+           interval="$1"; shift;;
+         "--interval="* )
+           interval="${opt#*=}";;
+         "--timeout" )
+           timeout="$1"; shift;;
+         "--timeout="* )
+           timeout="${opt#*=}";;
+         *) echo >&2 "Invalid nuotde option: $opt ($@)"; exit 1;;
+   esac
+done
+
+if [ -z "${command}" ]; then
+   error "Required argument missing: get|update" 2
+fi
+if [ -z "${db_name}" ]; then
+   error "--db-name option is mandatory" 2
+fi
+
+! is_tde_supported && \
+   error "pynuoadmin doesn't have support for Transperant Data Encryption (TDE). Make sure that you are running NuoDB 4.1+"
+if [ -d "${NUODB_TDE_FILES_PATH}" ]; then
+   config_file=""
+   for file in "${NUODB_TDE_FILES_PATH}"/*; do
+      read_tde_file "${file}" || continue
+      if [ "${config_database}" == "${db_name}" ]; then
+         config_file="${file}"
+         break
+      fi
+   done
+   if [ -z "${config_file}" ]; then
+      error "Unable to find TDE configuration file for database ${db_name} in ${NUODB_TDE_FILES_PATH}"
+   fi
+   if [ "${command}" == "update" ]; then
+      update_tde_passwords
+      if [ -n "${monitor}" ]; then
+         while poll_file_for_changes "${config_file}"; do
+            update_tde_passwords
+         done
+      fi
+   elif [ "${command}" == "get" ]; then
+      echo "${config_targetPassword} ${config_currentPassword} ${config_historicalPasswords}"
+   else
+      error "Unsupported command ${command}." 2
+   fi
+fi
