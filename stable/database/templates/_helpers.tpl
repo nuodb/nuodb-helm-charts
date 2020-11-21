@@ -26,10 +26,10 @@ and we have to allow for added suffixes including "-hotcopy" and "-NN" where NN 
 {{- end -}}
 
 {{/*
-Create chart name and version as used by the chart label.
+Create chart name as used by the chart label.
 */}}
 {{- define "database.chart" -}}
-{{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
+{{- printf "%s" .Chart.Name | replace "+" "_" | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -190,4 +190,34 @@ Import user defined ENV vars
 {{- if not (empty .Values.database.env) }}
 {{ toYaml .Values.database.env | trim }}
 {{- end }}
+{{- end -}}
+
+{{/*
+Takes a boolean as argument return it's value if it was defined or return true otherwise
+Note: Sprig's default function on an empty/not defined variable returns false, workaround
+it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
+*/}}
+{{- define "defaulttrue" -}}
+{{- if typeIs "bool" . -}}
+{{- . -}}
+{{- else -}}
+{{- default true . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Imports per-database load balancer configuration via annotations.
+The configuration is imported only in the entrypoint cluster.
+*/}}
+{{- define "database.loadBalancerConfig" -}}
+{{- if .Values.database.lbConfig }}
+{{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+{{- with .Values.database.lbConfig.prefilter }}
+"nuodb.com/load-balancer-prefilter": {{ . | quote }}
+{{- end -}}
+{{- with .Values.database.lbConfig.default }}
+"nuodb.com/load-balancer-default": {{ . | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}

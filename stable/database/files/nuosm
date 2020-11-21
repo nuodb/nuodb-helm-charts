@@ -22,12 +22,13 @@ NUODB_BINDIR=$NUODB_HOME/bin
 [ -z "$NUOCMD" ] && NUOCMD="$NUODB_BINDIR/nuocmd --api-server $NUOCMD_API_SERVER"
 
 # attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
-if [ -f $NUODB_CRASHDIR/* ]; then
-  crashcount=$(find $NUODB_LOGDIR/crash-* -type d -cmin -$OVERWRITE_WINDOW ! -path . | wc -l)
-  if [ $crashcount -lt $OVERWRITE_COPIES ]; then
+crashcount=$(find $NUODB_CRASHDIR/core* -maxdepth 0 ! -type d 2>/dev/null | wc -l)
+if [ $crashcount -ge 1 ]; then
+  retainedcrashcount=$(find $NUODB_LOGDIR/crash-* -maxdepth 0 -type d -cmin -$OVERWRITE_WINDOW 2>/dev/null | wc -l)
+  if [ $retainedcrashcount -lt $OVERWRITE_COPIES ]; then
     crashbackupdir="$NUODB_LOGDIR/crash-$( date +%Y%m%dT%H%M%S )/"
     mkdir $crashbackupdir
-    mv $NUODB_CRASHDIR/* $crashbackupdir
+    mv $NUODB_CRASHDIR/core* $crashbackupdir
   fi
 fi
 
@@ -101,8 +102,11 @@ function perform_restore() {
 
   # restore request is a URL - so retrieve the backup using curl
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
-    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
-    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR
+    [ -n "$restore_credentials" -a "$restore_credentials" != ":" ] && curl_creds="--user $restore_credentials"
+    [ -n "$curl_creds" ] && curl_opts="--user *:*"
+
+    echo "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
+    curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $DB_DIR
 
     chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
   else
@@ -261,7 +265,12 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     fi
 
     # wait for the starting SM to be RUNNING
-    $NUOCMD check process --start-id $owner_id --check-running --wait-forever
+    $NUOCMD check process --start-id $owner_id --check-running --timeout 600
+    if [ $? != 0 ]; then
+      echo "Timeout waiting for SM to go RUNNING - owner $owner, start-id $owner_id - retrying."
+      sleep 30
+      continue
+    fi
 
     # transfer ownership of the startup semaphore to myself
     $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --expected-value $owner
@@ -299,8 +308,11 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a ! -f $DB_DIR/1.atm ]; th
     fi
     
     # download the source
-    echo "curl -k --user '**' $restore_source | tar xzf - --strip-components $strip_levels -C $auto_download_dir"
-    curl -k --user "$restore_credentials" $restore_source | tar xzf - --strip-components $strip_levels -C $auto_download_dir
+    [ -n "$restore_credentials" -a "$restore_credentials" != ":" ] && curl_creds="--user $restore_credentials"
+    [ -n "$curl_creds" ] && curl_opts="--user *:*"
+
+    echo "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $auto_download_dir"
+    curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $auto_download_dir
 
     chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
 

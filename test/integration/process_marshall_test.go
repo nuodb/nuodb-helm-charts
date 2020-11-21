@@ -2,8 +2,9 @@ package integration
 
 import (
 	"encoding/json"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"gotest.tools/assert"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+	"github.com/stretchr/testify/assert"
+
 	"testing"
 )
 
@@ -55,23 +56,23 @@ func TestUnmarshall(t *testing.T) {
 
 	err, objects := testlib.Unmarshal(s)
 
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(objects), 1)
 
 	obj := objects[0]
 
-	assert.Check(t, obj.Hostname == "te-database-rggfj1-nuodb-demo-57f984dcd5-s7nhr")
-	assert.Check(t, obj.Host == "admin-kljkzo-nuodb-0")
-	assert.Check(t, obj.DbName == "demo")
+	assert.True(t, obj.Hostname == "te-database-rggfj1-nuodb-demo-57f984dcd5-s7nhr")
+	assert.True(t, obj.Host == "admin-kljkzo-nuodb-0")
+	assert.True(t, obj.DbName == "demo")
 
 	_, ok := obj.Labels["cloud"]
-	assert.Check(t, ok)
+	assert.True(t, ok)
 
 	_, ok = obj.Labels["region"]
-	assert.Check(t, ok)
+	assert.True(t, ok)
 
 	_, ok = obj.Labels["zone"]
-	assert.Check(t, ok)
+	assert.True(t, ok)
 
 }
 
@@ -110,22 +111,22 @@ func TestUnmarshallMany(t *testing.T) {
 
 `)
 	err, objects := testlib.Unmarshal(s)
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
-	assert.Check(t, len(objects) == 2)
+	assert.True(t, len(objects) == 2)
 
 	for _, obj := range objects {
-		assert.Check(t, obj.Host == "admin-kljkzo-nuodb-0")
-		assert.Check(t, obj.DbName == "demo")
+		assert.True(t, obj.Host == "admin-kljkzo-nuodb-0")
+		assert.True(t, obj.DbName == "demo")
 
 		_, ok := obj.Labels["cloud"]
-		assert.Check(t, ok)
+		assert.True(t, ok)
 
 		_, ok = obj.Labels["region"]
-		assert.Check(t, ok)
+		assert.True(t, ok)
 
 		_, ok = obj.Labels["zone"]
-		assert.Check(t, ok)
+		assert.True(t, ok)
 	}
 
 }
@@ -147,7 +148,7 @@ func TestMarshall(t *testing.T) {
 	}
 	b, err := json.Marshal(&obj)
 
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 
 	t.Log(string(b))
 }

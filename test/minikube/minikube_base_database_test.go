@@ -8,9 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/stretchr/testify/require"
 
-	"gotest.tools/assert"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -24,8 +25,8 @@ const LABEL_ZONE = "local-b"
 
 func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 	// populate some data
-	opts := k8s.NewKubectlOptions("", "")
-	opts.Namespace = namespaceName
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+
 	k8s.RunKubectl(t, opts,
 		"exec", adminPod, "--",
 		"/opt/nuodb/bin/nuosql",
@@ -37,75 +38,97 @@ func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 }
 
 func verifyKubernetesAccess(t *testing.T, namespaceName string, podName string) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	serviceAccountDir := "/var/run/secrets/kubernetes.io/serviceaccount"
 
 	// check namespace matches service account directory
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "cat", serviceAccountDir+"/namespace")
-	assert.NilError(t, err, output)
-	assert.Equal(t, namespaceName, output)
+	require.NoError(t, err, output)
+	require.Equal(t, namespaceName, output)
 
 	// get authorization token
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "cat", serviceAccountDir+"/token")
-	assert.NilError(t, err, output)
+	require.NoError(t, err, output)
 
 	curlCmdPrefix := fmt.Sprintf("curl -s --cacert %s -H 'Authorization: Bearer %s' https://kubernetes.default.svc", serviceAccountDir+"/ca.crt", output)
 
 	// check that we can access Pods
 	url := "/api/v1/namespaces/" + namespaceName + "/pods"
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
-	assert.NilError(t, err, output)
-	assert.Check(t, strings.Contains(output, "\"kind\": \"PodList\""), output)
+	require.NoError(t, err, output)
+	require.True(t, strings.Contains(output, "\"kind\": \"PodList\""), output)
 
 	// check that we can access this Pod
 	url = "/api/v1/namespaces/" + namespaceName + "/pods/" + podName
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
-	assert.NilError(t, err, output)
-	assert.Check(t, strings.Contains(output, "\"kind\": \"Pod\""), output)
+	require.NoError(t, err, output)
+	require.True(t, strings.Contains(output, "\"kind\": \"Pod\""), output)
 
 	// check that we can access PersistentVolumeClaims
 	url = "/api/v1/namespaces/" + namespaceName + "/persistentvolumeclaims"
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
-	assert.Check(t, strings.Contains(output, "\"kind\": \"PersistentVolumeClaimList\""), output)
+	require.True(t, strings.Contains(output, "\"kind\": \"PersistentVolumeClaimList\""), output)
+
+	// check that we can access Deployments
+	url = "/apis/apps/v1/namespaces/" + namespaceName + "/deployments"
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	require.True(t, strings.Contains(output, "\"kind\": \"DeploymentList\""), output)
 
 	// check that we can access StatefulSets
 	url = "/apis/apps/v1/namespaces/" + namespaceName + "/statefulsets"
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
-	assert.Check(t, strings.Contains(output, "\"kind\": \"StatefulSetList\""), output)
+	require.True(t, strings.Contains(output, "\"kind\": \"StatefulSetList\""), output)
+
+	// check that we can create Leases
+	url = "/apis/coordination.k8s.io/v1/namespaces/" + namespaceName + "/leases"
+	// when request data is specified without an explicit request method, POST is assumed
+	leaseName := strings.ToLower(random.UniqueId())
+	extraArgs := fmt.Sprintf(" -H 'Content-Type: application/json' -d  '{\"metadata\": {\"name\": \"%s\"}}'", leaseName)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url+extraArgs)
+	require.True(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
+
+	// check that we can update Leases
+	url = "/apis/coordination.k8s.io/v1/namespaces/" + namespaceName + "/leases/" + leaseName
+	// use create response as request payload, which contains the correct resourceVersion (update fails if the resourceVersion does not match)
+	extraArgs = fmt.Sprintf(" -X PUT -H 'Content-Type: application/json' -d '%s'", output)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url+extraArgs)
+	require.True(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
+
+	// check that we can get Leases
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	require.True(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
 }
 
 func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseName string) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--", "bash", "-c",
 		fmt.Sprintf("echo \"select * from system.nodes;\" | nuosql %s@localhost --user dba --password secret", databaseName))
 
-	assert.NilError(t, err, output)
+	require.NoError(t, err, output)
 
-	assert.Check(t, strings.Contains(output, "Storage"))
-	assert.Check(t, strings.Contains(output, "Transaction"))
+	require.True(t, strings.Contains(output, "Storage"))
+	require.True(t, strings.Contains(output, "Transaction"))
 }
 
 func verifySecret(t *testing.T, namespaceName string) {
 	secret := testlib.GetSecret(t, namespaceName, "demo.nuodb.com")
 
 	_, ok := secret.Data["database-name"]
-	assert.Check(t, ok)
+	require.True(t, ok)
 
 	_, ok = secret.Data["database-password"]
-	assert.Check(t, ok)
+	require.True(t, ok)
 
 	_, ok = secret.Data["database-username"]
-	assert.Check(t, ok)
+	require.True(t, ok)
 }
 
 func verifyDBService(t *testing.T, namespaceName string, podName string, serviceName string, ping bool) {
 
 	dBService := testlib.GetService(t, namespaceName, serviceName)
-	assert.Equal(t, dBService.Name, serviceName)
+	require.Equal(t, dBService.Name, serviceName)
 
 	if ping {
 		testlib.PingService(t, namespaceName, serviceName, podName)
@@ -113,35 +136,33 @@ func verifyDBService(t *testing.T, namespaceName string, podName string, service
 }
 
 func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
 		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
 
-	assert.NilError(t, err, output)
+	require.NoError(t, err, output)
 
 	err, objects := testlib.Unmarshal(output)
 
 	for _, obj := range objects {
 		val, ok := obj.Labels["cloud"]
-		assert.Check(t, ok)
-		assert.Check(t, val == LABEL_CLOUD)
+		require.True(t, ok)
+		require.True(t, val == LABEL_CLOUD)
 
 		val, ok = obj.Labels["region"]
-		assert.Check(t, ok)
-		assert.Check(t, val == LABEL_REGION)
+		require.True(t, ok)
+		require.True(t, val == LABEL_REGION)
 
 		val, ok = obj.Labels["zone"]
-		assert.Check(t, ok)
-		assert.Check(t, val == LABEL_ZONE)
+		require.True(t, ok)
+		require.True(t, val == LABEL_ZONE)
 	}
 
 }
 
 func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	// verify the container can actually download the file from the internet
 	start := time.Now()
@@ -150,34 +171,33 @@ func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
 		"bash", "-c",
 		fmt.Sprintf("curl -k %s | tar tzf - ", testlib.IMPORT_ARCHIVE_URL),
 	)
-	assert.NilError(t, err, "Could not fetch archive")
+	require.NoError(t, err, "Could not fetch archive")
 	elapsed := time.Since(start)
 	t.Logf("Fetching package (%s) took %f seconds", testlib.IMPORT_ARCHIVE_URL, elapsed.Seconds())
 	t.Log("tar contents: ", output)
 }
 
 func verifyEngineAltAddress(t *testing.T, namespaceName string, admin0 string, expectedNrEngines int) {
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	podNames, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
 		"bash", "-c",
 		"nuocmd get processes | grep -o \"(address=[^/]*\"| cut -f2 -d'='")
-	assert.NilError(t, err)
+	require.NoError(t, err)
 	podNamesSlice := strings.Split(strings.TrimSuffix(podNames, "\n"), "\n")
 
 	actualAltAddresses, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
 		"bash", "-c",
 		"nuocmd get processes | grep -o \"alt-address: [^}]*\" | cut -f2 -d' '")
-	assert.NilError(t, err)
+	require.NoError(t, err)
 	actualAltAddressesSlice := strings.Split(strings.TrimSuffix(actualAltAddresses, "\n"), "\n")
 
-	assert.Assert(t, len(podNamesSlice) == expectedNrEngines, "Expected number of process names don't match")
-	assert.Assert(t, len(actualAltAddressesSlice) == expectedNrEngines, "Expected number of process addresses don't match")
+	require.True(t, len(podNamesSlice) == expectedNrEngines, "Expected number of process names don't match")
+	require.True(t, len(actualAltAddressesSlice) == expectedNrEngines, "Expected number of process addresses don't match")
 
 	for index, podName := range podNamesSlice {
 		pod := k8s.GetPod(t, kubectlOptions, podName)
-		assert.Assert(t, pod.Status.PodIP == actualAltAddressesSlice[index], "Expected alt-address doesn't match")
+		require.True(t, pod.Status.PodIP == actualAltAddressesSlice[index], "Expected alt-address doesn't match")
 	}
 }
 
@@ -193,8 +213,8 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 		"nuodocker", "get", "current-backup", "--db-name", databaseName,
 	)
 
-	assert.NilError(t, err, "Error running: nuodocker get current-backup  ")
-	assert.Check(t, backupset != "")
+	require.NoError(t, err, "Error running: nuodocker get current-backup  ")
+	require.True(t, backupset != "")
 }
 
 func restoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options) {
@@ -210,12 +230,11 @@ func restoreDatabase(t *testing.T, namespaceName string, podName string, databas
 			"restore.autoRestart": "true",
 		},
 	}
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
 
 	restore := func() {
-		testlib.InjectTestVersion(t, options)
+		testlib.InjectTestValues(t, options)
 		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
 		testlib.AddTeardown(testlib.TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 
@@ -478,16 +497,21 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"backup.persistence.enabled":            "true",
 			"backup.persistence.size":               "1Gi",
+			"database.te.logPersistence.enabled":    "true",
 		},
 	}
 
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 	// Generate diagnose in case this test fails
-	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() { testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0) })
+	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() {
+		if t.Failed() {
+			testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+			testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+		}
+	})
 
-	opts := k8s.NewKubectlOptions("", "")
-	opts.Namespace = namespaceName
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	databaseOptions.KubectlOptions = opts
 
 	// wait for the initial backup to complete
@@ -507,18 +531,18 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	// verify that the database contains the populated data
 	tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-	assert.NilError(t, err, "error running SQL: show schema User")
-	assert.Check(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
+	require.NoError(t, err, "error running SQL: show schema User")
+	require.True(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
 
 	opt := testlib.GetExtractedOptions(&databaseOptions)
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-	testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart")
+	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	smPodName0 := testlib.GetPodName(t, namespaceName, smPodName)
-	testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart")
+	go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	// restore database
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
@@ -526,8 +550,8 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	// verify that the database does NOT contain the data from AFTER the backup
 	tables, err = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-	assert.NilError(t, err, "error running SQL: show schema User")
-	assert.Check(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
+	require.NoError(t, err, "error running SQL: show schema User")
+	require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 }
 
 func TestKubernetesImportDatabase(t *testing.T) {
@@ -561,8 +585,8 @@ func TestKubernetesImportDatabase(t *testing.T) {
 
 		// verify that the database contains the restored data
 		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		assert.NilError(t, err, "error running SQL: show schema User")
-		assert.Check(t, strings.Contains(tables, "HOCKEY"))
+		require.NoError(t, err, "error running SQL: show schema User")
+		require.True(t, strings.Contains(tables, "HOCKEY"))
 	})
 
 	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
@@ -585,7 +609,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 
 		// verify that the database contains the restored data
 		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		assert.NilError(t, err, "error running SQL: show schema User")
-		assert.Check(t, strings.Contains(tables, "HOCKEY"))
+		require.NoError(t, err, "error running SQL: show schema User")
+		require.True(t, strings.Contains(tables, "HOCKEY"))
 	})
 }

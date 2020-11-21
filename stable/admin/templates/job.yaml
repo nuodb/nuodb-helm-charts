@@ -21,13 +21,26 @@ spec:
         release: {{ .Release.Name | quote }}
       name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
     spec:
+      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      {{- with .Values.admin.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | trim | indent 8 }}
+      {{- end }}
+{{- if .Values.admin.affinity }}
+      affinity:
+{{ tpl .Values.admin.affinity . | trim | indent 8 }}
+{{- end }}
+      {{- if .Values.admin.tolerations }}
+      tolerations:
+{{ toYaml .Values.admin.tolerations | trim | indent 8 }}
+      {{- end }}
       initContainers:
       - name: wait
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
         command: ['/usr/local/bin/waitscript']
         env:
-        - { name: NUOCMD_API_SERVER , value: "https://{{ template "admin.address" . }}:8888" }
+        - { name: NUOCMD_API_SERVER , value: "{{ template "admin.address" . }}:8888" }
         volumeMounts:
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert

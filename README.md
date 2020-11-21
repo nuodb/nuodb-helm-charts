@@ -1,4 +1,4 @@
-<img src="https://www.nuodb.com/sites/all/themes/nuodb/logo.svg" data-canonical-src="https://www.nuodb.com/sites/all/themes/nuodb/logo.svg" width="200" height="200" />
+<img src="images/nuodb.svg" width="200" height="200" /> 
 
 # NuoDB Helm Charts
 
@@ -19,8 +19,8 @@ To enable automated notification of new releases, click the `Watch` button above
 |------------|------------------------------------------------|
 | Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.16 then 1.16 and 1.15 are offically supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
 | Managed Kubernetes Distributions |  OpenShift 4.x, Google GKE, Amazon EKS, Azure AKS, or Rancher RKE. Charts may also work on other Kubernetes distributions. The distributions listed here are tested regularly. |
-| Helm       |  Version 2 is supported, v2.9 or greater   |
-| NuoDB      |  Version [4.0](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
+| Helm       |  Version 2 and 3 are supported, v2.9 or greater. v3.2 is the main development environment   |
+| NuoDB      |  Version [4.0.4](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
 
 ## NuoDB Helm Chart Installation
 
@@ -35,10 +35,11 @@ helm repo add nuodb https://storage.googleapis.com/nuodb-charts
 
 To list the NuoDB charts added to your repository, run `helm search nuodb/`
 
+If using Helm 2, `helm init` is required.
+
 To install a chart into your Kubernetes cluster, run 
 
 ```
-helm init
 helm install nuodb/<chart>
 ```
 
@@ -53,10 +54,11 @@ helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.
 
 To list the NuoDB incubator charts added to your repository, run `helm search nuodb-incubator/`
 
+If using Helm 2, `helm init` is required.
+
 To install an incubator chart into your Kubernetes cluster, run 
 
 ```
-helm init
 helm install nuodb-incubator/<chart>
 ```
 

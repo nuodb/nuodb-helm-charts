@@ -4,8 +4,9 @@ package minikube
 
 import (
 	"fmt"
+	"time"
 
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 
 	"strings"
 	"testing"
@@ -13,7 +14,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
-	"gotest.tools/assert"
 )
 
 
@@ -26,16 +26,17 @@ func scheduleDefault(t *testing.T, helmChartPath string, namespaceName string) {
 		SetValues: map[string]string{"thp.fullnameOverride": daemonName},
 	}
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
 
 	helm.Install(t, options, helmChartPath, helmChartReleaseName)
 
 	defer helm.Delete(t, options, helmChartReleaseName, true)
 
-	daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
-	assert.Assert(t, daemonSet.Status.DesiredNumberScheduled == 1)
+	testlib.Await(t, func() bool {
+		daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
+		return daemonSet.Status.DesiredNumberScheduled == 1
+	}, 30* time.Second)
 }
 
 func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
@@ -48,9 +49,8 @@ func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
 		SetValues:   map[string]string{"thp.fullnameOverride": daemonName},
 	}
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
 
 	testlib.LabelNodes(t, namespaceName, "test.nuodb.com/zone", randomSuffix)
 
@@ -58,8 +58,10 @@ func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
 
 	defer helm.Delete(t, options, helmChartReleaseName, true)
 
-	daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
-	assert.Assert(t, daemonSet.Status.DesiredNumberScheduled == 1)
+	testlib.Await(t, func() bool {
+		daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
+		return daemonSet.Status.DesiredNumberScheduled == 1
+	}, 30* time.Second)
 }
 
 func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName string) {
@@ -72,9 +74,8 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 		SetValues:   map[string]string{"thp.fullnameOverride": daemonName},
 	}
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
-	options.KubectlOptions.Namespace = namespaceName
 
 	testlib.LabelNodes(t, namespaceName, "test.nuodb.com/zone", "")
 
@@ -82,8 +83,10 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 
 	defer helm.Delete(t, options, helmChartReleaseName, true)
 
-	daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
-	assert.Assert(t, daemonSet.Status.DesiredNumberScheduled == 0)
+	testlib.Await(t, func() bool {
+		daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
+		return daemonSet.Status.DesiredNumberScheduled == 0
+	}, 30* time.Second)
 }
 
 func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
@@ -91,13 +94,6 @@ func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-
-	options := &helm.Options{
-		SetValues: map[string]string{},
-	}
-
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	options.KubectlOptions = kubectlOptions
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN) // some namespace cleanup
 

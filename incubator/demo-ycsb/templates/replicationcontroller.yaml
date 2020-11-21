@@ -8,7 +8,7 @@ metadata:
     release: {{ .Release.Name | quote }}
   name: {{ .Values.ycsb.loadName }}
 spec:
-  replicas: 0
+  replicas: {{ .Values.ycsb.replicas }}
   selector:
     app: ycsb-load
   template:
@@ -77,9 +77,6 @@ spec:
         - { name: MAX_DELAY,           value: {{ .Values.ycsb.maxDelay | quote }} }
         - { name: TE_DIRECT,           value: {{ default false .Values.ycsb.teDirect | quote }} }
         volumeMounts:
-        - name: cloud-profile
-          mountPath: /etc/profile.d/cloud.sh
-          subPath: cloud.sh
         - name: ycsb-gen
           mountPath: /driver/ycsb_gen.sh
           subPath: ycsb_gen.sh
@@ -91,10 +88,6 @@ spec:
           subPath: create_usertable.sh
 {{- include "ycsb.imagePullSecrets" . | indent 6 }}
       volumes:
-        - name: cloud-profile
-          configMap:
-            name: {{ template "ycsb.fullname" . }}-cloud-profile
-            defaultMode: 0777
         - name: ycsb-gen
           configMap:
             name: {{ template "ycsb.fullname" . }}-ycsb-gen

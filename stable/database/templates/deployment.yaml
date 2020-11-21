@@ -1,6 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  annotations:
+    description: |-
+      Database deployment resource for NuoDB Transaction Engines (TE).
+{{- include "database.loadBalancerConfig" . | indent 4 }}
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
@@ -19,6 +23,10 @@ spec:
     type: RollingUpdate
   template:
     metadata:
+      {{- if .Values.database.podAnnotations }}
+      annotations:
+{{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
+      {{- end }}
       labels:
         app: {{ template "database.fullname" . }}
         group: nuodb
@@ -42,7 +50,7 @@ spec:
 {{ toYaml .Values.database.te.tolerations | trim | indent 8 }}
       {{- end }}
       containers:
-      - name: te-{{ template "database.fullname" . }}
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
@@ -53,7 +61,7 @@ spec:
           - "--servers-ready-timeout"
           - "300"
           - "--options"
-          - "mem {{ .Values.database.te.memoryOption}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
+          - "mem {{ .Values.database.te.resources.requests.memory}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
         {{- with .Values.database.te.labels }}
           - "--labels"
           - "{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}"
@@ -84,6 +92,8 @@ spec:
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
           - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
           - { name: COMPONENT_NAME,      value: "te" }
+          - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.te.logPersistence.overwriteBackoff.copies | default "3" }}" }
+          - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.te.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
 {{- include "database.env" . | indent 10 }}
       {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
@@ -105,7 +115,7 @@ spec:
           subPath: {{ $key }}
         {{- end -}}
         {{- end }}
-        - name: logdir
+        - name: log-volume
           mountPath: /var/log/nuodb
         - name: nuote
           mountPath: /usr/local/bin/nuote
@@ -136,16 +146,23 @@ spec:
           failureThreshold: 54
           # the TE becomes unready if it does not start within 5 minutes = 30s + 5s*54
           successThreshold: 2
-          timeoutSeconds: 5
+          timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+        {{- include "nuodb.sidecar.volumes" . | nindent 8 }}
         {{- if .Values.database.configFiles }}
         - name: configurations
           configMap:
             name: {{ template "database.fullname" . }}-configuration
         {{- end }}
-        - name: logdir
+        - name: log-volume
+  {{- if not .Values.database.te.logPersistence.enabled }}
           emptyDir: {}
+        {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.database.name }}-log-te-volume
+        {{- end }}
         - name: nuote
           configMap:
             name: {{ template "database.fullname" . }}-nuote

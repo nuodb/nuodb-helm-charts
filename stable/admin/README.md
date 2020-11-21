@@ -5,7 +5,7 @@ This chart starts a NuoDB Admin deployment on a Kubernetes cluster using the Hel
 ## Command
 
 ```bash
-helm install nuodb/admin [--name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/admin [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -66,7 +66,7 @@ The following tables list the configurable parameters for the `busybox` option:
 | `image.registry` | busybox container registry | `docker.io` |
 | `image.repository` | busybox container image name |`busybox`|
 | `image.tag` | busybox container image tag | `latest` |
-| `image.pullPolicy` | busybox container pull policy |`Always`|
+| `image.pullPolicy` | busybox container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
@@ -89,7 +89,7 @@ busybox:
     registry: docker.io
     repository: busybox
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 ```
 
 #### nuodb.*
@@ -103,7 +103,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
 | `image.tag` | NuoDB container image tag | `latest` |
-| `image.pullPolicy` | NuoDB container pull policy |`Always`|
+| `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
 | `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
@@ -128,7 +128,7 @@ nuodb:
     registry: docker.io
     repository: nuodb/nuodb-ce
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 ```
 
 #### admin.*
@@ -144,8 +144,12 @@ The following tables list the configurable parameters for the `admin` option of 
 | `domain` | NuoDB admin cluster name | `nuodb` |
 | `namespace` | Namespace where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
 | `replicas` | Number of NuoDB Admin replicas | `1` |
-| `lbPolicy` | Load balancer policy name | `nil` |
-| `lbQuery` | Load balancer query | `nil` |
+| `lbConfig.prefilter` | Global load balancer prefilter expression | `nil` |
+| `lbConfig.default` | Global load balancer default query | `nil` |
+| `lbConfig.policies` | Load balancer named policies | `{ nearest: ... }` |
+| `lbConfig.fullSync` | Remove any manually created load balancer configuration | `false` |
+| `lbPolicy` | Load balancer policy name | `nearest` |
+| `lbQuery` | Load balancer query | `random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))` |
 | `externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
 | `externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `resources` | Labels to apply to all resources | `{}` |
@@ -178,6 +182,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
 | `serviceSuffix.balancer` | The suffix to use for the LoadBalancer service name | `balancer` |
 | `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
+| `readinessTimeoutSeconds` | Admin readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `1` |
+| `podAnnotations` | Annotations to pass through to the Admin pod | `nil` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 
@@ -209,6 +215,24 @@ The purpose of this section is to allow customisation of the names of the cluste
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
 | `balancer` | suffix for the balancer service | "balancer" |
 
+#### nuocollector.*
+
+The purpose of this section is to specify the NuoDB monitoring parameters.
+
+The following tables list the configurable parameters for the `nuocollector` option of the admin chart and their default values.
+
+| Parameter | Description | Default |
+| ----- | ----------- | ------ |
+| `enabled` | Whether to enable NuoDB monitoring using sidecar containers |`false`|
+| `image.registry` | NuoDB Collector container registry | `docker.io` |
+| `image.repository` | NuoDB Collector container image name |`nuodb/nuodb-collector`|
+| `image.tag` | NuoDB Collector container image tag | `1.1.0` |
+| `image.pullPolicy` | NuoDB Collector container pull policy |`IfNotPresent`|
+| `watcher.registry` | ConfigMap watcher container registry | `docker.io` |
+| `watcher.repository` | ConfigMap watcher container image name |`kiwigrid/k8s-sidecar`|
+| `watcher.tag` | ConfigMap watcher container image tag | `0.1.259` |
+| `watcher.pullPolicy` | ConfigMap watcher container pull policy |`IfNotPresent`|
+| `plugins.admin` | NuoDB Collector additional plugins for admin services |`{}`|
 
 ### Running
 
@@ -242,7 +266,7 @@ Verify the pods are running:
 ```bash
 $ kubectl get pods
 NAME                           READY     STATUS    RESTARTS   AGE
-admin-nuodb-0                  1/1       Running   0          29m
+admin-nuodb-cluster0-0         1/1       Running   0          29m
 tiller-86c4495fcc-lczdp        1/1       Running   0          5h
 ```
 
@@ -251,7 +275,7 @@ The command displays the NuoDB Pods running on the Kubernetes cluster. When comp
 Verify the connected states of the database domain:
 
 ```bash
-$ kubectl exec -it admin-nuodb-0 -- nuocmd show domain
+$ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 
 server version: 3.4.1-1-ccb6be381c, server license: Community
 server time: 2019-04-10T00:25:53.054, client token: 370d671ff18dd57a4b4bb0d146c72c8f2f256e7f
@@ -269,7 +293,7 @@ The command displays the status of NuoDB processes. The Servers section lists ad
 To scale the admin to 3 replicas, e.g., run the following command:
 
 ```bash
-kubectl scale sts admin-nuodb --replicas=3
+kubectl scale sts admin-nuodb-cluster0 --replicas=3
 ```
 
 ## Uninstalling the Chart

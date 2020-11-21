@@ -7,11 +7,12 @@ import (
 )
 
 type NuoDBProcess struct {
-	Address string `json:"address"`
-	DbName string `json:"dbName"`
-	Host string `json:"host"`
-	Hostname string `json:"hostname"`
-	Labels map[string]string `json:"labels"`
+	Address  string            `json:"address"`
+	DbName   string            `json:"dbName"`
+	Type     string            `json:"type"`
+	Host     string            `json:"host"`
+	Hostname string            `json:"hostname"`
+	Labels   map[string]string `json:"labels"`
 }
 
 func Unmarshal(s string) (err error, processes []NuoDBProcess) {

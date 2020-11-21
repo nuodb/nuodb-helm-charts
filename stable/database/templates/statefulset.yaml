@@ -4,6 +4,9 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  annotations:
+    description: |-
+      Database deployment resource for NuoDB Storage Engines (SM).
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
@@ -23,6 +26,10 @@ spec:
   serviceName: {{ .Values.database.name }}
   template:
     metadata:
+      {{- if .Values.database.podAnnotations }}
+      annotations:
+{{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
+      {{- end }}
       labels:
         app: {{ template "database.fullname" . }}
         component: sm
@@ -63,7 +70,7 @@ spec:
         - name: log-volume
           mountPath: /var/log/nuodb
       containers:
-      - name: sm
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
@@ -75,7 +82,7 @@ spec:
           - "--restored"
     {{- end }}
           - "--options"
-          - "mem {{ .Values.database.sm.memoryOption}} {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
+          - "mem {{ .Values.database.sm.resources.requests.memory}} {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
     {{- with .Values.database.sm.labels }}      
           - "--labels"
           - "{{- include "opt.key-values" . }}"
@@ -194,9 +201,11 @@ spec:
           failureThreshold: 58
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
-          timeoutSeconds: 5
+          timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.database.configFiles }}
       - name: configurations
         configMap:
@@ -299,6 +308,9 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
+  annotations:
+    description: |-
+      Database deployment resource for NuoDB Storage Engines (SM).
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
@@ -318,6 +330,10 @@ spec:
   serviceName: {{ .Values.database.name }}
   template:
     metadata:
+      {{- if .Values.database.podAnnotations }}
+      annotations:
+{{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
+      {{- end }}
       labels:
         app: {{ template "database.fullname" . }}
         component: sm
@@ -360,7 +376,7 @@ spec:
         - name: log-volume
           mountPath: /var/log/nuodb
       containers:
-      - name: sm
+      - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
@@ -369,7 +385,7 @@ spec:
           - "--servers-ready-timeout"
           - "300"
           - "--options"
-          - "mem {{ .Values.database.sm.memoryOption}} {{- if .Values.database.sm.hotCopy.journalBackup.enabled }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
+          - "mem {{ .Values.database.sm.resources.requests.memory}} {{- if and (eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true") .Values.database.sm.hotCopy.journalBackup.enabled }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
           - "--labels"
           - "backup {{ include "hotcopy.group" . }} {{- include "opt.key-values" .Values.database.sm.labels }}"
 {{- with .Values.database.options}}
@@ -494,9 +510,11 @@ spec:
           failureThreshold: 58
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
-          timeoutSeconds: 5
+          timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.database.configFiles }}
       - name: configurations
         configMap:

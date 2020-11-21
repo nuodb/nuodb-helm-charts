@@ -5,7 +5,7 @@ This chart starts a Job to restore a NuoDB database from an existing backup, in 
 ## Command
 
 ```bash
-helm install nuodb/restore [--name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/restore [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -60,7 +60,7 @@ The following tables list the configurable parameters for the `busybox` option:
 | `image.registry` | busybox container registry | `docker.io` |
 | `image.repository` | busybox container image name |`busybox`|
 | `image.tag` | busybox container image tag | `latest` |
-| `image.pullPolicy` | busybox container pull policy |`Always`|
+| `image.pullPolicy` | busybox container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
@@ -83,7 +83,7 @@ busybox:
     registry: docker.io
     repository: busybox
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 ```
 
 #### admin.*
@@ -118,7 +118,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
 | `image.tag` | NuoDB container image tag | `latest` |
-| `image.pullPolicy` | NuoDB container pull policy |`Always`|
+| `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
@@ -141,7 +141,7 @@ nuodb:
     registry: docker.io
     repository: nuodb/nuodb-ce
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 ```
 
 #### restore.*
@@ -157,7 +157,7 @@ The following tables list the configurable parameters of the backup chart and th
 
 ## Detailed Steps
 
-- First install Helm charts for Admin, Database, and optionally Influx.
+- First install Helm charts for Admin and Database.
 
 ### Identify the Backupset
 

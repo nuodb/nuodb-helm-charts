@@ -1,5 +1,0 @@
-** Please be patient while the chart is being deployed **
-
-NuoDB can be accessed via port 48004 on the following DNS name from within your cluster:
-
-  {{ template "admin.address" . }}.cluster.local - Read/Write connection

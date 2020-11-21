@@ -1,8 +1,9 @@
 package integration
 
 import (
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
-	"gotest.tools/assert"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+	"github.com/stretchr/testify/assert"
+
 	"testing"
 )
 
@@ -20,14 +21,14 @@ func TestDatabaseUnmarshal(t *testing.T) {
 
 	err, objects := testlib.UnmarshalDatabase(s)
 
-	assert.NilError(t, err)
+	assert.NoError(t, err)
 	assert.Equal(t, len(objects), 1)
 
 	obj := objects[0]
 
-	assert.Check(t, obj.Name == "demo")
-	assert.Check(t, obj.State == "NOT_RUNNING")
-	assert.Check(t, obj.Incarnation.Major == 1)
-	assert.Check(t, obj.Incarnation.Minor == 2)
+	assert.True(t, obj.Name == "demo")
+	assert.True(t, obj.State == "NOT_RUNNING")
+	assert.True(t, obj.Incarnation.Major == 1)
+	assert.True(t, obj.Incarnation.Minor == 2)
 
 }

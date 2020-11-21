@@ -17,7 +17,6 @@ database:
       - ReadWriteOnce
     storageClass: fast-storage
   sm:
-    memoryOption: 8g
     resources:
       limits:
         cpu: 8
@@ -26,7 +25,6 @@ database:
         cpu: 4
         memory: 8Gi
   te:
-    memoryOption: 8g
     resources:
       limits:
         cpu: 4
@@ -42,16 +40,3 @@ backup:
     accessModes:
       - ReadWriteOnce
     storageClass: standard-storage
-
-influx:
-  persistence:
-    enabled: true
-    size: 20Gi
-    accessModes:
-      - ReadWriteOnce
-    storageClass: standard-storage
-  service:
-    type: LoadBalancer
-
-insights:
-  enabled: true

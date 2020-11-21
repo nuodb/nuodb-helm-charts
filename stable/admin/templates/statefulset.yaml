@@ -1,12 +1,22 @@
 apiVersion: "apps/v1"
 kind: StatefulSet
 metadata:
+  annotations:
+    description: |-
+      NuoAdmin statefulset resource for NuoDB Admin layer.
+{{- include "admin.loadBalancerConfig" . | indent 4 }}
+    {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+    nuodb.com/bootstrap-servers: {{ default 0 .Values.admin.bootstrapServers | quote }}
+    {{- end }}
   labels:
     app: {{ template "admin.fullname" . }}
     chart: {{ template "admin.chart" . }}
     release: {{ .Release.Name | quote }}
     group: nuodb
     domain: {{ .Values.admin.domain }}
+    {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+    bootstrapServers: {{ default 0 .Values.admin.bootstrapServers | quote }}
+    {{- end }}
   name: {{ template "admin.fullname" . }}
 spec:
   serviceName: {{ .Values.admin.domain }}
@@ -19,6 +29,10 @@ spec:
   template:
     metadata:
       name: {{ template "admin.fullname" . }}
+      {{- if .Values.admin.podAnnotations }}
+      annotations:
+{{ toYaml .Values.admin.podAnnotations | trim | indent 8}}
+      {{- end }}
       labels:
         app: {{ template "admin.fullname" . }}
         chart: {{ template "admin.chart" . }}
@@ -114,7 +128,7 @@ spec:
             command: [ "nuodocker", "check", "servers", "--check-connected", "--check-active", "--check-leader" ]
           failureThreshold: 30
           successThreshold: 2
-          timeoutSeconds: 1
+          timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb
@@ -150,8 +164,10 @@ spec:
           mountPath: /etc/nuodb/keys/nuocmd.pem
           subPath: {{ .Values.admin.tlsClientPEM.key }}
         {{- end }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert
         secret:

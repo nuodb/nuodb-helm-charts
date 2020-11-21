@@ -23,19 +23,26 @@ const TEARDOWN_BACKUP = "backup"
 const TEARDOWN_DATABASE = "database"
 const TEARDOWN_RESTORE = "database"
 const TEARDOWN_SECRETS = "secrets"
+const TEARDOWN_YCSB = "ycsb"
+const TEARDOWN_COLLECTOR = "nuocollector"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
-const BACKUP_HELM_CHART_PATH = "../../stable/backup"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"
 const RESTORE_HELM_CHART_PATH = "../../stable/restore"
 const THP_HELM_CHART_PATH = "../../stable/transparent-hugepage"
+const YCSB_HELM_CHART_PATH = "../../incubator/demo-ycsb"
 
 const RESULT_DIR = "../../results"
 const INJECT_FILE = "../../versionInject.yaml"
+const INJECT_VALUES_FILE = "../../valuesInject.yaml"
 
-const IMPORT_ARCHIVE_URL = "http://download.nuohub.org/ce_releases/restore.bak.tz"
+const IMPORT_ARCHIVE_URL = "https://download.nuohub.org/ce_releases/restore.bak.tz"
 
+// suffix "m" for spec.containers[].resources.requests.cpu denotes "millicores",
+// and 1 CPU is equivalent to 1000m
 const MINIMAL_VIABLE_ENGINE_CPU = "500m"
 const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
 
 const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
+
+const ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS = "ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS"

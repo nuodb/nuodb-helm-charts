@@ -34,7 +34,7 @@ busybox:
     registry: docker.io
     repository: busybox
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
     ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
@@ -49,8 +49,8 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.0.4
-    pullPolicy: Always
+    tag: 4.0.7
+    pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
     ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
@@ -82,6 +82,36 @@ admin:
   # Admin Service
   replicas: 1
 
+  # If specified and set to a value greater than 0, an initial membership
+  # consisting of server IDs <statefulset name>-0, <statefulset name>-1, ...,
+  # <statefulset name>-<n-1> is defined for all Admins. Defining this to a
+  # value larger than 1 allows a bootstrap server (e.g. <statefulset name>-0)
+  # that has to be reprovisioned from scratch to rejoin its peers when it is
+  # restarted, rather than bootstrapping a new domain consisting of itself.
+  #
+  # For multi-cluster configurations, only the Admin StatefulSet in the
+  # entrypoint cluster (i.e. the one with cloud.cluster.name equal to
+  # cloud.cluster.entrypointName) can specify bootstrapServers.
+  #
+  # Changing the value of bootstrapServers on a existing domain, either by
+  # reinstantiating the Helm chart with a new value or by updating the 
+  # corresponding nuodb.com/bootstrap-servers annotation or bootstrapServers label 
+  # on an existing Admin StatefulSet, is illegal because
+  # the domain can only be bootstrapped once. When upgrading nuodb-helm-charts
+  # from a version that does not support bootstrapServers, bootstrapServers
+  # must be set to 0.
+  bootstrapServers: 1
+
+  ## Global load balancer configuration for NuoAdmin
+  ## Policy names for named policies should contain lowercase alphabetical 
+  ## characters, numbers and hyphens.
+  lbConfig:
+    prefilter: ""
+    default: ""
+    fullSync: false
+    policies:
+      nearest: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
+
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
 
@@ -97,7 +127,7 @@ admin:
       - ReadWriteOnce
     # storageClass: "-"
 
-  ## Enable persistent log volumes to retain logs when an external logging solution is not used.
+  ## Enable persistent volumes to retain logs when an external logging solution is not used.
   logPersistence:
     enabled: false
     overwriteBackoff:
@@ -127,15 +157,15 @@ admin:
   # These are applied using the nuoadmin startup command
   # Add these values as appropriate for this domain
   options:
-      # this high reconnect timeout is necessary because an admin can be
-      # rescheduled on a different Node and a reconnecting engine will not
-      # connect to it until the stale DNS entry in its local cache expires,
-      # which has a default TTL of 30 seconds
-      pendingReconnectTimeout: 60000
-      # this is necessary because killed engine Pods may not generate a TCP_RST
-      # packet to close the admin connection, leaving a database process entry
-      # in the domain state that has no running Pod associated with it
-      processLivenessCheckSec: 30
+    # this high reconnect timeout is necessary because an admin can be
+    # rescheduled on a different Node and a reconnecting engine will not
+    # connect to it until the stale DNS entry in its local cache expires,
+    # which has a default TTL of 30 seconds
+    pendingReconnectTimeout: 60000
+    # this is necessary because killed engine Pods may not generate a TCP_RST
+    # packet to close the admin connection, leaving a database process entry
+    # in the domain state that has no running Pod associated with it
+    processLivenessCheckSec: 30
 
   ## nuodb-admin resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
@@ -190,3 +220,26 @@ admin:
   serviceSuffix:
     clusterip: clusterip
     balancer: balancer
+
+  # Some clusters require longer readiness probe timeouts
+  readinessTimeoutSeconds: 1
+
+  # These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
+  podAnnotations: {}
+    # vault.hashicorp.com/agent-inject: true
+
+nuocollector:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: nuodb/nuodb-collector
+    tag: 1.1.0
+    pullPolicy: IfNotPresent
+  watcher:
+    registry: docker.io
+    repository: kiwigrid/k8s-sidecar
+    tag: 0.1.259
+    pullPolicy: IfNotPresent
+  plugins:
+    ## NuoDB Collector compatible plugins specific for admin services
+    admin: {}

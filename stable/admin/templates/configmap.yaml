@@ -11,8 +11,8 @@ metadata:
   name: waitscript
 data:
 {{ (.Files.Glob "files/waitscript").AsConfig | indent 2 }}
----
 {{- if .Values.admin.configFiles }}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:

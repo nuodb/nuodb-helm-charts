@@ -20,13 +20,14 @@ cloud:
     # If the NuoDB domain spans 2 or more physical clusters, then each cluster must have a unique cluster.name.
     # The default is fine for single-cluster domains.
     name: cluster0
+    entrypointName: cluster0
 
 busybox:
   image:
     registry: docker.io
     repository: busybox
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
     ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
@@ -41,8 +42,8 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.0.4
-    pullPolicy: Always
+    tag: 4.0.7
+    pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
     ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
@@ -89,6 +90,7 @@ admin:
   serviceSuffix:
     clusterip: "clusterip"
     balancer: "balancer"
+
 
 database:
   ## Provide a name in place of prometheus-operator for `app:` labels
@@ -154,6 +156,11 @@ database:
     # nuodb.config: |-
     #   verbose error,flush,warn
 
+  # Load balancer configuration per database
+  lbConfig:
+    prefilter: ""
+    default: ""
+
   # ensure all values here are strings - so quote any purely numeric values
   # source should be a tar.gz or an already local backupset.
   # type either stream or backupset
@@ -198,10 +205,11 @@ database:
     # All time values are in seconds unless the unit is included in the name.
     hotCopy:
       enablePod: true
+      enableBackups: true
       replicas: 1
 
       # Deadline for starting a hotcopy job - if a job hasn't started in this time - give up
-      deadine: 1800
+      deadline: 1800
 
       # timeout for completing a hotcopy job - if a job hasn't completed in this time - stop waiting for it
       timeout: 1800
@@ -246,11 +254,9 @@ database:
       enablePod: true
       replicas: 0
 
-    # NuoDB mem option - target maximum memory to be used by the cache
-    memoryOption: 8g
-
     ## resources
-    # k8s resouce min (request) and max (limit)
+    # k8s resource min (request) and max (limit)
+    # min is also used for the target maximum memory used by the cache (NuoDB --mem option)
     resources:
       limits:
         cpu: 8
@@ -260,7 +266,7 @@ database:
         memory: 8Gi
 
     ## Affinity, selector, and tolerations
-    # There are expanded as YAML, and can include variable and template references
+    # They are expanded as YAML, and can include variable and template references
     affinity: {}
     # nodeSelector: {}
     # tolerations: []
@@ -283,7 +289,24 @@ database:
     # nodeSelectorHotCopyDS: {}
     # tolerationsDS: []
 
+    #Some clusters require longer readiness probe timeouts
+    readinessTimeoutSeconds: 5
+
   te:
+    ## Enable persistent log volumes to retain logs when an external logging solution is not used.
+    logPersistence:
+      enabled: false
+      overwriteBackoff:
+        # Copies of the crash directory are taken to avoid overwrites of root crash.
+        # This controls the window within which no more copies of the crash directory will be taken to avoid the disk filling.
+        # Default will retain 3 copies within the last 120 minutes, after which copies will continue to be created.
+        copies: 3
+        windowMinutes: 120
+      size: 60Gi
+      accessModes:
+        - ReadWriteMany
+      # storageClass: "-"
+
     ## Enable the Layer 4 Load balancer if required,
     ## and specify if it should provision an internal or external cloud IP address
     externalAccess: {}
@@ -298,9 +321,9 @@ database:
     # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
     replicas: 1
 
-    # NuoDB mem option - target maximum memory to be used by the cache
-    memoryOption: 8g
-
+    ## resources
+    # k8s resource min (request) and max (limit)
+    # min is also used for the target maximum memory used by the cache (NuoDB --mem option)
     resources:
       limits:
         cpu: 4
@@ -325,13 +348,38 @@ database:
     # named key/value pairs that need to be passed to the image, such as
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
+
+    # Some clusters require longer readiness probe timeouts
+    readinessTimeoutSeconds: 5
   
+  # These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
+  podAnnotations: {}
+    # vault.hashicorp.com/agent-inject: true
+
   enableDaemonSet: false
   # Set to true if you are using manually created volumes or restoring
   # from a previously existing backup.
   isManualVolumeProvisioning: false
   isRestore: false
 
+
 openshift:
   # change this to true if you want to deploy using OpenShift proprietary features
   enabled: false
+
+nuocollector:
+  # Enable NuoDB Collector by setting nuocollector.enabled=true
+  enabled: false
+  image:
+    registry: docker.io
+    repository: nuodb/nuodb-collector
+    tag: 1.1.0
+    pullPolicy: IfNotPresent
+  watcher:
+    registry: docker.io
+    repository: kiwigrid/k8s-sidecar
+    tag: 0.1.259
+    pullPolicy: IfNotPresent
+  plugins:
+    ## NuoDB Collector compatible plugins specific for database services
+    database: {}

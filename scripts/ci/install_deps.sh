@@ -21,11 +21,20 @@ if [[ -n "$REQUIRES_MINIKUBE" ]]; then
   sudo chown -R travis: /home/travis/.minikube/
   kubectl cluster-info
 
-  # install helm
-  # Use default K8s service account as a workaround explained in https://github.com/helm/helm/issues/3460
-  helm init --service-account default
+  # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
+  # after pods have been re-created which causes problems with inter pod communicataion.
+  # Set CoreDNS TTL to 0 so that DNS entries are not cached. 
+  kubectl get cm coredns -n kube-system -o yaml | sed -e 's/ttl [0-9]*$/ttl 0/' | kubectl apply -n kube-system -f -
+  kubectl delete pods -l k8s-app=kube-dns -n kube-system
+
+  helm version
 
   kubectl version
+
+  # get the helm repo for upgrade testing
+  helm repo add nuodb https://storage.googleapis.com/nuodb-charts
+  helm repo add nuodb-incubator https://storage.googleapis.com/nuodb-charts-incubator
+
 elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
   wget https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -O /tmp/oc.tar.gz
   tar xzf /tmp/oc.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/oc && sudo mv /tmp/oc /usr/local/bin
@@ -50,7 +59,6 @@ elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
 
   kubectl -n kube-system create serviceaccount tiller-system
   kubectl create clusterrolebinding tiller-system --clusterrole cluster-admin --serviceaccount=kube-system:tiller-system
-  helm init --service-account tiller-system --tiller-namespace kube-system
 
   helm version
 
@@ -64,6 +72,9 @@ elif [[ -n "$REQUIRES_MINISHIFT" ]]; then
   oc adm policy add-scc-to-user nuodb-scc system:serviceaccount:nuodb:default -n nuodb
   helm install stable/transparent-hugepage/ --namespace nuodb
 
+  # get the helm repo for upgrade testing
+  helm repo add nuodb https://storage.googleapis.com/nuodb-charts
+  helm repo add nuodb-incubator https://storage.googleapis.com/nuodb-charts-incubator
 else
   echo "Skipping installation steps"
 fi

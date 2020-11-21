@@ -16,3 +16,4 @@ results/
 .vscode/
 venv/
 versionInject.yaml
+valuesInject.yaml

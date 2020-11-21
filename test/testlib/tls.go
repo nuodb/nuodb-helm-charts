@@ -4,19 +4,18 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
-	"strconv"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/otiai10/copy"
-	"gotest.tools/assert"
-	corev1 "k8s.io/api/core/v1"
 )
 
 const TLS_GENERATOR_POD_TEMPLATE = `---
@@ -39,13 +38,12 @@ func createTLSGeneratorPod(t *testing.T, namespaceName string, timeout time.Dura
 	podTemplateString := fmt.Sprintf(TLS_GENERATOR_POD_TEMPLATE,
 		podName, namespaceName, image)
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, podTemplateString)
 	AddTeardown(TEARDOWN_SECRETS, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, podTemplateString) })
 
-	AwaitPodStatus(t, namespaceName, podName, corev1.PodReady, corev1.ConditionTrue, timeout)
+	AwaitPodUp(t, namespaceName, podName, timeout)
 
 	return podName
 }
@@ -59,7 +57,7 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 	}
 
 	files, err := ioutil.ReadDir(directory)
-	assert.NilError(t, err)
+	require.NoError(t, err)
 
 	set := make(map[string]bool)
 	for _, file := range files {
@@ -67,7 +65,7 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 		t.Logf("Found generated certificate file: %s", file.Name())
 	}
 	for _, expectedFile := range expectedFiles {
-		assert.Assert(t, set[expectedFile] == true, "Unable to find certificate file %s in path %s", expectedFile, directory)
+		require.True(t, set[expectedFile] == true, "Unable to find certificate file %s in path %s", expectedFile, directory)
 	}
 }
 
@@ -80,39 +78,26 @@ func GenerateCustomCertificates(t *testing.T, podName string, namespaceName stri
 	}
 	finalCommands := append(prependCommands, commands...)
 	// Execute certificate generation commands
-	ExecuteCommandsInPod(t, podName, namespaceName, finalCommands)
+	ExecuteCommandsInPod(t, namespaceName, podName, finalCommands)
 }
 
 func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName string) string {
-	options := k8s.NewKubectlOptions("", "")
-	options.Namespace = namespaceName
+	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	prefix := "tls-keys"
 	targetDirectory, err := ioutil.TempDir("", prefix)
-	assert.NilError(t, err, "Unable to create TMP directory with prefix ", prefix)
+	require.NoError(t, err, "Unable to create TMP directory with prefix ", prefix)
 	AddTeardown(TEARDOWN_SECRETS, func() { os.RemoveAll(targetDirectory) })
 
 	realTargetDirectory, err := filepath.EvalSymlinks(targetDirectory)
-	assert.NilError(t, err)
+	require.NoError(t, err)
 
 	k8s.RunKubectl(t, options, "cp", podName+":"+CERTIFICATES_GENERATION_PATH, realTargetDirectory)
 	t.Logf("Certificate files location: %s", realTargetDirectory)
 	AddTeardown(TEARDOWN_SECRETS, func() { BackupCerificateFilesOnTestFailure(t, namespaceName, realTargetDirectory) })
-	AddTeardown(TEARDOWN_SECRETS, func() { PrintCertificateFilesOnTestFailure(t, realTargetDirectory) })
 	verifyCertificateFiles(t, realTargetDirectory)
 
 	return realTargetDirectory
-}
-
-func PrintCertificateFilesOnTestFailure(t *testing.T, srcDirectory string) {
-	if t.Failed() && shouldPrintToStdout() {
-		files, _ := ioutil.ReadDir(srcDirectory)
-		t.Logf("Printing certificate files in %s.", srcDirectory)
-		for _, file := range files {
-			output, _ := exec.Command("hexdump", "-ve", `16/1 "%02x " "\n"`, filepath.Join(srcDirectory, file.Name())).CombinedOutput()
-			t.Logf("%s:\n%s", file.Name(), string(output))
-		}
-	}
 }
 
 func BackupCerificateFilesOnTestFailure(t *testing.T, namespaceName string, srcDirectory string) {
@@ -143,17 +128,16 @@ func GenerateTLSConfiguration(t *testing.T, namespaceName string, commands []str
 func RotateTLSCertificates(t *testing.T, options *helm.Options, namespaceName string,
 	adminReleaseName string, databaseReleaseName string, tlsKeysLocation string, helmUpgrade bool) {
 
-	kubectlOptions := k8s.NewKubectlOptions("", "")
-	kubectlOptions.Namespace = namespaceName
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	adminReplicaCount, err := strconv.Atoi(options.SetValues["admin.replicas"])
-	assert.NilError(t, err, "Unable to find/convert admin.replicas value")
+	require.NoError(t, err, "Unable to find/convert admin.replicas value")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	k8s.RunKubectl(t, kubectlOptions, "cp", filepath.Join(tlsKeysLocation, CA_CERT_FILE_NEW), admin0+":/tmp")
 	err = k8s.RunKubectlE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "add", "trusted-certificate",
 		"--alias", "ca_prime", "--cert", "/tmp/"+CA_CERT_FILE_NEW, "--timeout", "60")
-	assert.NilError(t, err, "add trusted-certificate failed")
+	require.NoError(t, err, "add trusted-certificate failed")
 
 	if helmUpgrade == true {
 		// Upgrade admin release
@@ -168,11 +152,34 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options, namespaceName st
 		helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, databaseReleaseName)
 	} else {
 		// Rolling upgrade could take a lot of time due to readiness probes.
-		// Faster approach will be to restart all PODs. A prerequsite for this 
+		// Faster approach will be to restart all PODs. A prerequisite for this
 		// is to have the same secrets update before hand.
+		adminPod := GetPod(t, namespaceName, admin0)
 		k8s.RunKubectl(t, kubectlOptions, "delete", "pod", "--selector=domain=nuodb")
-		AwaitPodPhase(t, namespaceName, admin0, corev1.PodRunning, 60*time.Second)
+		AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+		AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 		AwaitAdminFullyConnected(t, namespaceName, admin0, adminReplicaCount)
 	}
 	AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
+}
+
+func GenerateAndSetTLSKeys(t *testing.T, options *helm.Options, namespaceName string) {
+	tlsCommands := []string{
+		"export DEFAULT_PASSWORD='" + SECRET_PASSWORD + "'",
+		"setup-keys.sh",
+	}
+	GenerateTLSConfiguration(t, namespaceName, tlsCommands)
+	if options.SetValues == nil {
+		options.SetValues = make(map[string]string)
+	}
+	options.SetValues["admin.tlsCACert.secret"] = CA_CERT_SECRET
+	options.SetValues["admin.tlsCACert.key"] = CA_CERT_FILE
+	options.SetValues["admin.tlsKeyStore.secret"] = KEYSTORE_SECRET
+	options.SetValues["admin.tlsKeyStore.key"] = KEYSTORE_FILE
+	options.SetValues["admin.tlsKeyStore.password"] = SECRET_PASSWORD
+	options.SetValues["admin.tlsTrustStore.secret"] = TRUSTSTORE_SECRET
+	options.SetValues["admin.tlsTrustStore.key"] = TRUSTSTORE_FILE
+	options.SetValues["admin.tlsTrustStore.password"] = SECRET_PASSWORD
+	options.SetValues["admin.tlsClientPEM.secret"] = NUOCMD_SECRET
+	options.SetValues["admin.tlsClientPEM.key"] = NUOCMD_FILE
 }

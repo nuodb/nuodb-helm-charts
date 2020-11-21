@@ -5,7 +5,7 @@ This chart deploys the NuoDB YCSB Demo on a Kubernetes cluster using the Helm pa
 ## Command
 
 ```bash
-helm install nuodb/demo-ycsb [--name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/demo-ycsb [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -83,6 +83,7 @@ The following tables list the configurable parameters of the YCSB chart and thei
 | ----- | ----------- | ------ |
 | `nameOverride` | Database name | `demo` |
 | `fullnameOverride` | Number of threads | `1` |
+| `replicas` | Number of NuoDB YCSB replicas | `0` |
 | `loadName` | Name of the activity | `ycsb-load` |
 | `workload` | YCSB workload.  Valid values are a-f. Each letter determines a different mix of read and update workload percentage generated. a= 50/50, b=95/5, c=100 read. Refer to YCSB documentation for more detail | `b` |
 | `lbPolicy` | YCSB load-balancer policy. Name of an existing load-balancer policy, that has already been created using the 'nuocmd set load-balancer' command. | `ycsb-load` |
@@ -97,9 +98,9 @@ The following tables list the configurable parameters of the YCSB chart and thei
 | `image.tag` | Tag for the NuoDB Docker image | `latest` |
 | `image.pullPolicy` | Image pull policy | `Always` |
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
-| `affinity` | Affinity rules for NuoDB SM | `{}` |
-| `nodeSelector` | Node selector rules for NuoDB SM | `{}` |
-| `tolerations` | Tolerations for NuoDB SM | `[]` |
+| `affinity` | Affinity rules for NuoDB YCSB pods | `{}` |
+| `nodeSelector` | Node selector rules for NuoDB YCSB pods | `{}` |
+| `tolerations` | Tolerations for NuoDB YCSB pods | `[]` |
 
 Verify the Helm chart:
 

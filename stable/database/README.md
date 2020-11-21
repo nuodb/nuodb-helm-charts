@@ -5,7 +5,7 @@ This chart starts a NuoDB database deployment on a Kubernetes cluster using the 
 ## Command
 
 ```bash
-helm install nuodb/database [--name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install nuodb/database [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -63,7 +63,7 @@ The following tables list the configurable parameters for the `busybox` option:
 | `image.registry` | busybox container registry | `docker.io` |
 | `image.repository` | busybox container image name |`busybox`|
 | `image.tag` | busybox container image tag | `latest` |
-| `image.pullPolicy` | busybox container pull policy |`Always`|
+| `image.pullPolicy` | busybox container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
@@ -86,7 +86,7 @@ busybox:
     registry: docker.io
     repository: busybox
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 ```
 
 #### nuodb.*
@@ -100,7 +100,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
 | `image.tag` | NuoDB container image tag | `latest` |
-| `image.pullPolicy` | NuoDB container pull policy |`Always`|
+| `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
 | `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
@@ -125,7 +125,7 @@ nuodb:
     registry: docker.io
     repository: nuodb/nuodb-ce
     tag: latest
-    pullPolicy: Always
+    pullPolicy: IfNotPresent
 ```
 
 #### openshift.*
@@ -219,19 +219,23 @@ The following tables list the configurable parameters of the `database` chart an
 | `securityContext.capabilities` | Enable capabilities for the container - disregards `securityContext.enabled` | `[]` |
 | `env` | Import ENV vars inside containers | `[]` |
 | `envFrom` | Import ENV vars from configMap(s) | `[]` |
+| `lbConfig.prefilter` | Database load balancer prefilter expression | `nil` |
+| `lbConfig.default` | Database load balancer default query | `nil` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
+| `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
 | `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `sm.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
 | `sm.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
-| `sm.logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
+| `sm.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
+| `sm.hotCopy.enableBackups` | Enable full/incremental/journal backups | `true` |
 | `sm.hotcopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
 | `sm.hotcopy.timeout` | Timeout for a started hotcopy job to complete (seconds) | `1800` |
 | `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
@@ -250,18 +254,23 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotcopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create DS/SS for non-hot-copy SMs | `true` |
-| `sm.memoryOption` | SM engine memory (*future deprecation*) | `"8g"` |
 | `sm.labels` | Labels given to the SMs started | `{}` |
 | `sm.engineOptions` | Additional NuoDB engine options | `{}` |
 | `sm.resources` | Labels to apply to all resources | `{}` |
 | `sm.affinity` | Affinity rules for NuoDB SM | `{}` |
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
+| `sm.readinessTimeoutSeconds` | SM readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
+| `te.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
+| `te.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
+| `te.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
+| `te.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class).  This is expected to be ReadWriteMany.  Not all storage providers support this mode. | `ReadWriteMany` |
+| `te.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
+| `te.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
 | `te.replicas` | TE replicas | `1` |
-| `te.memoryOption` | TE engine memory (*future deprecation*) | `"8g"` |
 | `te.labels` | Labels given to the TEs started | `""` |
 | `te.engineOptions` | Additional NuoDB engine options | `""` |
 | `te.resources` | Labels to apply to all resources | `{}` |
@@ -275,6 +284,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.nodeSelectorNoHotCopyDS` | Node selector rules for non-hot-copy SMs (DaemonSet) | `{}` |
 | `sm.tolerationsDS` | Tolerations for SMs (DaemonSet) | `[]` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
+| `te.readinessTimeoutSeconds` | TE readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 
 #### database.configFiles.*
 
@@ -299,6 +309,25 @@ The purpose of this section is to allow customisation of the names of the cluste
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
 | `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
+
+#### nuocollector.*
+
+The purpose of this section is to specify the NuoDB monitoring parameters.
+
+The following tables list the configurable parameters for the `nuocollector` option of the admin chart and their default values.
+
+| Parameter | Description | Default |
+| ----- | ----------- | ------ |
+| `enabled` | Whether to enable NuoDB monitoring using sidecar containers |`false`|
+| `image.registry` | NuoDB Collector container registry | `docker.io` |
+| `image.repository` | NuoDB Collector container image name |`nuodb/nuodb-collector`|
+| `image.tag` | NuoDB Collector container image tag | `1.1.0` |
+| `image.pullPolicy` | NuoDB Collector container pull policy |`IfNotPresent`|
+| `watcher.registry` | ConfigMap watcher container registry | `docker.io` |
+| `watcher.repository` | ConfigMap watcher container image name |`kiwigrid/k8s-sidecar`|
+| `watcher.tag` | ConfigMap watcher container image tag | `0.1.259` |
+| `watcher.pullPolicy` | ConfigMap watcher container pull policy |`IfNotPresent`|
+| `plugins.database` | NuoDB Collector additional plugins for database services |`{}`|
 
 ### Running
 
