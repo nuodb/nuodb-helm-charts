@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# 'nuocmd check server' is introduced in versions >4.1.2; this checks that the
+# --api-server satisfies the following conditions:
+#   1. It is ACTIVE and able to service REST requests.
+#   2. It is able to ping its own advertised address, i.e. altAddr in
+#      nuoadmin.conf, which is derived from the --alt-address argument of
+#      'nuodocker start admin'.
+#   3. It has the same commit index as the current Raft leader, which means
+#      that its Raft state is current.
+out="$(nuocmd check server --check-active --check-connected --check-converged 2>&1)"
+ret=$?
+
+# nuocmd returns exit code 2 if there is a parse error due to unrecognized
+# subcommand or arguments
+if [ $ret != 2 ]; then
+    # failure is not due to the parse error, so print error message and exit
+    echo "$out"
+    exit $ret
+fi
+
+# 'nuocmd check server' is unsupported; use 'nuocmd check servers' (plural)
+# with no arguments, which simply checks that the --api-server is ACTIVE and
+# able to service REST requests
+nuocmd check servers
