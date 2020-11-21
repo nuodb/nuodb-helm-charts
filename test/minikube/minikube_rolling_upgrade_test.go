@@ -15,6 +15,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/gruntwork-io/terratest/modules/shell"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
@@ -29,6 +30,42 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 
 		return strings.Count(output, "MONITORED:RUNNING") == expectedNrProcesses
 	}, 30*time.Second)
+}
+
+func TestCheckServerFallback(t *testing.T) {
+	// 'nuomcd check server' (singular) is unsupported for versions <=4.1.1;
+	// this test verifies the fallback behavior of the readiness probe
+
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	// this test uses OLD_RELEASE, but any version <=4.1.1 will do
+	helmOptions := helm.Options{
+		SetValues: map[string]string{
+			"nuodb.image.registry":   "docker.io",
+			"nuodb.image.repository": "nuodb/nuodb-ce",
+			"nuodb.image.tag":        OLD_RELEASE,
+			"admin.bootstrapServers": "0",
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helmOptions, 1, "")
+	admin := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// make sure 'nuocmd check server' fails
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "nuocmd", "check", "server")
+	require.Error(t, err, fmt.Sprintf("Expected 'nuocmd check server' to fail on %s: %s", OLD_RELEASE, output))
+	// make sure exit code is 2 to indicate parse error
+	code, err := shell.GetExitCodeForRunCommandError(err)
+	require.NoError(t, err)
+	require.Equal(t, 2, code)
+
+	// make sure readinessprobe is successful
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "readinessprobe")
+	require.NoError(t, err, fmt.Sprintf("Expected readinessprobe to succeed on %s: %s", OLD_RELEASE, output))
 }
 
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
