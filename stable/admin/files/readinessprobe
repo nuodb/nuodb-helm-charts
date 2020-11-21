@@ -3,8 +3,8 @@
 nuocmd_fallback() {
     # run nuocmd subcommand and suppress parse errors due to the command
     # containing unsupported arguments or the subcommand not being supported at
-    # all by the available version of nuocmd; for all non-parse errors or
-    # successful invocations, emit command output and exit
+    # all by the available version of nuocmd; if the command succeeds or fails
+    # with a non-parse error, emit command output and exit
 
     # capture stdout and stderr and get exit code
     out="$(nuocmd "$@" 2>&1)"
@@ -13,8 +13,8 @@ nuocmd_fallback() {
     # nuocmd returns exit code 2 if there is a parse error due to unrecognized
     # subcommand or arguments
     if [ $ret != 2 ]; then
-        # failure is not due to parse error or the command succeeded; print
-        # command output and exit
+        # the command succeeded or failed with a non-parse error; emit command
+        # output and exit
         echo "$out"
         exit $ret
     fi
