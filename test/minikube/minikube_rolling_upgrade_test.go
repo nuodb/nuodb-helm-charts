@@ -77,6 +77,14 @@ func TestAdminReadinessProbe(t *testing.T) {
 	// make sure readinessprobe on admin-1 eventually fails, because there
 	// is no leader for it to converge with
 	testlib.Await(t, func() bool {
+		// make sure 'nuocmd check servers' (plural) is successful, since it
+		// only checks that the --api-server is ACTIVE
+		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "nuocmd", "check", "servers")
+		if err != nil {
+			return false
+		}
+
+		// make sure readinessprobe fails
 		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
 		// make sure exit code is 1 to indicate non-parse error
 		code, err := shell.GetExitCodeForRunCommandError(err)
