@@ -60,11 +60,10 @@ func TestAdminReadinessProbe(t *testing.T) {
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
 	require.NoError(t, err, fmt.Sprintf("readinessprobe failed: %s", output))
 
-	// kill admin-0 and delete its PVC so that it bootstraps a disjoint
-	// domain and refuses messages from admin-1
-	k8s.RunKubectl(t, options, "delete", "pod", admin0)
-	k8s.RunKubectl(t, options, "delete", "pvc", "raftlog-"+admin0)
-	testlib.AwaitNoPods(t, namespaceName, admin0)
+	// delete Raft log on admin-0 and kill admin-0 so that it bootstraps a
+	// disjoint domain when it is restarted and refuses messages from
+	// admin-1
+	k8s.RunKubectl(t, options, "exec", admin0, "--", "bash", "-c", "rm -f /var/opt/nuodb/raftlog && kill -9 1")
 
 	// make sure readinessprobe on admin-1 eventually fails, because there
 	// is no leader for it to converge with
@@ -76,9 +75,10 @@ func TestAdminReadinessProbe(t *testing.T) {
 		require.NoError(t, err)
 		require.Equal(t, 1, code)
 		return true
-	}, 300*time.Second)
+	}, 60*time.Second)
 
-	// make sure 'nuocmd check servers' (plural) is successful
+	// make sure 'nuocmd check servers' (plural) is successful, since it
+	// only checks that the --api-server is ACTIVE
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "nuocmd", "check", "servers")
 	require.NoError(t, err, fmt.Sprintf("'nuocmd check servers' failed: %s", output))
 }
