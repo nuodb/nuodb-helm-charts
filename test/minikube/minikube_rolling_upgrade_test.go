@@ -4,11 +4,8 @@ package minikube
 
 import (
 	"fmt"
+	"os"
 	"strings"
-
-	"github.com/stretchr/testify/require"
-	v12 "k8s.io/api/core/v1"
-
 	"testing"
 	"time"
 
@@ -17,6 +14,9 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/shell"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+	"github.com/stretchr/testify/require"
+
+	v12 "k8s.io/api/core/v1"
 )
 
 const OLD_RELEASE = "4.0.4"
@@ -32,7 +32,68 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 	}, 30*time.Second)
 }
 
-func TestCheckServerFallback(t *testing.T) {
+func TestAdminReadinessProbe(t *testing.T) {
+	if os.Getenv("NUODB_DEV") != "1" {
+		t.Skip("'nuocmd check server' is not supported in released versions")
+	}
+
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	// disable KAA by not installing rolebinding
+	helmOptions := helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas":       "2",
+			"nuodb.addRoleBinding": "false",
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helmOptions, 2, "")
+	adminStatefulSet := helmChartReleaseName + "-nuodb-cluster0"
+	admin0 := adminStatefulSet + "-0"
+	admin1 := adminStatefulSet + "-1"
+
+	// make sure readinessprobe succeeds on both Admin processes
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "readinessprobe")
+	require.NoError(t, err, fmt.Sprintf("readinessprobe failed: %s", output))
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
+	require.NoError(t, err, fmt.Sprintf("readinessprobe failed: %s", output))
+
+	// scale down Admin StatefulSet
+	k8s.RunKubectl(t, options, "scale", "statefulset", adminStatefulSet, "--replicas=1")
+
+	// wait for scaled-down Admin to show as "Disconnected"
+	testlib.Await(t, func() bool {
+		output, _ := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+			"nuocmd", "show", "domain", "--server-format", "{id} {connected_state}")
+		return strings.Contains(output, admin1+" Disconnected")
+	}, 300*time.Second)
+
+	// wait for scaled-down Admin Pod to be deleted
+	testlib.AwaitNoPods(t, namespaceName, admin1)
+
+	// try to commit a Raft command and make sure it times out
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+		"nuocmd", "set", "value", "--key", "testKey", "--value", "testValue", "--unconditional")
+	require.Error(t, err, fmt.Sprintf("Expected 'nuocmd set value' to fail: %s", output))
+
+	// make sure readinessprobe fails
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "readinessprobe")
+	require.Error(t, err, fmt.Sprintf("Expected readinessprobe to fail: %s", output))
+	// make sure exit code is 1 to indicate non-parse error
+	code, err := shell.GetExitCodeForRunCommandError(err)
+	require.NoError(t, err)
+	require.Equal(t, 1, code)
+
+	// make sure 'nuocmd check servers' (plural) is successful
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "nuocmd", "check", "servers")
+	require.NoError(t, err, fmt.Sprintf("Expected readinessprobe to succeed: %s", output))
+}
+
+func TestAdminReadinessProbeFallback(t *testing.T) {
 	// 'nuomcd check server' (singular) is unsupported for versions <=4.1.1;
 	// this test verifies the fallback behavior of the readiness probe
 
