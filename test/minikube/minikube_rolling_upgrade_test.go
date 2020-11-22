@@ -60,10 +60,19 @@ func TestAdminReadinessProbe(t *testing.T) {
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
 	require.NoError(t, err, fmt.Sprintf("readinessprobe failed: %s", output))
 
+	leader, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "bash", "-c",
+		"nuocmd show domain --server-format '{role} {id}' | sed -n 's/ *LEADER //p'")
+	require.NoError(t, err)
 	// delete Raft log on admin-0 and kill admin-0 so that it bootstraps a
 	// disjoint domain when it is restarted and refuses messages from
 	// admin-1
-	k8s.RunKubectl(t, options, "exec", admin0, "--", "bash", "-c", "rm -f /var/opt/nuodb/raftlog && (pgrep java | xargs kill -9)")
+	k8s.RunKubectl(t, options, "exec", admin0, "--", "rm", "-f", "/var/opt/nuodb/raftlog")
+	k8s.RunKubectl(t, options, "delete", "pod", admin0)
+	// also kill admin-1 if it was the leader so that a new leader has to be
+	// elected when it is restarted
+	if admin1 == strings.TrimSpace(leader) {
+		k8s.RunKubectl(t, options, "delete", "pod", admin1)
+	}
 
 	// make sure readinessprobe on admin-1 eventually fails, because there
 	// is no leader for it to converge with
