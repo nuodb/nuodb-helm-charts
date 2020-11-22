@@ -735,9 +735,9 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 
 	reader, err := getAppLogStreamE(t, namespace, podName, podLogOptions)
 	// avoid generating test failure just because container has not been started
-	if errors.Is(err, ContainerNotStarted) {
-		t.Logf("Skipping log collection for pod %s: %s", podName, err.Error())
-		return nil
+	if ctrerr, ok := err.(*ContainerNotStarted); ok {
+		t.Logf("Skipping log collection for pod %s because container %s has not been started", podName, ctrerr.Name)
+		return ""
 	}
 	require.NoError(t, err)
 	require.NotNil(t, reader)
@@ -760,13 +760,13 @@ func (e *ContainerNotStarted) Error() string {
 func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) (reader io.ReadCloser, err error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	reader := nil
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 
 	if podLogOptions.Container == "" {
 		// Select first container if not specified; otherwise the GetLogs method will fail if there are sidecars
-		pod, err := client.CoreV1().Pods(options.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-		if err != nil {
+		pod, e := client.CoreV1().Pods(options.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		if e != nil {
+			err = e
 			return
 		}
 		if len(pod.Spec.Containers) == 0 {
@@ -777,9 +777,11 @@ func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOpti
 		if container == nil {
 			container = &pod.Spec.Containers[0]
 		}
-		if !pod.Status.ContainerStatuses[container.Name].Started {
-			err = &ContainerNotStarted{container.Name}
-			return
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if containerStatus.Name == container.Name && containerStatus.Started != nil && !*containerStatus.Started {
+				err = &ContainerNotStarted{container.Name}
+				return
+			}
 		}
 		podLogOptions.Container = container.Name
 		t.Logf("Multiple containers found in pod %s. Getting logs from container %s.", podName, podLogOptions.Container)
