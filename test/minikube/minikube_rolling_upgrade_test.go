@@ -33,24 +33,22 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 }
 
 func TestAdminReadinessProbe(t *testing.T) {
-	if os.Getenv("NUODB_DEV") != "1" {
+	if os.Getenv("NUODB_DEV") != "true" {
 		t.Skip("'nuocmd check server' is not supported in released versions")
 	}
 
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
-
-	// disable KAA by not installing rolebinding
-	helmOptions := helm.Options{
-		SetValues: map[string]string{
-			"admin.replicas":       "2",
-			"nuodb.addRoleBinding": "false",
-		},
-	}
-
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helmOptions, 2, "")
+	// create a two-server domain and induce a failure that makes it
+	// impossible to elect a leader, causing 'nuocmd check server
+	// --check-converged' to fail
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas": "2",
+		},
+	}, 2, "")
 	adminStatefulSet := helmChartReleaseName + "-nuodb-cluster0"
 	admin0 := adminStatefulSet + "-0"
 	admin1 := adminStatefulSet + "-1"
@@ -62,35 +60,27 @@ func TestAdminReadinessProbe(t *testing.T) {
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
 	require.NoError(t, err, fmt.Sprintf("readinessprobe failed: %s", output))
 
-	// scale down Admin StatefulSet
-	k8s.RunKubectl(t, options, "scale", "statefulset", adminStatefulSet, "--replicas=1")
+	// kill admin-0 and delete its PVC so that it bootstraps a disjoint
+	// domain and refuses messages from admin-1
+	k8s.RunKubectl(t, options, "delete", "pod", admin0)
+	k8s.RunKubectl(t, options, "delete", "pvc", "raftlog-"+admin0)
+	testlib.AwaitNoPods(t, namespaceName, admin0)
 
-	// wait for scaled-down Admin to show as "Disconnected"
+	// make sure readinessprobe on admin-1 eventually fails, because there
+	// is no leader for it to converge with
 	testlib.Await(t, func() bool {
-		output, _ := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
-			"nuocmd", "show", "domain", "--server-format", "{id} {connected_state}")
-		return strings.Contains(output, admin1+" Disconnected")
+		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
+		require.Error(t, err, fmt.Sprintf("Expected readinessprobe to fail: %s", output))
+		// make sure exit code is 1 to indicate non-parse error
+		code, err := shell.GetExitCodeForRunCommandError(err)
+		require.NoError(t, err)
+		require.Equal(t, 1, code)
+		return true
 	}, 300*time.Second)
 
-	// wait for scaled-down Admin Pod to be deleted
-	testlib.AwaitNoPods(t, namespaceName, admin1)
-
-	// try to commit a Raft command and make sure it times out
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
-		"nuocmd", "set", "value", "--key", "testKey", "--value", "testValue", "--unconditional")
-	require.Error(t, err, fmt.Sprintf("Expected 'nuocmd set value' to fail: %s", output))
-
-	// make sure readinessprobe fails
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "readinessprobe")
-	require.Error(t, err, fmt.Sprintf("Expected readinessprobe to fail: %s", output))
-	// make sure exit code is 1 to indicate non-parse error
-	code, err := shell.GetExitCodeForRunCommandError(err)
-	require.NoError(t, err)
-	require.Equal(t, 1, code)
-
 	// make sure 'nuocmd check servers' (plural) is successful
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "nuocmd", "check", "servers")
-	require.NoError(t, err, fmt.Sprintf("Expected readinessprobe to succeed: %s", output))
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "nuocmd", "check", "servers")
+	require.NoError(t, err, fmt.Sprintf("'nuocmd check servers' failed: %s", output))
 }
 
 func TestAdminReadinessProbeFallback(t *testing.T) {
@@ -126,7 +116,7 @@ func TestAdminReadinessProbeFallback(t *testing.T) {
 
 	// make sure readinessprobe is successful
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "readinessprobe")
-	require.NoError(t, err, fmt.Sprintf("Expected readinessprobe to succeed on %s: %s", OLD_RELEASE, output))
+	require.NoError(t, err, fmt.Sprintf("readinessprobe failed on %s: %s", OLD_RELEASE, output))
 }
 
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
