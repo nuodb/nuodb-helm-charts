@@ -952,8 +952,9 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	)
 	require.NoError(t, err, "Could not set KV value")
 	elapsed := time.Since(start)
-
-	require.True(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV set took longer than 2s: %s", elapsed))
+	if elapsed.Seconds() > 2.0 {
+		t.Logf("KV set took longer than 2s: %s", elapsed)
+	}
 
 	start = time.Now()
 	output, err = k8s.RunKubectlAndGetOutputE(t, options,
@@ -961,8 +962,9 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	)
 	require.NoError(t, err, "Could not get KV value")
 	elapsed = time.Since(start)
-
-	require.True(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
+	if elapsed.Seconds() > 2.0 {
+		t.Logf("KV get took longer than 2s: %s", elapsed)
+	}
 
 	require.True(t, output == "testVal", fmt.Sprintf("KV get returned the wrong value: %s", output))
 }
