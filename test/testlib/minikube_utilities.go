@@ -733,7 +733,13 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 
 	writer := io.Writer(f)
 
-	reader := getAppLogStream(t, namespace, podName, podLogOptions)
+	reader, err := getAppLogStreamE(t, namespace, podName, podLogOptions)
+	// avoid generating test failure just because container has not been started
+	if errors.Is(err, ContainerNotStarted) {
+		t.Logf("Skipping log collection for pod %s: %s", podName, err.Error())
+		return nil
+	}
+	require.NoError(t, err)
 	require.NotNil(t, reader)
 	_, err = io.Copy(writer, reader)
 	require.NoError(t, err)
@@ -743,28 +749,49 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 	return filePath
 }
 
-func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
+type ContainerNotStarted struct {
+	Name string
+}
+
+func (e *ContainerNotStarted) Error() string {
+	return fmt.Sprintf("Container %s not started", e.Name)
+}
+
+func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) (reader io.ReadCloser, err error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
+	reader := nil
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	require.NoError(t, err)
 
 	if podLogOptions.Container == "" {
 		// Select first container if not specified; otherwise the GetLogs method will fail if there are sidecars
 		pod, err := client.CoreV1().Pods(options.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Greater(t, len(pod.Spec.Containers), 0)
+		if err != nil {
+			return
+		}
+		if len(pod.Spec.Containers) == 0 {
+			err = errors.New("No containers found")
+			return
+		}
 		container := findAdminOrEngineContainer(pod.Spec.Containers)
 		if container == nil {
 			container = &pod.Spec.Containers[0]
+		}
+		if !pod.Status.ContainerStatuses[container.Name].Started {
+			err = &ContainerNotStarted{container.Name}
+			return
 		}
 		podLogOptions.Container = container.Name
 		t.Logf("Multiple containers found in pod %s. Getting logs from container %s.", podName, podLogOptions.Container)
 	}
 
-	reader, err := client.CoreV1().Pods(options.Namespace).GetLogs(podName, podLogOptions).Stream(context.TODO())
-	require.NoError(t, err)
+	reader, err = client.CoreV1().Pods(options.Namespace).GetLogs(podName, podLogOptions).Stream(context.TODO())
+	return
+}
 
+func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
+	reader, err := getAppLogStreamE(t, namespace, podName, podLogOptions)
+	require.NoError(t, err)
 	return reader
 }
 

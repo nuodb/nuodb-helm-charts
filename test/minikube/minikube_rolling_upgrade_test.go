@@ -33,6 +33,8 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 }
 
 func TestAdminReadinessProbe(t *testing.T) {
+	// TODO: remove this whenever the image tested in nuodb-helm-charts CI
+	// supports 'nuocmd check server' (singular)
 	if os.Getenv("NUODB_DEV") != "true" {
 		t.Skip("'nuocmd check server' is not supported in released versions")
 	}
@@ -56,9 +58,9 @@ func TestAdminReadinessProbe(t *testing.T) {
 	// make sure readinessprobe succeeds on both Admin processes
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "readinessprobe")
-	require.NoError(t, err, fmt.Sprintf("readinessprobe failed: %s", output))
+	require.NoError(t, err, "readinessprobe failed: %s", output)
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
-	require.NoError(t, err, fmt.Sprintf("readinessprobe failed: %s", output))
+	require.NoError(t, err, "readinessprobe failed: %s", output)
 
 	leader, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "bash", "-c",
 		"nuocmd show domain --server-format '{role} {id}' | sed -n 's/ *LEADER //p'")
@@ -75,7 +77,10 @@ func TestAdminReadinessProbe(t *testing.T) {
 	}
 
 	// make sure readinessprobe on admin-1 eventually fails, because there
-	// is no leader for it to converge with
+	// is no leader for it to converge with even if the backwards-compatible
+	// 'nuocmd check servers' (plural) succeeds; this verifies that the
+	// fallback behavior does not apply to actual failures of the readiness
+	// check
 	testlib.Await(t, func() bool {
 		// make sure 'nuocmd check servers' (plural) is successful, since it
 		// only checks that the --api-server is ACTIVE
@@ -89,13 +94,14 @@ func TestAdminReadinessProbe(t *testing.T) {
 		// make sure exit code is 1 to indicate non-parse error
 		code, err := shell.GetExitCodeForRunCommandError(err)
 		require.NoError(t, err)
+		require.NotEqual(t, 2, code, "Exit code 2 should be reserved for parse errors")
 		return code == 1
 	}, 60*time.Second)
 
 	// make sure 'nuocmd check servers' (plural) is successful, since it
 	// only checks that the --api-server is ACTIVE
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "nuocmd", "check", "servers")
-	require.NoError(t, err, fmt.Sprintf("'nuocmd check servers' failed: %s", output))
+	require.NoError(t, err, "'nuocmd check servers' failed: %s", output)
 }
 
 func TestAdminReadinessProbeFallback(t *testing.T) {
@@ -123,7 +129,7 @@ func TestAdminReadinessProbeFallback(t *testing.T) {
 	// make sure 'nuocmd check server' fails
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "nuocmd", "check", "server")
-	require.Error(t, err, fmt.Sprintf("Expected 'nuocmd check server' to fail on %s: %s", OLD_RELEASE, output))
+	require.Error(t, err, "Expected 'nuocmd check server' to fail on %s: %s", OLD_RELEASE, output)
 	// make sure exit code is 2 to indicate parse error
 	code, err := shell.GetExitCodeForRunCommandError(err)
 	require.NoError(t, err)
@@ -131,7 +137,7 @@ func TestAdminReadinessProbeFallback(t *testing.T) {
 
 	// make sure readinessprobe is successful
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "readinessprobe")
-	require.NoError(t, err, fmt.Sprintf("readinessprobe failed on %s: %s", OLD_RELEASE, output))
+	require.NoError(t, err, "readinessprobe failed on %s: %s", OLD_RELEASE, output)
 }
 
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
