@@ -69,12 +69,10 @@ func TestAdminReadinessProbe(t *testing.T) {
 	// is no leader for it to converge with
 	testlib.Await(t, func() bool {
 		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
-		require.Error(t, err, fmt.Sprintf("Expected readinessprobe to fail: %s", output))
 		// make sure exit code is 1 to indicate non-parse error
 		code, err := shell.GetExitCodeForRunCommandError(err)
 		require.NoError(t, err)
-		require.Equal(t, 1, code)
-		return true
+		return code == 1
 	}, 60*time.Second)
 
 	// make sure 'nuocmd check servers' (plural) is successful, since it
