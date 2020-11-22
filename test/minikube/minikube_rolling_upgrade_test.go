@@ -63,7 +63,7 @@ func TestAdminReadinessProbe(t *testing.T) {
 	// delete Raft log on admin-0 and kill admin-0 so that it bootstraps a
 	// disjoint domain when it is restarted and refuses messages from
 	// admin-1
-	k8s.RunKubectl(t, options, "exec", admin0, "--", "bash", "-c", "rm -f /var/opt/nuodb/raftlog && kill -9 1")
+	k8s.RunKubectl(t, options, "exec", admin0, "--", "bash", "-c", "rm -f /var/opt/nuodb/raftlog && (pgrep java | xargs kill -9)")
 
 	// make sure readinessprobe on admin-1 eventually fails, because there
 	// is no leader for it to converge with
