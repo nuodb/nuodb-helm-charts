@@ -12,6 +12,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+	"github.com/stretchr/testify/require"
 	v12 "k8s.io/api/core/v1"
 )
 
@@ -163,6 +164,9 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 }
 
 func TestUpgradeHelm(t *testing.T) {
+	out, err := helm.RunHelmCommandAndGetOutputE(t, &helm.Options{}, "repo", "update")
+	require.NoError(t, err, "'helm repo update' failed: %s", out)
+
 	t.Run("NuoDB40X_From231_ToLocal", func(t *testing.T) {
 		upgradeAdminTest(t, "2.3.1", &UpdateOptions{
 			adminPodShouldGetRecreated:            true,
