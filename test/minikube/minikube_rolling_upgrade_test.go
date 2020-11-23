@@ -55,7 +55,12 @@ func TestAdminReadinessProbe(t *testing.T) {
 	admin0 := adminStatefulSet + "-0"
 	admin1 := adminStatefulSet + "-1"
 
-	// make sure readinessprobe succeeds on both Admin processes
+	// make sure both Admin Pods become Ready
+	testlib.AwaitPodUp(t, namespaceName, admin0, 120*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin1, 120*time.Second)
+
+	// make sure direct invocation of readinessprobe script succeeds on both
+	// Admin processes
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "readinessprobe")
 	require.NoError(t, err, "readinessprobe failed: %s", output)

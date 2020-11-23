@@ -125,7 +125,7 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           exec:
-            command: [ "nuodocker", "check", "servers", "--check-connected", "--check-active", "--check-leader" ]
+            command: [ "readinessprobe" ]
           failureThreshold: 30
           successThreshold: 2
           timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
