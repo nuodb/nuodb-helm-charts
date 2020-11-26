@@ -174,12 +174,15 @@ func TestUpgradeHelm(t *testing.T) {
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
 		upgradeAdminTest(t, "2.4.0", &UpdateOptions{
-			adminRolesRequirePatching: true,
+			adminPodShouldGetRecreated: true,
+			adminRolesRequirePatching:  true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "2.4.1", &UpdateOptions{})
+		upgradeAdminTest(t, "2.4.1", &UpdateOptions{
+			adminPodShouldGetRecreated: true,
+		})
 	})
 }
 
@@ -194,11 +197,14 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
 		upgradeDatabaseTest(t, "2.4.0", &UpdateOptions{
-			adminRolesRequirePatching: true,
+			adminPodShouldGetRecreated: true,
+			adminRolesRequirePatching:  true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "2.4.1", &UpdateOptions{})
+		upgradeDatabaseTest(t, "2.4.1", &UpdateOptions{
+			adminPodShouldGetRecreated: true,
+		})
 	})
 }
