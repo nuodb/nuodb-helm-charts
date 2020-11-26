@@ -31,7 +31,7 @@ nuocmd_fallback() {
 #      that its Raft state is up-to-date.
 nuocmd_fallback check server --check-active --check-connected --check-converged
 
-# 'nuocmd check server' is unsupported; use 'nuocmd check servers' (plural)
-# with no arguments, which simply checks that the --api-server is ACTIVE and
-# able to service REST requests
-nuocmd check servers
+# 'nuocmd check server' is unsupported; use the 'nuocmd check servers' (plural)
+# subcommand, which was used as the readiness probe in releases of
+# nuodb-helm-charts <=3.0.0
+nuocmd check servers --check-active --check-connected --check-leader

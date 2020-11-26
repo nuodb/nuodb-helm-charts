@@ -34,7 +34,8 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 
 func TestAdminReadinessProbe(t *testing.T) {
 	// TODO: remove this whenever the image tested in nuodb-helm-charts CI
-	// supports 'nuocmd check server' (singular)
+	// supports 'nuocmd check server' (singular), i.e. whenever the version
+	// is bumped to >4.1.1
 	if os.Getenv("NUODB_DEV") != "true" {
 		t.Skip("'nuocmd check server' is not supported in released versions")
 	}
