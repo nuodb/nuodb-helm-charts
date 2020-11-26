@@ -93,7 +93,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 			"database.sm.resources.requests.memory": "250Mi",
 			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": "250Mi",
-			"nuodb.image.imagePullPolicy":           "IfNotPresent",
+			"nuodb.image.pullPolicy":                "IfNotPresent",
 		},
 		Version: fromHelmVersion,
 	}
