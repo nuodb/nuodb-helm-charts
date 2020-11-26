@@ -67,46 +67,28 @@ func TestAdminReadinessProbe(t *testing.T) {
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
 	require.NoError(t, err, "readinessprobe failed: %s", output)
 
-	leader, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "bash", "-c",
-		"nuocmd show domain --server-format '{role} {id}' | sed -n 's/ *LEADER //p'")
-	require.NoError(t, err)
 	// delete Raft log on admin-0 and kill admin-0 so that it bootstraps a
 	// disjoint domain when it is restarted and refuses messages from
 	// admin-1
 	k8s.RunKubectl(t, options, "exec", admin0, "--", "rm", "-f", "/var/opt/nuodb/raftlog")
 	k8s.RunKubectl(t, options, "delete", "pod", admin0)
-	// also kill admin-1 if it was the leader so that a new leader has to be
-	// elected when it is restarted
-	if admin1 == strings.TrimSpace(leader) {
-		k8s.RunKubectl(t, options, "delete", "pod", admin1)
-	}
 
-	// make sure readinessprobe on admin-1 eventually fails, because there
-	// is no leader for it to converge with even if the backwards-compatible
-	// 'nuocmd check servers' (plural) succeeds; this verifies that the
-	// fallback behavior does not apply to actual failures of the readiness
-	// check
+	// make sure readinessprobe on admin-1 eventually fails, either because
+	// there is no leader for it to converge with or because it thinks it is
+	// the leader but is not connected to a quorum
 	testlib.Await(t, func() bool {
-		// make sure 'nuocmd check servers' (plural) is successful, since it
-		// only checks that the --api-server is ACTIVE
-		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "nuocmd", "check", "servers")
-		if err != nil {
-			return false
-		}
-
 		// make sure readinessprobe fails
 		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
-		// make sure exit code is 1 to indicate non-parse error
 		code, err := shell.GetExitCodeForRunCommandError(err)
 		require.NoError(t, err)
-		require.NotEqual(t, 2, code, "Exit code 2 should be reserved for parse errors")
-		return code == 1
+		if code == 0 {
+			return false
+		}
+		// make sure exit code is 1 to indicate non-parse error
+		require.Equal(t, 1, code)
+		require.Contains(t, output, "'check server' failed:")
+		return true
 	}, 60*time.Second)
-
-	// make sure 'nuocmd check servers' (plural) is successful, since it
-	// only checks that the --api-server is ACTIVE
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "nuocmd", "check", "servers")
-	require.NoError(t, err, "'nuocmd check servers' failed: %s", output)
 }
 
 func TestAdminReadinessProbeFallback(t *testing.T) {

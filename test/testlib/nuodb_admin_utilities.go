@@ -125,10 +125,10 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 			_, err := k8s.GetPodE(t, kubectlOptions, adminName)
 			if err != nil {
 				t.Logf("Admin pod '%s' is not available and logs can not be retrieved", adminName)
+			} else {
+				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
+				GetAdminEventLog(t, namespaceName, adminName)
 			}
-
-			go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
-			GetAdminEventLog(t, namespaceName, adminName)
 		})
 	}
 
