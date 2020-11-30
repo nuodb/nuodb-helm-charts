@@ -281,11 +281,33 @@ func TestAdminScaleDown(t *testing.T) {
 	testlib.Await(t, func() bool {
 		output, _ := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
 			"nuocmd", "show", "domain", "--server-format", "{id} {connected_state}")
-		return strings.Contains(output, admin1+" Disconnected")
+		return strings.Contains(output, admin1+" Disconnected") || strings.Contains(output, admin1+" Evicted")
 	}, 300*time.Second)
 
 	// wait for scaled-down Admin Pod to be deleted
 	testlib.AwaitNoPods(t, namespaceName, admin1)
+
+	// make sure 'nuocmd check servers --check-active --check-connected
+	// --check-leader' fails due to admin1 being disconnected
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+		"nuocmd", "check", "servers", "--check-active", "--check-connected", "--check-leader")
+	require.Error(t, err, output)
+	require.Contains(t, output, fmt.Sprintf("Servers not CONNECTED to %s: %s", admin0, admin1))
+
+	// if 'nuocmd check server' (singular) is supported, check that
+	// readiness probe still passes; TODO: perform this check
+	// unconditionally whenever the image tested in nuodb-helm-charts CI
+	// is bumped to >4.1.1
+	if os.Getenv("NUODB_DEV") == "true" {
+		// admin0 should still show as "Ready"
+		testlib.AwaitPodUp(t, namespaceName, admin0, 30*time.Second)
+
+		// invoke 'nuocmd check server' directly
+		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+			"nuocmd", "check", "server", "--check-active", "--check-connected", "--check-converged")
+		require.NoError(t, err, output)
+		require.Empty(t, strings.TrimSpace(output))
+	}
 
 	// commit a Raft command to confirm that remaining Admin has consensus
 	k8s.RunKubectl(t, options, "exec", admin0, "--",
