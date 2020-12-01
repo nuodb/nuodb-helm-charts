@@ -184,6 +184,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
 | `readinessTimeoutSeconds` | Admin readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `1` |
 | `podAnnotations` | Annotations to pass through to the Admin pod | `nil` |
+| `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
+| `tde.storagePasswordsDir` | Transparent Data Encryption storage passwords mount path | `/etc/nuodb/tde` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 

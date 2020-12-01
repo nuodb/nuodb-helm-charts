@@ -164,6 +164,8 @@ The following tables list the configurable admin parameters for a database and t
 | `tlsKeyStore.password` | TLS keystore secret password | `nil` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
+| `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
+| `tde.storagePasswordsDir` | Transparent Data Encryption storage passwords mount path | `/etc/nuodb/tde` |
 
 #### admin.configFiles.*
 

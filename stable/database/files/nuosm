@@ -9,6 +9,7 @@ NUODB_DEBUG="false"
 
 : ${NUODB_ARCHIVEDIR:=/var/opt/nuodb/archive}
 : ${NUODB_BACKUPDIR:=/var/opt/nuodb/backup}
+: ${NUODB_STORAGE_PASSWORDS_DIR:=/etc/nuodb/tde}
 : ${NUODB_DOMAIN:="nuodb"}
 : ${NUODB_SEQUENCE_SYNC:=true}
 
@@ -32,7 +33,7 @@ if [ $crashcount -ge 1 ]; then
   fi
 fi
 
-export NUOCMD DB_NAME
+export NUOCMD DB_NAME NUODB_STORAGE_PASSWORDS_DIR
 
 #=======================================
 # function - report an error and exit
@@ -109,18 +110,21 @@ function perform_restore() {
     curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $DB_DIR
 
     chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $DB_DIR
+    # call nuodocker to fix the archive metadata
+    nuodocker --api-server $NUOCMD_API_SERVER restore archive \
+      --origin-dir $DB_DIR \
+      --restore-dir $DB_DIR \
+      --db-name $DB_NAME --clean-metadata
   else
-    $NUODB_BINDIR/nuoarchive restore --restore-dir $DB_DIR $NUODB_BACKUPDIR/$restore_source
+    nuodocker --api-server $NUOCMD_API_SERVER restore archive \
+      --origin-dir $NUODB_BACKUPDIR/$restore_source \
+      --restore-dir $DB_DIR \
+      --db-name $DB_NAME --clean-metadata ${extra_flags}
   fi
 
-  # # call nuodocker to fix the archive metadata
-  # nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
-
-  # # completely delete my previous archive metadata
-  # [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
-
-  # clear the SM wait semaphore
-  #$NUOCMD set value --key $startup_key/$DB_NAME --value '' --unconditional
+  # completely delete my previous archive metadata
+  # this is required because nuodocker always creates a new archive
+  [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
 }
 
 #=============================
@@ -275,13 +279,6 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     # transfer ownership of the startup semaphore to myself
     $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --expected-value $owner
   done
-
-  # call nuodocker to fix the archive metadata
-  nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $DB_DIR --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata
-
-  # completely delete my previous archive metadata
-  # this is required because nuodocker always creates a new archive
-  [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
 
 fi
 
