@@ -43,10 +43,10 @@ jobs:
           no_output_timeout: 60m
 
       - store_test_results: # upload test results for display in Test Summary
-          path: $TEST_RESULTS
+          path: /tmp/test-results
 
       - store_artifacts:
-          path: $TEST_RESULTS
+          path: /tmp/test-results
 
       - store_artifacts:
           path: ./results/
