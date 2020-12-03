@@ -119,7 +119,7 @@ function perform_restore() {
     nuodocker --api-server $NUOCMD_API_SERVER restore archive \
       --origin-dir $NUODB_BACKUPDIR/$restore_source \
       --restore-dir $DB_DIR \
-      --db-name $DB_NAME --clean-metadata ${extra_flags}
+      --db-name $DB_NAME --clean-metadata
   fi
 
   # completely delete my previous archive metadata

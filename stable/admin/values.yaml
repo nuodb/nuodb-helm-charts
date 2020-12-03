@@ -244,9 +244,8 @@ admin:
   # For example:
   #   kubectl create secret generic demo-tde-secret -n nuodb \
   #     --from-literal target='superSecret' \
-  #     --from-literal current='topSecret' \
   #     --from-literal historical-20201110='topSecret' \
-  #     --dry-run -o yaml | k apply -f -
+  #     --dry-run=client -o yaml | kubectl apply -f -
   tde:
     secrets: {}
       # demo: demo-tde-secret

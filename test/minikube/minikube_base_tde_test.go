@@ -58,6 +58,7 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"admin.tde.storagePasswordsDir":         "/etc/nuodb/encryption",
 		},
 	}
 	randomSuffix := strings.ToLower(random.UniqueId())
