@@ -7,11 +7,13 @@ import (
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
 )
 
 const UPGRADE_STRATEGY = `
@@ -143,4 +145,57 @@ func StartDatabase(t *testing.T, namespace string, adminPod string, options *hel
 func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, deploymentName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.RunKubectl(t, kubectlOptions, "patch", "deployment", deploymentName, "-p", UPGRADE_STRATEGY)
+}
+
+func RestoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options) {
+	// run the restore chart - which flags the database to restore on next startup
+	randomSuffix := strings.ToLower(random.UniqueId())
+
+	restName := fmt.Sprintf("restore-demo-%s", randomSuffix)
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.name":       "demo",
+			"restore.target":      "demo",
+			"restore.source":      ":latest",
+			"restore.autoRestart": "true",
+		},
+	}
+	for key := range options.SetValues {
+		if value, ok := databaseOptions.SetValues[key]; ok {
+			options.SetValues[key] = value
+		}
+	}
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = kubectlOptions
+
+	restore := func() {
+		// Remove restore job if exist as it's not unique for a restore chart release
+		k8s.RunKubectlE(t, kubectlOptions, "delete", "job", "restore-"+options.SetValues["database.name"])
+		InjectTestValues(t, options)
+		helm.Install(t, options, RESTORE_HELM_CHART_PATH, restName)
+		AddTeardown(TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
+		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
+	}
+
+	AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
+}
+
+func BackupDatabase(t *testing.T, namespaceName string, podName string,
+	databaseName string, backupType string, backupGroup string) string {
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, opts,
+		"exec", podName, "--",
+		"nuobackup", "--type", backupType, "--db-name", databaseName,
+		"--group", backupGroup, "--backup-root", "/var/opt/nuodb/backup",
+	)
+	require.NoError(t, err, "Error creating backup")
+	require.True(t, strings.Contains(output, "completed"), "Error nuobackup: %s", output)
+	backupset, err := k8s.RunKubectlAndGetOutputE(t, opts,
+		"exec", podName, "--", "bash", "-c",
+		"nuobackup --type report-latest --db-name "+databaseName+
+			" --group "+backupGroup+" --backup-root /var/opt/nuodb/backup 2>/dev/null",
+	)
+	require.NoError(t, err, "Error while reporting latest backupset")
+	require.True(t, output != "")
+	return backupset
 }

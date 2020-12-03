@@ -828,7 +828,7 @@ func DeleteDatabase(t *testing.T, namespace string, dbName string, podName strin
 func DeletePod(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	k8s.RunKubectl(t, options, "delete", podName)
+	k8s.RunKubectl(t, options, "delete", "pod", podName)
 }
 
 func RunSQL(t *testing.T, namespace string, podName string, databaseName string, sql string) (result string, err error) {

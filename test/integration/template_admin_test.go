@@ -12,7 +12,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 )
 
 func TestAdminDefaultLicense(t *testing.T) {
@@ -373,16 +372,16 @@ func TestAdminPodAnnotationsRender(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.podAnnotations.key1": "value1",
-			"admin.podAnnotations.key2": "value2",
-			"admin.podAnnotations.key3\\.key3": "value3",
-			"admin.podAnnotations.key4\\.key4/key4": "value4",
-			"admin.podAnnotations.key5\\.key5/key5": "value5/value5",
+			"admin.podAnnotations.key1":                                 "value1",
+			"admin.podAnnotations.key2":                                 "value2",
+			"admin.podAnnotations.key3\\.key3":                          "value3",
+			"admin.podAnnotations.key4\\.key4/key4":                     "value4",
+			"admin.podAnnotations.key5\\.key5/key5":                     "value5/value5",
 			"admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject": `"true"`,
-			"admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert": "|\n"+
-			"{{- with secret \"nuodb.com/TLS\" -}}\n"+
-			"  {{ .Data.data.tlsCACert }}\n"+
-			"{{- end }}",
+			"admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert": "|\n" +
+				"{{- with secret \"nuodb.com/TLS\" -}}\n" +
+				"  {{ .Data.data.tlsCACert }}\n" +
+				"{{- end }}",
 		},
 	}
 
@@ -397,5 +396,35 @@ func TestAdminPodAnnotationsRender(t *testing.T) {
 		assert.Equal(t, options.SetValues["admin.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
 		assert.Equal(t, options.SetValues["admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
 		assert.Equal(t, options.SetValues["admin.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
+	}
+}
+
+func TestAdminStoragePasswordsRender(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.tde.secrets.databaseA":   "tde-secret-db-a",
+			"admin.tde.secrets.databaseB":   "tde-secret-db-b",
+			"admin.tde.storagePasswordsDir": "/etc/nuodb/encryption",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		container := obj.Spec.Template.Spec.Containers[0]
+		assert.Contains(t, container.Args, "tdeMonitor.storagePasswordsDir="+options.SetValues["admin.tde.storagePasswordsDir"])
+		for _, database := range []string{"databaseA", "databaseB"} {
+			mount, ok := testlib.GetMount(container.VolumeMounts, "tde-volume-"+database)
+			assert.True(t, ok, "mount tde-volume-%s not found", database)
+			assert.True(t, mount.ReadOnly)
+			assert.Equal(t, options.SetValues["admin.tde.storagePasswordsDir"]+"/"+database, mount.MountPath)
+			volume, ok := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "tde-volume-"+database)
+			assert.True(t, ok, "volume tde-volume-%s not found", database)
+			assert.Equal(t, options.SetValues["admin.tde.secrets."+database], volume.VolumeSource.Secret.SecretName)
+		}
 	}
 }
