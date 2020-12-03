@@ -87,7 +87,7 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 	// Restarting the only admin pod will mean that all storage passwords
 	// will be "forgoten" by the admin
 	adminPod := testlib.GetPod(t, namespaceName, admin0)
-	testlib.DeletePod(t, namespaceName, admin0)
+	testlib.DeletePod(t, namespaceName, "pod/"+admin0)
 	testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 	testlib.AwaitAdminFullyConnected(t, namespaceName, admin0, 1)
@@ -100,7 +100,7 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 	opt := testlib.GetExtractedOptions(&options)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
-	testlib.DeletePod(t, namespaceName, smPodName0)
+	testlib.DeletePod(t, namespaceName, "pod/"+smPodName0)
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 2)
 }
 
