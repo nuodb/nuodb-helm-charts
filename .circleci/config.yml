@@ -1,0 +1,52 @@
+# Golang CircleCI 2.0 configuration file
+#
+# Check https://circleci.com/docs/2.0/language-go/ for more details
+version: 2
+jobs:
+  build:
+    machine:
+      image: ubuntu-1604:202007-01
+
+    environment:
+      HELM_VERSION: "v3.2.4"
+      DEP_VERSION: "0.5.4"
+      KUBERNETES_VERSION: "1.15.0"
+      OPENSHIFT_VERSION: "3.11.0"
+      MINIKUBE_VERSION: "1.2.0"
+      MINISHIFT_VERSION: "1.34.2"
+      GOTESTSUM_VERSION: "0.6.0"
+      MINIKUBE_WANTUPDATENOTIFICATION: false
+      MINIKUBE_WANTREPORTERRORPROMPT: false
+      CHANGE_MINIKUBE_NONE_USER: true
+      REQUIRES_MINIKUBE: true
+      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+
+    parallelism: 4
+    
+    steps:
+      - checkout
+
+      - run:
+          name: Install Dependencies
+          command: |
+            export KUBECONFIG="$HOME/.kube/config"
+            export MINIKUBE_HOME="$HOME"
+            chmod a+x scripts/ci/*.sh
+            scripts/ci/install_deps.sh
+
+      - run:
+          name: Run the tests
+          command: |
+            mkdir -p $TEST_RESULTS # create the test results directory
+            test_suites=("./test/integration ./test/minikube -tags=short" "./test/minikube -tags=long" "./test/minikube -tags=diagnostics" "./test/minikube -tags=upgrade")
+            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-$CIRCLE_NODE_INDEX.xml --format testname -- -timeout 50m ${test_suites[$CIRCLE_NODE_INDEX]}
+          no_output_timeout: 60m
+
+      - store_test_results: # upload test results for display in Test Summary
+          path: /tmp/test-results
+
+      - store_artifacts:
+          path: /tmp/test-results
+
+      - store_artifacts:
+          path: ./results/

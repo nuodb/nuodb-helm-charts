@@ -1,0 +1,37 @@
+#!/bin/sh
+
+nuocmd_fallback() {
+    # run nuocmd subcommand and suppress parse errors due to the command
+    # containing unsupported arguments or the subcommand not being supported at
+    # all by the available version of nuocmd; if the command succeeds or fails
+    # with a non-parse error, emit command output and exit
+
+    # capture stdout and stderr and get exit code
+    out="$(nuocmd "$@" 2>&1)"
+    ret=$?
+
+    # nuocmd returns exit code 2 if there is a parse error due to unrecognized
+    # subcommand or arguments
+    if [ $ret != 2 ]; then
+        # the command succeeded or failed with a non-parse error; emit command
+        # output and exit
+        echo "$out"
+        exit $ret
+    fi
+}
+
+# 'nuocmd check server' is introduced in versions >4.1.1; this checks that the
+# --api-server satisfies the following conditions:
+#   1. It is ACTIVE and able to service REST requests.
+#   2. It is able to ping its own advertised address, i.e. altAddr in
+#      nuoadmin.conf, which is derived from the --alt-address argument of
+#      'nuodocker start admin' and the NUODB_ALT_ADDRESS environment variable
+#      for the nuoadmin entrypoint script.
+#   3. It has the same commit index as the current Raft leader, which means
+#      that its Raft state is up-to-date.
+nuocmd_fallback check server --check-active --check-connected --check-converged
+
+# 'nuocmd check server' is unsupported; use the 'nuocmd check servers' (plural)
+# subcommand, which was used as the readiness probe in releases of
+# nuodb-helm-charts <=3.0.0
+nuocmd check servers --check-active --check-connected --check-leader

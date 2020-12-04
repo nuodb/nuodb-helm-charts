@@ -733,7 +733,13 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 
 	writer := io.Writer(f)
 
-	reader := getAppLogStream(t, namespace, podName, podLogOptions)
+	reader, err := getAppLogStreamE(t, namespace, podName, podLogOptions)
+	// avoid generating test failure just because container has not been started
+	if ctrerr, ok := err.(*ContainerNotStarted); ok {
+		t.Logf("Skipping log collection for pod %s because container %s has not been started", podName, ctrerr.Name)
+		return ""
+	}
+	require.NoError(t, err)
 	require.NotNil(t, reader)
 	_, err = io.Copy(writer, reader)
 	require.NoError(t, err)
@@ -743,28 +749,51 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 	return filePath
 }
 
-func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
+type ContainerNotStarted struct {
+	Name string
+}
+
+func (e *ContainerNotStarted) Error() string {
+	return fmt.Sprintf("Container %s not started", e.Name)
+}
+
+func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) (reader io.ReadCloser, err error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
-	require.NoError(t, err)
 
 	if podLogOptions.Container == "" {
 		// Select first container if not specified; otherwise the GetLogs method will fail if there are sidecars
-		pod, err := client.CoreV1().Pods(options.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
-		require.NoError(t, err)
-		require.Greater(t, len(pod.Spec.Containers), 0)
+		pod, e := client.CoreV1().Pods(options.Namespace).Get(context.TODO(), podName, metav1.GetOptions{})
+		if e != nil {
+			err = e
+			return
+		}
+		if len(pod.Spec.Containers) == 0 {
+			err = errors.New("No containers found")
+			return
+		}
 		container := findAdminOrEngineContainer(pod.Spec.Containers)
 		if container == nil {
 			container = &pod.Spec.Containers[0]
+		}
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if containerStatus.Name == container.Name && containerStatus.Started != nil && !*containerStatus.Started {
+				err = &ContainerNotStarted{container.Name}
+				return
+			}
 		}
 		podLogOptions.Container = container.Name
 		t.Logf("Multiple containers found in pod %s. Getting logs from container %s.", podName, podLogOptions.Container)
 	}
 
-	reader, err := client.CoreV1().Pods(options.Namespace).GetLogs(podName, podLogOptions).Stream(context.TODO())
-	require.NoError(t, err)
+	reader, err = client.CoreV1().Pods(options.Namespace).GetLogs(podName, podLogOptions).Stream(context.TODO())
+	return
+}
 
+func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
+	reader, err := getAppLogStreamE(t, namespace, podName, podLogOptions)
+	require.NoError(t, err)
 	return reader
 }
 
@@ -923,8 +952,9 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	)
 	require.NoError(t, err, "Could not set KV value")
 	elapsed := time.Since(start)
-
-	require.True(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV set took longer than 2s: %s", elapsed))
+	if elapsed.Seconds() > 2.0 {
+		t.Logf("KV set took longer than 2s: %s", elapsed)
+	}
 
 	start = time.Now()
 	output, err = k8s.RunKubectlAndGetOutputE(t, options,
@@ -932,8 +962,9 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	)
 	require.NoError(t, err, "Could not get KV value")
 	elapsed = time.Since(start)
-
-	require.True(t, elapsed.Seconds() < 2.0, fmt.Sprintf("KV get took longer than 2s: %s", elapsed))
+	if elapsed.Seconds() > 2.0 {
+		t.Logf("KV get took longer than 2s: %s", elapsed)
+	}
 
 	require.True(t, output == "testVal", fmt.Sprintf("KV get returned the wrong value: %s", output))
 }

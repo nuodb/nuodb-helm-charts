@@ -130,7 +130,7 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           exec:
-            command: [ "nuodocker", "check", "servers", "--check-connected", "--check-active", "--check-leader" ]
+            command: [ "readinessprobe" ]
           failureThreshold: 30
           successThreshold: 2
           timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
@@ -149,6 +149,9 @@ spec:
         - name: nuoadmin
           mountPath: /usr/local/bin/nuoadmin
           subPath: nuoadmin
+        - name: readinessprobe
+          mountPath: /usr/local/bin/readinessprobe
+          subPath: readinessprobe
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert
           mountPath: /etc/nuodb/keys/ca.cert
@@ -227,7 +230,11 @@ spec:
       - name: nuoadmin
         configMap:
           name: {{ template "admin.fullname" . }}-nuoadmin
-          defaultMode: 0777
+          defaultMode: 0755
+      - name: readinessprobe
+        configMap:
+          name: {{ template "admin.fullname" . }}-readinessprobe
+          defaultMode: 0755
   volumeClaimTemplates:
   - metadata:
       name: raftlog
