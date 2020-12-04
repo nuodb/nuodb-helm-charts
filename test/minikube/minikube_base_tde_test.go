@@ -1,4 +1,4 @@
-// +build enterprise
+// +build long
 
 package minikube
 
@@ -47,6 +47,12 @@ func applyStoragePasswordSecret(t *testing.T, namespaceName string, name string,
 }
 
 func TestAdminColdStartWithTDE(t *testing.T) {
+	// TODO: remove this whenever the image tested in nuodb-helm-charts CI
+	// supports 'tde_monitor' service, i.e. whenever the version
+	// is bumped to >4.1.1
+	if os.Getenv("NUODB_DEV") != "true" {
+		t.Skip("'tde_monitor' service is not supported in released versions")
+	}
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -105,6 +111,12 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 }
 
 func TestRestoreInPlaceWithTDE(t *testing.T) {
+	// TODO: remove this whenever the image tested in nuodb-helm-charts CI
+	// supports 'tde_monitor' service, i.e. whenever the version
+	// is bumped to >4.1.1
+	if os.Getenv("NUODB_DEV") != "true" {
+		t.Skip("'tde_monitor' service is not supported in released versions")
+	}
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
