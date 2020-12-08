@@ -238,8 +238,8 @@ admin:
   # Note: TDE should be enabled on database layer using
   #   SQL> alter database change encryption type AES128;
   #
-  # Storage password rotation is performed by updating te secret and 
-  # providing current, new target and historical (optional) passwords. 
+  # Storage password rotation is performed by updating the secret and 
+  # providing the new target and historical (optional) passwords. 
   # The historical passwords are used for restoring old backup sets. 
   # For example:
   #   kubectl create secret generic demo-tde-secret -n nuodb \

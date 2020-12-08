@@ -46,6 +46,22 @@ func applyStoragePasswordSecret(t *testing.T, namespaceName string, name string,
 	})
 }
 
+func performStoragePasswordsRotation(t *testing.T, namespaceName string, adminPod string,
+	dbName string, secretName string, passwords []string) {
+	assert.Greater(t, len(passwords), 0)
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	applyStoragePasswordSecret(t, namespaceName, secretName, passwords)
+	testlib.Await(t, func() bool {
+		err := k8s.RunKubectlE(t, kubectlOptions,
+			"exec", adminPod, "--",
+			"nuocmd", "check", "data-encryption",
+			"--db-name", dbName,
+			"--password", passwords[0],
+		)
+		return err == nil
+	}, 90*time.Second)
+}
+
 func TestAdminColdStartWithTDE(t *testing.T) {
 	// TODO: remove this whenever the image tested in nuodb-helm-charts CI
 	// supports 'tde_monitor' service, i.e. whenever the version
@@ -67,6 +83,7 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 			"admin.tde.storagePasswordsDir":         "/etc/nuodb/encryption",
 		},
 	}
+	opt := testlib.GetExtractedOptions(&options)
 	randomSuffix := strings.ToLower(random.UniqueId())
 	namespaceName := fmt.Sprintf("admin-cold-start-with-tde-%s", randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
@@ -83,12 +100,18 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
 			"Successfully updated storage passwords for dbName=demo", &corev1.PodLogOptions{}) >= 1
 	}, 30*time.Second)
+	k8s.RunKubectl(t, kubectlOptions,
+		"exec", admin0, "--",
+		"nuocmd", "check", "data-encryption",
+		"--db-name", opt.DbName,
+		"--password", password,
+	)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 	// Enable TDE on database level
 	output, _ := testlib.RunSQL(t, namespaceName, admin0, "demo", "alter database change encryption type AES128")
-	assert.False(t, strings.Contains(output, "Error"), "Failed to enable TDE: %s", output)
+	require.False(t, strings.Contains(output, "Error"), "Failed to enable TDE: %s", output)
 
 	// Restarting the only admin pod will mean that all storage passwords
 	// will be "forgoten" by the admin
@@ -103,7 +126,6 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 	}, 30*time.Second)
 
 	// verify that restarting an SM pod will succeed to start encrypted archive
-	opt := testlib.GetExtractedOptions(&options)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
 	testlib.DeletePod(t, namespaceName, "pod/"+smPodName0)
@@ -128,11 +150,10 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"backup.persistence.enabled":            "true",
-			"backup.persistence.size":               "1Gi",
 			"database.te.logPersistence.enabled":    "true",
 		},
 	}
+	opt := testlib.GetExtractedOptions(&options)
 	randomSuffix := strings.ToLower(random.UniqueId())
 	namespaceName := fmt.Sprintf("restore-in-place-with-tde-%s", randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
@@ -149,21 +170,25 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
 			"Successfully updated storage passwords for dbName=demo", &corev1.PodLogOptions{}) >= 1
 	}, 30*time.Second)
+	k8s.RunKubectl(t, kubectlOptions,
+		"exec", admin0, "--",
+		"nuocmd", "check", "data-encryption",
+		"--db-name", opt.DbName,
+		"--password", password,
+	)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
 	// Generate diagnose in case this test fails
-	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() {
-		if t.Failed() {
-			testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-			testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
-		}
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
 	})
 
 	// Enable TDE on database level
 	output, _ := testlib.RunSQL(t, namespaceName, admin0, "demo", "alter database change encryption type AES128")
-	assert.False(t, strings.Contains(output, "Error"), "Failed to enable TDE: %s", output)
+	require.False(t, strings.Contains(output, "Error"), "Failed to enable TDE: %s", output)
 
 	// populate some data
 	k8s.RunKubectl(t, kubectlOptions,
@@ -179,7 +204,6 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	tables, _ := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
 	require.True(t, strings.Contains(tables, "HOCKEY"), "tables returned: %s", tables)
 
-	opt := testlib.GetExtractedOptions(&options)
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 
@@ -204,16 +228,8 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 
 	// Perform TDE password rotation
 	passwordNew := strings.ToLower(random.UniqueId())
-	applyStoragePasswordSecret(t, namespaceName, options.SetValues["admin.tde.secrets.demo"], []string{passwordNew, password})
-	testlib.Await(t, func() bool {
-		err := k8s.RunKubectlE(t, kubectlOptions,
-			"exec", admin0, "--",
-			"nuocmd", "check", "data-encryption",
-			"--db-name", opt.DbName,
-			"--password", passwordNew,
-		)
-		return err == nil
-	}, 90*time.Second)
+	performStoragePasswordsRotation(t, namespaceName, admin0, opt.DbName,
+		options.SetValues["admin.tde.secrets.demo"], []string{passwordNew, password})
 
 	// Drop USER.HOCKEY table before restore
 	testlib.RunSQL(t, namespaceName, admin0, "demo", "drop table USER.HOCKEY")
