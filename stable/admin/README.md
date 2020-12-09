@@ -102,7 +102,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | ----- | ----------- | ------ |
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
-| `image.tag` | NuoDB container image tag | `latest` |
+| `image.tag` | NuoDB container image tag | `4.0.8` |
 | `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
