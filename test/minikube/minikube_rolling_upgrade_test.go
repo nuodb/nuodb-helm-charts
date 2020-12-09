@@ -254,7 +254,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 }
 
 func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
-	t.Skip("4.0.7 Admin is not rolling upgradeable from pre-4.0.7")
+	t.Skip("4.0.7+ Admin is not rolling upgradeable from pre-4.0.7")
 
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
