@@ -284,9 +284,7 @@ Servers:
 Databases:
 ```
 
-The command displays the status of NuoDB processes. The Servers section lists admin processes; they should all be **Connected**, one will be the **LEADER** and other designated as a **FOLLOWER**.
-
-  **Tip**: Wait until all processes are be in a **RUNNING** state.
+The Servers section lists admin processes; each admin server should transition to the **Connected** state. When multiple Admins are started, one will be the **LEADER** and other designated as a **FOLLOWER**.
 
 ### Scaling
 
