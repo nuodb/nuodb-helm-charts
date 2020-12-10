@@ -24,7 +24,7 @@ To enable automated notification of new releases, click the `Watch` button above
 
 ## NuoDB Helm Chart Installation
 
-To add the NuoDB charts to your local client, run the `helm repo add` command below:
+To add the NuoDB charts to your local client, run:
 
 ```
 helm repo add nuodb https://storage.googleapis.com/nuodb-charts
@@ -36,7 +36,7 @@ To list the NuoDB charts added to your repository, run `helm search repo nuodb/`
 
 ## NuoDB Helm Chart Incubator Repository Installation
 
-The Incubator repository contains enhancements not yet available in the supported releases. To add the Incubator charts for your local client, run the `helm repo add` command below:
+The Incubator repository contains enhancements not yet available in the supported releases. This repository includes a sample applciation load generator. If you would like to install this sample application, then add the Incubator charts to your local client, run:
 
 ```
 helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.com/
@@ -48,11 +48,11 @@ To list the NuoDB incubator charts added to your repository, run `helm search re
 
 ## Install NuoDB
 
-### Follow the instructions in the [stable](stable/README.md) folder to install NuoDB: 
+### Follow the instructions in the [stable](stable/README.md) folder to install NuoDB.
 
 The charts in the `stable` directory in the master branch of this repository are the latest packaged chart in the chart repository. The purpose of this repository is to provide a place for maintaining and contributing official chart updates and enhancements into the chart repository.
 
-### Follow the instructions in the [incubator](incubator) folder to install the YCSB database workload generator (sample application): 
+### Follow the instructions in the [incubator](incubator) folder to install the YCSB database workload generator (sample application).
 
 The charts in the `Incubator` directory allows charts to be shared and improved on until they are ready to be moved into the stable folder.
 
