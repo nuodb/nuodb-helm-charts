@@ -343,6 +343,8 @@ Deploy a database without backups:
 helm install database nuodb/database --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1
 ```
 
+**Tip**: If you plan to deploy NuoDB Insights visual monitoring, add the `--set nuocollector.enabled=true` switch.
+
 Wait until the deployment completes:
 
 ```bash
@@ -354,12 +356,11 @@ Verify the pods are running:
 ```bash
 $ kubectl get pods
 NAME                                               READY   STATUS      RESTARTS   AGE
-admin-nuodb-0                                      1/1     Running     0          18h
+admin-nuodb-cluster-0-0                            1/1     Running     0          18h
 disable-thp-transparent-hugepage-59f7q             1/1     Running     0          18h
-sm-database-cashews-demo-0                         1/1     Running     0          18h
-sm-database-cashews-demo-hotcopy-0                 1/1     Running     0          18h
-te-database-cashews-demo-599ff97797-dtqkk          1/1     Running     0          18h
-tiller-deploy-88ff958dd-pgsjn                      1/1     Running     0          23h
+sm-database-demo-0                                 1/1     Running     0          18h
+sm-database-demo-hotcopy-0                         1/1     Running     0          18h
+te-database-demo-599ff97797-dtqkk                  1/1     Running     0          18h
 ```
 
 The command displays the NuoDB Pods running on the Kubernetes cluster. When completed, both the TE and the storage containers should show a **STATUS** of `Running`, and with 0 **RESTARTS**.
@@ -367,24 +368,26 @@ The command displays the NuoDB Pods running on the Kubernetes cluster. When comp
 Verify the connected states of the database domain:
 
 ```bash
-$ kubectl exec -it admin-nuodb-0 -- nuocmd show domain
+$ kubectl exec -it admin-nuodb-cluster-0-0 -- nuocmd show domain
 
-server version: 4.0-2-ef765f7906, server license: Enterprise
-server time: 2019-08-29T13:31:10.325, client token: b2c99602e831c0ad61e9becd518e4d5b323d6b3f
+server version: 4.0.7-2-6526a2db74, server license: Community
+server time: 2020-12-10T21:38:06.902, client token: 9d17a2a27edb31bd039ea85391c18197113a7a15
 Servers:
-  [admin-cashews-0] admin-cashews-0.cashews.nuodb.svc:48005 [last_ack = 1.81] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=admin-cashews-0, log=0/6535/6535) Connected *
+  [admin-nuodb-cluster0-0] admin-nuodb-cluster0-0.nuodb.nuodb-helm.svc.cluster.local:48005 
+     [last_ack = 0.29] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=admin-nuodb-cluster0-0, log=0/51/51) Connected *
 Databases:
   demo [state = RUNNING]
-    [SM] sm-database-cashews-demo-0/10.28.7.84:48006 [start_id = 0] [server_id = admin-cashews-2] [pid = 87] [node_id = 2] [last_ack = 10.17] MONITORED:RUNNING
-    [SM] sm-database-cashews-demo-hotcopy-0/10.28.2.172:48006 [start_id = 1] [server_id = admin-cashews-0] [pid = 87] [node_id = 1] [last_ack =  4.49] MONITORED:RUNNING
-    [TE] te-database-cashews-demo-599ff97797-dtqkk/10.28.3.166:48006 [start_id = 2] [server_id = admin-cashews-0] [pid = 86] [node_id = 3] [last_ack =  3.68] MONITORED:RUNNING
+    [SM] sm-demo-nuodb-cluster0-demo-database-hotcopy-0/10.1.0.163:48006 [start_id = 0] 
+        [server_id = admin-nuodb-cluster0-1] [pid = 343] [node_id = 1] [last_ack =  5.39] MONITORED:RUNNING
+    [TE] te-demo-nuodb-cluster0-demo-database-f7799d48d-bbnzv/10.1.0.159:48006 [start_id = 1] 
+        [server_id = admin-nuodb-cluster0-1] [pid = 496] [node_id = 2] [last_ack =  9.30] MONITORED:RUNNING
 ```
 
 The command displays the status of NuoDB processes. The Servers section lists admin processes; they should all be **Connected**, one will be the **LEADER** and other designated as a **FOLLOWER**.
 
-  **Tip**: Wait until all processes are be in a **RUNNING** state.
+**Tip**: Wait until all processes are be in a **RUNNING** state.
 
-Now to scale the TEs is simple enough:
+to scale-out the TEs, run:
 
 ```bash
 $ kubectl scale deployment te-database-nuodb-demo --replicas=2
