@@ -48,13 +48,11 @@ To list the NuoDB incubator charts added to your repository, run `helm search re
 
 ## Install NuoDB
 
-This GitHub repository contains the source for the packaged and versioned charts released in the [`gs://nuodb-charts` Google Storage bucket](https://console.cloud.google.com/storage/browser/nuodb-charts/) (the Chart Repository).
-
-Follow the instructions in the [stable](stable/README.md) folder to install NuoDB: 
+### Follow the instructions in the [stable](stable/README.md) folder to install NuoDB: 
 
 The charts in the `stable` directory in the master branch of this repository are the latest packaged chart in the chart repository. The purpose of this repository is to provide a place for maintaining and contributing official chart updates and enhancements into the chart repository.
 
-Follow the instructions in the [incubator](incubator) folder to install the YCSB database workload generator (sample application): 
+### Follow the instructions in the [incubator](incubator) folder to install the YCSB database workload generator (sample application): 
 
 The charts in the `Incubator` directory allows charts to be shared and improved on until they are ready to be moved into the stable folder.
 
