@@ -5,7 +5,7 @@ This chart deploys the NuoDB YCSB Demo on a Kubernetes cluster using the Helm pa
 ## Command
 
 ```bash
-helm install nuodb/demo-ycsb [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install [name] nuodb-incubator/demo-ycsb [--generate-name] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -105,13 +105,13 @@ The following tables list the configurable parameters of the YCSB chart and thei
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/demo-ycsb --name ycsb --debug --dry-run
+helm install ycsb nuodb-incubator/demo-ycsb --debug --dry-run
 ```
 
 Deploy the demo:
 
 ```bash
-helm install nuodb/demo-ycsb --name ycsb
+helm install ycsb nuodb-incubator/demo-ycsb
 ```
 
 The command deploys NuoDB Quickstart on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
@@ -146,7 +146,7 @@ replicationcontroller "demo-ycsb" scaled
 To uninstall/delete the deployment:
 
 ```bash
-helm del --purge ycsb
+helm del ycsb
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
