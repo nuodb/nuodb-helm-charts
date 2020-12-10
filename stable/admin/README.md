@@ -279,7 +279,8 @@ $ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 server version: 4.0.7-2-6526a2db74, server license: Community
 server time: 2020-12-10T21:13:25.722, client token: e64322a4728c8bf35ff7f02cda62cc74aca40b66
 Servers:
-  [admin-nuodb-cluster0-0] admin-nuodb-cluster0-0.nuodb.nuodb-helm.svc.cluster.local:48005 [last_ack = 1.29] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=admin-nuodb-cluster0-0, log=0/35/35) Connected *
+  [admin-nuodb-cluster0-0] admin-nuodb-cluster0-0.nuodb.nuodb-helm.svc.cluster.local:48005 
+     (LEADER, Leader=admin-nuodb-cluster0-0, log=0/35/35) Connected *
 Databases:
 ```
 
