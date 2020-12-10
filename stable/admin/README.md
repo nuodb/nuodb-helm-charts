@@ -244,11 +244,12 @@ helm install admin nuodb/admin --debug --dry-run
 
 Deploy the administration tier:
 
-```bash
-helm install admin nuodb/admin
-```
+**Tip**: If you plan to deploy NuoDB Insights visual monitoring, add the `--set nuocollector.enabled=true` switch as below.
 
-**Tip**: If you plan to deploy NuoDB Insights visual monitoring, add the `--set nuocollector.enabled=true` switch.
+
+```bash
+helm install admin nuodb/admin --set nuocollector.enabled=true
+```
 
 The command deploys NuoDB on the Kubernetes cluster using the default configuration. The configuration section lists the parameters that can be configured during installation.
 
