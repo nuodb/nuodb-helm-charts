@@ -98,7 +98,7 @@ Deploy the NuoDB Components in this order :
 - **NuoDB Admin** ([documentation](admin/README.md)) 
 - **NuoDB Database** ([documentation](database/README.md)) 
 
-Optionally, adding NuoDB Insights visual monitoring to your deployment is highly recommended. With NuoDB Insights, you can view real-time and historical performance data to assist with workload and/or root-cause analysis. 
+Optionally, adding NuoDB Insights visual monitoring to your deployment is highly recommended. With NuoDB Insights, you can view real-time and historical performance data graphically to assist with workload and/or root-cause analysis. 
 
 - **NuoDB Insights** ([documentation](https://github.com/nuodb/nuodb-insights/tree/master/stable#deploying-nuodb-insights-using-helm-charts)) 
 
