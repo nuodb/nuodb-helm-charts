@@ -248,9 +248,9 @@ Deploy the administration tier:
 helm install admin nuodb/admin
 ```
 
-**Tip**: It will take approximately 1 minute to deploy.
+**Tip**: If you plan to deploy NuoDB Insights visual monitoring, add the `--set nuocollector.enabled=true` switch.
 
-The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
+The command deploys NuoDB on the Kubernetes cluster using the default configuration. The configuration section lists the parameters that can be configured during installation.
 
 **Tip**: List all releases using `helm list`
 
