@@ -47,7 +47,7 @@ helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.
 To list the NuoDB incubator charts added to your repository, run `helm search repo nuodb-incubator/`
 
 
-## Install NuoDB
+## NuoDB Installation
 
 ### Follow the instructions in the [stable](stable/README.md) folder to install NuoDB.
 
