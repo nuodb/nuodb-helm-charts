@@ -5,9 +5,9 @@
 
 # Getting Started with Helm 
 
-This section will walk you through getting the Helm client installed in your environment. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
+This section provides instructions to install the Helm client in your environment. If using Red Hat OpenShift, confirm the OpenShift `oc` client program is installed locally and that you are logged into your OpenShift instance.
 
-There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
+There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm (and Tiller if using Helm 2). In some cases, required security settings are documented. Sub-charts pages include instructions for deploying each required NuoDB component.
 
 ## Software Version Prerequisites
 
@@ -23,17 +23,24 @@ NuoDB Helm Charts and their privilege requirements:
 | admin, database| allowedCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 | admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 
-
 ## Install Helm 3
 
-If you are interested in Helm 2, please follow the [official Helm 2 docs][7].
+If you are planning to install Helm 2, please follow the [official Helm 2 docs][7].
+
+### MacOS
+
+Use the Brew Package manager.
+```
+brew install helm
+```
+### Linux
 
 Every [release][2] of Helm provides binary releases for a variety of OSes. 
 
 1. Download your [desired version][2]
 2. Unpack it (`tar -zxvf helm-${helm-version}-linux-amd64.tgz`)
 
-We’ll use Helm version 3.2.4, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v3.2.4>.
+This example uses Helm version 3.2.4, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v3.2.4>.
 
 Run the following commands to install the Helm locally on your Linux client machine:
 ```bash
@@ -44,20 +51,6 @@ $ cd linux-amd64
 Move the Helm binaries to /usr/local/bin
 ```
 $ mv helm /usr/local/bin
-```
-
-If you're running on Mac, we recommend using the Brew Package manager.
-```
-brew install helm
-```
-
-Confirm you can run the Helm client: `helm help`.
-
-
-## Create the _nuodb_ namespace to install NuoDB
-
-```
-kubectl create namespace nuodb
 ```
 
 ## Confirm that the Helm client is installed correctly 
@@ -72,6 +65,12 @@ version.BuildInfo{Version:"v3.2.4", GitCommit:"0ad800ef43d3b826f31a5ad8dfbb4fe05
 # Deploying NuoDB using Helm Charts
 
 The following section outlines the steps in order to deploy a NuoDB database using this Helm Chart repository.
+
+## Create the _nuodb_ namespace to install the NuoDB components
+
+```
+kubectl create namespace nuodb
+```
 
 ## Configuration Parameters
 
