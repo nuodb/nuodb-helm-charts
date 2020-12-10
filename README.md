@@ -19,8 +19,9 @@ To enable automated notification of new releases, click the `Watch` button above
 |------------|------------------------------------------------|
 | Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.16 then 1.16 and 1.15 are offically supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
 | Managed Kubernetes Distributions |  OpenShift 4.x, Google GKE, Amazon EKS, Azure AKS, or Rancher RKE. Charts may also work on other Kubernetes distributions. The distributions listed here are tested regularly. |
-| Helm       |  Version 2 and 3 are supported, v2.9 or greater. v3.2 is the main development environment   |
+| Helm       |  Version 2 and 3 are supported, v2.9 or greater. v3.2 is the main development environment. **NOTE**: The helm commands used in this repository use Helm 3. If you are using Helm 2, please replace those commands with the equivalent Helm 2 commands. |
 | NuoDB      |  Version [4.0.4](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
+
 
 ## NuoDB Helm Chart Installation
 
