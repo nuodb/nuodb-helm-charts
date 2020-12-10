@@ -339,11 +339,12 @@ helm install database nuodb/database --debug --dry-run
 
 Deploy a database without backups:
 
-```bash
-helm install database nuodb/database --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1
-```
+**Tip**: If you plan to deploy NuoDB Insights visual monitoring, add the `--set nuocollector.enabled=true` switch as below.
 
-**Tip**: If you plan to deploy NuoDB Insights visual monitoring, add the `--set nuocollector.enabled=true` switch.
+```bash
+helm install database nuodb/database \
+    --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1 --set nuocollector.enabled=true
+```
 
 Wait until the deployment completes:
 
