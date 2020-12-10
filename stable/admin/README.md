@@ -276,10 +276,10 @@ Verify the connected states of the database domain:
 ```bash
 $ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 
-server version: 3.4.1-1-ccb6be381c, server license: Community
-server time: 2019-04-10T00:25:53.054, client token: 370d671ff18dd57a4b4bb0d146c72c8f2f256e7f
+server version: 4.0.7-2-6526a2db74, server license: Community
+server time: 2020-12-10T21:13:25.722, client token: e64322a4728c8bf35ff7f02cda62cc74aca40b66
 Servers:
-  [east-0] east-0.domain.nuodb.svc:48005 [last_ack = 6.92] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=east-0, log=0/15/15) Connected *
+  [admin-nuodb-cluster0-0] admin-nuodb-cluster0-0.nuodb.nuodb-helm.svc.cluster.local:48005 [last_ack = 1.29] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=admin-nuodb-cluster0-0, log=0/35/35) Connected *
 Databases:
 ```
 
