@@ -5,7 +5,7 @@ This chart starts a NuoDB database deployment on a Kubernetes cluster using the 
 ## Command
 
 ```bash
-helm install nuodb/database [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install [name] nuodb/database [--generate-name] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -334,15 +334,13 @@ The following tables list the configurable parameters for the `nuocollector` opt
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/database --name database \
-    --debug --dry-run
+helm install database nuodb/database --debug --dry-run
 ```
 
 Deploy a database without backups:
 
 ```bash
-helm install nuodb/database --name database \
-    --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1
+helm install database nuodb/database --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1
 ```
 
 Wait until the deployment completes:
@@ -419,7 +417,7 @@ kubectl delete pvc backup-volume-sm-database-nuodb-demo-hotcopy-0
 To uninstall/delete the deployment:
 
 ```bash
-helm del --purge database
+helm del database
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
