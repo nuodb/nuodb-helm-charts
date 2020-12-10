@@ -51,7 +51,7 @@ To list the NuoDB incubator charts added to your repository, run `helm search re
 
 ### Follow the instructions in the [stable](stable/README.md) folder to install NuoDB.
 
-The charts in the `stable` directory in the master branch of this repository are the latest packaged chart in the chart repository. The purpose of this repository is to provide a place for maintaining and contributing official chart updates and enhancements into the chart repository.
+The charts in the `stable` directory are the latest packaged charts in the chart repository. The purpose of this repository is to provide a place for maintaining and contributing official chart updates and enhancements into the chart repository.
 
 ### Follow the instructions in the [incubator](incubator) folder to install the YCSB database workload generator (sample application).
 
