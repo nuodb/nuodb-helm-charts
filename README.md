@@ -4,8 +4,8 @@
 
 [![Build Status](https://circleci.com/gh/nuodb/nuodb-helm-charts/tree/master.svg?style=shield)](https://circleci.com/gh/nuodb/nuodb-helm-charts/tree/master)
 
-Use this repository to submit official Charts for NuoDB. Charts are curated application definitions for Helm. For more information about installing and using Helm, see its
-[README.md](https://github.com/helm/helm/tree/master/README.md). To get a quick introduction to Charts see this [chart document](https://github.com/helm/helm/blob/master/docs/charts.md). For more information on using Helm, refer to the [Helm's documentation](https://github.com/kubernetes/helm#docs).
+This repository includes Helm Charts that can be used to deploy NuoDB in Kubernetes. You may also contribute by submitting enhancement requests if you like. Charts are curated application definitions for Helm. For more information about installing and using Helm, see its
+[README.md](https://github.com/helm/helm/tree/master/README.md). To get a quick introduction to Helm Charts see this [chart document](https://github.com/helm/helm/blob/master/docs/charts.md). For more information on using Helm, refer to the [Helm's documentation](https://github.com/kubernetes/helm#docs).
 
 ## NuoDB Helm Chart Version support
 
@@ -26,22 +26,15 @@ To enable automated notification of new releases, click the `Watch` button above
 
 The default repository for NuoDB is located at https://storage.googleapis.com/nuodb-charts and must be enabled.
 
-To add the charts for your local client, run the `helm repo add` command below:
+To add the charts to your local client, run the `helm repo add` command below:
 
 ```
 helm repo add nuodb https://storage.googleapis.com/nuodb-charts
 "nuodb" has been added to your repositories
 ```
 
-To list the NuoDB charts added to your repository, run `helm search nuodb/`
+To list the NuoDB charts added to your repository, run `helm search repo nuodb/`
 
-If using Helm 2, `helm init` is required.
-
-To install a chart into your Kubernetes cluster, run 
-
-```
-helm install nuodb/<chart>
-```
 
 ## NuoDB Helm Chart Incubator Repository Installation
 
@@ -52,31 +45,21 @@ helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.
 "nuodb-incubator" has been added to your repositories
 ```
 
-To list the NuoDB incubator charts added to your repository, run `helm search nuodb-incubator/`
+To list the NuoDB incubator charts added to your repository, run `helm search repo nuodb-incubator/`
 
-If using Helm 2, `helm init` is required.
 
-To install an incubator chart into your Kubernetes cluster, run 
-
-```
-helm install nuodb-incubator/<chart>
-```
-
-## Repository Structure
+## Install NuoDB
 
 This GitHub repository contains the source for the packaged and versioned charts released in the [`gs://nuodb-charts` Google Storage bucket](https://console.cloud.google.com/storage/browser/nuodb-charts/) (the Chart Repository).
 
-The Charts in this repository are organized into two folders:
-
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [stable](stable/README.md)
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; [incubator](incubator)
+Follow the instructions in the [stable](stable/README.md) folder to install NuoDB: 
 
 The charts in the `stable` directory in the master branch of this repository are the latest packaged chart in the chart repository. The purpose of this repository is to provide a place for maintaining and contributing official chart updates and enhancements into the chart repository.
 
-The charts in the `Incubator` directory are those that do not meet these criteria. Having the incubator folder allows charts to be shared and improved on until they are ready to be moved into the stable folder. The charts in the `incubator/` directory can be found in the [`gs://nuodb-charts-incubator` Google Storage Bucket](https://console.cloud.google.com/storage/browser/nuodb-charts-incubator).
+Follow the instructions in the [incubator](incubator) folder to install the YCSB database workload generator (sample application): 
+
+The charts in the `Incubator` directory allows charts to be shared and improved on until they are ready to be moved into the stable folder.
 
 ## Status of the Project
 
-This project is still under active development, so you might run into [issues](https://github.com/nuodb/nuodb-helm-charts/issues). If you do, please don't be shy about letting us know, or better yet, contribute a fix or feature.
+This project is still under active development. If you experience any [issues](https://github.com/nuodb/nuodb-helm-charts/issues) please let us know, or better yet, contribute a fix or feature.
