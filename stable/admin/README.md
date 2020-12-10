@@ -5,7 +5,7 @@ This chart starts a NuoDB Admin deployment on a Kubernetes cluster using the Hel
 ## Command
 
 ```bash
-helm install nuodb/admin [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install [name] nuodb/admin [--generate-name] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -239,14 +239,13 @@ The following tables list the configurable parameters for the `nuocollector` opt
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/admin --name admin \
-    --debug --dry-run
+helm install admin nuodb/admin --debug --dry-run
 ```
 
 Deploy the administration tier:
 
 ```bash
-helm install nuodb/admin --name admin
+helm install admin nuodb/admin
 ```
 
 **Tip**: It will take approximately 1 minute to deploy.
@@ -301,7 +300,7 @@ kubectl scale sts admin-nuodb-cluster0 --replicas=3
 To uninstall/delete the deployment:
 
 ```bash
-helm del --purge admin
+helm del admin
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
