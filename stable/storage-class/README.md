@@ -9,7 +9,7 @@ This chart installs NuoDB storage classes in a Kubernetes cluster using the Helm
 ## Command
 
 ```bash
-helm install nuodb/storage-class [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install [name] nuodb/storage-class [--generate-name] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -58,16 +58,13 @@ The following tables list the configurable parameters for the `storageClass` opt
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/storage-class \
-    --name storage-class \
-    --debug --dry-run
+helm install storage-class nuodb/storage-class --debug --dry-run
 ```
 
 Deploy the storage classes:
 
 ```bash
-helm install nuodb/storage-class \
-    --name storage-class
+helm install storage-class nuodb/storage-class 
 ```
 
 ## Uninstalling the Chart
@@ -75,7 +72,7 @@ helm install nuodb/storage-class \
 To uninstall/delete the deployment:
 
 ```bash
-helm del --purge storage-class
+helm del storage-class
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
