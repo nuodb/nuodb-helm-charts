@@ -24,7 +24,7 @@ To enable automated notification of new releases, click the `Watch` button above
 
 **NOTE**: The helm commands used in this repository use Helm 3. 
 
-Helm 2 has reached it's end of life. The last Helm 2 security patch was released in November 2020. If you are using Helm 2, we recommend you upgrade to Helm 3 before deploying NuoDB. If you must use Helm 2, NuoDB can only offer limited and best reasonable effort (BRE) support for Helm 2. If using Helm 2, please replace the helm commands referenced in this repository with the equivalent Helm 2 commands. Also, Helm 2 requires Tiller to be deployed in your Kubernetes cluster, hence follow the Helm Tiller install instructions before proceeding to your NuoDB install.
+Helm 2 has reached it's end of life. The last Helm 2 security patch was released in November 2020. If you are using Helm 2, NuoDB recommends you upgrade to Helm 3 before deploying NuoDB. If you must use Helm 2, NuoDB can only offer limited and best reasonable effort (BRE) support for Helm 2. If using Helm 2, please replace the helm commands referenced in this repository with the equivalent Helm 2 commands. Also, Helm 2 requires Tiller to be deployed in your Kubernetes cluster, hence follow the Helm Tiller install instructions before proceeding to your NuoDB install.
 
 ## NuoDB Helm Chart Installation
 
