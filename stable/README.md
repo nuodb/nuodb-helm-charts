@@ -1,13 +1,11 @@
 ### The instructions on this page are in two parts:
 
-1. **[Getting Started with Helm][4]** covers how to install and configure Helm on a client host. It will walk you through deploying a canary application to make sure Helm is properly configured.
-2. **[Deploying NuoDB using Helm Charts][5]** covers how to configure hosts to permit running NuoDB, and covers deploying your first NuoDB database using the provided Helm charts.
+1. **[Getting Started with Helm][4]** describes how to install and configure Helm on a client host.
+2. **[Deploying NuoDB using Helm Charts][5]** describes how to deploy a NuoDB database using the Helm charts.
 
 # Getting Started with Helm 
 
-This section provides instructions to install the Helm client in your environment. If using Red Hat OpenShift, confirm the OpenShift `oc` client program is installed locally and that you are logged into your OpenShift instance.
-
-There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm (and Tiller if using Helm 2). In some cases, required security settings are documented. Sub-charts pages include instructions for deploying each required NuoDB component.
+This section provides instructions to install and configure Helm in your client environment. If using Red Hat OpenShift, confirm the OpenShift `oc` client program is installed locally and that you are logged into your OpenShift instance. In some cases, required security settings are documented. 
 
 ## Software Version Prerequisites
 
