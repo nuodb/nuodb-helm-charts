@@ -83,22 +83,25 @@ Each Helm Chart has a default values.yaml parameter file that contains configura
 
 ## Deployment Steps
 
-**Note:** You MUST first disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods. Run the `transparent-hugepage` chart first.
+1. Disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods.
 
-- **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
+- **Disable transparent-hugepage** ([Instructions](transparent-hugepage/README.md))
 
-Optionally, consider configuring storage classes for persistent storage use by installing the NuoDB _Storage Classes_ chart. You can also use persistent storage without using the _Storage Classes_ Chart. See the chart documentation for existing options: 
+2. Optionally, create additional storage classes for use when configuring NuoDB persistent storage. You can also use persistent storage without using the _Storage Classes_ Chart. See the chart documentation for existing options: 
 
-- **Storage Classes** ([documentation](storage-class/README.md)) 
+- **Storage Classes** ([Instructions](storage-class/README.md)) 
 
-Deploy the NuoDB Components in this order : 
+3. Install the NuoDB Admin domain administrative tier
 
-- **NuoDB Admin** ([documentation](admin/README.md)) 
-- **NuoDB Database** ([documentation](database/README.md)) 
+- **NuoDB Admin** ([Instructions](admin/README.md)) 
 
-Optionally, adding NuoDB Insights visual monitoring to your deployment is highly recommended. With NuoDB Insights, you can view real-time and historical performance data graphically to assist with workload and/or root-cause analysis. 
+4. Install the NuoDB database
 
-- **NuoDB Insights** ([documentation](https://github.com/nuodb/nuodb-insights/tree/master/stable#deploying-nuodb-insights-using-helm-charts)) 
+- **NuoDB Database** ([Instructions](database/README.md)) 
+
+5. Optionally, install NuoDB Insights visual monitoring into your deployment environment. NuoDB Insights displays real-time and historical performance data graphically to assist you with workload and/or root-cause analysis. 
+
+- **NuoDB Insights** ([Instructions](https://github.com/nuodb/nuodb-insights/tree/master/stable#deploying-nuodb-insights-using-helm-charts)) 
 
 ## Cleanup
 
