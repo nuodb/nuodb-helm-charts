@@ -71,6 +71,9 @@ data:
   NUODB_AUTO_IMPORT_TYPE: {{ default "stream" .Values.database.autoImport.type | quote }}
   NUODB_AUTO_RESTORE: {{ default "" .Values.database.autoRestore.source | quote }}
   NUODB_AUTO_RESTORE_TYPE: {{ default "stream" .Values.database.autoRestore.type | quote }}
+  {{- if .Values.admin.tde }}
+  NUODB_STORAGE_PASSWORDS_DIR: {{ default "/etc/nuodb/tde" .Values.admin.tde.storagePasswordsDir | quote }}
+  {{- end }}
   NUODB_OS_USER: {{ include "os.user" . | quote }}
   NUODB_OS_GROUP: {{ include "os.group" . | quote }}
 {{- if .Values.database.configFiles }}
