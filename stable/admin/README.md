@@ -267,7 +267,6 @@ Verify the pods are running:
 $ kubectl get pods
 NAME                           READY     STATUS    RESTARTS   AGE
 admin-nuodb-cluster0-0         1/1       Running   0          29m
-tiller-86c4495fcc-lczdp        1/1       Running   0          5h
 ```
 
 The command displays the NuoDB Pods running on the Kubernetes cluster. When completed, both the TE and the storage containers should show a **STATUS** of `Running`, and with 0 **RESTARTS**.
