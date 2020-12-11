@@ -17,12 +17,14 @@ To enable automated notification of new releases, click the `Watch` button above
 
 | Software   | Release Requirements                           | 
 |------------|------------------------------------------------|
-| Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.16 then 1.16 and 1.15 are offically supported. Charts may still work on previous versions of Kubernertes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
+| Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.16 then 1.16 and 1.15 are officially supported. Charts may still work on previous versions of Kubernetes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
 | Managed Kubernetes Distributions |  OpenShift 4.x, Google GKE, Amazon EKS, Azure AKS, or Rancher RKE. Charts may also work on other Kubernetes distributions. The distributions listed here are tested regularly. |
 | Helm       |  Version 3. Version 3.2 is the main development environment. |
 | NuoDB      |  Version [4.0.4](https://hub.docker.com/r/nuodb/nuodb-ce/tags) and onwards. |
 
-**NOTE**: The helm commands used in this repository use Helm 3. Helm 2 has reached it's end of life. The last Helm 2 security patch was released in November 2020. If you are using Helm 2, we recommend you upgrade to Helm 3 before deploying NuoDB. If you must use Helm 2, NuoDB can only offer limited and best reasonable effort (BRE) support for Helm 2. If using Helm 2, please replace the helm commands referenced in this repository with the equivalent Helm 2 commands. Also, Helm 2 requires tiller to be deployed in your Kubernetes cluster, hence follow the Helm tiller instructions for deploying in Kubernetes environments.
+**NOTE**: The helm commands used in this repository use Helm 3. 
+
+Helm 2 has reached it's end of life. The last Helm 2 security patch was released in November 2020. If you are using Helm 2, we recommend you upgrade to Helm 3 before deploying NuoDB. If you must use Helm 2, NuoDB can only offer limited and best reasonable effort (BRE) support for Helm 2. If using Helm 2, please replace the helm commands referenced in this repository with the equivalent Helm 2 commands. Also, Helm 2 requires Tiller to be deployed in your Kubernetes cluster, hence follow the Helm Tiller install instructions before proceeding to your NuoDB install.
 
 ## NuoDB Helm Chart Installation
 
@@ -38,7 +40,7 @@ To list the NuoDB charts added to your repository, run `helm search repo nuodb/`
 
 ## NuoDB Helm Chart Incubator Repository Installation
 
-The Incubator repository contains enhancements not yet available in the supported releases. This repository includes a sample applciation load generator. If you would like to install this sample application, then add the Incubator charts to your local helm repository, run:
+The Incubator repository contains enhancements not yet available in the supported releases. This repository includes a sample application load generator. If you would like to install this sample application, then add the Incubator charts to your local helm repository, run:
 
 ```
 helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.com/
