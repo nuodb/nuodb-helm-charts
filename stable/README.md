@@ -85,23 +85,23 @@ Each Helm Chart has a default values.yaml parameter file that contains configura
 
 1. Disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods.
 
-**Disable transparent-hugepage** ([Instructions](transparent-hugepage/README.md))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Disable transparent-hugepage** ([Instructions](transparent-hugepage/README.md))
 
 2. Optionally, create additional storage classes for use when configuring NuoDB persistent storage. You can also use persistent storage without using the _Storage Classes_ Chart. See the chart documentation for existing options: 
 
-**Storage Classes** ([Instructions](storage-class/README.md)) 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**Storage Classes** ([Instructions](storage-class/README.md)) 
 
 3. Install the NuoDB Admin domain administrative tier
 
-**NuoDB Admin** ([Instructions](admin/README.md)) 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**NuoDB Admin** ([Instructions](admin/README.md)) 
 
 4. Install the NuoDB database Storage Manager (SM) and Transaction Engine (TE) components
 
-**NuoDB Database** ([Instructions](database/README.md)) 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**NuoDB Database** ([Instructions](database/README.md)) 
 
 5. Optionally, install NuoDB Insights visual monitoring into your deployment environment. NuoDB Insights displays real-time and historical performance data graphically to assist you with workload and/or root-cause analysis. 
 
-**NuoDB Insights** ([Instructions](https://github.com/nuodb/nuodb-insights/tree/master/stable#deploying-nuodb-insights-using-helm-charts)) 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;**NuoDB Insights** ([Instructions](https://github.com/nuodb/nuodb-insights/tree/master/stable#deploying-nuodb-insights-using-helm-charts)) 
 
 ## Cleanup
 
