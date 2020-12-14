@@ -421,7 +421,7 @@ kubectl delete pvc backup-volume-sm-database-nuodb-demo-hotcopy-0
 To uninstall/delete the deployment:
 
 ```bash
-helm del database
+helm delete database
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
