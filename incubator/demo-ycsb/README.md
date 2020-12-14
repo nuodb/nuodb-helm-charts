@@ -146,7 +146,7 @@ replicationcontroller "demo-ycsb" scaled
 To uninstall/delete the deployment:
 
 ```bash
-helm del ycsb
+helm delete ycsb
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
