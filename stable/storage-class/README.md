@@ -72,7 +72,7 @@ helm install storage-class nuodb/storage-class
 To uninstall/delete the deployment:
 
 ```bash
-helm del storage-class
+helm delete storage-class
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
