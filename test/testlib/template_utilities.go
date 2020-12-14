@@ -59,6 +59,15 @@ func MountContains(mounts []v1.VolumeMount, expectedName string) bool {
 	return false
 }
 
+func GetMount(mounts []v1.VolumeMount, expectedName string) (*v1.VolumeMount, bool) {
+	for _, mount := range mounts {
+		if mount.Name == expectedName {
+			return &mount, true
+		}
+	}
+	return nil, false
+}
+
 func VolumesContains(mounts []v1.Volume, expectedName string) bool {
 	for _, mount := range mounts {
 		if mount.Name == expectedName {
@@ -66,6 +75,15 @@ func VolumesContains(mounts []v1.Volume, expectedName string) bool {
 		}
 	}
 	return false
+}
+
+func GetVolume(volumes []v1.Volume, expectedName string) (*v1.Volume, bool) {
+	for _, volume := range volumes {
+		if volume.Name == expectedName {
+			return &volume, true
+		}
+	}
+	return nil, false
 }
 
 func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int) []v1.ConfigMap {
