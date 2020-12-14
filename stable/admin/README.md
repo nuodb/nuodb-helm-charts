@@ -299,7 +299,7 @@ kubectl scale sts admin-nuodb-cluster0 --replicas=3
 To uninstall/delete the deployment:
 
 ```bash
-helm del admin
+helm delete admin
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
