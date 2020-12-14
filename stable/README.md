@@ -1,13 +1,11 @@
 ### The instructions on this page are in two parts:
 
-1. **[Getting Started with Helm][4]** covers how to install and configure Helm on a client host. It will walk you through deploying a canary application to make sure Helm is properly configured.
-2. **[Deploying NuoDB using Helm Charts][5]** covers how to configure hosts to permit running NuoDB, and covers deploying your first NuoDB database using the provided Helm charts.
+1. **[Getting Started with Helm][4]** describes how to install and configure Helm on a client host.
+2. **[Deploying NuoDB using Helm Charts][5]** describes how to deploy a NuoDB database using the Helm charts.
 
 # Getting Started with Helm 
 
-This section will walk you through getting the Helm client installed in your environment. If using Red Hat OpenShift, this page assumes that you already have the OpenShift `oc` client program installed locally and that you are logged into your OpenShift instance.
-
-There are sub-charts in subdirectories included in this distribution. Instructions provided on this page are for initial configuration of Helm and Tiller, in some cases, required security settings. Sub-charts pages include instructions for deploying each required NuoDB component.
+This section provides instructions to install and configure Helm in your client environment. If using Red Hat OpenShift, confirm the OpenShift `oc` client program is installed locally and that you are logged into your OpenShift instance. In some cases, required security settings are documented. 
 
 ## Software Version Prerequisites
 
@@ -23,17 +21,24 @@ NuoDB Helm Charts and their privilege requirements:
 | admin, database| allowedCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 | admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
 
-
 ## Install Helm 3
 
-If you are interested in Helm 2, please follow the [official Helm 2 docs][7].
+If you are planning to install Helm 2, please follow the [official Helm 2 docs][7].
+
+### MacOS
+
+Use the Brew Package manager.
+```
+brew install helm
+```
+### Linux
 
 Every [release][2] of Helm provides binary releases for a variety of OSes. 
 
 1. Download your [desired version][2]
 2. Unpack it (`tar -zxvf helm-${helm-version}-linux-amd64.tgz`)
 
-We’ll use Helm version 3.2.4, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v3.2.4>.
+This example uses Helm version 3.2.4, which can be downloaded via <https://github.com/kubernetes/helm/releases/tag/v3.2.4>.
 
 Run the following commands to install the Helm locally on your Linux client machine:
 ```bash
@@ -44,20 +49,6 @@ $ cd linux-amd64
 Move the Helm binaries to /usr/local/bin
 ```
 $ mv helm /usr/local/bin
-```
-
-If you're running on Mac, we recommend using the Brew Package manager.
-```
-brew install helm
-```
-
-Confirm you can run the Helm client: `helm help`.
-
-
-## Create the _nuodb_ namespace to install NuoDB
-
-```
-kubectl create namespace nuodb
 ```
 
 ## Confirm that the Helm client is installed correctly 
@@ -73,6 +64,12 @@ version.BuildInfo{Version:"v3.2.4", GitCommit:"0ad800ef43d3b826f31a5ad8dfbb4fe05
 
 The following section outlines the steps in order to deploy a NuoDB database using this Helm Chart repository.
 
+## Create the _nuodb_ namespace to install the NuoDB components
+
+```
+kubectl create namespace nuodb
+```
+
 ## Configuration Parameters
 
 Each Helm Chart has a default values.yaml parameter file that contains configuration parameters specific to that chart. The configuration is structured where configuration values are implemented following a single-definition rule, that is, values are structured and scoped, and shared across charts; e.g. for admin, its parameters are specified once in a single values file which is used for all the charts, and the database chart can use admin values for configuring connectivity of engines to a specific admin process. The same goes for other values **shared** amongst Helm charts. A few key points here:
@@ -86,19 +83,30 @@ Each Helm Chart has a default values.yaml parameter file that contains configura
 
 ## Deployment Steps
 
-**Note:** You MUST first disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods. Run the `transparent-hugepage` chart first.
+1. Disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods.
 
-- **transparent-hugepage** ([documentation](transparent-hugepage/README.md))
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+**Disable transparent-hugepage** ([Instructions](transparent-hugepage/README.md))
 
-Optionally, consider configuring storage classes for persistent storage use by installing the NuoDB _Storage Classes_ chart. You can also use persistent storage without using the _Storage Classes_ Chart. See the chart documentation for existing options: 
+2. Optionally, create additional storage classes for use when configuring NuoDB persistent storage. You can also use persistent storage without using the _Storage Classes_ Chart. See the chart documentation for existing options: 
 
-- **Storage Classes** ([documentation](storage-class/README.md)) 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+**Storage Classes** ([Instructions](storage-class/README.md)) 
 
-Deploy the NuoDB Components in this order : 
+3. Install the NuoDB Admin domain administrative tier
 
-- **NuoDB Admin** ([documentation](admin/README.md)) 
-- **NuoDB Database** ([documentation](database/README.md)) 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+**NuoDB Admin** ([Instructions](admin/README.md)) 
 
+4. Install the NuoDB database Storage Manager (SM) and Transaction Engine (TE) components
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+**NuoDB Database** ([Instructions](database/README.md)) 
+
+5. Optionally, install NuoDB Insights visual monitoring into your deployment environment. NuoDB Insights displays real-time and historical performance data graphically to assist you with workload and/or root-cause analysis. Installing NuoDB Insights is highly recommended.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+**NuoDB Insights** ([Instructions](https://github.com/nuodb/nuodb-insights/tree/master/stable#deploying-nuodb-insights-using-helm-charts)) 
 
 ## Cleanup
 
