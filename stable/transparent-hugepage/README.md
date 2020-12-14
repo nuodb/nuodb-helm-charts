@@ -158,7 +158,7 @@ The file MUST be run as root/sudo.
 To uninstall/delete the deployment:
 
 ```bash
-helm del thp
+helm delete thp
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
