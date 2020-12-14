@@ -13,9 +13,8 @@ Enabling TDE consists of two steps
 1. [Supply storage passwords](#supplying-storage-passwords)
 2. [Configure database layer](#enable-transparent-data-encryption)
 
-!!! note
-    For information on enabling TDE in non-Kubernetes deployments of NuoDB, see [here](https://doc.nuodb.com/nuodb/latest/database-administration/transparent-data-encryption/configuring-transparent-data-encryption/). 
-    This document expands on the product documentation and is specific to this Helm Chart repository.
+> **NOTE**: For information on enabling TDE in non-Kubernetes deployments of NuoDB, see [here](https://doc.nuodb.com/nuodb/latest/database-administration/transparent-data-encryption/configuring-transparent-data-encryption/). 
+This document expands on the product documentation and is specific to this Helm Chart repository.
 
 ### Terminology
 
@@ -33,8 +32,7 @@ The domain administrator is responsible for configuring TDE storage passwords. T
 If using third-party party software, the storage passwords need to be injected and stored as files inside AP and SM pods. NuoDB supports file per password approach explained in [using Kubernetes secrets](#using-kubernetes-secrets) and single configuration file per database approach explained in [HashiCorp Vault integration](#using-hashicorp-vault).
 Choosing the right approach depends on the capabilities and flexibility that any other 3rd party tool securing the storage passwords have.
 
-!!! important:
-    NuoDB, Inc. cannot recover Transparent Data Encryption storage passwords, and the database cannot be loaded if its storage password is lost. It is the user’s responsibility to keep track of storage passwords, including historical passwords for encrypted hot copy backups.
+> **IMPORTANT**: NuoDB, Inc. cannot recover Transparent Data Encryption storage passwords, and the database cannot be loaded if its storage password is lost. It is the user’s responsibility to keep track of storage passwords, including historical passwords for encrypted hot copy backups.
 
 ### Using Kubernetes secrets
 
@@ -70,8 +68,7 @@ helm install -n nuodb database stable/database \
 
 The scope of this document doesn't include steps on how to install and setup HashiCorp Vault. 
 
-!!! note
-    For a quick tutorial on how to deploy Vault in Kubernetes using agent injector, see [here](https://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar).
+> **NOTE**: For a quick tutorial on how to deploy Vault in Kubernetes using agent injector, see [here](https://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar).
 
 The secret injection is controlled via Kubernetes annotations which can be specified for [Admin chart](../stable/admin/README.md) or [Database chart](../stable/database/README.md) using respectively `admin.podAnnotations` and `database.podAnnotations` variables.
 
@@ -137,8 +134,7 @@ database:
 Templates for Vault KV store version 1 and version 2 are different..
 If Vault KV store version 1 is used, `.Data.data` references in inject templates should be replaced with `.Data`.
 
-!!! note
-    For information on how different annotations can be used, see [here](https://www.vaultproject.io/docs/platform/k8s/injector/annotations).
+> **NOTE**: For information on how different annotations can be used, see [here](https://www.vaultproject.io/docs/platform/k8s/injector/annotations).
 
 If `tde.conf` needs to be created using several secrets or special keys from the secret needs to be filtered out, [scratch](https://github.com/hashicorp/consul-template#scratch) Consul template API functions can be used. 
 For example this template will filter out any other keys in a Vault secret:
@@ -177,8 +173,7 @@ kubectl exec -n nuodb admin-nuodb-cluster0-0 -- bash -c \
 
 SMs will start data encryption in the background.
 
-!!! note
-    For information on how to confirm if TDE is enabled, see [here](https://doc.nuodb.com/nuodb/latest/database-administration/transparent-data-encryption/configuring-transparent-data-encryption/#_confirming_that_tde_is_enabled).
+> **NOTE**: For information on how to confirm if TDE is enabled, see [here](https://doc.nuodb.com/nuodb/latest/database-administration/transparent-data-encryption/configuring-transparent-data-encryption/#_confirming_that_tde_is_enabled).
 
 
 ## Change storage passwords
@@ -201,13 +196,11 @@ kubectl create secret generic demo-tde-secret -n nuodb \
 
 Kubernetes will update automatically mounted secrets inside the containers. The delay depends on _kubelet sync period_ + _kubelet cache propagation delay_.
 
-!!! note
-    For information on Kubernetes secrets automatic update, see [here](https://kubernetes.io/docs/concepts/configuration/secret/#mounted-secrets-are-updated-automatically).
+> **NOTE**: For information on Kubernetes secrets automatic update, see [here](https://kubernetes.io/docs/concepts/configuration/secret/#mounted-secrets-are-updated-automatically).
 
 If any other 3rd party software is used to inject the storage passwords configuration, update the passwords and ensure that the configuration is updated inside the NuoDB pods.
 
-!!! note
-    For information on HashiCorp Vault secrets renewals, see [here](https://www.vaultproject.io/docs/agent/template#renewals-and-updating-secrets).
+> **NOTE**: For information on HashiCorp Vault secrets renewals, see [here](https://www.vaultproject.io/docs/agent/template#renewals-and-updating-secrets).
 
 To verify that password rotation is done successfully, the following command should succeed returning no errors.
 
