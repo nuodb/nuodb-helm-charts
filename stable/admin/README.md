@@ -5,7 +5,7 @@ This chart starts a NuoDB Admin deployment on a Kubernetes cluster using the Hel
 ## Command
 
 ```bash
-helm install nuodb/admin [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install [name] nuodb/admin [--generate-name] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -241,19 +241,19 @@ The following tables list the configurable parameters for the `nuocollector` opt
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/admin --name admin \
-    --debug --dry-run
+helm install admin nuodb/admin --debug --dry-run
 ```
 
 Deploy the administration tier:
 
+**Tip**: If you plan to deploy NuoDB Insights visual monitoring, add the `--set nuocollector.enabled=true` switch as below.
+
+
 ```bash
-helm install nuodb/admin --name admin
+helm install admin nuodb/admin --set nuocollector.enabled=true
 ```
 
-**Tip**: It will take approximately 1 minute to deploy.
-
-The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
+The command deploys NuoDB on the Kubernetes cluster using the default configuration. The configuration section lists the parameters that can be configured during installation.
 
 **Tip**: List all releases using `helm list`
 
@@ -269,7 +269,6 @@ Verify the pods are running:
 $ kubectl get pods
 NAME                           READY     STATUS    RESTARTS   AGE
 admin-nuodb-cluster0-0         1/1       Running   0          29m
-tiller-86c4495fcc-lczdp        1/1       Running   0          5h
 ```
 
 The command displays the NuoDB Pods running on the Kubernetes cluster. When completed, both the TE and the storage containers should show a **STATUS** of `Running`, and with 0 **RESTARTS**.
@@ -279,16 +278,15 @@ Verify the connected states of the database domain:
 ```bash
 $ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 
-server version: 3.4.1-1-ccb6be381c, server license: Community
-server time: 2019-04-10T00:25:53.054, client token: 370d671ff18dd57a4b4bb0d146c72c8f2f256e7f
+server version: 4.0.7-2-6526a2db74, server license: Community
+server time: 2020-12-10T21:13:25.722, client token: e64322a4728c8bf35ff7f02cda62cc74aca40b66
 Servers:
-  [east-0] east-0.domain.nuodb.svc:48005 [last_ack = 6.92] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=east-0, log=0/15/15) Connected *
+  [admin-nuodb-cluster0-0] admin-nuodb-cluster0-0.nuodb.nuodb-helm.svc.cluster.local:48005 
+     (LEADER, Leader=admin-nuodb-cluster0-0, log=0/35/35) Connected *
 Databases:
 ```
 
-The command displays the status of NuoDB processes. The Servers section lists admin processes; they should all be **Connected**, one will be the **LEADER** and other designated as a **FOLLOWER**.
-
-  **Tip**: Wait until all processes are be in a **RUNNING** state.
+The Servers section lists admin processes; each admin server should transition to the **Connected** state. When multiple Admins are started, one will be the **LEADER** and other designated as a **FOLLOWER**.
 
 ### Scaling
 
@@ -303,7 +301,7 @@ kubectl scale sts admin-nuodb-cluster0 --replicas=3
 To uninstall/delete the deployment:
 
 ```bash
-helm del --purge admin
+helm delete admin
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
