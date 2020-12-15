@@ -211,8 +211,6 @@ kubectl exec admin-nuodb-cluster0-0 -- nuocmd check data-encryption \
   --timeout 90
 ```
 
-Database archives do not need to be re-encrypted when the storage password is changed.
-
 ## Working with encrypted backup
 
 Before importing or restoring from an encrypted backupset or cold archive, the storage password used to encrypt it must be present in the NuoDB Admin either as target or historical database storage password.
