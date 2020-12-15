@@ -4,9 +4,10 @@
 
 NuoDB offers strong protection for both _data at rest_ and _data in transit_ allowing enterprises to implement and enforce needed company security policies. This helps you to protect your valuable company data. Transport Layer Security (TLS) secures data in transit within NuoDB domain by encrypting all network communication and the data which is in motion. Transparent Data Encryption (TDE) allows data at rest to be encrypted before being written to disk.
 
-Before TDE encryption can be enabled on a database, `NuoDB Admin` must be configured with a _storage password_ for each database.
+Before TDE encryption can be enabled on a database, `NuoDB Admin` must be configured with a _storage password_ for the database.
 `NuoDB Admin` is responsible for propagating storage passwords within the admin layer and to database engines.
 All SMs and TEs in the database will use this storage password as a key to secure the encrypted data.
+User data stored in the archive, the journal, backups, and [spill-to-disk](https://doc.nuodb.com/nuodb/latest/database-administration/reducing-memory-pressure-on-transaction-engines/) files is encrypted before being written to disk.
 Starting from NuoDB v4.1.2 and NuoDB Helm Charts v3.1.0 Transparent Data Encryption is supported in NuoDB Kubernetes deployments.
 
 Enabling TDE consists of two steps
