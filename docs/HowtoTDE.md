@@ -7,15 +7,15 @@ NuoDB offers strong protection for both _data at rest_ and _data in transit_ all
 Before TDE encryption can be enabled on a database, `NuoDB Admin` must be configured with a _storage password_ for the database.
 `NuoDB Admin` is responsible for propagating storage passwords within the admin layer and to database engines.
 All SMs and TEs in the database will use this storage password as a key to secure the encrypted data.
-User data stored in the archive, the journal, backups, and [spill-to-disk](https://doc.nuodb.com/nuodb/latest/database-administration/reducing-memory-pressure-on-transaction-engines/) files is encrypted before being written to disk.
+User data that is stored in the archive, the journal, the backups, and [spill-to-disk](https://doc.nuodb.com/nuodb/latest/database-administration/reducing-memory-pressure-on-transaction-engines/) files is encrypted before being written to disk.
 Starting from NuoDB v4.1.2 and NuoDB Helm Charts v3.1.0 Transparent Data Encryption is supported in NuoDB Kubernetes deployments.
 
 Enabling TDE consists of two steps
 1. [Supply storage passwords](#supplying-storage-passwords)
 2. [Configure database layer](#enable-transparent-data-encryption)
 
-> **NOTE**: For information on enabling TDE in non-Kubernetes deployments of NuoDB, see [here](https://doc.nuodb.com/nuodb/latest/database-administration/transparent-data-encryption/configuring-transparent-data-encryption/). 
-This document expands on the product documentation and is specific to this Helm Chart repository.
+> **NOTE**: For information on enabling TDE in non-Kubernetes deployments of NuoDB, see [Configuring Transparent Data Encryption](https://doc.nuodb.com/nuodb/latest/database-administration/transparent-data-encryption/configuring-transparent-data-encryption/). 
+The documentation in this repository expands on the product documentation and is specific to this Helm Chart repository.
 
 ### Terminology
 
@@ -37,14 +37,14 @@ Choosing the right approach depends on the capabilities and flexibility that any
 
 ### Using Kubernetes secrets
 
-Storage passwords can be supplied using Kubernetes secret.
+Storage passwords can be supplied using a Kubernetes secret.
 One secret per database should be created in the Kubernetes namespace where NuoDB is deployed.
 It must hold the `target` and optional `historical` storage passwords for that database.
-The configured secret name is mounted inside all AP, hotcopy SM and non-hotcopy SM pods. The mount path is `/etc/nuodb/tde/<db-name>` by default and the static portion of the path can be changed using `admin.tde.storagePasswordsDir` variable.
-NuoDB Admin monitors all directories and files under `/etc/nuodb/tde` path and will configure storage passwords available in the mounted files. The following files can be used:
+The configured secret name is mounted inside the AP, hotcopy SM and non-hotcopy SM pods. The mount path is `/etc/nuodb/tde/<db-name>` by default and the static portion of the path can be changed using the `admin.tde.storagePasswordsDir` variable.
+NuoDB Admin monitors all directories and files under the `/etc/nuodb/tde` path and will configure the storage passwords available in the mounted files. The following files can be used:
 
 - `/etc/nuodb/tde/<db-name>/target` = Holds the database target storage password.
-- `/etc/nuodb/tde/<db-name>/historical*` _(optional)_ = Holds a database historical storage password. Multiple files can be used to supply multiple historical passwords for each database. Historical passwords are discussed in detailin the  [Change storage passwords](#change-storage-passwords) section.
+- `/etc/nuodb/tde/<db-name>/historical*` _(optional)_ = Holds a database historical storage password. Multiple files can be used to supply multiple historical passwords for each database. Historical passwords are discussed in detail in the [Change storage passwords](#change-storage-passwords) section.
 
 Create a Kubernetes secret holding TDE passwords:
 
@@ -69,11 +69,11 @@ helm install -n nuodb database stable/database \
 
 The scope of this document doesn't include steps on how to install and setup HashiCorp Vault. 
 
-> **NOTE**: For a quick tutorial on how to deploy Vault in Kubernetes using agent injector, see [here](https://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar).
+> **NOTE**: For a quick tutorial on how to deploy Vault in Kubernetes using the agent injector, see [Injecting Vault Secrets into Kubernetes Pods](https://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar).
 
 The secret injection is controlled via Kubernetes annotations which can be specified for [Admin chart](../stable/admin/README.md) or [Database chart](../stable/database/README.md) using respectively `admin.podAnnotations` and `database.podAnnotations` variables.
 
-In addition to single file per password explained in [Using Kubernetes secrets](#using-kubernetes-secrets) section, NuoDB Admin supports a single configuration file per database `/etc/nuodb/tde/<db-name>/tde.json` which holds all storage passwords for a single NuoDB database.
+In addition to the single file per password approach explained in [Using Kubernetes secrets](#using-kubernetes-secrets) section, NuoDB Admin supports a single configuration file per database `/etc/nuodb/tde/<db-name>/tde.json` which holds all storage passwords for a single NuoDB database.
 
 The file is encoded in JSON format and takes precedence over the file per password approach. 
 Example file content:
@@ -98,7 +98,7 @@ vault kv put v2.nuodb.com/TDE/demo \
 The secret name can be different from the example above.
 In this case _v2_ illustrates that Vault KV store version 2 is used and _v2.nuodb.com/TDE_ path can group several Vault secrets for several NuoDB databases.
 
-Vault policy should be created and attached to Vault Kubernetes role to allow `read` capability for the secret created above by NuoDB service account. In the examples further in this section, `nuodb` Vault Kubernetes role is used.
+The Vault policy should be created and attached to the Vault Kubernetes role to allow `read` capability for the secret created above by NuoDB service account. In the examples further in this section, `nuodb` Vault Kubernetes role is used.
 
 The `tde.json` configuration file can be injected using the following Helm values file snippet:
 
@@ -156,7 +156,7 @@ For example this template will filter out any other keys in a Vault secret:
 ## Enable Transparent Data Encryption
 
 NuoDB Admin will configure supplied storage passwords and will propagate them to engines.
-To verify that the target password is configured correctly, the following command should succeed returning no errors.
+To verify that the target password is configured correctly, execute the following command, which will emit no output if successful.
 
 ```bash
 kubectl exec admin-nuodb-cluster0-0 -- nuocmd check data-encryption \
@@ -164,12 +164,11 @@ kubectl exec admin-nuodb-cluster0-0 -- nuocmd check data-encryption \
   --password 'topSecret'
 ```
 
-Now that the database has a storage password, encryption can be enabled using `ALTER DATABASE CHANGE ENCRYPTION TYPE`. Database administrator privileges are required in order to use this command.
-The SQL statement should be executed manually by obtaining SQL connection towards the target database.
+Now that the database is configured with a storage password, data encryption must be enabled using the `ALTER DATABASE CHANGE ENCRYPTION TYPE` SQL statement, which requires database administrator privileges.
 
 ```bash
 kubectl exec -n nuodb admin-nuodb-cluster0-0 -- bash -c \
-  'echo "alter database change encryption type AES128;" | /opt/nuodb/bin/nuosql demo --user dba --password secret'
+  'echo "ALTER DATABASE CHANGE ENCRYPTION TYPE AES128;" | /opt/nuodb/bin/nuosql demo --user dba --password secret'
 ```
 
 SMs will start data encryption in the background.
@@ -181,10 +180,14 @@ SMs will start data encryption in the background.
 
 Database storage passwords can be changed at any time by changing the secret supplying them. The password rotation will be performed automatically in the background.
 
-The current storage password must be specified as historical so that it can be used if:
+Historical passwords are not required during normal operation.
+There are special circumstances under which a historical password needs to be provided.
+These circumstances include:
 
-- some of the SMs are down during password rotation
-- database restore needs to be performed from a backupset encrypted with the previous password
+- some of the Storage Managers were down during password rotation.
+Once these SMs start, they will need to use the historical password to read the archive so they can encrypt it with the new target password.
+- A DBA wants to use an older backupset that was encrypted with a previous historical password. 
+See [Working with encrypted backup](#working-with-encrypted-backup).
 
 If Kubernetes secret is used to supply the storage passwords, update it to match the desired state.
 
