@@ -206,7 +206,7 @@ If any other 3rd party software is used to inject the storage passwords configur
 
 > **NOTE**: For information on HashiCorp Vault secrets renewals, see [here](https://www.vaultproject.io/docs/agent/template#renewals-and-updating-secrets).
 
-To verify that password rotation is done successfully, the following command should succeed returning no errors.
+To verify that password rotation is done successfully, execute the following command, which will emit no output if successful.
 
 ```bash
 kubectl exec admin-nuodb-cluster0-0 -- nuocmd check data-encryption \
