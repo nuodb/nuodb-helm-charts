@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # simple script to automate backup.
 #
@@ -28,6 +28,8 @@
 #   --labels   - additional arbitrary labels to select the SMs to backup
 #   --timeout  - timeout (in seconds) to synchronously wait for the backup to complete. 0 => async backup.
 #   --backup-root - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
+#   --wait-for-num-processes - wait for a specified number of SM processes in a backup group to be in RUNNING state before starting a backup
+#   --wait-timeout - timeout (in seconds) to wait for specified amount of SM processes
 
 # for debugging...
 [ -n "$NUODB_DEBUG" ] && set -x 
@@ -42,6 +44,64 @@ labels=""
 semaphore=""
 timeout=1800
 backup_root=$BACKUP_DIR
+wait_for_num_processes=0
+wait_timeout=300
+
+function await() {
+	local timeout=$1
+	shift
+	local end_time=$(( $(date -u +%s) + $timeout ))
+	local rc=0
+	while [ "$(date -u +%s)" -lt "$end_time" ]; do
+		eval "$*"
+		rc=$?
+		if [ $rc -eq 0 ]; then
+			return $rc
+		fi
+		sleep 1
+	done
+	return 124
+}
+
+function check_backup_processes() {
+	declare -a label_patterns=()
+   local all_process_labels=""
+
+	for ((i=0; i<${#labels_arr[@]}; i+=2)); do
+	  label_patterns[${#label_patterns[@]}]="\"${labels_arr[i]}\"\s*:\s*\"${labels_arr[i+1]}\""
+	done
+
+   all_process_labels="$(nuocmd --api-server $NUOCMD_API_SERVER show database \
+      --db-name $db_name \
+      --process-format '#{engine_type} {state} {labels}')" || return $?
+
+	num_processes=0
+	while read process_labels; do
+      [ -z "$process_labels" ] && continue
+		parsed_labels=$(echo "$process_labels" | tr "'" '"' | python -m json.tool 2>&1)
+		if [ $? -ne 0 ];then
+			echo "Unable to parse SM process labels ${process_labels}: ${parsed_labels}" 2>&1
+			continue
+		fi
+		match=true
+		for pattern in ${label_patterns[@]}; do
+			if ! echo "${parsed_labels}" | grep -E -q "${pattern}"; then
+				# Some of the labels are not found
+				match=""
+				break
+			fi
+		done
+		if [ -n "$match" ]; then
+			num_processes=$(( num_processes+1 ))
+		fi
+	done <<< "$( echo "$all_process_labels" | sed -n -e 's/\s*#SM RUNNING //p')"
+
+	if [ "$num_processes" -eq "$wait_for_num_processes" ]; then
+		return 0
+	else
+		return 1
+	fi
+}
 
 while [ $# -gt 0 ];
 do
@@ -69,10 +129,18 @@ do
            semaphore="$1"; shift;;
         "--semaphore="* )
            semaphore="${opt#*=}";;
+        "--wait-for-num-processes" )
+           wait_for_num_processes="$1"; shift;;
+        "--wait-for-num-processes="* )
+           wait_for_num_processes="${opt#*=}";;
         "--timeout" )
            timeout="$1"; shift;;
         "--timeout="* )
            timeout="${opt#*=}";;
+        "--wait-timeout" )
+           wait_timeout="$1"; shift;;
+        "--wait-timeout="* )
+           wait_timeout="${opt#*=}";;
         "--backup-root" )
            backup_root="$1"; shift;;
         "--backup-root="* )
@@ -83,6 +151,7 @@ done
 
 backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
 label=$(echo $label | tr '[:upper:]' '[:lower:]')
+read -a labels_arr <<< "backup $backup_group $labels"
 
 # Return which group made the latest backup
 if [ "$backup_type" = "report-latest" -a "$backup_group" = "" ]; then
@@ -143,13 +212,22 @@ if [ "$backup_type" = "report-latest" ]; then
    exit 0
 fi
 
+if [ "$wait_for_num_processes" -ne 0 ]; then
+   # Wait for num of processes is specified, so wait for SMs to start
+   await $wait_timeout check_backup_processes
+   if [ $? -eq 124 ]; then
+      echo "Timed out waiting for ${wait_for_num_processes} SM processes with labels: ${labels_arr[@]}"
+      exit 1
+   fi
+fi
+
 # call nuodocker to perform the actual backup
 nuodocker backup database \
     --db-name ${db_name} \
     --type ${backup_type} \
     --backup-root ${backup_root} \
     --backup-name ${backupset} \
-    --labels "backup ${backup_group} ${labels}" \
+    --labels "${labels_arr[*]}" \
     --timeout ${timeout}
 
 retval=$?
