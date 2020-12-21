@@ -71,10 +71,8 @@ function die() {
 # function - log messages
 #
 function log() {
-  if [ -n "$NUODB_DEBUG" ]; then
-    local err="$@"
-    echo "$err" | tee -a $LOGFILE
-  fi
+  local err="$@"
+  echo "$err" | tee -a $LOGFILE
 }
 
 #=======================================

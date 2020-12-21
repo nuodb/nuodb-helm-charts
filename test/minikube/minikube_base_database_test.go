@@ -412,8 +412,6 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
-				"database.env[0].name":                  "NUODB_DEBUG",
-				"database.env[0].value":                 "debug",
 			},
 		}
 
@@ -438,8 +436,6 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 				"database.enableDaemonSet":              "true",
 				// prevent non-backup SM from scheduling
 				"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
-				"database.env[0].name":                              "NUODB_DEBUG",
-				"database.env[0].value":                             "debug",
 			},
 		}
 
@@ -475,8 +471,6 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 			"backup.persistence.enabled":            "true",
 			"backup.persistence.size":               "1Gi",
 			"database.te.logPersistence.enabled":    "true",
-			"database.env[0].name":                  "NUODB_DEBUG",
-			"database.env[0].value":                 "debug",
 		},
 	}
 
@@ -559,8 +553,6 @@ func TestKubernetesImportDatabase(t *testing.T) {
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
-				"database.env[0].name":                  "NUODB_DEBUG",
-				"database.env[0].value":                 "debug",
 			},
 		})
 
@@ -584,8 +576,6 @@ func TestKubernetesImportDatabase(t *testing.T) {
 					"database.enableDaemonSet":              "true",
 					// prevent non-backup SM from scheduling
 					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
-					"database.env[0].name":                              "NUODB_DEBUG",
-					"database.env[0].value":                             "debug",
 				},
 			},
 		)

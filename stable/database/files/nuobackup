@@ -41,9 +41,7 @@ LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuobackup.log
 # function - log messages
 #
 function log() {
-  if [ -n "$NUODB_DEBUG" ]; then
-    echo "nuobackup $@" | tee -a $LOGFILE
-  fi
+   echo "nuobackup $@" | tee -a $LOGFILE
 }
 
 #=======================================
