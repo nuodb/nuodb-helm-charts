@@ -553,27 +553,13 @@ func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, data
 	return nil
 }
 
-func GetRestartCount(t *testing.T, podName string, options *k8s.KubectlOptions) int32 {
-	pod := k8s.GetPod(t, options, podName)
-
-	var restartCount int32
-	for _, status := range pod.Status.ContainerStatuses {
-		restartCount += status.RestartCount
-	}
-
-	return restartCount
-}
-
-// TODO remove databaseNae param - and retrieve it from extracted databaseOptions
 func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databaseName string, databaseOptions *helm.Options, restart func()) {
 	incarnation := GetDatabaseIncarnation(t, namespace, podName, databaseName)
 
 	restart()
 
 	Await(t, func() bool {
-		newIncarnation := GetDatabaseIncarnation(t, namespace, podName, databaseName)
-		t.Log("incarnation ->", newIncarnation)
-		return newIncarnation.Major > incarnation.Major
+		return GetDatabaseIncarnation(t, namespace, podName, databaseName).Major > incarnation.Major
 	}, 300*time.Second)
 
 	opts := GetExtractedOptions(databaseOptions)
@@ -598,24 +584,6 @@ func AwaitPodRestartCountGreaterThan(t *testing.T, namespace string, podName str
 	Await(t, func() bool {
 		return GetPodRestartCount(t, namespace, podName) > expectedRestartCount
 	}, timeout)
-}
-
-func VerifyProcessRestartFails(t *testing.T, namespace string, podName string, restart func()) {
-	AwaitProcessRestart(t, namespace, podName, restart)
-
-	pod, _ := findPod(t, namespace, podName)
-	Await(t, func() bool {
-		return strings.Contains(fmt.Sprint(pod.Status), "CrashLoopBackoff")
-	}, 120*time.Second)
-}
-
-func AwaitProcessRestart(t *testing.T, namespace string, podName string, restart func()) {
-	options := k8s.NewKubectlOptions("", "", namespace)
-	expectedRestartCount := GetRestartCount(t, podName, options)
-
-	restart()
-
-	AwaitPodRestartCountGreaterThan(t, namespace, podName, expectedRestartCount, 30*time.Second)
 }
 
 func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
@@ -852,35 +820,6 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	)
 }
 
-func GetFile(t *testing.T, namespace string, podname string, path string, filename string) error {
-	pwd, err := os.Getwd()
-	require.NoError(t, err)
-
-	fromPath := fmt.Sprintf("%s/%s:%s/%s", namespace, podname, path, filename)
-	dirPath := filepath.Join(pwd, RESULT_DIR, namespace, podname)
-	toPath := filepath.Join(dirPath, filename)
-
-	_ = os.MkdirAll(dirPath, 0700)
-
-	f, err := os.Create(toPath)
-	require.NoError(t, err)
-	defer f.Close()
-
-	options := k8s.NewKubectlOptions("", "", namespace)
-
-	err = k8s.RunKubectlE(t, options,
-		"cp",
-		fromPath,
-		toPath,
-	)
-
-	if err != nil {
-		t.Log(err)
-	}
-
-	return err
-}
-
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
@@ -926,11 +865,15 @@ func RunSQL(t *testing.T, namespace string, podName string, databaseName string,
 
 	// secrets := getSecret(t, namespace, databaseName)
 
-	return k8s.RunKubectlAndGetOutputE(t, options,
+	result, err = k8s.RunKubectlAndGetOutputE(t, options,
 		"exec", podName, "--",
 		"bash", "-c",
 		fmt.Sprintf("echo \"%s;\" | /opt/nuodb/bin/nuosql --user dba --password secret %s", sql, databaseName),
 	)
+
+	require.NoError(t, err, "runSQL: error trying to run ", sql)
+
+	return result, err
 }
 
 func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDBKubeConfig {
