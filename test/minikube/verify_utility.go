@@ -1,7 +1,7 @@
 package minikube
 
 import (
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"

@@ -49,7 +49,7 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.0.7
+    tag: 4.0.8
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -111,7 +111,7 @@ admin:
     fullSync: false
     policies:
       nearest: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
-  
+
   lbPolicy: nearest
   lbQuery: random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))
 
@@ -227,3 +227,42 @@ admin:
   # These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
+
+  ## Transparent Data Encryption (TDE) secrets
+  # Storage passwords can be managed and stored as Kubernetes
+  # secrets. TDE secrets for all databases should be created and 
+  # provided before deploying NuoDB. For example:
+  #   kubectl create secret generic demo-tde-secret -n nuodb \
+  #     --from-literal target='topSecret'
+  #
+  # Note: TDE should be enabled on database layer using
+  #   SQL> alter database change encryption type AES128;
+  #
+  # Storage password rotation is performed by updating the secret and 
+  # providing the new target and historical (optional) passwords. 
+  # The historical passwords are used for restoring old backup sets. 
+  # For example:
+  #   kubectl create secret generic demo-tde-secret -n nuodb \
+  #     --from-literal target='superSecret' \
+  #     --from-literal historical-20201110='topSecret' \
+  #     --dry-run=client -o yaml | kubectl apply -f -
+  tde:
+    secrets: {}
+      # demo: demo-tde-secret
+    storagePasswordsDir: /etc/nuodb/tde
+
+nuocollector:
+  enabled: false
+  image:
+    registry: docker.io
+    repository: nuodb/nuodb-collector
+    tag: 1.1.0
+    pullPolicy: IfNotPresent
+  watcher:
+    registry: docker.io
+    repository: kiwigrid/k8s-sidecar
+    tag: 0.1.259
+    pullPolicy: IfNotPresent
+  plugins:
+    ## NuoDB Collector compatible plugins specific for admin services
+    admin: {}

@@ -10,7 +10,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 
 	corev1 "k8s.io/api/core/v1"
 
@@ -211,38 +211,6 @@ func backupDatabase(t *testing.T, namespaceName string, podName string, database
 
 	require.NoError(t, err, "Error running: nuodocker get current-backup  ")
 	require.True(t, backupset != "")
-}
-
-func restoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options) {
-	// run the restore chart - which flags the database to restore on next startup
-	randomSuffix := strings.ToLower(random.UniqueId())
-
-	restName := fmt.Sprintf("restore-demo-%s", randomSuffix)
-	options := &helm.Options{
-		SetValues: map[string]string{
-			"database.name":       "demo",
-			"restore.target":      "demo",
-			"restore.source":      ":latest",
-			"restore.autoRestart": "true",
-		},
-	}
-	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	options.KubectlOptions = kubectlOptions
-
-	restore := func() {
-		testlib.InjectTestValues(t, options)
-		helm.Install(t, options, testlib.RESTORE_HELM_CHART_PATH, restName)
-		defer helm.Delete(t, options, restName, true)
-		defer k8s.RunKubectl(t, kubectlOptions, "delete", "job", "restore-demo")
-
-		testlib.AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
-		podName := testlib.GetPodName(t, namespaceName, "restore-demo-")
-		if restoreLog, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "logs", podName); err != nil {
-			t.Log(restoreLog)
-		}
-	}
-
-	testlib.AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
 }
 
 func TestKubernetesBasicDatabase(t *testing.T) {
@@ -553,7 +521,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	// restore database
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
-	restoreDatabase(t, namespaceName, admin0, &databaseOptions)
+	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 
 	// verify that the database does NOT contain the data from AFTER the backup
 	tables, err = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")

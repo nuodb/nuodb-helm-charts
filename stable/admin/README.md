@@ -5,7 +5,7 @@ This chart starts a NuoDB Admin deployment on a Kubernetes cluster using the Hel
 ## Command
 
 ```bash
-helm install nuodb/admin [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install [name] nuodb/admin [--generate-name] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -102,7 +102,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | ----- | ----------- | ------ |
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
-| `image.tag` | NuoDB container image tag | `latest` |
+| `image.tag` | NuoDB container image tag | `4.0.8` |
 | `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
@@ -184,6 +184,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
 | `readinessTimeoutSeconds` | Admin readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `1` |
 | `podAnnotations` | Annotations to pass through to the Admin pod | `nil` |
+| `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
+| `tde.storagePasswordsDir` | Transparent Data Encryption storage passwords mount path | `/etc/nuodb/tde` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 
@@ -215,25 +217,43 @@ The purpose of this section is to allow customisation of the names of the cluste
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
 | `balancer` | suffix for the balancer service | "balancer" |
 
+#### nuocollector.*
+
+The purpose of this section is to specify the NuoDB monitoring parameters.
+
+The following tables list the configurable parameters for the `nuocollector` option of the admin chart and their default values.
+
+| Parameter | Description | Default |
+| ----- | ----------- | ------ |
+| `enabled` | Whether to enable NuoDB monitoring using sidecar containers |`false`|
+| `image.registry` | NuoDB Collector container registry | `docker.io` |
+| `image.repository` | NuoDB Collector container image name |`nuodb/nuodb-collector`|
+| `image.tag` | NuoDB Collector container image tag | `1.1.0` |
+| `image.pullPolicy` | NuoDB Collector container pull policy |`IfNotPresent`|
+| `watcher.registry` | ConfigMap watcher container registry | `docker.io` |
+| `watcher.repository` | ConfigMap watcher container image name |`kiwigrid/k8s-sidecar`|
+| `watcher.tag` | ConfigMap watcher container image tag | `0.1.259` |
+| `watcher.pullPolicy` | ConfigMap watcher container pull policy |`IfNotPresent`|
+| `plugins.admin` | NuoDB Collector additional plugins for admin services |`{}`|
 
 ### Running
 
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/admin --name admin \
-    --debug --dry-run
+helm install admin nuodb/admin --debug --dry-run
 ```
 
 Deploy the administration tier:
 
+**Tip**: If you plan to deploy NuoDB Insights visual monitoring, add the `--set nuocollector.enabled=true` switch as below.
+
+
 ```bash
-helm install nuodb/admin --name admin
+helm install admin nuodb/admin --set nuocollector.enabled=true
 ```
 
-**Tip**: It will take approximately 1 minute to deploy.
-
-The command deploys NuoDB on the Kubernetes cluster in the default configuration. The configuration section lists the parameters that can be configured during installation.
+The command deploys NuoDB on the Kubernetes cluster using the default configuration. The configuration section lists the parameters that can be configured during installation.
 
 **Tip**: List all releases using `helm list`
 
@@ -249,7 +269,6 @@ Verify the pods are running:
 $ kubectl get pods
 NAME                           READY     STATUS    RESTARTS   AGE
 admin-nuodb-cluster0-0         1/1       Running   0          29m
-tiller-86c4495fcc-lczdp        1/1       Running   0          5h
 ```
 
 The command displays the NuoDB Pods running on the Kubernetes cluster. When completed, both the TE and the storage containers should show a **STATUS** of `Running`, and with 0 **RESTARTS**.
@@ -259,16 +278,15 @@ Verify the connected states of the database domain:
 ```bash
 $ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 
-server version: 3.4.1-1-ccb6be381c, server license: Community
-server time: 2019-04-10T00:25:53.054, client token: 370d671ff18dd57a4b4bb0d146c72c8f2f256e7f
+server version: 4.0.7-2-6526a2db74, server license: Community
+server time: 2020-12-10T21:13:25.722, client token: e64322a4728c8bf35ff7f02cda62cc74aca40b66
 Servers:
-  [east-0] east-0.domain.nuodb.svc:48005 [last_ack = 6.92] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=east-0, log=0/15/15) Connected *
+  [admin-nuodb-cluster0-0] admin-nuodb-cluster0-0.nuodb.nuodb-helm.svc.cluster.local:48005 
+     (LEADER, Leader=admin-nuodb-cluster0-0, log=0/35/35) Connected *
 Databases:
 ```
 
-The command displays the status of NuoDB processes. The Servers section lists admin processes; they should all be **Connected**, one will be the **LEADER** and other designated as a **FOLLOWER**.
-
-  **Tip**: Wait until all processes are be in a **RUNNING** state.
+The Servers section lists admin processes; each admin server should transition to the **Connected** state. When multiple Admins are started, one will be the **LEADER** and other designated as a **FOLLOWER**.
 
 ### Scaling
 
@@ -283,7 +301,7 @@ kubectl scale sts admin-nuodb-cluster0 --replicas=3
 To uninstall/delete the deployment:
 
 ```bash
-helm del --purge admin
+helm delete admin
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.

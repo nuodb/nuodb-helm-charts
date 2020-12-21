@@ -2,7 +2,7 @@ package integration
 
 import (
 	"encoding/json"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/assert"
 
 	"testing"

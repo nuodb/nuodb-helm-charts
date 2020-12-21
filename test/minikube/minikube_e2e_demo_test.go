@@ -5,7 +5,7 @@ package minikube
 import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	v12 "k8s.io/api/core/v1"
 	"testing"
 	"time"

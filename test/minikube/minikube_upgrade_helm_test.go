@@ -11,7 +11,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	v12 "k8s.io/api/core/v1"
 )
 
@@ -93,6 +93,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 			"database.sm.resources.requests.memory": "250Mi",
 			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": "250Mi",
+			"nuodb.image.pullPolicy":                "IfNotPresent",
 		},
 		Version: fromHelmVersion,
 	}
@@ -173,12 +174,15 @@ func TestUpgradeHelm(t *testing.T) {
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
 		upgradeAdminTest(t, "2.4.0", &UpdateOptions{
-			adminRolesRequirePatching: true,
+			adminPodShouldGetRecreated: true,
+			adminRolesRequirePatching:  true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "2.4.1", &UpdateOptions{})
+		upgradeAdminTest(t, "2.4.1", &UpdateOptions{
+			adminPodShouldGetRecreated: true,
+		})
 	})
 }
 
@@ -193,11 +197,14 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 
 	t.Run("NuoDB40X_From240_ToLocal", func(t *testing.T) {
 		upgradeDatabaseTest(t, "2.4.0", &UpdateOptions{
-			adminRolesRequirePatching: true,
+			adminPodShouldGetRecreated: true,
+			adminRolesRequirePatching:  true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "2.4.1", &UpdateOptions{})
+		upgradeDatabaseTest(t, "2.4.1", &UpdateOptions{
+			adminPodShouldGetRecreated: true,
+		})
 	})
 }

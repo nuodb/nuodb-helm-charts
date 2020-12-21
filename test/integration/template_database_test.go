@@ -10,7 +10,7 @@ import (
 	v1 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestDatabaseSecretsDefault(t *testing.T) {
@@ -37,23 +37,27 @@ func TestDatabaseConfigMaps(t *testing.T) {
 	helmChartPath := "../../stable/database"
 
 	options := &helm.Options{
-		SetValues: map[string]string{},
+		SetValues: map[string]string{
+			"admin.tde.storagePasswordsDir": "/etc/nuodb/encryption",
+		},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 
-	configs := make(map[string]bool)
+	configs := make(map[string]string)
 
 	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 3) {
-		for k := range obj.Data {
-			configs[k] = true
+		for k, v := range obj.Data {
+			configs[k] = v
 		}
 	}
 
 	assert.Contains(t, configs, "nuosm")
 	assert.Contains(t, configs, "nuote")
 	assert.Contains(t, configs, "readinessprobe")
+	assert.Contains(t, configs, "NUODB_STORAGE_PASSWORDS_DIR")
+	assert.Equal(t, configs["NUODB_STORAGE_PASSWORDS_DIR"], "/etc/nuodb/encryption")
 }
 
 func TestDatabaseDaemonSetDisabled(t *testing.T) {
@@ -550,7 +554,7 @@ func TestDefaultLoadBalancerConfigurationRendersOnlyOnEntryPointCluster(t *testi
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"cloud.cluster.name": 		   "aws0",
+			"cloud.cluster.name":          "aws0",
 			"database.lbConfig.prefilter": "not(label(zone DR))",
 			"database.lbConfig.default":   "random(first(label(node ${NODE_NAME:-}) any))",
 		},
@@ -600,16 +604,16 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"cc.podAnnotations.key1": "value1",
-			"database.podAnnotations.key2": "value2",
-			"database.podAnnotations.key3\\.key3": "value3",
-			"database.podAnnotations.key4\\.key4/key4": "value4",
-			"database.podAnnotations.key5\\.key5/key5": "value5/value5",
+			"cc.podAnnotations.key1":                                       "value1",
+			"database.podAnnotations.key2":                                 "value2",
+			"database.podAnnotations.key3\\.key3":                          "value3",
+			"database.podAnnotations.key4\\.key4/key4":                     "value4",
+			"database.podAnnotations.key5\\.key5/key5":                     "value5/value5",
 			"database.podAnnotations.vault\\.hashicorp\\.com/agent-inject": `"true"`,
-			"database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert": "|\n"+
-			"{{- with secret \"nuodb.com/TLS\" -}}\n"+
-			"  {{ .Data.data.tlsCACert }}\n"+
-			"{{- end }}",
+			"database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert": "|\n" +
+				"{{- with secret \"nuodb.com/TLS\" -}}\n" +
+				"  {{ .Data.data.tlsCACert }}\n" +
+				"{{- end }}",
 		},
 	}
 
@@ -695,4 +699,72 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 		}
 	})
+}
+
+func TestDatabaseStoragePasswordsRender(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.tde.secrets.demo":        "tde-secret",
+			"admin.tde.storagePasswordsDir": "/etc/nuodb/encryption",
+		},
+	}
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			database := "demo"
+			container := obj.Spec.Template.Spec.Containers[0]
+			mount, ok := testlib.GetMount(container.VolumeMounts, "tde-volume-"+database)
+			assert.True(t, ok, "mount tde-volume-%s not found", database)
+			assert.True(t, mount.ReadOnly)
+			assert.Equal(t, options.SetValues["admin.tde.storagePasswordsDir"]+"/"+database, mount.MountPath)
+			volume, ok := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "tde-volume-"+database)
+			assert.True(t, ok, "volume tde-volume-%s not found", database)
+			assert.Equal(t, options.SetValues["admin.tde.secrets."+database], volume.VolumeSource.Secret.SecretName)
+		}
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			database := "demo"
+			container := obj.Spec.Template.Spec.Containers[0]
+			mount, ok := testlib.GetMount(container.VolumeMounts, "tde-volume-"+database)
+			assert.True(t, ok, "mount tde-volume-%s not found", database)
+			assert.True(t, mount.ReadOnly)
+			assert.Equal(t, options.SetValues["admin.tde.storagePasswordsDir"]+"/"+database, mount.MountPath)
+			volume, ok := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "tde-volume-"+database)
+			assert.True(t, ok, "volume tde-volume-%s not found", database)
+			assert.Equal(t, options.SetValues["admin.tde.secrets."+database], volume.VolumeSource.Secret.SecretName)
+		}
+	})
+
+	t.Run("testDaemonSet", func(t *testing.T) {
+		// make a copy
+		localOptions := *options
+		localOptions.SetValues["database.enableDaemonSet"] = "true"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
+			database := "demo"
+			container := obj.Spec.Template.Spec.Containers[0]
+			mount, ok := testlib.GetMount(container.VolumeMounts, "tde-volume-"+database)
+			assert.True(t, ok, "mount tde-volume-%s not found", database)
+			assert.True(t, mount.ReadOnly)
+			assert.Equal(t, options.SetValues["admin.tde.storagePasswordsDir"]+"/"+database, mount.MountPath)
+			volume, ok := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "tde-volume-"+database)
+			assert.True(t, ok, "volume tde-volume-%s not found", database)
+			assert.Equal(t, options.SetValues["admin.tde.secrets."+database], volume.VolumeSource.Secret.SecretName)
+		}
+	})
+
 }

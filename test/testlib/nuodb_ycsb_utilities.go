@@ -26,7 +26,11 @@ func StartYCSBWorkload(t *testing.T, namespaceName string, options *helm.Options
 		helm.Delete(t, options, helmChartReleaseName, true)
 	})
 
-	helm.Install(t, options, YCSB_HELM_CHART_PATH, helmChartReleaseName)
+	if options.Version == "" {
+		helm.Install(t, options, YCSB_HELM_CHART_PATH, helmChartReleaseName)
+	} else {
+		helm.Install(t, options, "nuodb-incubator/demo-ycsb ", helmChartReleaseName)
+	}
 
 	Await(t, func() bool {
 		return GetReplicationController(t, namespaceName, helmChartReleaseName) != nil

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 
 	"strings"
 	"testing"

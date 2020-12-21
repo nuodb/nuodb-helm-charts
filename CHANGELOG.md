@@ -1,8 +1,51 @@
 # Changelog
 
-## [2.4.0](https://github.com/nuodb/nuodb-helm-charts/tree/2.4.0) (2020-07-15)
+## [3.0.0](https://github.com/nuodb/nuodb-helm-charts/tree/3.0.0) (2020-11-09)
 
-[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.3.1...2.4.0)
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.4.1...3.0.0)
+
+**Implemented enhancements:**
+
+- Added NuoDB Collector support for database statistics collection and visual monitoring [\#161](https://github.com/nuodb/nuodb-helm-charts/pull/161) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Moved custom NuoDB admin podAnnotations from StatefulSet metadata to the admin pod itself [\#156](https://github.com/nuodb/nuodb-helm-charts/pull/156) ([acabrele](https://github.com/acabrele))
+- Simplified the required configuration changes for NuoDB admin domains not utilizing TLS network encryption [\#155](https://github.com/nuodb/nuodb-helm-charts/pull/155) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- To support Red Hat OpenShift - Added "nuodb" service account for the admin's Load Balancer job [\#153](https://github.com/nuodb/nuodb-helm-charts/pull/153) ([kmabda](https://github.com/kmabda))
+- Added the ability to pass through custom annotations \(`podAnnotations`\) to be applied to pods to enable 3rd party integrations \(Vault, CNIs, ...\) [\#149](https://github.com/nuodb/nuodb-helm-charts/pull/149) ([acabrele](https://github.com/acabrele))
+- Changed all database container names to "engine" inside of the StatefulSet and Deployment pods [\#135](https://github.com/nuodb/nuodb-helm-charts/pull/135) ([adriansuarez](https://github.com/adriansuarez))
+- Replaced Transaction Engine \(TE\) Load Balancer job \(lbConfig\) with Load Balancer Specification via Kubernetes object annotations \(depends on NuoDB Kubernetes Aware Admin\) [\#133](https://github.com/nuodb/nuodb-helm-charts/pull/133) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Switched to Helm 3 testing by default [\#129](https://github.com/nuodb/nuodb-helm-charts/pull/129) ([vegichan](https://github.com/vegichan))
+- Made StorageClass Persistent Volume reclaim policy configurable [\#128](https://github.com/nuodb/nuodb-helm-charts/pull/128) ([vegichan](https://github.com/vegichan))
+
+**Fixed bugs:**
+
+- Fixed an intermittent timing issue in NuoDB Storage Manager restore-from-backup procedure by adding a timeout-and-retry [\#160](https://github.com/nuodb/nuodb-helm-charts/pull/160) ([NikTJ777](https://github.com/NikTJ777))
+- Fixed NuoDB database Storage Manager StatefulSet database.autoImport credentials by removing single-quotes from curl\_creds [\#157](https://github.com/nuodb/nuodb-helm-charts/pull/157) ([NikTJ777](https://github.com/NikTJ777))
+- Added option to use embedded HTTP path security credentials in the database.autoImport feature [\#154](https://github.com/nuodb/nuodb-helm-charts/pull/154) ([NikTJ777](https://github.com/NikTJ777))
+- Improved retention and handling of multiple post-restart diagnostics files or folders in $NUODB\_CRASHDIR [\#147](https://github.com/nuodb/nuodb-helm-charts/pull/147) ([acabrele](https://github.com/acabrele))
+
+**Merged pull requests:**
+
+- Bumped NuoDB version to 4.0.7 [\#144](https://github.com/nuodb/nuodb-helm-charts/pull/144) ([vegichan](https://github.com/vegichan))
+
+## [v2.4.1](https://github.com/nuodb/nuodb-helm-charts/tree/v2.4.1) (2020-08-30)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.4.0...v2.4.1)
+
+**Implemented enhancements:**
+
+- Added DaemonSets to list of NuoDB Kubernetes Aware Admin permissions [\#141](https://github.com/nuodb/nuodb-helm-charts/pull/141) ([vegichan](https://github.com/vegichan))
+
+**Fixed bugs:**
+
+- Forbidden!Configured service account doesn't have access. Service account may have been revoked. daemonsets.apps is forbidden [\#140](https://github.com/nuodb/nuodb-helm-charts/issues/140)
+
+**Merged pull requests:**
+
+- Bump NuoDB version to 4.0.7 \[2.4-dev branch\] [\#145](https://github.com/nuodb/nuodb-helm-charts/pull/145) ([vegichan](https://github.com/vegichan))
+
+## [v2.4.0](https://github.com/nuodb/nuodb-helm-charts/tree/v2.4.0) (2020-07-15)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.3.1...v2.4.0)
 
 **Implemented enhancements:**
 

@@ -113,6 +113,11 @@ spec:
         args:
           - "nuoadmin"
           - "--"
+          {{- if .Values.admin.tde }}
+          {{- if and .Values.admin.tde.storagePasswordsDir (ne .Values.admin.tde.storagePasswordsDir "/etc/nuodb/tde") }}
+          - "tdeMonitor.storagePasswordsDir={{ .Values.admin.tde.storagePasswordsDir }}"
+          {{- end }}
+          {{- end }}
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
           {{- end}}
@@ -125,7 +130,7 @@ spec:
           initialDelaySeconds: 30
           periodSeconds: 15
           exec:
-            command: [ "nuodocker", "check", "servers", "--check-connected", "--check-active", "--check-leader" ]
+            command: [ "readinessprobe" ]
           failureThreshold: 30
           successThreshold: 2
           timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
@@ -144,6 +149,9 @@ spec:
         - name: nuoadmin
           mountPath: /usr/local/bin/nuoadmin
           subPath: nuoadmin
+        - name: readinessprobe
+          mountPath: /usr/local/bin/readinessprobe
+          subPath: readinessprobe
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert
           mountPath: /etc/nuodb/keys/ca.cert
@@ -164,8 +172,28 @@ spec:
           mountPath: /etc/nuodb/keys/nuocmd.pem
           subPath: {{ .Values.admin.tlsClientPEM.key }}
         {{- end }}
+        {{- if .Values.admin.tde }}
+        {{- if .Values.admin.tde.secrets }}
+        {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+        - name: tde-volume-{{ $dbName }}
+          mountPath: {{ default "/etc/nuodb/tde" $.Values.admin.tde.storagePasswordsDir }}/{{ $dbName }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
+        {{- end }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
+      {{- if .Values.admin.tde }}
+      {{- if .Values.admin.tde.secrets }}
+      {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+      - name: tde-volume-{{ $dbName }}
+        secret:
+          secretName: {{ $secret }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert
         secret:
@@ -202,7 +230,11 @@ spec:
       - name: nuoadmin
         configMap:
           name: {{ template "admin.fullname" . }}-nuoadmin
-          defaultMode: 0777
+          defaultMode: 0755
+      - name: readinessprobe
+        configMap:
+          name: {{ template "admin.fullname" . }}-readinessprobe
+          defaultMode: 0755
   volumeClaimTemplates:
   - metadata:
       name: raftlog

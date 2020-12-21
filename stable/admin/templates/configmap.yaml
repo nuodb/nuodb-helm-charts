@@ -52,6 +52,6 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "admin.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: domain-{{ .Values.admin.domain }}-env
+  name: {{ template "admin.fullname" . }}-readinessprobe
 data:
-  NUOADMIN_AP0: {{ template "admin.fullname" .}}-0
+{{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}

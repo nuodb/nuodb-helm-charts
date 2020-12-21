@@ -5,7 +5,7 @@ This chart starts a Daemonset to disable transparent huge pages (THP) on the Lin
 ## Command
 
 ```bash
-helm install nuodb/transparent-hugepage [--generate-name | --name releaseName] [--set parameter] [--values myvalues.yaml]
+helm install [name] nuodb/transparent-hugepage [--generate-name] [--set parameter] [--values myvalues.yaml]
 ```
 
 ## Software Version Prerequisites
@@ -122,16 +122,13 @@ thp:
 Verify the Helm chart:
 
 ```bash
-helm install nuodb/transparent-hugepage \
-    --name thp \
-    --debug --dry-run
+helm install thp nuodb/transparent-hugepage --debug --dry-run
 ```
 
 Run the Helm Chart:
 
 ```bash
-helm install nuodb/transparent-hugepage \
-    --name thp
+helm install thp nuodb/transparent-hugepage
 ```
 
 Check the deployment status:
@@ -161,7 +158,7 @@ The file MUST be run as root/sudo.
 To uninstall/delete the deployment:
 
 ```bash
-helm del --purge thp
+helm delete thp
 ```
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.

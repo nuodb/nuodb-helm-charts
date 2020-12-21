@@ -159,6 +159,19 @@ spec:
           mountPath: /etc/nuodb/keys/nuoadmin.p12
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
+        {{- if .Values.admin.tde }}
+        {{- if .Values.admin.tde.secrets }}
+        {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+        {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+        {{- if eq $dbName $.Values.database.name }}
+        - name: tde-volume-{{ $dbName }}
+          mountPath: {{ default "/etc/nuodb/tde" $.Values.admin.tde.storagePasswordsDir }}/{{ $dbName }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -168,8 +181,10 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: 5
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       - name: log-volume
         emptyDir: {}
       - name: nuosm
@@ -204,6 +219,19 @@ spec:
         secret:
           secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tde }}
+      {{- if .Values.admin.tde.secrets }}
+      {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+      {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+      {{- if eq $dbName $.Values.database.name }}
+      - name: tde-volume-{{ $dbName }}
+        secret:
+          secretName: {{ $secret }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
       {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
@@ -371,6 +399,19 @@ spec:
           mountPath: /etc/nuodb/keys/nuoadmin.p12
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
+        {{- if .Values.admin.tde }}
+        {{- if .Values.admin.tde.secrets }}
+        {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+        {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+        {{- if eq $dbName $.Values.database.name }}
+        - name: tde-volume-{{ $dbName }}
+          mountPath: {{ default "/etc/nuodb/tde" $.Values.admin.tde.storagePasswordsDir }}/{{ $dbName }}
+          readOnly: true
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
+        {{- end }}
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15
@@ -380,8 +421,10 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
+      {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
+      {{-  include "nuodb.sidecar.volumes" . | nindent 6 }}
       - name: log-volume
         emptyDir: {}
       - name: nuosm
@@ -419,6 +462,19 @@ spec:
         secret:
           secretName: {{ .Values.admin.tlsKeyStore.secret }}
           defaultMode: 0440
+      {{- end }}
+      {{- if .Values.admin.tde }}
+      {{- if .Values.admin.tde.secrets }}
+      {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+      {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+      {{- if eq $dbName $.Values.database.name }}
+      - name: tde-volume-{{ $dbName }}
+        secret:
+          secretName: {{ $secret }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
+      {{- end }}
       {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
