@@ -74,7 +74,6 @@ function log() {
   if [ -n "$NUODB_DEBUG" ]; then
     local err="$@"
     echo "$err" | tee -a $LOGFILE
-    #curl -k -X POST -E /etc/nuodb/keys/nuocmd.pem -H "Content-type: application/json" $ap_protocol://$NUOADMIN_AP0:8888/api/1/diagnostics/log -d "{\"message\": \"nuosm $err\"}"
   fi
 }
 
@@ -101,10 +100,6 @@ function wrapLogfile() {
     log "(nuosm) log file wrapped around"
   fi
 }
-
-#=======================================
-# function to get a value from the KV store
-#
 
 #=======================================
 # function to perform archive restore
@@ -218,7 +213,6 @@ function perform_restore() {
 
   else
     # log "Calling nuoarchive to restore $restore_source into $DB_DIR"
-    # $NUODB_BINDIR/nuoarchive restore --restore-dir $DB_DIR $NUODB_BACKUPDIR/$restore_source
     log "Calling nuodocker to restore $restore_source into $DB_DIR"
     status="$(nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $NUODB_BACKUPDIR/$restore_source --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata)"
     log "$status"
@@ -395,8 +389,6 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
 
     log "I am first-in: $first_in == $HOSTNAME"
 
-    # [ -z "$restore_source" ] && die 70 "There is no valid LATEST backup - restore of LATEST failed."
-
     # take ownership of the SM startup semaphore
     trace "Take ownership of SM startup semaphore"
     $NUOCMD set value --key $startup_key/$DB_NAME --value $HOSTNAME --unconditional
@@ -420,8 +412,6 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     log "Restored from $restore_source"
 
     # clear/release shared state
-    # $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
-    # $NUOCMD set value --key $restore_req --value '' --expected-value $restore_requested
     log "clearing restore credential request from raft"
     $NUOCMD set value --key $credential_req --value '' --unconditional
 

@@ -43,7 +43,6 @@ LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuobackup.log
 function log() {
   if [ -n "$NUODB_DEBUG" ]; then
     echo "nuobackup $@" | tee -a $LOGFILE
-   #  curl -k -X POST -E /etc/nuodb/keys/nuocmd.pem -H "Content-type: application/json" $ap_protocol://$NUOADMIN_AP0:8888/api/1/diagnostics/log -d "{\"message\": \"nuosm $@\"}"
   fi
 }
 
