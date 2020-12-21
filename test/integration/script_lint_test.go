@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nuodb/nuodb-helm-charts/test/testlib"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 const shebangPattern = "[#][!][ \t]*/[^/]+/(sh|bash)"
