@@ -64,7 +64,7 @@ admin:
 
 restore:
 
-  ## Provide a name in place of prometheus-operator for `app:` labels
+  ## Provide a name in place of the chart name for `app:` labels
   ##
   #nameOverride: ""
 
