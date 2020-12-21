@@ -1,6 +1,5 @@
-#!/bin/bash
+#!/bin/sh
 
-# print error and exit
 function die() {
   retval=$1
   shift
@@ -13,10 +12,10 @@ processes=`nuocmd show domain --process-format "{address} {start_id}" | grep \`h
 
 if [ -z "$processes" ]
 then
-  die 80 "No process found"
+  die -1 "No process found"
 fi
 
 for start_id in $processes
 do
-  nuocmd check process --check-running --start-id $start_id || die 81 "Process reported not ready"
+  nuocmd check process --check-running --start-id $start_id || die -1 "Process reported not ready"
 done
