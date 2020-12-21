@@ -19,6 +19,10 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
+const LABEL_CLOUD = "minikube"
+const LABEL_REGION = "local"
+const LABEL_ZONE = "local-b"
+
 func populateCreateDBData(t *testing.T, namespaceName string, adminPod string) {
 	// populate some data
 	opts := k8s.NewKubectlOptions("", "", namespaceName)

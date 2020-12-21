@@ -38,9 +38,6 @@ const INJECT_VALUES_FILE = "../../valuesInject.yaml"
 
 const IMPORT_ARCHIVE_URL = "https://download.nuohub.org/ce_releases/restore.bak.tz"
 
-const RESTORE_EMPTYARCHIVE_URL = "https://download.nuohub.org/ce_releases/empty.bak.tz"
-const RESTORE_ARCHIVE2_URL = "https://download.nuohub.org/ce_releases/restore2.bak.tz"
-
 // suffix "m" for spec.containers[].resources.requests.cpu denotes "millicores",
 // and 1 CPU is equivalent to 1000m
 const MINIMAL_VIABLE_ENGINE_CPU = "500m"
