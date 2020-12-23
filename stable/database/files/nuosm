@@ -13,8 +13,6 @@
 
 : ${NUODB_IMPORT_CREDENTIALS:=:}
 
-[ -n "$NUODOCKER_KEYSTORE_PASSWORD" ] && ap_protocol="https" || ap_protocol="http"
-
 ERR_ADMIN_UNAVAILABLE=71
 ERR_BACKUPSET_NOT_FOUND=72
 ERR_NO_SPACE=73
@@ -194,7 +192,11 @@ function perform_restore() {
 
     # restore data and/or fix the metadata
     log "restoring archive and/or clearing restored archive physical metadata"
-    status="$(nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $download_dir --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata)"
+    status="$(nuodocker --api-server $NUOCMD_API_SERVER restore archive \
+      --origin-dir $download_dir \
+      --restore-dir $DB_DIR \
+      --db-name $DB_NAME \
+      --clean-metadata 2>&1)"
     log "$status"
 
     if [ "$download_dir" != "$DB_DIR" ]; then
@@ -205,7 +207,11 @@ function perform_restore() {
   else
     # log "Calling nuoarchive to restore $restore_source into $DB_DIR"
     log "Calling nuodocker to restore $restore_source into $DB_DIR"
-    status="$(nuodocker --api-server $NUOCMD_API_SERVER restore archive --origin-dir $NUODB_BACKUPDIR/$restore_source --restore-dir $DB_DIR --db-name $DB_NAME --clean-metadata)"
+    status="$(nuodocker --api-server $NUOCMD_API_SERVER restore archive \
+      --origin-dir $NUODB_BACKUPDIR/$restore_source \
+      --restore-dir $DB_DIR \
+      --db-name $DB_NAME \
+      --clean-metadata 2>&1)"
     log "$status"
   fi
 
@@ -220,8 +226,12 @@ function perform_restore() {
 
   # completely delete my previous archive metadata
   # this is required because nuodocker always creates a new archive
-  trace "completely deleting the raft metadata for my archive"
-  [ $myArchive -ge 0 ] && $NUOCMD delete archive --archive-id $myArchive --purge
+  trace "completely deleting the raft metadata for my archive $myArchive"
+  if [ "$myArchive" -ne "-1" ]; then
+    trace "deleting my archive metadata: $myArchive"
+    log "$( $NUOCMD delete archive --archive-id $myArchive --purge 2>&1 )"
+
+  fi
 
   [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
 }
@@ -246,7 +256,7 @@ log "existing archives: $( ls -l $DB_PARENTDIR )"
 
 # ensure the admin layer is intact...
 trace "checking Admin layer"
-status="$($NUOCMD check servers --check-leader --timeout 30)"
+status="$($NUOCMD check servers --check-leader --timeout 30 2>&1)"
 retval=$?
 [ $retval -ne 0 ] && die $ERR_ADMIN_UNAVAILABLE "(nuosm) Admin layer is inoperative - exiting: $status"
 
@@ -464,8 +474,8 @@ wotIdid=""
 trace "releasing my locked archive metadata"
 locked_archive=$( $NUOCMD show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 if [ -n "$locked_archive" ]; then
-  $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
   log "Unlocking my locked archive $locked_archive"
+  $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
 fi
 
 log "restore_source=$restore_source; restore_requested=$restore_requested; path=$DB_DIR; atom files=$( ls -l $DB_DIR/*.atm | wc -l ); catalogs=$( ls -l $DB_DIR/*.cat | wc -l)"
@@ -482,14 +492,6 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $ca
 
   # any error in a IMPORT restore is a fatal error
   [ $retval -ne 0 ] && die $retval $error
-
-  # completely delete my previous archive metadata
-  trace "completely deleting raft metadata for my archive $myArchive"
-  if [ "$myArchive" -ne "-1" ]; then
-    trace "deleting my archive metadata: $myArchive"
-    log "$( $NUOCMD delete archive --archive-id "$myArchive" --purge )"
-
-  fi
 fi
 
 log "$( $NUOCMD show archives --db-name $DB_NAME )"
