@@ -50,11 +50,9 @@ export NUOCMD DB_NAME NUODB_STORAGE_PASSWORDS_DIR
 function die() {
   retval=$1
   shift
-  [ -n "$wotIdid" ] && echo "While $wotIdid"
-  echo "$@"
-
   error="$@"
-  log "While $wotIdid: $error"
+  [ -n "$wotIdid" ] && error="Error while ${wotIdid}: ${error}"
+  log "$error"
 
   # cleanup
   $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
@@ -164,11 +162,6 @@ function perform_restore() {
   mkdir $DB_DIR
 
   log "(restore) recreated $DB_DIR; atoms=$( ls -l $DB_DIR/*.atm | wc -l)"
-
-  # find the backup set and backup id
-  # backupset=$(ls -tl $BACKUPDIR | head -n 1)
-  # backup_id=$($NUODB_BINDIR/nuoarchive restore --report...
-  # currently, backup-id is not supported
 
   # restore request is a URL - so retrieve the backup using curl
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
@@ -458,8 +451,8 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
 
       log "Restored secondary archive to match primary restore"
 
-      # any error in a SEED restore is logged, but not fatal
-      [ -n "$error" ] && echo "WARNING: Error performing SEED restore: $error"
+      # any error in a SEED restore is a fatal error
+      [ $retval -ne 0 ] && die $retval $error
     fi
   fi
 fi
@@ -487,8 +480,8 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $ca
 
   perform_restore
 
-  # any error in a SEED restore is logged, but not fatal
-  [ -n "$error" ] && log "WARNING: Error performing IMPORT/SEED restore: $error"
+  # any error in a IMPORT restore is a fatal error
+  [ $retval -ne 0 ] && die $retval $error
 
   # completely delete my previous archive metadata
   trace "completely deleting raft metadata for my archive $myArchive"
