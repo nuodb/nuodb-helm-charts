@@ -401,7 +401,7 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
 
     # delete all archives but my own
     for archv in $archive_ids; do
-      [ "$archv" -ne "$myArchive" ] && log "Deleting archiveId=$archv" && $NUOCMD delete archive --archive-id $archv
+      [ "$archv" -ne "$myArchive" ] && log "Deleting archiveId=$archv" && log $($NUOCMD delete archive --archive-id $archv 2>&1)
     done
 
     # and restore the data
@@ -410,14 +410,18 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
 
     wotIdid=""
 
-    # clear/release shared state
-    log "clearing restore credential request from raft"
-    $NUOCMD set value --key $credential_req --value '' --unconditional
-
     # any error is a fatal error
     [ $retval -ne 0 ] && die $retval $error
 
     log "Restored from $restore_source"
+
+    # clear/release shared state only if restore is successfull
+    log "clearing restore credential request from raft"
+    $NUOCMD set value --key $credential_req --value '' --unconditional
+
+    # clear the restore_request only if restore is successfull
+    trace "clearing restore request"
+    $NUOCMD set value --key $restore_req --value '' --expected-value "$restore_requested"
 
   fi
 
@@ -495,10 +499,6 @@ log "$( $NUOCMD show archives --db-name $DB_NAME )"
 # release the first-in semaphore
 wotIdid="releasing first-in semaphore"
 [ -n "$first_in" ] && $NUOCMD set value --key $first_req --value '' --expected-value $HOSTNAME
-
-# clear the restore_request
-wotIdid="clearing restore request"
-[ -n "$restore_requested" ] && $NUOCMD set value --key $restore_req --value '' --expected-value "$restore_requested"
 
 trace "executing nuodocker to start SM"
 
