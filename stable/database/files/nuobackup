@@ -192,8 +192,6 @@ if [ "$backup_type" = "full" ]; then
       current=0
    fi
 
-   backupset=$( date "+%Y%m%dT%H%M%S" )
-
    # bump latest, and wrap around (simple ring-buffer)
    next=$(( (current + 1) % $NUODB_MAX_BACKUP_HISTORY ))
 else
@@ -201,13 +199,12 @@ else
       echo >&2 "No full backup has completed yet - try again later"
       exit -1
    fi
-
-   # retrieve the latest backupset name
-   backupset=$(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
-   echo >&2 "Looking up $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} returned: $backupset"
 fi
 
 if [ "$backup_type" = "report-latest" ]; then
+   # retrieve the latest backupset name
+   backupset=$(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
+   echo >&2 "Looking up $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} returned: $backupset"
    echo "$backupset"
    exit 0
 fi
@@ -226,7 +223,6 @@ nuodocker backup database \
     --db-name ${db_name} \
     --type ${backup_type} \
     --backup-root ${backup_root} \
-    --backup-name ${backupset} \
     --labels "${labels_arr[*]}" \
     --timeout ${timeout}
 
@@ -238,6 +234,9 @@ fi
 
 if [ "$backup_type" = "full" ]; then
    # store the new backupset as latest, and store the new latest index
+   backupset=$( nuodocker get current-backup \
+      --db-name ${db_name} \
+      --labels "backup ${backup_group} ${labels}" | head -1 | awk '{print $2}' )
    echo >&2 "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest = $next"
    echo >&2 "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next = $backupset"
    echo >&2 "$NUODB_BACKUP_KEY/$db_name/latest = $backup_group"
