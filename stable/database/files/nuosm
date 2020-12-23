@@ -124,7 +124,7 @@ function perform_restore() {
   archSpace="$(df --output=avail $DB_DIR | grep -o ' *[0-9]\+')"
 
   if [ $(( archSpace > archSize * 2)) ]; then
-    saveName=$DB_DIR-save-$( date +%Y%m%dT%H%M%S )
+    saveName="${DB_DIR}-save-$( date +%Y%m%dT%H%M%S )"
     undo="mv $saveName $DB_DIR"
     mv $DB_DIR $saveName
      
@@ -135,7 +135,7 @@ function perform_restore() {
       return $retval
     fi
   else
-    tarfile=$DB_DIR-$( date +%Y%m%dT%H%M%S ).tar.gz
+    tarfile="${DB_DIR}-$( date +%Y%m%dT%H%M%S ).tar.gz"
     tar czf $tarfile -C $DB_PARENTDIR $DB_NAME
 
     retval=$?
@@ -178,8 +178,8 @@ function perform_restore() {
     [ -n "$restore_credentials" -a "$restore_credentials" != ":" ] && curl_creds="--user $restore_credentials"
     [ -n "$curl_creds" ] && curl_opts="--user *:*"
 
-    log "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
-    curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $DB_DIR
+    log "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $download_dir"
+    curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $download_dir
 
     retval=$?
     if [ $retval -ne 0 ]; then
@@ -197,6 +197,7 @@ function perform_restore() {
       --restore-dir $DB_DIR \
       --db-name $DB_NAME \
       --clean-metadata 2>&1)"
+    retval=$?
     log "$status"
 
     if [ "$download_dir" != "$DB_DIR" ]; then
@@ -212,7 +213,14 @@ function perform_restore() {
       --restore-dir $DB_DIR \
       --db-name $DB_NAME \
       --clean-metadata 2>&1)"
+    retval=$?
     log "$status"
+  fi
+
+  if [ $retval -ne 0 ]; then
+    $undo
+    error="Restore: unable to restore source=$restore_source type=$restore_type into $DB_DIR"
+    return $retval
   fi
 
   # make sure the archive is correct for this database
@@ -233,7 +241,7 @@ function perform_restore() {
 
   fi
 
-  [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR 2>/dev/null
+  [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
 }
 
 #=============================
@@ -390,11 +398,10 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     # disable all the archive metadata so that get-archive-history will not look for other SMs
     trace "Disable all archive metadata except my own"
     archive_ids=$( $NUOCMD get archives --db-name $DB_NAME | grep -o "id=[0-9]\+" | grep -o "[0-9]\+")
-    log "Archive IDs: $archive_ids"
 
     # delete all archives but my own
     for archv in $archive_ids; do
-      [ "$archv" -ne "$myArchive" ] && $NUOCMD delete archive --archive-id $archv
+      [ "$archv" -ne "$myArchive" ] && log "Deleting archiveId=$archv" && $NUOCMD delete archive --archive-id $archv
     done
 
     # and restore the data
@@ -403,14 +410,14 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
 
     wotIdid=""
 
-    log "Restored from $restore_source"
-
     # clear/release shared state
     log "clearing restore credential request from raft"
     $NUOCMD set value --key $credential_req --value '' --unconditional
 
     # any error is a fatal error
     [ $retval -ne 0 ] && die $retval $error
+
+    log "Restored from $restore_source"
 
   fi
 
