@@ -110,7 +110,7 @@ function perform_restore() {
   retval=0
   error=
 
-  log "Restoring $restore_source; existing archives: $( ls -l $DB_PARENTDIR )"
+  log "Restoring $restore_source; existing archive directores: $( ls -l $DB_PARENTDIR )"
 
   # bail out early if the restore will obviously fail
   if [ -z "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" -a ! -d "$NUODB_BACKUPDIR/$restore_source" ]; then
@@ -159,7 +159,7 @@ function perform_restore() {
 
   mkdir $DB_DIR
 
-  log "(restore) recreated $DB_DIR; atoms=$( ls -l $DB_DIR/*.atm | wc -l)"
+  log "(restore) recreated $DB_DIR; atoms=$( ls -l $DB_DIR/*.atm 2>/dev/null | wc -l)"
 
   # restore request is a URL - so retrieve the backup using curl
   if [ -n "$( echo $restore_source | grep '^[a-z]\+:/[^ ]\+')" ]; then
@@ -178,7 +178,7 @@ function perform_restore() {
     [ -n "$restore_credentials" -a "$restore_credentials" != ":" ] && curl_creds="--user $restore_credentials"
     [ -n "$curl_creds" ] && curl_opts="--user *:*"
 
-    echo "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
+    log "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $DB_DIR"
     curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $DB_DIR
 
     retval=$?
@@ -233,7 +233,7 @@ function perform_restore() {
 
   fi
 
-  [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
+  [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR 2>/dev/null
 }
 
 #=============================
@@ -247,12 +247,10 @@ wrapLogfile
 # ensure DB_DIR exists
 if [ ! -e "${DB_DIR}" ] ; then
   mkdir -p "${DB_DIR}"
-  log "Created new dir $DB_DIR: atoms=$( ls -l $DB_DIR/*.atm | wc -l )"
+  log "Created new dir $DB_DIR"
 else
-  log "$DB_DIR exists: $( ls -l $DB_DIR | wc -l )"
+  log "Directory $DB_DIR exists"
 fi
-
-log "existing archives: $( ls -l $DB_PARENTDIR )"
 
 # ensure the admin layer is intact...
 trace "checking Admin layer"
@@ -273,8 +271,6 @@ trace "retrieving restore request from raft"
 restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
 restore_requested="$( $NUOCMD get value --key $restore_req )"
 
-log "restore requested: $restore_requested"
-
 wotIdid=""
 
 if [ -n "$restore_requested" ]; then
@@ -291,14 +287,10 @@ fi
 # if my archive already exists
 if [ "$myArchive" -ne "-1" ]; then
 
-  log "myArchive found; existing archives: $( ls -l $DB_PARENTDIR )"
-
   # if a restore has been requested, then do that
   if [ -n "$restore_requested" ]; then
     restore_source=$(echo $restore_requested | sed -r 's;^stream:(.+)$;\1;')
     [ "$restore_source" != "$restore_requested" ] && restore_type="stream"
-
-    log "restore requested: $restore_source"
 
   # else if the database is configured with an AUTO_RESTORE, then specify that
   elif [ -n "$NUODB_AUTO_RESTORE" ]; then
@@ -335,7 +327,7 @@ elif [ ! -f $DB_DIR/1.atm ]; then
     strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
   fi
 elif [ -n "$NUODB_DEBUG" ]; then
-  log "myArchive not found, but archive has some contents: $( ls -l $DB_DIR | wc -l )"
+  log "myArchive not found, but archive has some contents: $( ls -l $DB_DIR )"
 fi
 
 # resolve ":latest"
@@ -370,12 +362,13 @@ if [ "$restore_source" = ":latest" -o "$restore_source" = ":group-latest" ]; the
   log "Latest restore for $NUODB_BACKUP_GROUP resolved to $restore_source"
 fi
 
+atomCount=$( ls -l $DB_DIR/*.atm 2>/dev/null | wc -l )
+catalogCount=$( ls -l $DB_DIR/*.cat 2>/dev/null | wc -l )
+log "restore_source=$restore_source; restore_requested=$restore_requested; path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
+
 wotIdid=""
 
 if [ -n "$restore_requested" -a -n "$restore_source" ]; then
-
-  log "Restore $restore_requested requested; archive contents: $( ls -l $DB_DIR | wc -l)"
-
   # work out who is the first one in
   trace "trying to reserve first-in"
   $NUOCMD set value --key $first_req --value $HOSTNAME --expected-value ''
@@ -397,7 +390,7 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     # disable all the archive metadata so that get-archive-history will not look for other SMs
     trace "Disable all archive metadata except my own"
     archive_ids=$( $NUOCMD get archives --db-name $DB_NAME | grep -o "id=[0-9]\+" | grep -o "[0-9]\+")
-    log "archives: $archive_ids"
+    log "Archive IDs: $archive_ids"
 
     # delete all archives but my own
     for archv in $archive_ids; do
@@ -441,7 +434,7 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     # wait for the starting SM to be RUNNING
     $NUOCMD check process --start-id $owner_id --check-running --timeout 600
     if [ $? != 0 ]; then
-      echo "Timeout waiting for SM to go RUNNING - owner $owner, start-id $owner_id - retrying."
+      log "Timeout waiting for SM to go RUNNING - owner $owner, start-id $owner_id - retrying."
       sleep 30
       continue
     fi
@@ -478,15 +471,11 @@ if [ -n "$locked_archive" ]; then
   $NUOCMD create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
 fi
 
-log "restore_source=$restore_source; restore_requested=$restore_requested; path=$DB_DIR; atom files=$( ls -l $DB_DIR/*.atm | wc -l ); catalogs=$( ls -l $DB_DIR/*.cat | wc -l)"
-
 # if a RESTORE_SOURCE is defined, and the archive dir is empty, then import/restore from the URL
-atomCount=$( ls -l $DB_DIR/*.atm | wc -l)
-catalogCount=$( ls -l $DB_DIR/*.cat | wc -l )
 if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $catalogCount -lt 2 ]; then
 
   trace "restoring empty/damaged archive"
-  log "Existing archive is empty - restoring and clearing metadata"
+  log "Existing archive is empty or damaged - restoring and clearing metadata"
 
   perform_restore
 
