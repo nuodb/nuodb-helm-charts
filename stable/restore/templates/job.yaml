@@ -34,7 +34,11 @@ spec:
         - "--source"
         - "{{ include "restore.source" . }}"
         - "--auto"
-        - "{{ default "true" .Values.restore.autoRestart }}"
+        {{- if hasKey .Values.restore "autoRestart" }}
+        - {{ .Values.restore.autoRestart | quote }}
+        {{ else }}
+        - "true"
+        {{- end }}
     {{- include "restore.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
