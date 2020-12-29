@@ -37,40 +37,6 @@
 : ${NUODB_MAX_BACKUP_HISTORY:=10}
 : ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
 
-LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuobackup.log
-
-#=======================================
-# function - log messages
-#
-function log() {
-   echo "nuobackup $@" | tee -a $LOGFILE
-}
-
-#=======================================
-# function - trace workflow
-#
-function trace() {
-  wotIdid="$@"
-  [ -n "$1" -a -n "$NUODB_DEBUG" ] && log "trace: $wotIdid"
-}
-
-#=======================================
-# function - wrap a log file around so it doesn't grow infinitely
-#
-function wrapLogfile() {
-  logsize=$( du -sb $LOGFILE | grep -o '^ *[0-9]\+' )
-  maxlog=5000000
-  log "logsize=$logsize"
-  if [ ${logsize:=0} -gt $maxlog ]; then
-    lines=$(wc -l $LOGFILE)
-    tail -n $(( lines / 2 )) $LOGFILE > ${LOGFILE}-new
-    rm -rf $LOGFILE
-    mv $LOGFILE-new $LOGFILE
-  fi
-
-  log "log file wrapped around"
-}
-
 backup_type="full"
 db_name=$DB_NAME
 backup_group=""
