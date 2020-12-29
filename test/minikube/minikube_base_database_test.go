@@ -544,9 +544,10 @@ func TestKubernetesImportDatabase(t *testing.T) {
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
-		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		databaseOptions := &helm.Options{
 			SetValues: map[string]string{
-				"database.autoImport.source":            testlib.IMPORT_ARCHIVE_URL,
+				"database.autoImport.source":            "sftp://sftp.nuodb.com/incoming/restore.bak.tz",
+				"database.autoImport.credentials":       "nuodb:wrongPass",
 				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
@@ -554,7 +555,29 @@ func TestKubernetesImportDatabase(t *testing.T) {
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
 			},
-		})
+		}
+
+		// Install database and expect archive download failure during auto import
+		databaseReleaseName := testlib.StartDatabaseNoWait(t, namespaceName, admin0, databaseOptions)
+
+		opt := testlib.GetExtractedOptions(databaseOptions)
+		smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
+		testlib.AwaitNrReplicasScheduled(t, namespaceName, smPodNameTemplate, opt.NrSmPods)
+		smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPodName0, 0, 120*time.Second)
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
+			"Restore: unable to download/unpack backup", &corev1.PodLogOptions{Previous: true}), 1)
+
+		// Use the correct IMPORT URL without credentials
+		databaseOptions.SetValues["database.autoImport.source"] = testlib.IMPORT_ARCHIVE_URL
+		databaseOptions.SetValues["database.autoImport.credentials"] = ""
+		helm.Upgrade(t, databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
+
+		smPod0 := testlib.GetPod(t, namespaceName, smPodName0)
+		testlib.DeletePod(t, namespaceName, "pod/"+smPodName0)
+		testlib.AwaitPodObjectRecreated(t, namespaceName, smPod0, 30*time.Second)
+		testlib.AwaitPodUp(t, namespaceName, smPodName0, 120*time.Second)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 		// verify that the database contains the restored data
 		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")

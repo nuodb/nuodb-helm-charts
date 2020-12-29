@@ -127,13 +127,6 @@ function perform_restore() {
 
   log "Restoring $restore_source; existing archive directores: $( ls -l $DB_PARENTDIR )"
 
-  # bail out early if the restore will obviously fail
-  if ! isRestoreSourceAvailable; then
-      error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
-      retval=$ERR_BACKUPSET_NOT_FOUND
-      return $retval
-  fi
-
   # work out available space
   archSize="$(du -s $DB_DIR | grep -o '^ *[0-9]\+')"
   archSpace="$(df --output=avail $DB_DIR | grep -o ' *[0-9]\+')"
@@ -238,22 +231,13 @@ function perform_restore() {
     return $retval
   fi
 
-  # make sure the archive is correct for this database
+  # make sure the archive i s correct for this database
   restoredName="$($NUODB_BINDIR/nuodb --show-archive-history --archive $DB_DIR | tr -d '\n' | grep -Eo '[<]Arg[>]--database[<]/Arg[>][^<]*[<]Arg[>]([^<]+)[<]/Arg[>]' | sed -r 's;[<]Arg[>]--database[<]/Arg[>][^<]*[<]Arg[>]([^<]+)[<]/Arg[>];\1;' )"
   if [ -n "$restoredName" -a "$restoredName" != "$DB_NAME" ]; then
     $undo
     error="Restore: incorrect backup specified. Database name is $DB_NAME but archive is for $restoredName"
     retval=$ERR_INCORRECT_BACKUP
     return $retval
-  fi
-
-  # completely delete my previous archive metadata
-  # this is required because nuodocker always creates a new archive
-  trace "completely deleting the raft metadata for my archive $myArchive"
-  if [ "$myArchive" -ne "-1" ]; then
-    trace "deleting my archive metadata: $myArchive"
-    log "$( nuocmd delete archive --archive-id $myArchive --purge 2>&1 )"
-
   fi
 
   [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
@@ -410,6 +394,12 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     trace "Take ownership of SM startup semaphore"
     nuocmd set value --key $startup_key/$DB_NAME --value $HOSTNAME --unconditional
 
+    wotIdid=""
+    if ! isRestoreSourceAvailable; then
+      error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
+      die $ERR_BACKUPSET_NOT_FOUND $error
+    fi
+
     # disable all the archive metadata so that get-archive-history will not look for other SMs
     trace "Disable all archive metadata except my own"
     archive_ids=$( nuocmd get archives --db-name $DB_NAME | grep -o "id=[0-9]\+" | grep -o "[0-9]\+")
@@ -484,6 +474,15 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
       [ $retval -ne 0 ] && die $retval $error
     fi
   fi
+
+  # completely delete my previous archive metadata
+  # this is required because nuodocker always creates a new archive
+  trace "completely deleting the raft metadata for my archive $myArchive"
+  if [ "$myArchive" -ne "-1" ]; then
+    log "deleting my archive metadata: $myArchive"
+    log "$( nuocmd delete archive --archive-id $myArchive --purge 2>&1 )"
+  fi
+
 fi
 
 wotIdid=""
@@ -506,13 +505,14 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $ca
   
     # any error in a IMPORT restore is a fatal error
     [ $retval -ne 0 ] && die $retval $error
-  else
-    if [ "$myArchive" -ne "-1" ]; then
-      # delete damaged archive metadata as new one will be created by nuodocker
-      trace "deleting damaged archive metadata: $myArchive"
-      log "$( nuocmd delete archive --archive-id "$myArchive" --purge )"
-    fi
   fi
+
+  if [ "$myArchive" -ne "-1" ]; then
+    # delete damaged archive metadata as new one will be created by nuodocker
+    log "deleting damaged archive metadata: $myArchive"
+    log "$( nuocmd delete archive --archive-id "$myArchive" --purge )"
+  fi
+
 fi
 
 log "$( nuocmd show archives --db-name $DB_NAME )"
