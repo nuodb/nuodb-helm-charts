@@ -168,10 +168,8 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 			"restore.autoRestart": "true",
 		},
 	}
-	for key := range options.SetValues {
-		if value, ok := databaseOptions.SetValues[key]; ok {
-			options.SetValues[key] = value
-		}
+	for key, value := range databaseOptions.SetValues {
+		options.SetValues[key] = value
 	}
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
@@ -185,7 +183,7 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
 	}
 
-	if databaseOptions.SetValues["restore.autoRestart"] == "true" {
+	if options.SetValues["restore.autoRestart"] == "true" {
 		AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
 	} else {
 		restore()

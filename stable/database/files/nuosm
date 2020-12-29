@@ -56,8 +56,7 @@ function die() {
   nuocmd set value --key $startup_key/$DB_NAME --value '' --expected-value $HOSTNAME
 
   # release my archive if it is locked
-  locked_archive=$( nuocmd show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-  [ -n "$locked_archive" ] && nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
+  releaseLockedArchive
 
   exit $retval
 }
@@ -107,6 +106,15 @@ function isRestoreSourceAvailable() {
     return 0
   else
     return 1
+  fi
+}
+
+function releaseLockedArchive() {
+  trace "releasing my locked archive metadata"
+  locked_archive=$( nuocmd show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
+  if [ -n "$locked_archive" ]; then
+    log "Unlocking my locked archive $locked_archive"
+    nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
   fi
 }
 
@@ -240,6 +248,14 @@ function perform_restore() {
     return $retval
   fi
 
+  # completely delete my previous archive metadata
+  # this is required because nuodocker always creates a new archive
+  trace "completely deleting the raft metadata for my archive $myArchive"
+  if [ "$myArchive" -ne "-1" ]; then
+    log "deleting my archive metadata: $myArchive"
+    log "$( nuocmd delete archive --archive-id $myArchive --purge 2>&1 )"
+  fi
+
   [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
 }
 
@@ -269,6 +285,9 @@ first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
 
 trace "checking archive raft metadata"
 myArchive=$( nuocmd show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
+[ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
+  --db-name $DB_NAME \
+  --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -z "$myArchive" ] && myArchive="-1"
 log "myArchive=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
 [ -n "$NUODB_DEBUG" -a "$myArchive" -eq "-1" ] && log "$(nuocmd show archives --db-name $DB_NAME)"
@@ -400,6 +419,10 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
       die $ERR_BACKUPSET_NOT_FOUND $error
     fi
 
+    # KAA will remove archives for scaled down SM statefulsets; 
+    # release my archive if needed
+    releaseLockedArchive
+
     # disable all the archive metadata so that get-archive-history will not look for other SMs
     trace "Disable all archive metadata except my own"
     archive_ids=$( nuocmd get archives --db-name $DB_NAME | grep -o "id=[0-9]\+" | grep -o "[0-9]\+")
@@ -475,26 +498,13 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     fi
   fi
 
-  # completely delete my previous archive metadata
-  # this is required because nuodocker always creates a new archive
-  trace "completely deleting the raft metadata for my archive $myArchive"
-  if [ "$myArchive" -ne "-1" ]; then
-    log "deleting my archive metadata: $myArchive"
-    log "$( nuocmd delete archive --archive-id $myArchive --purge 2>&1 )"
-  fi
-
 fi
 
 wotIdid=""
 
 # release my archive if it is locked
-# this will likely never execute but is kept to be sure, to be sure...
-trace "releasing my locked archive metadata"
-locked_archive=$( nuocmd show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-if [ -n "$locked_archive" ]; then
-  log "Unlocking my locked archive $locked_archive"
-  nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
-fi
+# this will likely never execute but is kept to be sure
+releaseLockedArchive
 
 # if a RESTORE_SOURCE is defined, and the archive dir is empty, then import/restore from the URL
 if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $catalogCount -lt 2 ]; then
@@ -505,12 +515,12 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $ca
   
     # any error in a IMPORT restore is a fatal error
     [ $retval -ne 0 ] && die $retval $error
-  fi
-
-  if [ "$myArchive" -ne "-1" ]; then
-    # delete damaged archive metadata as new one will be created by nuodocker
-    log "deleting damaged archive metadata: $myArchive"
-    log "$( nuocmd delete archive --archive-id "$myArchive" --purge )"
+  else
+      if [ "$myArchive" -ne "-1" ]; then
+        # delete damaged archive metadata as new one will be created by nuodocker
+        log "deleting damaged archive metadata: $myArchive"
+        log "$( nuocmd delete archive --archive-id "$myArchive" --purge )"
+      fi
   fi
 
 fi
