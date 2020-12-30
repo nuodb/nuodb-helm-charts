@@ -656,8 +656,7 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
 
 	// wait for the initial backup to complete
-	databaseName := "demo"
-	backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", databaseName)
+	backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", opt.DbName)
 	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 	backupset := testlib.GetLatestBackup(t, namespaceName, hcSmPodName0, opt.DbName, opt.ClusterName)
 
@@ -677,10 +676,10 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		awaitPodLog(t, namespaceName, hcSmPodName0, "_auto_post-restart")
 
 		// verify that the database does NOT contain the data from AFTER the backup
-		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "show schema User")
 		require.NoError(t, err, "error running SQL: show schema User")
 		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
-		checkArchives(t, namespaceName, admin0, 2, 0)
+		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	})
 
 	t.Run("manualRestart", func(t *testing.T) {
@@ -714,9 +713,9 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 		// verify that the database does NOT contain the data from AFTER the backup
-		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "show schema User")
 		require.NoError(t, err, "error running SQL: show schema User")
 		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
-		checkArchives(t, namespaceName, admin0, 2, 0)
+		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	})
 }

@@ -215,3 +215,26 @@ func GetLatestBackup(t *testing.T, namespaceName string, podName string,
 	require.True(t, backupset != "")
 	return backupset
 }
+
+func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName string, numExpected int, numExpectedRemoved int) (archives []NuoDBArchive, removedArchives []NuoDBArchive) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	// check archives
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName)
+	require.NoError(t, err, output)
+
+	err, archives = UnmarshalArchives(output)
+	require.NoError(t, err)
+	require.Equal(t, numExpected, len(archives), output)
+
+	// check removed archives
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName, "--removed")
+	require.NoError(t, err, output)
+
+	err, removedArchives = UnmarshalArchives(output)
+	require.NoError(t, err)
+	require.Equal(t, numExpectedRemoved, len(removedArchives), output)
+	return
+}
