@@ -20,6 +20,10 @@ ERR_INCORRECT_BACKUP=74
 ERR_RESTORE_FAILED=75
 
 startup_key="/nuodb/nuosm/startup"
+first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
+restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
+credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
+strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
 
 DB_PARENTDIR=${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}
 DB_DIR=${DB_PARENTDIR}/${DB_NAME}
@@ -55,8 +59,8 @@ function die() {
   nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
   nuocmd set value --key $startup_key/$DB_NAME --value '' --expected-value $HOSTNAME
 
-  # release my archive if it is locked
-  releaseLockedArchive
+  # resurect my archive if it is removed
+  resurrectRemovedArchive
 
   exit $retval
 }
@@ -66,7 +70,9 @@ function die() {
 #
 function log() {
   local err="$@"
-  echo "$err" | tee -a $LOGFILE
+  if [ -n "$err" ]; then
+    echo "$err" | tee -a $LOGFILE
+  fi
 }
 
 #=======================================
@@ -94,27 +100,25 @@ function wrapLogfile() {
 }
 
 function isUrl() {
-  if echo $1 | grep -q '^[a-z]\+:/[^ ]\+'; then
-    return 0
-  else
-    return 1
-  fi
+  local url="$1"
+  echo "$url" | grep -q '^[a-z]\+:/[^ ]\+'
+  return $?
 }
 
 function isRestoreSourceAvailable() {
-  if isUrl "$restore_source" || [ -d $NUODB_BACKUPDIR/$restore_source ]; then
-    return 0
-  else
-    return 1
-  fi
+  local source="$1"
+  isUrl "$source" || [ -d "$NUODB_BACKUPDIR/$source" ]
+  return $?
 }
 
-function releaseLockedArchive() {
-  trace "releasing my locked archive metadata"
-  locked_archive=$( nuocmd show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-  if [ -n "$locked_archive" ]; then
-    log "Unlocking my locked archive $locked_archive"
-    nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $locked_archive
+function resurrectRemovedArchive() {
+  trace "resurrecting removed archive metadata"
+  # Find archiveId associated with process which address is the same as this pod hostname
+  # It assumes that there is only one archive object associated with the current host
+  removed_archive=$( nuocmd show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
+  if [ -n "$removed_archive" ]; then
+    log "Resurrecting removed archiveId=${removed_archive}"
+    nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $removed_archive
   fi
 }
 
@@ -252,7 +256,7 @@ function perform_restore() {
   # this is required because nuodocker always creates a new archive
   trace "completely deleting the raft metadata for my archive $myArchive"
   if [ "$myArchive" -ne "-1" ]; then
-    log "deleting my archive metadata: $myArchive"
+    log "Purging my archive metadata archiveId=$myArchive"
     log "$( nuocmd delete archive --archive-id $myArchive --purge 2>&1 )"
   fi
 
@@ -281,31 +285,26 @@ status="$(nuocmd check servers --check-leader --timeout 30 2>&1)"
 retval=$?
 [ $retval -ne 0 ] && die $ERR_ADMIN_UNAVAILABLE "(nuosm) Admin layer is inoperative - exiting: $status"
 
-first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
-
 trace "checking archive raft metadata"
 myArchive=$( nuocmd show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
   --db-name $DB_NAME \
   --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -z "$myArchive" ] && myArchive="-1"
-log "myArchive=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
+log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
 [ -n "$NUODB_DEBUG" -a "$myArchive" -eq "-1" ] && log "$(nuocmd show archives --db-name $DB_NAME)"
 
 # if a restore from backup has been requested, then do that now
 trace "retrieving restore request from raft"
-restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
 restore_requested="$( nuocmd get value --key $restore_req )"
 
 wotIdid=""
 
 if [ -n "$restore_requested" ]; then
   trace "retrieving restore credentials from raft"
-  credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
   restore_credentials="$( nuocmd get value --key $credential_req )"
   [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
 
-  strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
   strip_levels="$( nuocmd get value --key $strip_req )"
   [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
 fi
@@ -414,14 +413,14 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     nuocmd set value --key $startup_key/$DB_NAME --value $HOSTNAME --unconditional
 
     wotIdid=""
-    if ! isRestoreSourceAvailable; then
+    if ! isRestoreSourceAvailable "$restore_source"; then
       error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
       die $ERR_BACKUPSET_NOT_FOUND $error
     fi
 
     # KAA will remove archives for scaled down SM statefulsets; 
-    # release my archive if needed
-    releaseLockedArchive
+    # resurrect my archive if needed
+    resurrectRemovedArchive
 
     # disable all the archive metadata so that get-archive-history will not look for other SMs
     trace "Disable all archive metadata except my own"
@@ -444,7 +443,7 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     log "Restored from $restore_source"
 
     # clear/release shared state only if restore is successfull
-    log "clearing restore credential request from raft"
+    log "Clearing restore credential request from raft"
     nuocmd set value --key $credential_req --value '' --unconditional
 
     # clear the restore_request only if restore is successfull
@@ -488,7 +487,7 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     # attempt to restore the same backup that the initial SM is restoring - to reduce SYNC time
     trace "attempting to restore same backup as master SM to secondary SM"
 
-    if isRestoreSourceAvailable; then
+    if isRestoreSourceAvailable "$restore_source"; then
       perform_restore
 
       log "Restored secondary archive to match primary restore"
@@ -502,13 +501,13 @@ fi
 
 wotIdid=""
 
-# release my archive if it is locked
+# resurrect my archive if it is removed
 # this will likely never execute but is kept to be sure
-releaseLockedArchive
+resurrectRemovedArchive
 
 # if a RESTORE_SOURCE is defined, and the archive dir is empty, then import/restore from the URL
 if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $catalogCount -lt 2 ]; then
-  if isRestoreSourceAvailable; then
+  if isRestoreSourceAvailable "$restore_source"; then
     trace "restoring empty/damaged archive"
     log "Existing archive is empty or damaged - restoring and clearing metadata"
     perform_restore
@@ -518,7 +517,7 @@ if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $ca
   else
       if [ "$myArchive" -ne "-1" ]; then
         # delete damaged archive metadata as new one will be created by nuodocker
-        log "deleting damaged archive metadata: $myArchive"
+        log "Purging damaged archive metadata archiveId=$myArchive"
         log "$( nuocmd delete archive --archive-id "$myArchive" --purge )"
       fi
   fi

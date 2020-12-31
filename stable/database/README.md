@@ -229,12 +229,12 @@ The following tables list the configurable parameters of the `database` chart an
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
-| `autoImport.*` | Enable and configure the automatic initialising of the initial database state | `disabled` |
+| `autoImport.*` | Enable and configure the automatic initializing of the initial database state | `disabled` |
 | `autoImport.source` | The source - typically a URL - of the database copy to import | `""` |
 | `autoImport.credentials` | Authentication for the download of `source` in the form `user`:`password` | '""'|
 | `autoImport.stripLevels` | The number of levels to strip off pathnames when unpacking a TAR file of an archive | `1` |
 | `autoImport.type` | Type of content in `source`. One of `stream` -> exact copy of an archive; or `backupset` -> a NuoDB hotcopy backupset | 'backupset' |
-| `autoRestore.*` | Enable and configure the automatic reinitialising of a single archive in a running database - see the options in `autoImport` | `disabled` |
+| `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
 | `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `sm.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |

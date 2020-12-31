@@ -22,8 +22,7 @@ LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuorestore.log
 #
 function log() {
   if [ -n "$NUODB_DEBUG" ]; then
-    echo "nuorestore $@" | tee -a $LOGFILE
-   #  curl -k -X POST -E /etc/nuodb/keys/nuocmd.pem -H "Content-type: application/json" $ap_protocol://$NUOADMIN_AP0:8888/api/1/diagnostics/log -d "{\"message\": \"nuorestore $@\"}"
+   echo "nuorestore $@" | tee -a $LOGFILE
   fi
 }
 
