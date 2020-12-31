@@ -9,6 +9,7 @@
 : ${NUODB_BACKUPDIR:=/var/opt/nuodb/backup}
 : ${NUODB_STORAGE_PASSWORDS_DIR:=/etc/nuodb/tde}
 : ${NUODB_DOMAIN:="nuodb"}
+: ${DB_NAME:="demo"}
 : ${NUODB_SEQUENCE_SYNC:=true}
 
 : ${NUODB_IMPORT_CREDENTIALS:=:}
