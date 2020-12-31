@@ -719,3 +719,88 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	})
 }
+
+func TestKubernetesAutoRestore(t *testing.T) {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
+		t.Skip("Cannot test autoRestore without the Enterprise Edition")
+	}
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "demo",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.autoRestore.source":           ":latest",
+			"database.sm.noHotCopy.replicas":        "1",
+			"database.te.logPersistence.enabled":    "true",
+			"database.env[0].name":                  "NUODB_DEBUG",
+			"database.env[0].value":                 "debug",
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+	})
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	databaseOptions.KubectlOptions = kubectlOptions
+
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	hcSmPodNameTemplate := fmt.Sprintf("%s-hotcopy", smPodNameTemplate)
+	smPodName0 := fmt.Sprintf("%s-0", smPodNameTemplate)
+	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+
+	// wait for the initial backup to complete
+	backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", opt.DbName)
+	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
+
+	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, hcSmPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+
+	populateCreateDBData(t, namespaceName, admin0)
+	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
+
+	removeArchiveData := func(podName string) {
+		// Remove archive data and restart the pod
+		k8s.RunKubectl(t, kubectlOptions, "exec", podName, "--", "rm", "-rf", "/var/opt/nuodb/archive/nuodb/demo")
+		// Engine should fail with ASSERT and pod will be restarted
+		testlib.RunSQL(t, namespaceName, admin0, "demo", "select * from system.nodes")
+		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 30*time.Second)
+		awaitPodLog(t, namespaceName, podName, "_post-restart")
+	}
+
+	t.Run("restartHotCopySM", func(t *testing.T) {
+		removeArchiveData(hcSmPodName0)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+		// HC SM should restore the archive from the latest backup
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
+			fmt.Sprintf("Finished restoring /var/opt/nuodb/backup/%s to /var/opt/nuodb/archive/nuodb/demo", backupset),
+			&corev1.PodLogOptions{}), 1)
+		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
+	})
+
+	t.Run("restartNonHotCopySM", func(t *testing.T) {
+		removeArchiveData(hcSmPodName0)
+		// nonHC SM should remove the archive metadata and SYNC the data from other SM
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
+	})
+}

@@ -248,7 +248,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotcopy.timeout` | Timeout for a started hotcopy job to complete (seconds) | `1800` |
 | `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
 | `sm.hotcopy.failureHostory` | Number of failed jobs to keep | `5` |
-| `sm.hotcopy.backupDir` | Directory path where backiupsets will be stored | `/var/opt/nuodb/backup` |
+| `sm.hotcopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
 | `sm.hotcopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
 | `sm.hotcopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
 | `sm.hotcopy.incrementalSchedule` | cron schedule for INCREMENTAL hotcopy jobs | `35 22 * * 0-5` |
