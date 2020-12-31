@@ -21,8 +21,9 @@ LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuorestore.log
 # function - log messages
 #
 function log() {
-  if [ -n "$NUODB_DEBUG" ]; then
-   echo "nuorestore $@" | tee -a $LOGFILE
+  local message="$@"
+  if [ -n "$message" ]; then
+    echo "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" ) $message" | tee -a $LOGFILE
   fi
 }
 

@@ -64,9 +64,9 @@ function die() {
 # function - log messages
 #
 function log() {
-  local err="$@"
-  if [ -n "$err" ]; then
-    echo "$err" | tee -a $LOGFILE
+  local message="$@"
+  if [ -n "$message" ]; then
+    echo "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" ) $message" | tee -a $LOGFILE
   fi
 }
 
