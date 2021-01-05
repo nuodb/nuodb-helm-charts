@@ -75,7 +75,7 @@ func EnsureDatabaseNotRunning(t *testing.T, adminPod string, opt ExtractedOption
 
 type DatabaseInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
 
-func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, options *helm.Options, installationStep DatabaseInstallationStep) (helmChartReleaseName string) {
+func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, options *helm.Options, installationStep DatabaseInstallationStep, awaitDatabase bool) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
 	InjectTestValues(t, options)
@@ -108,38 +108,46 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 
 	installationStep(t, options, helmChartReleaseName)
 
-	AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, opt.NrTePods)
-	AwaitNrReplicasScheduled(t, namespaceName, smPodName, opt.NrSmPods)
+	if awaitDatabase {
+		AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, opt.NrTePods)
+		AwaitNrReplicasScheduled(t, namespaceName, smPodName, opt.NrSmPods)
 
-	// NOTE: the Teardown logic will pick a TE/SM that is running during teardown time. Not the TE/SM that was running originally
-	// this is relevant for any tests that restart TEs/SMs
+		// NOTE: the Teardown logic will pick a TE/SM that is running during teardown time. Not the TE/SM that was running originally
+		// this is relevant for any tests that restart TEs/SMs
 
-	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
+		tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 
-	AddTeardown(TEARDOWN_DATABASE, func() {
-		go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{Follow: true})
-	})
-	AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
+		AddTeardown(TEARDOWN_DATABASE, func() {
+			go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{Follow: true})
+		})
+		AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
 
-	smPodName0 := GetPodName(t, namespaceName, smPodName)
-	AddTeardown(TEARDOWN_DATABASE, func() {
-		go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{Follow: true})
-	})
-	AwaitPodUp(t, namespaceName, smPodName0, 240*time.Second)
+		smPodName0 := GetPodName(t, namespaceName, smPodName)
+		AddTeardown(TEARDOWN_DATABASE, func() {
+			go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{Follow: true})
+		})
+		AwaitPodUp(t, namespaceName, smPodName0, 240*time.Second)
 
-	AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
+		AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
+	}
 
 	return
 }
 
+func InstallDatabase(t *testing.T, options *helm.Options, helmChartReleaseName string) {
+	if options.Version == "" {
+		helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
+	} else {
+		helm.Install(t, options, "nuodb/database", helmChartReleaseName)
+	}
+}
+
 func StartDatabase(t *testing.T, namespace string, adminPod string, options *helm.Options) string {
-	return StartDatabaseTemplate(t, namespace, adminPod, options, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		if options.Version == "" {
-			helm.Install(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
-		} else {
-			helm.Install(t, options, "nuodb/database", helmChartReleaseName)
-		}
-	})
+	return StartDatabaseTemplate(t, namespace, adminPod, options, InstallDatabase, true)
+}
+
+func StartDatabaseNoWait(t *testing.T, namespace string, adminPod string, options *helm.Options) string {
+	return StartDatabaseTemplate(t, namespace, adminPod, options, InstallDatabase, false)
 }
 
 func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, deploymentName string) {
@@ -160,10 +168,8 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 			"restore.autoRestart": "true",
 		},
 	}
-	for key := range options.SetValues {
-		if value, ok := databaseOptions.SetValues[key]; ok {
-			options.SetValues[key] = value
-		}
+	for key, value := range databaseOptions.SetValues {
+		options.SetValues[key] = value
 	}
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
@@ -177,7 +183,11 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
 	}
 
-	AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
+	if options.SetValues["restore.autoRestart"] == "true" {
+		AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
+	} else {
+		restore()
+	}
 }
 
 func BackupDatabase(t *testing.T, namespaceName string, podName string,
@@ -190,12 +200,41 @@ func BackupDatabase(t *testing.T, namespaceName string, podName string,
 	)
 	require.NoError(t, err, "Error creating backup")
 	require.True(t, strings.Contains(output, "completed"), "Error nuobackup: %s", output)
+	return GetLatestBackup(t, namespaceName, podName, databaseName, backupGroup)
+}
+
+func GetLatestBackup(t *testing.T, namespaceName string, podName string,
+	databaseName string, backupGroup string) string {
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	backupset, err := k8s.RunKubectlAndGetOutputE(t, opts,
 		"exec", podName, "--", "bash", "-c",
 		"nuobackup --type report-latest --db-name "+databaseName+
 			" --group "+backupGroup+" --backup-root /var/opt/nuodb/backup 2>/dev/null",
 	)
 	require.NoError(t, err, "Error while reporting latest backupset")
-	require.True(t, output != "")
+	require.True(t, backupset != "")
 	return backupset
+}
+
+func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName string, numExpected int, numExpectedRemoved int) (archives []NuoDBArchive, removedArchives []NuoDBArchive) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	// check archives
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName)
+	require.NoError(t, err, output)
+
+	err, archives = UnmarshalArchives(output)
+	require.NoError(t, err)
+	require.Equal(t, numExpected, len(archives), output)
+
+	// check removed archives
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName, "--removed")
+	require.NoError(t, err, output)
+
+	err, removedArchives = UnmarshalArchives(output)
+	require.NoError(t, err)
+	require.Equal(t, numExpectedRemoved, len(removedArchives), output)
+	return
 }

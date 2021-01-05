@@ -13,7 +13,7 @@
 # A backup can be specific to a backup-group, and the backup-groups can have different schedules.
 #
 # An optional semaphore can be specified - if the semaphore is specified, and not set in the KV store, then
-# NO backupis performed.
+# NO backup is performed.
 # This allows a cronjob to run `nuobackup` on a schedule, and conditionally perform a backup if the semaphore has been set.
 #
 # The information of recent backups in the KV store is organised as a ringbuffer.
@@ -32,7 +32,7 @@
 #   --wait-timeout - timeout (in seconds) to wait for specified amount of SM processes
 
 # for debugging...
-[ -n "$NUODB_DEBUG" ] && set -x 
+[ "$NUODB_DEBUG" = "verbose" ] && set -x 
 
 : ${NUODB_MAX_BACKUP_HISTORY:=10}
 : ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}

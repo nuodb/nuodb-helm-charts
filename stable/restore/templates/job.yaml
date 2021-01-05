@@ -1,11 +1,12 @@
+{{- $restoreTarget := include "restore.target" . -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: restore-{{ include "restore.target" . }}
+  name: restore-{{ $restoreTarget }}
   labels:
     group: nuodb
     subgroup: restore
-    database: "{{ .Values.database.name }}"
+    database: "{{ $restoreTarget }}"
 spec:
   parallelism: 1
   completions: 1
@@ -26,12 +27,18 @@ spec:
         ##
         args:
         - "nuorestore"
+        - "--type"
+        - "{{ default "database" .Values.restore.type }}"
         - "--db-name"
-        - "{{ include "restore.target" . }}"
+        - "{{ $restoreTarget }}"
         - "--source"
         - "{{ include "restore.source" . }}"
         - "--auto"
-        - "{{ default "true" .Values.restore.autoRestart }}"
+        {{- if hasKey .Values.restore "autoRestart" }}
+        - {{ .Values.restore.autoRestart | quote }}
+        {{ else }}
+        - "true"
+        {{- end }}
     {{- include "restore.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -53,12 +60,12 @@ spec:
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
-              name: {{ include "restore.target" . }}.nuodb.com
+              name: {{ $restoreTarget }}.nuodb.com
               key: database-name
         - name: DATABASE_RESTORE_CREDENTIALS
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ $restoreTarget }}.nuodb.com
               key: database-restore-credentials
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888"}
         - { name: NUODB_RESTORE_URL,   value: "{{ include "restore.source" . }}" }
@@ -85,7 +92,7 @@ spec:
         emptyDir: {}
       - name: nuorestore
         configMap:
-          name: {{ template "database.fullname" . }}-nuorestore
+          name: {{ template "restore.fullname" . }}-nuorestore
           defaultMode: 0777
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert

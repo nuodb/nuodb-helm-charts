@@ -9,6 +9,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
@@ -119,6 +120,28 @@ func SplitAndRenderDaemonSet(t *testing.T, output string, expectedNrObjects int)
 
 		if strings.Contains(part, fmt.Sprintf("kind: %s", "DaemonSet")) {
 			var obj appsv1.DaemonSet
+			helm.UnmarshalK8SYaml(t, part, &obj)
+
+			objects = append(objects, obj)
+		}
+	}
+
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
+
+	return objects
+}
+
+func SplitAndRenderJob(t *testing.T, output string, expectedNrObjects int) []batchv1.Job {
+	objects := make([]batchv1.Job, 0)
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if strings.Contains(part, fmt.Sprintf("kind: %s", "Job")) {
+			var obj batchv1.Job
 			helm.UnmarshalK8SYaml(t, part, &obj)
 
 			objects = append(objects, obj)

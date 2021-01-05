@@ -229,6 +229,12 @@ The following tables list the configurable parameters of the `database` chart an
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
+| `autoImport.*` | Enable and configure the automatic initializing of the initial database state | `disabled` |
+| `autoImport.source` | The source - typically a URL - of the database copy to import | `""` |
+| `autoImport.credentials` | Authentication for the download of `source` in the form `user`:`password` | '""'|
+| `autoImport.stripLevels` | The number of levels to strip off pathnames when unpacking a TAR file of an archive | `1` |
+| `autoImport.type` | Type of content in `source`. One of `stream` -> exact copy of an archive; or `backupset` -> a NuoDB hotcopy backupset | 'backupset' |
+| `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
 | `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `sm.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
@@ -242,7 +248,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotcopy.timeout` | Timeout for a started hotcopy job to complete (seconds) | `1800` |
 | `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
 | `sm.hotcopy.failureHostory` | Number of failed jobs to keep | `5` |
-| `sm.hotcopy.backupDir` | Directory path where backiupsets will be stored | `/var/opt/nuodb/backup` |
+| `sm.hotcopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
 | `sm.hotcopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
 | `sm.hotcopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
 | `sm.hotcopy.incrementalSchedule` | cron schedule for INCREMENTAL hotcopy jobs | `35 22 * * 0-5` |
@@ -303,7 +309,20 @@ Any file located in `database.configFilesPath` can be replaced; the YAML key cor
 | ----- | ----------- | ------ |
 | `nuodb.config` | [NuoDB database options][6] | `nil` |
 
-#### database.serviceSuffix
+#### restore.*
+
+The following tables list the configurable parameters of the restore chart and their default values.
+
+| Parameter | Description | Default |
+| ----- | ----------- | ------ |
+| `restore.type` | What type of restore to perform: [ "database" | "archive" ]. A "database" restore restarts the entire database at a previous state. An "archive" restore restores/repairs a SINGLE archive in a RUNNING database. | `"database"` |
+| `restore.target` | Where to restore `TO` | `{{ .Values.database.name }}` |
+| `restore.source` | Where to restore `FROM` [ backupset | url | `:latest` | `:group-latest` ] | `:latest` |
+| `restore.credentials` | Credentials to use for a URL source (user:password) | `""` |
+| `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false). Only valid for a "database" restore | `true` |
+
+
+### Running
 
 The purpose of this section is to allow customisation of the names of the clusterIP and balancer database services (load-balancers).
 

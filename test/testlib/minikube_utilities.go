@@ -863,17 +863,11 @@ func DeletePod(t *testing.T, namespace string, podName string) {
 func RunSQL(t *testing.T, namespace string, podName string, databaseName string, sql string) (result string, err error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	// secrets := getSecret(t, namespace, databaseName)
-
-	result, err = k8s.RunKubectlAndGetOutputE(t, options,
+	return k8s.RunKubectlAndGetOutputE(t, options,
 		"exec", podName, "--",
 		"bash", "-c",
 		fmt.Sprintf("echo \"%s;\" | /opt/nuodb/bin/nuosql --user dba --password secret %s", sql, databaseName),
 	)
-
-	require.NoError(t, err, "runSQL: error trying to run ", sql)
-
-	return result, err
 }
 
 func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDBKubeConfig {

@@ -62,20 +62,31 @@ admin:
   #   secret: nuodb-client-pem
   #   key: client.pem
 
-database:
-  # name
-  # NuoDB Database name.  must consist of lowercase alphanumeric
-  # characters '[a-z0-9]+'
-  name:
-
 restore:
+
+  ## Provide a name in place of the chart name for `app:` labels
+  ##
+  #nameOverride: ""
+
+  ## Provide a name to substitute for the full names of resources
+  ##
+  #fullnameOverride: ""
+
+  # restore type: [ database | archive ]
+  #
+  # A database restore restores ALL archives of the database - ie restarts the database at a previous state
+  # An archive restore restores/repairs a single archive in a RUNNING database
+  type: "database"
+
   # name of the existing database being restored 
-  target: ""
+  target: "demo"
 
   # source
   # Can be one of:
   # * the name of a backupset on a hotcopy-SM's backup disk;
   # * the metaname ':latest'
+  # * the URL of a downloadable TAR file of a hotcopy backupset
+  # * stream:URL of a downloadable TAR file of a exact copy of a NuoDB archive
   source: ""
 
   # credentials for the specified target - if different to the database.autoRestore.credentials

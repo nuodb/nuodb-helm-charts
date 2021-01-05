@@ -146,14 +146,15 @@ nuodb:
 
 #### restore.*
 
-The following tables list the configurable parameters of the backup chart and their default values.
+The following tables list the configurable parameters of the restore chart and their default values.
 
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
+| `restore.type` | What type of restore to perform: [ "database" | "archive" ]. A "database" restore restarts the entire database at a previous state. An "archive" restore restores/repairs a SINGLE archive in a RUNNING database. | `"database"` |
 | `restore.target` | Where to restore `TO` | `{{ .Values.database.name }}` |
 | `restore.source` | Where to restore `FROM` [ backupset | url | `:latest` ] | `:latest` |
 | `restore.credentials` | Credentials to use for a URL source (user:password) | `""` |
-| `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false) | `true` |
+| `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false). Only valid for a "database" restore | `true` |
 
 ## Detailed Steps
 

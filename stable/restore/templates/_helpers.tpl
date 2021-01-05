@@ -18,17 +18,18 @@ We truncate at 63 chars because some Kubernetes name fields are limited to this 
 Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
-{{- define "database.fullname" -}}
+{{- define "restore.fullname" -}}
 {{- $domain := default "domain" .Values.admin.domain -}}
 {{- $cluster := default "cluster0" .Values.cloud.cluster.name -}}
-{{- if .Values.database.fullnameOverride -}}
-{{- .Values.database.fullnameOverride | trunc 63 | trimSuffix "-" -}}
+{{- $target := include "restore.target" . -}}
+{{- if .Values.restore.fullnameOverride -}}
+{{- .Values.restore.fullnameOverride | trunc 63 | trimSuffix "-" -}}
 {{- else -}}
-{{- $name := default .Chart.Name .Values.database.nameOverride -}}
+{{- $name := default .Chart.Name .Values.restore.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 43 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster $target | trunc 43 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 43 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster $target $name | trunc 43 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -133,14 +134,18 @@ Import ENV vars from configMaps
    You Have Been Warned.
 */}}
 {{- define "restore.envFrom" }}
-envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+envFrom: [ configMapRef: { name: {{ include "restore.target" . }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
 {{- end -}}
 
 {{/*
 Return the restore target.
 */}}
 {{- define "restore.target" -}}
+{{- if .Values.database -}}
 {{- default .Values.database.name .Values.restore.target -}}
+{{- else -}}
+{{- .Values.restore.target -}}
+{{- end -}}
 {{- end -}}
 
 {{/*

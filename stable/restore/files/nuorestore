@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 #
 # simple script to perform a NuoDB restore.
 # Sets a flag to tell newly-starting SM(s) to perform the restore; then optionally causes the SM(s) to restart
@@ -10,8 +10,46 @@
 #   --source    - source to restore from - can be a backupset or a URL
 #   --auto      - automatically start the restore operation ( true | false )
 
+[ "$NUODB_DEBUG" = "verbose" ] && set -X
+
 : ${NUODB_BACKUP_KEY:=/nuodb/nuobackup}
 : ${NUODB_RESTORE_REQUEST_PREFIX:=/nuodb/nuosm}
+
+LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuorestore.log
+
+#=======================================
+# function - log messages
+#
+function log() {
+  local message="$@"
+  if [ -n "$message" ]; then
+    echo "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" ) $message" | tee -a $LOGFILE
+  fi
+}
+
+#=======================================
+# function - trace workflow
+#
+function trace() {
+  wotIdid="$@"
+  [ -n "$1" -a -n "$NUODB_DEBUG" ] && log "trace: $wotIdid"
+}
+
+#=======================================
+# function - wrap a log file around so it doesn't grow infinitely
+#
+function wrapLogfile() {
+  logsize=$( du -sb $LOGFILE | grep -o '^ *[0-9]\+' )
+  maxlog=5000000
+  log "logsize=$logsize"
+  if [ ${logsize:=0} -gt $maxlog ]; then
+    lines=$(wc -l $LOGFILE)
+    tail -n $(( lines / 2 )) $LOGFILE > ${LOGFILE}-new
+    rm -rf $LOGFILE
+    mv $LOGFILE-new $LOGFILE
+    log "(nuorestore) log file wrapped around"
+  fi
+}
 
 restore_type="database"
 db_name=$DB_NAME
@@ -56,6 +94,8 @@ restore_type=$(echo $restore_type | tr '[:upper:]' '[:lower:]')
 auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 
 # set the persistent flag for the backup
+log "restore_type=$restore_type; writing $restore_source to $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore"
+
 nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
     --value $restore_source \
     --unconditional
@@ -66,8 +106,12 @@ if [ -n "$restore_credentials" ]; then
         --unconditional
 fi
 
+log "Setting flag for database $db_name to restore from $restore_source on next database/SM startup"
 
 if [ "$restore_type" = "database" ]; then
+
+   log "Setting flag for database $db_name to initiate a new FULL backup after next restart"
+
    # Set the semaphores to create a new backupset from a full backup
    nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
 
@@ -76,7 +120,15 @@ if [ "$restore_type" = "database" ]; then
    done
 
    # optionally do automatic initiation of the restore
-   [ "$auto" = "true" ] && nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
+   if [ "$auto" = "true" ]; then
+      log "restore.autoRestart=true - initiating full database restart for database $db_name"
+
+      nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
+   else
+      log "restore.autoRestart=false. Restore will be performed when the database - or SM(s) - are manually restarted - over to you..."
+   fi
+else
+   log "Flag set for $restore_type restore. Restore will be performed when the chosen SM is manually restarted - over to you..."
 fi
 
-echo "Restore job completed"
+log "Restore job completed"
