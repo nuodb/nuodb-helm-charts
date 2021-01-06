@@ -16,10 +16,10 @@ import (
 )
 
 type UpdateOptions struct {
-	adminPodShouldGetRecreated            bool
-	adminRolesRequirePatching             bool
-	adminBootstrapServersOverrideRequired bool
-	adminJobWasCreated					  bool
+	adminPodShouldGetRecreated            	bool
+	adminRolesRequirePatching             	bool
+	adminBootstrapServersOverrideRequired 	bool
+	adminJobWasCreated						bool
 }
 
 func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *UpdateOptions) {
