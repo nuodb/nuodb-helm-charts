@@ -280,6 +280,9 @@ status="$(nuocmd check servers --check-leader --timeout 30 2>&1)"
 retval=$?
 [ $retval -ne 0 ] && die 1 "(nuosm) Admin layer is inoperative - exiting: $status"
 
+trace "retrieving restore request from raft"
+restore_requested="$( nuocmd get value --key $restore_req )"
+
 trace "checking archive raft metadata"
 myArchive=$( nuocmd show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
@@ -288,10 +291,6 @@ myArchive=$( nuocmd show archives --db-name $DB_NAME --archive-format "archive-i
 [ -z "$myArchive" ] && myArchive="-1"
 log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
 [ -n "$NUODB_DEBUG" -a "$myArchive" -eq "-1" ] && log "$(nuocmd show archives --db-name $DB_NAME)"
-
-# if a restore from backup has been requested, then do that now
-trace "retrieving restore request from raft"
-restore_requested="$( nuocmd get value --key $restore_req )"
 
 wotIdid=""
 
