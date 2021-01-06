@@ -149,13 +149,6 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	// get the OLD log
 	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
-
-	// all jobs need to be deleted before an upgrade can be performed
-	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
-	// if we find it, this line can be removed and the test should still pass
-	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
-
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
@@ -203,12 +196,9 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
-
 	// all jobs need to be deleted before an upgrade can be performed
 	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
 	// if we find it, this line can be removed and the test should still pass
-	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
 
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)

@@ -251,6 +251,10 @@ admin:
       # demo: demo-tde-secret
     storagePasswordsDir: /etc/nuodb/tde
 
+  legacy:
+    loadBalancerJob:
+      enabled: false
+
 nuocollector:
   enabled: false
   image:
