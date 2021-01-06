@@ -117,6 +117,15 @@ function resurrectRemovedArchive() {
   fi
 }
 
+function clearRestoreRequest() {
+    local expected_state="$1"
+    nuocmd check database --db-name $DB_NAME --check-running --wait-forever
+    log "clearing restore request"
+    nuocmd set value --key $restore_req --value '' --expected-value "$expected_state"
+    trace "releasing first-in"
+    nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
+}
+
 #=======================================
 # function to perform archive restore
 #
@@ -508,14 +517,9 @@ fi
 
 log "$( nuocmd show archives --db-name $DB_NAME )"
 
-# release the first-in semaphore
-wotIdid="releasing first-in semaphore"
-[ -n "$first_in" ] && nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
-
 if [ -n "$restore_requested" ] && [ -n "$restore_successful" ]; then 
     # clear the restore_request only if restore is successfull
-    trace "clearing restore request"
-    nuocmd set value --key $restore_req --value '' --expected-value "$restore_requested"
+    clearRestoreRequest "$restore_requested" &
 fi
 
 trace "executing nuodocker to start SM"
