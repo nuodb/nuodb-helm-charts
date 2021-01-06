@@ -433,15 +433,11 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     wotIdid=""
 
     log "Restored from $restore_source"
+    restore_successful="true"
 
     # clear/release shared state only if restore is successfull
     log "Clearing restore credential request from raft"
     nuocmd set value --key $credential_req --value '' --unconditional
-
-    # clear the restore_request only if restore is successfull
-    trace "clearing restore request"
-    nuocmd set value --key $restore_req --value '' --expected-value "$restore_requested"
-
   fi
 
   # wait until it's my turn to startup
@@ -516,6 +512,12 @@ log "$( nuocmd show archives --db-name $DB_NAME )"
 # release the first-in semaphore
 wotIdid="releasing first-in semaphore"
 [ -n "$first_in" ] && nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
+
+if [ -n "$restore_requested" ] && [ -n "$restore_successful" ]; then 
+    # clear the restore_request only if restore is successfull
+    trace "clearing restore request"
+    nuocmd set value --key $restore_req --value '' --expected-value "$restore_requested"
+fi
 
 trace "executing nuodocker to start SM"
 
