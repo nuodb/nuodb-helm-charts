@@ -19,7 +19,6 @@ func verifyAdminService(t *testing.T, namespaceName string, podName string, serv
 }
 
 func verifyLBPolicy(t *testing.T, namespaceName string, podName string) {
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 	testlib.VerifyPolicyInstalled(t, namespaceName, podName)
 }
 

@@ -16,9 +16,10 @@ import (
 )
 
 type UpdateOptions struct {
-	adminPodShouldGetRecreated            bool
-	adminRolesRequirePatching             bool
-	adminBootstrapServersOverrideRequired bool
+	adminPodShouldGetRecreated            	bool
+	adminRolesRequirePatching             	bool
+	adminBootstrapServersOverrideRequired 	bool
+	adminJobWasCreated						bool
 }
 
 func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *UpdateOptions) {
@@ -59,7 +60,9 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *Updat
 	// get the OLD log
 	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
 
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
+	if updateOptions.adminJobWasCreated {
+		testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
+	}
 
 	// all jobs need to be deleted before an upgrade can be performed
 	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
@@ -169,6 +172,7 @@ func TestUpgradeHelm(t *testing.T) {
 			adminPodShouldGetRecreated:            true,
 			adminRolesRequirePatching:             true,
 			adminBootstrapServersOverrideRequired: true,
+			adminJobWasCreated: 			       true,
 		})
 	})
 
@@ -176,12 +180,14 @@ func TestUpgradeHelm(t *testing.T) {
 		upgradeAdminTest(t, "2.4.0", &UpdateOptions{
 			adminPodShouldGetRecreated: true,
 			adminRolesRequirePatching:  true,
+			adminJobWasCreated: 		true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
 		upgradeAdminTest(t, "2.4.1", &UpdateOptions{
 			adminPodShouldGetRecreated: true,
+			adminJobWasCreated: 		true,
 		})
 	})
 }

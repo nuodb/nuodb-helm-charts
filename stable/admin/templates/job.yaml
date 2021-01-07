@@ -1,3 +1,4 @@
+{{- if .Values.admin.legacy.loadBalancerJob.enabled }}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -92,3 +93,4 @@ spec:
         configMap:
           name: waitscript
           defaultMode: 0777
+{{- end }}

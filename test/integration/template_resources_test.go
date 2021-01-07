@@ -171,7 +171,10 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 
 func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 	options := &helm.Options{
-		SetValues: map[string]string{"nuodb.image.pullSecrets": "{fooBar}"},
+		SetValues: map[string]string{
+			"nuodb.image.pullSecrets": "{fooBar}",
+			"admin.legacy.loadBalancerJob.enabled": "true",
+		},
 	}
 
 	helm.RenderTemplate(t, options, "../../stable/admin", "release-name", []string{"templates/job.yaml"})
@@ -189,7 +192,10 @@ func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 
 func TestPullSecretsRenderAllGlobal(t *testing.T) {
 	options := &helm.Options{
-		SetValues: map[string]string{"global.imagePullSecrets": "{fooBar}"},
+		SetValues: map[string]string{
+			"global.imagePullSecrets": "{fooBar}",
+			"admin.legacy.loadBalancerJob.enabled": "true",
+		},
 	}
 
 	helm.RenderTemplate(t, options, "../../stable/admin", "release-name", []string{"templates/job.yaml"})
