@@ -150,6 +150,7 @@ if [ "$backup_type" = "report-latest" ]; then
       echo "$( nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/latest )"
    else
       # retrieve the latest backupset name
+      latest=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" )
       echo "$( nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )"
    fi
    exit 0
