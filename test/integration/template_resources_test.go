@@ -1,12 +1,13 @@
 package integration
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"k8s.io/apimachinery/pkg/api/resource"
 
@@ -95,16 +96,16 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
 		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 8 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+		assert.EqualValues(t, 8*1024*1024*1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
 		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
+		assert.EqualValues(t, 16*1024*1024*1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
 		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem 8Gi"))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
-			assert.EqualValues(t, 1,  *obj.Spec.Replicas)
+			assert.EqualValues(t, 1, *obj.Spec.Replicas)
 			foundBackupEnabled = true
 		} else {
 			assert.Zero(t, *obj.Spec.Replicas)
@@ -148,10 +149,10 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
 		assert.EqualValues(t, 1, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 4 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+		assert.EqualValues(t, 4*1024*1024*1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
 		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
+		assert.EqualValues(t, 16*1024*1024*1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
 		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem 4Gi"))
 
@@ -172,7 +173,7 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"nuodb.image.pullSecrets": "{fooBar}",
+			"nuodb.image.pullSecrets":              "{fooBar}",
 			"admin.legacy.loadBalancerJob.enabled": "true",
 		},
 	}
@@ -183,7 +184,6 @@ func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/statefulset.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/deployment.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/cronjob.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/job.yaml"})
 
 	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", "release-name", []string{"templates/daemonset.yaml"})
 
@@ -193,7 +193,7 @@ func TestPullSecretsRenderAllNuoDB(t *testing.T) {
 func TestPullSecretsRenderAllGlobal(t *testing.T) {
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"global.imagePullSecrets": "{fooBar}",
+			"global.imagePullSecrets":              "{fooBar}",
 			"admin.legacy.loadBalancerJob.enabled": "true",
 		},
 	}
@@ -204,7 +204,6 @@ func TestPullSecretsRenderAllGlobal(t *testing.T) {
 	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/statefulset.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/deployment.yaml"})
 	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/cronjob.yaml"})
-	helm.RenderTemplate(t, options, "../../stable/database", "release-name", []string{"templates/job.yaml"})
 
 	helm.RenderTemplate(t, options, "../../stable/transparent-hugepage", "release-name", []string{"templates/daemonset.yaml"})
 
@@ -216,7 +215,7 @@ func TestPingTimeout(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
-		SetValues:   map[string]string{},
+		SetValues: map[string]string{},
 	}
 
 	t.Run("testStatefulSet", func(t *testing.T) {
@@ -253,7 +252,6 @@ func TestSpecificOptions(t *testing.T) {
 			"database.te.engineOptions.verbose": "advanced-txn",
 			"database.sm.engineOptions.verbose": "advanced-txn",
 		},
-
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {
@@ -316,10 +314,10 @@ func TestResourcesDaemonSetsDefaults(t *testing.T) {
 		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
 
 		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 8 * 1024 * 1024 * 1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
+		assert.EqualValues(t, 8*1024*1024*1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
 
 		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 16 * 1024 * 1024 * 1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
+		assert.EqualValues(t, 16*1024*1024*1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
 		if testlib.IsDaemonSetHotCopyEnabled(&obj) {
 			foundBackupEnabled = true
