@@ -28,8 +28,6 @@
 #   --labels   - additional arbitrary labels to select the SMs to backup
 #   --timeout  - timeout (in seconds) to synchronously wait for the backup to complete. 0 => async backup.
 #   --backup-root - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
-#   --wait-for-num-processes - wait for a specified number of SM processes in a backup group to be in RUNNING state before starting a backup
-#   --wait-timeout - timeout (in seconds) to wait for specified amount of SM processes
 
 # for debugging...
 [ "$NUODB_DEBUG" = "verbose" ] && set -x 
@@ -44,62 +42,61 @@ labels=""
 semaphore=""
 timeout=1800
 backup_root=$BACKUP_DIR
-wait_for_num_processes=0
-wait_timeout=300
 
-function await() {
-   local timeout=$1
-   shift
-   local end_time=$(( $(date -u +%s) + $timeout ))
-   local rc=0
-   while [ "$(date -u +%s)" -lt "$end_time" ]; do
-      eval "$*"
-      rc=$?
-      if [ $rc -eq 0 ]; then
-         return $rc
+
+function execute_backup() {
+   local type="$1"
+   local latest
+   local current
+   local next
+   local backupset
+   local output
+
+   # call nuodocker to perform the actual backup
+   nuodocker backup database \
+      --db-name "${db_name}" \
+      --type "${type}" \
+      --backup-root "${backup_root}" \
+      --labels "${labels}" \
+      --timeout "${timeout}"
+
+   retval=$?
+   if [ $retval != 0 ]; then
+      echo >&2 "Error running hotcopy $retval"
+      exit $retval
+   fi
+
+   if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
+      # store the new backupset as latest, and store the new latest index
+      latest=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" )
+      current=${latest:-0}
+      # bump latest, and wrap around (simple ring-buffer)
+      next=$(( (current + 1) % $NUODB_MAX_BACKUP_HISTORY ))
+      output=$( nuodocker get current-backup \
+         --db-name "${db_name}" \
+         --labels "${labels}" )
+      backupset=$( echo "$output" | head -1 | awk '{print $2}' )
+
+      if [ -n "$backupset" ]; then
+         echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest = $next"
+         echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next = $backupset"
+         echo "$NUODB_BACKUP_KEY/$db_name/latest = $backup_group"
+
+         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next" --value "$backupset" --expected-value "" && \
+         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" --value "$next" --expected-value "$latest" && \
+         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/latest" --value "$backup_group" --unconditional
+      else
+         echo >&2 "Unable to obtain backupset name. Skipping backupset recording"
       fi
-      sleep 1
-   done
-   return 124
-}
 
-function check_backup_processes() {
-   declare -a label_patterns=()
-   local all_process_labels=""
+      # update the list of known backup groups for this database
+      group_list="$(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups)"
+      if [ -z "$(echo "$group_list" | grep -o $backup_group)" ]; then
+         new_list="$group_list $backup_group"
 
-   for ((i=0; i<${#labels_arr[@]}; i+=2)); do
-     label_patterns[${#label_patterns[@]}]="\"${labels_arr[i]}\"\s*:\s*\"${labels_arr[i+1]}\""
-   done
-
-   all_process_labels="$(nuocmd show database \
-      --db-name $db_name \
-      --process-format '#{engine_type} {state} {labels}')" || return $?
-
-   num_processes=0
-   while read process_labels; do
-      [ -z "$process_labels" ] && continue
-      parsed_labels=$(echo "$process_labels" | tr "'" '"' | python -m json.tool 2>&1)
-      if [ $? -ne 0 ];then
-         echo "Unable to parse SM process labels ${process_labels}: ${parsed_labels}" 2>&1
-         continue
+         echo "$NUODB_BACKUP_KEY/$db_name/backup-groups = $new_list"
+         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/backup-groups" --value "$new_list" --expected-value "$group_list"
       fi
-      match=true
-      for pattern in ${label_patterns[@]}; do
-         if ! echo "${parsed_labels}" | grep -E -q "${pattern}"; then
-            # Some of the labels are not found
-            match=""
-            break
-         fi
-      done
-      if [ -n "$match" ]; then
-         num_processes=$(( num_processes+1 ))
-      fi
-   done <<< "$( echo "$all_process_labels" | sed -n -e 's/\s*#SM RUNNING //p')"
-
-   if [ "$num_processes" -eq "$wait_for_num_processes" ]; then
-      return 0
-   else
-      return 1
    fi
 }
 
@@ -129,18 +126,10 @@ do
            semaphore="$1"; shift;;
         "--semaphore="* )
            semaphore="${opt#*=}";;
-        "--wait-for-num-processes" )
-           wait_for_num_processes="$1"; shift;;
-        "--wait-for-num-processes="* )
-           wait_for_num_processes="${opt#*=}";;
         "--timeout" )
            timeout="$1"; shift;;
         "--timeout="* )
            timeout="${opt#*=}";;
-        "--wait-timeout" )
-           wait_timeout="$1"; shift;;
-        "--wait-timeout="* )
-           wait_timeout="${opt#*=}";;
         "--backup-root" )
            backup_root="$1"; shift;;
         "--backup-root="* )
@@ -150,12 +139,19 @@ do
 done
 
 backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
-label=$(echo $label | tr '[:upper:]' '[:lower:]')
-read -a labels_arr <<< "backup $backup_group $labels"
+if [ -n "$backup_group" ]; then
+   labels="backup ${backup_group} ${labels}"
+fi
 
 # Return which group made the latest backup
-if [ "$backup_type" = "report-latest" -a "$backup_group" = "" ]; then
-   echo "$(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/latest )"
+if [ "$backup_type" = "report-latest" ]; then
+   if [ -z "$backup_group" ]; then
+      # retrieve the latest group name
+      echo "$( nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/latest )"
+   else
+      # retrieve the latest backupset name
+      echo "$( nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )"
+   fi
    exit 0
 fi
 
@@ -175,7 +171,7 @@ if [ -n "$semaphore" ]; then
 
 
    if [ -z "$gate" ]; then
-      echo >&2 "Semaphore $semaphore/$db_name empty - nothing to do"
+      echo "Semaphore $semaphore/$db_name empty - nothing to do"
       exit 0
    fi
 
@@ -183,74 +179,20 @@ if [ -n "$semaphore" ]; then
    nuocmd check database --db-name $db_name --check-running --wait-forever
 fi
 
-# find the index for the latest backup info
-latest=$(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest )
-current=$latest
-
-if [ "$backup_type" = "full" ]; then
-   if [ -z "$latest" ]; then
-      current=0
-   fi
-
-   # bump latest, and wrap around (simple ring-buffer)
-   next=$(( (current + 1) % $NUODB_MAX_BACKUP_HISTORY ))
-else
-   if [ -z "$latest" ]; then
-      echo >&2 "No full backup has completed yet - try again later"
-      exit -1
+if [ "$backup_type" != "full" ]; then
+   error="$( nuodocker get current-backup \
+      --db-name "${db_name}" \
+      --labels "backup ${backup_group} ${labels}" 2>&1)"
+   if [ $? -ne 0 ] && echo "$error" | grep -q "No existing backup path found"; then
+      # Check if full backup has been started already for all archiveIds
+      # This will most likely execute in the following scenarious:
+      # * initial database backup request
+      # * backup request after the database have been restored
+      # * new HC SM has been started since the last full backup
+      echo "Executing full hotcopy as a prerequisite for ${backup_type} hotcopy: ${error}"
+      nuocmd check database --db-name $db_name --check-running --wait-forever
+      execute_backup "full"
    fi
 fi
 
-if [ "$backup_type" = "report-latest" ]; then
-   # retrieve the latest backupset name
-   backupset=$(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )
-   echo >&2 "Looking up $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} returned: $backupset"
-   echo "$backupset"
-   exit 0
-fi
-
-if [ "$wait_for_num_processes" -ne 0 ]; then
-   # Wait for num of processes is specified, so wait for SMs to start
-   await $wait_timeout check_backup_processes
-   if [ $? -eq 124 ]; then
-      echo "Timed out waiting for ${wait_for_num_processes} SM processes with labels: ${labels_arr[@]}"
-      exit 1
-   fi
-fi
-
-# call nuodocker to perform the actual backup
-nuodocker backup database \
-    --db-name ${db_name} \
-    --type ${backup_type} \
-    --backup-root ${backup_root} \
-    --labels "${labels_arr[*]}" \
-    --timeout ${timeout}
-
-retval=$?
-if [ $retval != 0 ]; then
-   echo >&2 "Error running hotcopy $retval"
-   exit $retval
-fi
-
-if [ "$backup_type" = "full" ]; then
-   # store the new backupset as latest, and store the new latest index
-   backupset=$( nuodocker get current-backup \
-      --db-name ${db_name} \
-      --labels "backup ${backup_group} ${labels}" | head -1 | awk '{print $2}' )
-   echo >&2 "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest = $next"
-   echo >&2 "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next = $backupset"
-   echo >&2 "$NUODB_BACKUP_KEY/$db_name/latest = $backup_group"
-
-   nuocmd set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/$next --value $backupset --unconditional
-   nuocmd set value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/latest --value $next --expected-value "$latest"
-   nuocmd set value --key $NUODB_BACKUP_KEY/$db_name/latest --value $backup_group --unconditional
-
-   # update the list of known backup groups for this database
-   group_list="$(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups)"
-   if [ -z $(echo "$group_list" | grep -o $backup_group) ]; then
-      new_list="$group_list $backup_group"
-
-      echo >&2 "$NUODB_BACKUP_KEY/$db_name/backup-groups = $new_list"
-      nuocmd set value --key $NUODB_BACKUP_KEY/$db_name/backup-groups --value "$new_list" --expected-value "$group_list"
-   fi
-fi
+execute_backup "$backup_type"

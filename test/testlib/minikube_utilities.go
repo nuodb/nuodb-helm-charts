@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -253,7 +254,11 @@ func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
 func findAllPodsInSchema(t *testing.T, namespace string) []corev1.Pod {
 	options := k8s.NewKubectlOptions("", "", namespace)
 	filter := metav1.ListOptions{}
-	return k8s.ListPods(t, options, filter)
+	pods := k8s.ListPods(t, options, filter)
+	sort.SliceStable(pods, func(i, j int) bool {
+		return pods[j].CreationTimestamp.Before(&pods[i].CreationTimestamp)
+	})
+	return pods
 }
 
 func findAdminOrEngineContainer(containers []corev1.Container) *corev1.Container {
