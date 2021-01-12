@@ -407,6 +407,16 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 	}, timeout)
 }
 
+func AwaitJobSucceeded(t *testing.T, namespace string, jobName string, timeout time.Duration) {
+	Await(t, func() bool {
+		pod, err := findPod(t, namespace, jobName)
+		if err != nil {
+			return false
+		}
+		return pod.Status.Phase == corev1.PodSucceeded
+	}, timeout)
+}
+
 func AwaitPodUp(t *testing.T, namespace string, adminPodName string, timeout time.Duration) {
 	AwaitPodStatus(t, namespace, adminPodName, corev1.PodReady, corev1.ConditionTrue, timeout)
 }

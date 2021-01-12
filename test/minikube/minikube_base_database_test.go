@@ -430,9 +430,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		populateCreateDBData(t, namespaceName, admin0)
 
 		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
-		jobName := "incremental-hotcopy-demo-cronjob"
-		testlib.AwaitNrReplicasScheduled(t, namespaceName, jobName, 1)
-		testlib.AwaitPodPhase(t, namespaceName, jobName, corev1.PodSucceeded, 120*time.Second)
+		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-demo-cronjob", 120*time.Second)
 		verifyBackup(t, namespaceName, admin0, "demo", &databaseOptions)
 	})
 
@@ -460,9 +458,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		populateCreateDBData(t, namespaceName, admin0)
 
 		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
-		jobName := "incremental-hotcopy-demo-cronjob"
-		testlib.AwaitNrReplicasScheduled(t, namespaceName, jobName, 1)
-		testlib.AwaitPodPhase(t, namespaceName, jobName, corev1.PodSucceeded, 120*time.Second)
+		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-demo-cronjob", 120*time.Second)
 		verifyBackup(t, namespaceName, admin0, "demo", &databaseOptions)
 	})
 }
