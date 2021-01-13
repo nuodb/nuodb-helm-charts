@@ -237,14 +237,6 @@ function perform_restore() {
     return $retval
   fi
 
-  # make sure the archive i s correct for this database
-  restoredName="$($NUODB_BINDIR/nuodb --show-archive-history --archive $DB_DIR | tr -d '\n' | grep -Eo '[<]Arg[>]--database[<]/Arg[>][^<]*[<]Arg[>]([^<]+)[<]/Arg[>]' | sed -r 's;[<]Arg[>]--database[<]/Arg[>][^<]*[<]Arg[>]([^<]+)[<]/Arg[>];\1;' )"
-  if [ -n "$restoredName" -a "$restoredName" != "$DB_NAME" ]; then
-    $undo
-    error="Restore: incorrect backup specified. Database name is $DB_NAME but archive is for $restoredName"
-    return 1
-  fi
-
   # completely delete my previous archive metadata
   # this is required because nuodocker always creates a new archive
   trace "completely deleting the raft metadata for my archive $myArchive"
