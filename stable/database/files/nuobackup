@@ -53,6 +53,7 @@ function execute_backup() {
    local output
 
    # call nuodocker to perform the actual backup
+   echo "Starting ${type} backup for database ${db_name} on processes with labels '${labels}' ..."
    nuodocker backup database \
       --db-name "${db_name}" \
       --type "${type}" \
@@ -191,7 +192,6 @@ if [ "$backup_type" != "full" ]; then
       # * backup request after the database have been restored
       # * new HC SM has been started since the last full backup
       echo "Executing full hotcopy as a prerequisite for ${backup_type} hotcopy: ${error}"
-      nuocmd check database --db-name $db_name --check-running --wait-forever
       execute_backup "full"
    fi
 fi
