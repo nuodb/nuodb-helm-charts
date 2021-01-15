@@ -409,6 +409,12 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		podName := testlib.GetPodName(t, namespaceName, "incremental-hotcopy-demo-cronjob")
+		testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
+	})
+
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{

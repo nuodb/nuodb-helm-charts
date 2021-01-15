@@ -413,6 +413,7 @@ func AwaitJobSucceeded(t *testing.T, namespace string, jobName string, timeout t
 		if err != nil {
 			return false
 		}
+		t.Logf("Waiting for job %s to succeed pod=%s phase=%s", jobName, pod.Name, pod.Status.Phase)
 		return pod.Status.Phase == corev1.PodSucceeded
 	}, timeout)
 }
@@ -793,7 +794,7 @@ func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOpti
 			container = &pod.Spec.Containers[0]
 		}
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if containerStatus.Name == container.Name && containerStatus.Started != nil && !*containerStatus.Started {
+			if containerStatus.Name == container.Name && containerStatus.Started != nil && (!*containerStatus.Started || containerStatus.State.Waiting != nil) {
 				err = &ContainerNotStarted{container.Name}
 				return
 			}
