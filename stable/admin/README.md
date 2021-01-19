@@ -217,6 +217,15 @@ The purpose of this section is to allow customisation of the names of the cluste
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
 | `balancer` | suffix for the balancer service | "balancer" |
 
+#### admin.legacy
+
+Features in this section have been deprecated but not yet removed.
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `loadBalancerJob.enabled` | Create a job that sets the default load balancer policy for the admin tier. Replaced by Kubernetes Aware Admin. | false |
+
+
 #### nuocollector.*
 
 The purpose of this section is to specify the NuoDB monitoring parameters.

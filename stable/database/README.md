@@ -128,23 +128,6 @@ nuodb:
     pullPolicy: IfNotPresent
 ```
 
-#### openshift.*
-
-The purpose of this section is to specify parameters specific to OpenShift, e.g. enable features only present in OpenShift.
-
-The following tables list the configurable parameters for the `openshift` option:
-
-| Parameter | Description | Default |
-| ----- | ----------- | ------ |
-| `enabled` | Enable OpenShift features | `false` |
-
-For example, to enable an OpenShift integration, and enable DeploymentConfigs:
-
-```yaml
-openshift:
-  enabled: true
-```
-
 #### admin.*
 
 The purpose of this section is to specify the NuoDB Admin parameters.
