@@ -186,7 +186,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `podAnnotations` | Annotations to pass through to the Admin pod | `nil` |
 | `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
 | `tde.storagePasswordsDir` | Transparent Data Encryption storage passwords mount path | `/etc/nuodb/tde` |
-| `evicted.servers` | A list of evicted servers excluded RAFT consensus. Used during disaster recovery. | `[]` |
+| `evicted.servers` | A list of evicted servers excluded from RAFT consensus. Used during disaster recovery. | `[]` |
 
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
