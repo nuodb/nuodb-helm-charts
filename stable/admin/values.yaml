@@ -251,6 +251,11 @@ admin:
       # demo: demo-tde-secret
     storagePasswordsDir: /etc/nuodb/tde
 
+  # used for disaster recovery when a majority of admins is loss
+  # consult https://doc.nuodb.com/nuodb/latest/database-administration/recovering-from-a-lost-majority/
+  evicted:
+    servers: []
+
   legacy:
     loadBalancerJob:
       enabled: false
