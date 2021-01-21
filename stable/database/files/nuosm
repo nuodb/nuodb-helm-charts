@@ -117,6 +117,15 @@ function resurrectRemovedArchive() {
   fi
 }
 
+function clearRestoreRequest() {
+    local expected_state="$1"
+    nuocmd check database --db-name $DB_NAME --check-running --wait-forever
+    log "clearing restore request"
+    nuocmd set value --key $restore_req --value '' --expected-value "$expected_state"
+    trace "releasing first-in"
+    nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
+}
+
 #=======================================
 # function to perform archive restore
 #
@@ -237,14 +246,6 @@ function perform_restore() {
     return $retval
   fi
 
-  # make sure the archive i s correct for this database
-  restoredName="$($NUODB_BINDIR/nuodb --show-archive-history --archive $DB_DIR | tr -d '\n' | grep -Eo '[<]Arg[>]--database[<]/Arg[>][^<]*[<]Arg[>]([^<]+)[<]/Arg[>]' | sed -r 's;[<]Arg[>]--database[<]/Arg[>][^<]*[<]Arg[>]([^<]+)[<]/Arg[>];\1;' )"
-  if [ -n "$restoredName" -a "$restoredName" != "$DB_NAME" ]; then
-    $undo
-    error="Restore: incorrect backup specified. Database name is $DB_NAME but archive is for $restoredName"
-    return 1
-  fi
-
   # completely delete my previous archive metadata
   # this is required because nuodocker always creates a new archive
   trace "completely deleting the raft metadata for my archive $myArchive"
@@ -280,6 +281,9 @@ status="$(nuocmd check servers --check-leader --timeout 30 2>&1)"
 retval=$?
 [ $retval -ne 0 ] && die 1 "(nuosm) Admin layer is inoperative - exiting: $status"
 
+trace "retrieving restore request from raft"
+restore_requested="$( nuocmd get value --key $restore_req )"
+
 trace "checking archive raft metadata"
 myArchive=$( nuocmd show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
 [ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
@@ -288,10 +292,6 @@ myArchive=$( nuocmd show archives --db-name $DB_NAME --archive-format "archive-i
 [ -z "$myArchive" ] && myArchive="-1"
 log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
 [ -n "$NUODB_DEBUG" -a "$myArchive" -eq "-1" ] && log "$(nuocmd show archives --db-name $DB_NAME)"
-
-# if a restore from backup has been requested, then do that now
-trace "retrieving restore request from raft"
-restore_requested="$( nuocmd get value --key $restore_req )"
 
 wotIdid=""
 
@@ -433,15 +433,11 @@ if [ -n "$restore_requested" -a -n "$restore_source" ]; then
     wotIdid=""
 
     log "Restored from $restore_source"
+    restore_successful="true"
 
     # clear/release shared state only if restore is successfull
     log "Clearing restore credential request from raft"
     nuocmd set value --key $credential_req --value '' --unconditional
-
-    # clear the restore_request only if restore is successfull
-    trace "clearing restore request"
-    nuocmd set value --key $restore_req --value '' --expected-value "$restore_requested"
-
   fi
 
   # wait until it's my turn to startup
@@ -513,9 +509,10 @@ fi
 
 log "$( nuocmd show archives --db-name $DB_NAME )"
 
-# release the first-in semaphore
-wotIdid="releasing first-in semaphore"
-[ -n "$first_in" ] && nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
+if [ -n "$restore_requested" ] && [ -n "$restore_successful" ]; then 
+    # clear the restore_request only if restore is successfull
+    clearRestoreRequest "$restore_requested" &
+fi
 
 trace "executing nuodocker to start SM"
 
