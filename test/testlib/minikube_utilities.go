@@ -13,6 +13,7 @@ import (
 	"regexp"
 	"runtime"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -253,7 +254,11 @@ func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
 func findAllPodsInSchema(t *testing.T, namespace string) []corev1.Pod {
 	options := k8s.NewKubectlOptions("", "", namespace)
 	filter := metav1.ListOptions{}
-	return k8s.ListPods(t, options, filter)
+	pods := k8s.ListPods(t, options, filter)
+	sort.SliceStable(pods, func(i, j int) bool {
+		return pods[j].CreationTimestamp.Before(&pods[i].CreationTimestamp)
+	})
+	return pods
 }
 
 func findAdminOrEngineContainer(containers []corev1.Container) *corev1.Container {
@@ -399,6 +404,17 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 		require.NoError(t, err, "awaitPodPhase: could not find pod with name matching ", podName)
 
 		return pod.Status.Phase == phase
+	}, timeout)
+}
+
+func AwaitJobSucceeded(t *testing.T, namespace string, jobName string, timeout time.Duration) {
+	Await(t, func() bool {
+		pod, err := findPod(t, namespace, jobName)
+		if err != nil {
+			return false
+		}
+		t.Logf("Waiting for job %s to succeed pod=%s phase=%s", jobName, pod.Name, pod.Status.Phase)
+		return pod.Status.Phase == corev1.PodSucceeded
 	}, timeout)
 }
 
@@ -778,7 +794,7 @@ func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOpti
 			container = &pod.Spec.Containers[0]
 		}
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if containerStatus.Name == container.Name && containerStatus.Started != nil && !*containerStatus.Started {
+			if containerStatus.Name == container.Name && containerStatus.Started != nil && (!*containerStatus.Started || containerStatus.State.Waiting != nil) {
 				err = &ContainerNotStarted{container.Name}
 				return
 			}

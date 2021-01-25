@@ -16,10 +16,11 @@ import (
 )
 
 type UpdateOptions struct {
-	adminPodShouldGetRecreated            	bool
-	adminRolesRequirePatching             	bool
-	adminBootstrapServersOverrideRequired 	bool
-	adminJobWasCreated						bool
+	adminPodShouldGetRecreated            bool
+	adminRolesRequirePatching             bool
+	adminBootstrapServersOverrideRequired bool
+	adminJobWasCreated                    bool
+	databaseJobWasCreated                 bool
 }
 
 func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *UpdateOptions) {
@@ -138,8 +139,12 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 	// all jobs need to be deleted before an upgrade can be performed
 	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
 	// if we find it, this line can be removed and the test should still pass
-	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
-	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
+	if updateOptions.adminJobWasCreated {
+		testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
+	}
+	if updateOptions.databaseJobWasCreated {
+		testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
+	}
 
 	adminPod := testlib.GetPod(t, namespaceName, admin0)
 
@@ -172,7 +177,7 @@ func TestUpgradeHelm(t *testing.T) {
 			adminPodShouldGetRecreated:            true,
 			adminRolesRequirePatching:             true,
 			adminBootstrapServersOverrideRequired: true,
-			adminJobWasCreated: 			       true,
+			adminJobWasCreated:                    true,
 		})
 	})
 
@@ -180,14 +185,14 @@ func TestUpgradeHelm(t *testing.T) {
 		upgradeAdminTest(t, "2.4.0", &UpdateOptions{
 			adminPodShouldGetRecreated: true,
 			adminRolesRequirePatching:  true,
-			adminJobWasCreated: 		true,
+			adminJobWasCreated:         true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
 		upgradeAdminTest(t, "2.4.1", &UpdateOptions{
 			adminPodShouldGetRecreated: true,
-			adminJobWasCreated: 		true,
+			adminJobWasCreated:         true,
 		})
 	})
 }
@@ -198,6 +203,8 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 			adminPodShouldGetRecreated:            true,
 			adminRolesRequirePatching:             true,
 			adminBootstrapServersOverrideRequired: true,
+			adminJobWasCreated:                    true,
+			databaseJobWasCreated:                 true,
 		})
 	})
 
@@ -205,12 +212,16 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 		upgradeDatabaseTest(t, "2.4.0", &UpdateOptions{
 			adminPodShouldGetRecreated: true,
 			adminRolesRequirePatching:  true,
+			adminJobWasCreated:         true,
+			databaseJobWasCreated:      true,
 		})
 	})
 
 	t.Run("NuoDB40X_From241_ToLocal", func(t *testing.T) {
 		upgradeDatabaseTest(t, "2.4.1", &UpdateOptions{
 			adminPodShouldGetRecreated: true,
+			adminJobWasCreated:         true,
+			databaseJobWasCreated:      true,
 		})
 	})
 }

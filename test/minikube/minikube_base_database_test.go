@@ -207,12 +207,7 @@ func verifyEngineAltAddress(t *testing.T, namespaceName string, admin0 string, e
 	}
 }
 
-func backupDatabase(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
-
-	// wait for the backup to both start _and_ complete successfully
-	backupJob := fmt.Sprintf("hotcopy-%s-job-initial", databaseName)
-	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
-
+func verifyBackup(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
 	// verify that the backup has been documented by the Admin layer
 	backupset, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions,
 		"exec", podName, "--",
@@ -414,6 +409,12 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		podName := testlib.GetPodName(t, namespaceName, "incremental-hotcopy-demo-cronjob")
+		testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
+	})
+
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 		databaseOptions := helm.Options{
@@ -424,6 +425,9 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"backup.persistence.enabled":            "true",
 				"backup.persistence.size":               "1Gi",
+				// Configure more frequent incremental schedule so that
+				// a full backup is created as a prerequisite.
+				"database.sm.hotCopy.incrementalSchedule": "?/1 * * * *",
 			},
 		}
 
@@ -432,7 +436,8 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		populateCreateDBData(t, namespaceName, admin0)
 
 		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
-		backupDatabase(t, namespaceName, admin0, "demo", &databaseOptions)
+		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-demo-cronjob", 120*time.Second)
+		verifyBackup(t, namespaceName, admin0, "demo", &databaseOptions)
 	})
 
 	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
@@ -448,6 +453,9 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 				"database.enableDaemonSet":              "true",
 				// prevent non-backup SM from scheduling
 				"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
+				// Configure more frequent incremental schedule so that
+				// a full backup is created as a prerequisite.
+				"database.sm.hotCopy.incrementalSchedule": "?/1 * * * *",
 			},
 		}
 
@@ -456,7 +464,8 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		populateCreateDBData(t, namespaceName, admin0)
 
 		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
-		backupDatabase(t, namespaceName, admin0, "demo", &databaseOptions)
+		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-demo-cronjob", 120*time.Second)
+		verifyBackup(t, namespaceName, admin0, "demo", &databaseOptions)
 	})
 }
 
@@ -499,21 +508,18 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	databaseOptions.KubectlOptions = opts
 
-	// wait for the initial backup to complete
-	databaseName := "demo"
-	backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", databaseName)
-	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+	smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+
+	// Execute initial backup
+	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
 
 	populateCreateDBData(t, namespaceName, admin0)
 
-	opt := testlib.GetExtractedOptions(&databaseOptions)
-	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
-	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
-
-	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
-
-	smPodName0 := testlib.GetPodName(t, namespaceName, smPodName)
 	go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	// restore database
@@ -655,10 +661,8 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 	smPodName0 := fmt.Sprintf("%s-0", smPodNameTemplate)
 	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
 
-	// wait for the initial backup to complete
-	backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", opt.DbName)
-	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
-	backupset := testlib.GetLatestBackup(t, namespaceName, hcSmPodName0, opt.DbName, opt.ClusterName)
+	// Execute initial backup
+	backupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", opt.ClusterName)
 
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
@@ -766,10 +770,6 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	smPodName0 := fmt.Sprintf("%s-0", smPodNameTemplate)
 	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-
-	// wait for the initial backup to complete
-	backupJob := fmt.Sprintf("hotcopy-%s-job-initial-", opt.DbName)
-	testlib.AwaitPodPhase(t, namespaceName, backupJob, corev1.PodSucceeded, 120*time.Second)
 
 	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 	go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})

@@ -196,11 +196,6 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
-	// all jobs need to be deleted before an upgrade can be performed
-	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
-	// if we find it, this line can be removed and the test should still pass
-	testlib.DeletePod(t, namespaceName, "jobs/hotcopy-demo-job-initial")
-
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
