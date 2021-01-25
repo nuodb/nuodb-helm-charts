@@ -251,6 +251,11 @@ admin:
       # demo: demo-tde-secret
     storagePasswordsDir: /etc/nuodb/tde
 
+  # A list of evicted servers excluded from RAFT consensus. Used during disaster recovery
+  # consult https://doc.nuodb.com/nuodb/latest/database-administration/recovering-from-a-lost-majority/
+  evicted:
+    servers: []
+
   legacy:
     loadBalancerJob:
       enabled: false

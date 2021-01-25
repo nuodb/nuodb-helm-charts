@@ -447,3 +447,22 @@ func TestLoadBalancerLegacyRenders(t *testing.T) {
 	}
 }
 
+func TestAdminEvictedServers(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.evicted.servers":   "{nuoadmin-1,nuoadmin-2}",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		container := obj.Spec.Template.Spec.Containers[0]
+		assert.Contains(t, container.Args, "--evicted-servers")
+		assert.Contains(t, container.Args, "nuoadmin-1,nuoadmin-2")
+	}
+}

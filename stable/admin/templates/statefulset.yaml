@@ -112,6 +112,12 @@ spec:
       {{- end }}
         args:
           - "nuoadmin"
+          {{- if .Values.admin.evicted}}
+          {{- if .Values.admin.evicted.servers}}
+          - "--evicted-servers"
+          - "{{ include "helm-toolkit.utils.joinListWithComma" .Values.admin.evicted.servers }}"
+          {{- end }}
+          {{- end }}
           - "--"
           {{- if .Values.admin.tde }}
           {{- if and .Values.admin.tde.storagePasswordsDir (ne .Values.admin.tde.storagePasswordsDir "/etc/nuodb/tde") }}
