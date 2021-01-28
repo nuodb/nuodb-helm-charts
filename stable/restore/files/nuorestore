@@ -4,11 +4,14 @@
 # Sets a flag to tell newly-starting SM(s) to perform the restore; then optionally causes the SM(s) to restart
 
 # args are:
-#   --type      - retore type: ( database | archive )
-#   --db-name   - database name to perform the restore operation on
-#   --semaphore - a key in the raftlog KV store to set to trigger a full backup after the restore
-#   --source    - source to restore from - can be a backupset or a URL
-#   --auto      - automatically start the restore operation ( true | false )
+#   --type           - retore type: ( database | archive )
+#   --db-name        - database name to perform the restore operation on
+#   --semaphore      - a key in the raftlog KV store to set to trigger a full backup after the restore
+#   --source         - source to restore from - can be a backupset or a URL
+#   --labels         - additional arbitrary labels to select the SMs for restore
+#   --archive-ids    - set of archive ids which will be restored
+#   --auto           - automatically start the restore operation ( true | false )
+#   --manual         - request manual archives restore ( true | false )
 
 [ "$NUODB_DEBUG" = "verbose" ] && set -X
 
@@ -51,11 +54,27 @@ function wrapLogfile() {
   fi
 }
 
+#=======================================
+# function - NuoDB 4.2.2+ supports new way of requesting database in-place
+# restore build into nuodocker.
+#
+function isRestoreRequestSupported() {
+   nuodocker request restore -h > /dev/null 2>&1
+   if [ $? -eq 2 ]; then
+      return 1
+   else
+      return 0
+   fi
+}
+
 restore_type="database"
 db_name=$DB_NAME
 semaphore="/nuobackup/semaphore"
 restore_source=":latest"
 auto="false"
+labels=""
+archive_ids=""
+manual=""
 
 restore_credentials=$NUODB_RESTORE_CREDENTIALS
 [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:=:}
@@ -82,6 +101,18 @@ do
            restore_source="$1"; shift;;
         "--source="* )
            restore_source="${opt#*=}";;
+        "--labels" )
+           labels="$1"; shift;;
+        "--labels="* )
+           labels="${opt#*=}";;
+        "--archive-ids" )
+           archive_ids="$1"; shift;;
+        "--archive-ids="* )
+           archive_ids="${opt#*=}";;
+        "--manual" )
+           manual="$1"; shift;;
+        "--manual="* )
+           manual="${opt#*=}";;
         "--auto" )
            auto="$1"; shift;;
         "--auto="* )
@@ -93,42 +124,67 @@ done
 restore_type=$(echo $restore_type | tr '[:upper:]' '[:lower:]')
 auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 
-# set the persistent flag for the backup
-log "restore_type=$restore_type; writing $restore_source to $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore"
-
-nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
-    --value $restore_source \
-    --unconditional
-
-if [ -n "$restore_credentials" ]; then
-    nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/credentials \
-        --value $restore_credentials \
-        --unconditional
-fi
-
-log "Setting flag for database $db_name to restore from $restore_source on next database/SM startup"
-
-if [ "$restore_type" = "database" ]; then
-
-   log "Setting flag for database $db_name to initiate a new FULL backup after next restart"
-
-   # Set the semaphores to create a new backupset from a full backup
-   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
-
-   for group in $(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
-      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$group --value "true" --unconditional
-   done
-
-   # optionally do automatic initiation of the restore
-   if [ "$auto" = "true" ]; then
-      log "restore.autoRestart=true - initiating full database restart for database $db_name"
-
-      nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
-   else
-      log "restore.autoRestart=false. Restore will be performed when the database - or SM(s) - are manually restarted - over to you..."
+if isRestoreRequestSupported; then
+   # Use nuodocker to place restore request
+   additional_args=""
+   restore_source_encoded="$(printf "%s" "${restore_source}" | base64)"
+   user_data="restore_source_encoded='${restore_source_encoded}'"
+   [ -n "$labels" ] && additional_args="${additional_args} --labels ${labels}"
+   [ -n "$archive_ids" ] && additional_args="${additional_args} --archive-ids ${archive_ids}"
+   [ "$manual" == "true" ] && additional_args="${additional_args} --manual"
+   if [ -n "$restore_credentials" ]; then
+      restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64)"
+      user_data="${user_data};restore_credentials_encoded='${restore_credentials_encoded}'"
+   fi
+   log "restore_type=${restore_type}; restore_source=${restore_source}; arguments=${additional_args}"
+   nuodocker request restore \
+      --db-name "$db_name" \
+      --type "$restore_type" \
+      --user-data "${user_data}" $additional_args
+   rc=$?
+   if [ $rc -ne 0 ]; then
+      echo "Restore request failed" >&2
+      exit $rc
    fi
 else
-   log "Flag set for $restore_type restore. Restore will be performed when the chosen SM is manually restarted - over to you..."
+   # Legacy restore request code goes here
+   # set the persistent flag for the backup
+   log "restore_type=$restore_type; writing $restore_source to $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore"
+
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore \
+      --value $restore_source \
+      --unconditional
+
+   if [ -n "$restore_credentials" ]; then
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/credentials \
+         --value $restore_credentials \
+         --unconditional
+   fi
+
+   log "Setting flag for database $db_name to restore from $restore_source on next database/SM startup"
+
+   if [ "$restore_type" = "database" ]; then
+
+      log "Setting flag for database $db_name to initiate a new FULL backup after next restart"
+
+      # Set the semaphores to create a new backupset from a full backup
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
+
+      for group in $(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
+         nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$group --value "true" --unconditional
+      done
+
+      # optionally do automatic initiation of the restore
+      if [ "$auto" = "true" ]; then
+         log "restore.autoRestart=true - initiating full database restart for database $db_name"
+
+         nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
+      else
+         log "restore.autoRestart=false. Restore will be performed when the database - or SM(s) - are manually restarted - over to you..."
+      fi
+   else
+      log "Flag set for $restore_type restore. Restore will be performed when the chosen SM is manually restarted - over to you..."
+   fi
 fi
 
 log "Restore job completed"

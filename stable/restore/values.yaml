@@ -81,13 +81,29 @@ restore:
   # name of the existing database being restored 
   target: "demo"
 
-  # source
-  # Can be one of:
+  # The source can be one of:
   # * the name of a backupset on a hotcopy-SM's backup disk;
   # * the metaname ':latest'
   # * the URL of a downloadable TAR file of a hotcopy backupset
   # * stream:URL of a downloadable TAR file of a exact copy of a NuoDB archive
+  #
+  # When performing restore in multi-cluster deployment, the :latest tag can
+  # point to different backupsets in each cluster. Single backupset name should
+  # be used when requesting database restore. It's recommended to restore NuoDB
+  # database by selecting archiveIds in one of the clusters only.
   source: ""
+
+  # Complete set of archiveIds that should be restored which then defines the
+  # new state of the database upon restore. Either `labels` or `archiveIds`
+  # should be specified. The setting works with NuoDB 4.2.2+.
+  archiveIds: []
+
+  # Process labels used to filter the complete set of archiveIds that should be
+  # restored which then defines the new state of the database upon restore. By
+  # default all HC SMs in the specified cluster will be filtered. Either
+  # `labels` or `archiveIds` should be specified. The setting works with NuoDB
+  # 4.2.2+.
+  labels: {}
 
   # credentials for the specified target - if different to the database.autoRestore.credentials
   credentials: ""
@@ -95,6 +111,12 @@ restore:
   # autoRestart
   # if set to "true", running the restore chart causes the database to be restarted automatically
   autoRestart: "true"
+
+  # If set to "true", archives restore should be done manually once the SM pod
+  # is started. The engine statup will block waiting for the user to complete
+  # the archives restore. Otherwise the archives restore will be  performed by
+  # init container in the SM pod. The setting works with NuoDB 4.2.2+.
+  manual: "false"
 
   envFrom:
     configMapRef: []

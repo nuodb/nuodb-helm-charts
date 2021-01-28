@@ -21,24 +21,10 @@ spec:
       - name: restore
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ default "" .Values.nuodb.image.pullPolicy | quote }}
-
         ##
         # call the nuorestore script
         ##
-        args:
-        - "nuorestore"
-        - "--type"
-        - "{{ default "database" .Values.restore.type }}"
-        - "--db-name"
-        - "{{ $restoreTarget }}"
-        - "--source"
-        - "{{ include "restore.source" . }}"
-        - "--auto"
-        {{- if hasKey .Values.restore "autoRestart" }}
-        - {{ .Values.restore.autoRestart | quote }}
-        {{ else }}
-        - "true"
-        {{- end }}
+{{- include "restore.args" . | indent 8 }}
     {{- include "restore.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -68,7 +54,6 @@ spec:
               name: {{ $restoreTarget }}.nuodb.com
               key: database-restore-credentials
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888"}
-        - { name: NUODB_RESTORE_URL,   value: "{{ include "restore.source" . }}" }
         - { name: NUODB_RESTORE_CREDENTIALS, value: "{{ .Values.restore.credentials }}" }
         volumeMounts:
         - name: log-volume
