@@ -95,14 +95,14 @@ restore:
 
   # Complete set of archiveIds that should be restored which then defines the
   # new state of the database upon restore. Either `labels` or `archiveIds`
-  # should be specified. The setting works with NuoDB 4.2.2+.
+  # should be specified. The setting works with NuoDB 4.2.1+.
   archiveIds: []
 
   # Process labels used to filter the complete set of archiveIds that should be
   # restored which then defines the new state of the database upon restore. By
   # default all HC SMs in the specified cluster will be filtered. Either
   # `labels` or `archiveIds` should be specified. The setting works with NuoDB
-  # 4.2.2+.
+  # 4.2.1+.
   labels: {}
 
   # credentials for the specified target - if different to the database.autoRestore.credentials
@@ -115,7 +115,7 @@ restore:
   # If set to "true", archives restore should be done manually once the SM pod
   # is started. The engine statup will block waiting for the user to complete
   # the archives restore. Otherwise the archives restore will be  performed by
-  # init container in the SM pod. The setting works with NuoDB 4.2.2+.
+  # init container in the SM pod. The setting works with NuoDB 4.2.1+.
   manual: "false"
 
   envFrom:

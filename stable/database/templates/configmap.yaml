@@ -34,6 +34,19 @@ metadata:
     domain: {{ .Values.admin.domain }}
     chart: {{ template "database.chart" . }}
     release: {{ .Release.Name | quote }}
+  name: {{ template "database.fullname" . }}-restore-common
+data:
+{{ (.Files.Glob "files/restore_common.sh").AsConfig | indent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "database.fullname" . }}
+    group: nuodb
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "database.chart" . }}
+    release: {{ .Release.Name | quote }}
   name: {{ template "database.fullname" . }}-nuobackup
 data:
 {{ (.Files.Glob "files/nuobackup").AsConfig | indent 2 }}
