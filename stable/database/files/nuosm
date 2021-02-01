@@ -88,27 +88,28 @@ function purgeOldArchive() {
 # main routine
 #=============================
 
+log "==========================================="
+
+wrapLogfile
+
+# ensure DB_DIR exists
+if [ ! -e "${DB_DIR}" ] ; then
+  mkdir -p "${DB_DIR}"
+  log "Created new dir $DB_DIR"
+else
+  log "Directory $DB_DIR exists"
+fi
+
+# ensure the admin layer is intact...
+trace "checking Admin layer"
+status="$(nuocmd check servers --check-leader --timeout 30 2>&1)"
+retval=$?
+[ $retval -ne 0 ] && die 1 "(nuosm) Admin layer is inoperative - exiting: $status"
+
+
 if ! isRestoreRequestSupported; then
   # Keep the legacy way to perform in-place restore if the NuoDB version is not
   # new enough
-
-  log "==========================================="
-
-  wrapLogfile
-
-  # ensure DB_DIR exists
-  if [ ! -e "${DB_DIR}" ] ; then
-    mkdir -p "${DB_DIR}"
-    log "Created new dir $DB_DIR"
-  else
-    log "Directory $DB_DIR exists"
-  fi
-
-  # ensure the admin layer is intact...
-  trace "checking Admin layer"
-  status="$(nuocmd check servers --check-leader --timeout 30 2>&1)"
-  retval=$?
-  [ $retval -ne 0 ] && die 1 "(nuosm) Admin layer is inoperative - exiting: $status"
 
   trace "retrieving restore request from raft"
   restore_requested="$( nuocmd get value --key $restore_req )"
