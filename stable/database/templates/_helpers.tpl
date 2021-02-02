@@ -221,3 +221,148 @@ The configuration is imported only in the entrypoint cluster.
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Render database restore init container
+*/}}
+{{- define "database.restoreInitContainer" }}
+- name: restore
+  image: {{ template "nuodb.image" . }}
+  imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+  command: ['restorearchive']
+  env:
+  - name: DB_NAME
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.database.name }}.nuodb.com
+        key: database-name
+  - name: DATABASE_RESTORE_CREDENTIALS
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.database.name }}.nuodb.com
+        key: database-restore-credentials
+  - name: DATABASE_BACKUP_CREDENTIALS
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.database.name }}.nuodb.com
+        key: database-backup-credentials
+  - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+  - { name: NUODB_BACKUP_GROUP,  value: "{{ include "hotcopy.group" . }}" }
+  envFrom: 
+  - configMapRef: { name: {{ .Values.database.name }}-restore }
+  volumeMounts:
+  - name: log-volume
+    mountPath: /var/log/nuodb
+  - name: restore-common
+    mountPath: /opt/nuodb/etc/restore_common.sh
+    subPath: restore_common.sh
+  - name: nuobackup
+    mountPath: /usr/local/bin/nuobackup
+    subPath: nuobackup
+  - name: restore-archive
+    mountPath: /usr/local/bin/restorearchive
+    subPath: restorearchive
+  - mountPath: /var/opt/nuodb/archive
+    name: archive-volume
+  - mountPath: /var/opt/nuodb/backup
+    name: backup-volume
+  {{- if .Values.admin.tlsCACert }}
+  - name: tls-ca-cert
+    mountPath: /etc/nuodb/keys/ca.cert
+    subPath: {{ .Values.admin.tlsCACert.key }}
+  {{- end }}
+  {{- if .Values.admin.tlsClientPEM }}
+  - name: tls-client-pem
+    mountPath: /etc/nuodb/keys/nuocmd.pem
+    subPath: {{ .Values.admin.tlsClientPEM.key }}
+  {{- end }}
+  {{- if .Values.admin.tde }}
+  {{- if .Values.admin.tde.secrets }}
+  {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+  {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+  {{- if eq $dbName $.Values.database.name }}
+  - name: tde-volume-{{ $dbName }}
+    mountPath: {{ default "/etc/nuodb/tde" $.Values.admin.tde.storagePasswordsDir }}/{{ $dbName }}
+    readOnly: true
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end -}}
+
+{{/*
+Render database auto import init container
+*/}}
+{{- define "database.importInitContainer" }}
+- name: import
+  image: {{ template "nuodb.image" . }}
+  imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
+  command: ['importarchive']
+  env:
+  - name: DB_NAME
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.database.name }}.nuodb.com
+        key: database-name
+  - name: DATABASE_IMPORT_CREDENTIALS
+    valueFrom:
+      secretKeyRef:
+        name: {{ .Values.database.name }}.nuodb.com
+        key: database-import-credentials
+  - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+  envFrom: 
+  - configMapRef: { name: {{ .Values.database.name }}-restore }
+  volumeMounts:
+  - name: log-volume
+    mountPath: /var/log/nuodb
+  - name: restore-common
+    mountPath: /opt/nuodb/etc/restore_common.sh
+    subPath: restore_common.sh
+  - name: import-archive
+    mountPath: /usr/local/bin/importarchive
+    subPath: importarchive
+  - mountPath: /var/opt/nuodb/archive
+    name: archive-volume
+  {{- if .Values.admin.tlsCACert }}
+  - name: tls-ca-cert
+    mountPath: /etc/nuodb/keys/ca.cert
+    subPath: {{ .Values.admin.tlsCACert.key }}
+  {{- end }}
+  {{- if .Values.admin.tlsClientPEM }}
+  - name: tls-client-pem
+    mountPath: /etc/nuodb/keys/nuocmd.pem
+    subPath: {{ .Values.admin.tlsClientPEM.key }}
+  {{- end }}
+  {{- if .Values.admin.tde }}
+  {{- if .Values.admin.tde.secrets }}
+  {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+  {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+  {{- if eq $dbName $.Values.database.name }}
+  - name: tde-volume-{{ $dbName }}
+    mountPath: {{ default "/etc/nuodb/tde" $.Values.admin.tde.storagePasswordsDir }}/{{ $dbName }}
+    readOnly: true
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+  {{- end }}
+{{- end -}}
+
+{{/*
+Render database init containers
+*/}}
+{{- define "database.initContainers" }}
+initContainers:
+- name: init-disk
+  image: {{ template "init.image" . }}
+  imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
+  command: ['chmod' , '770', '/var/opt/nuodb/archive', '/var/log/nuodb']
+  volumeMounts:
+  - name: archive-volume
+    mountPath: /var/opt/nuodb/archive
+  - name: log-volume
+    mountPath: /var/log/nuodb
+{{- include "database.restoreInitContainer" . }}
+{{- include "database.importInitContainer" . }}
+{{- end -}}

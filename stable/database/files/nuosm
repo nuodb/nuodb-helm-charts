@@ -45,14 +45,6 @@ function die() {
   exit $retval
 }
 
-#=======================================
-# function - trace workflow
-#
-function trace() {
-  wotIdid="$@"
-  [ -n "$1" -a -n "$NUODB_DEBUG" ] && log "trace: $wotIdid"
-}
-
 function resurrectRemovedArchive() {
   trace "resurrecting removed archive metadata"
   # Find archiveId associated with process which address is the same as this pod hostname
@@ -73,17 +65,6 @@ function clearRestoreRequest() {
     nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
 }
 
-function purgeOldArchive() {
-  local archive_id="$1"
-  # completely delete my previous archive metadata
-  # this is required because nuodocker always creates a new archive
-  trace "completely deleting the raft metadata for my archive $archive_id"
-  if [ "$archive_id" -ne "-1" ]; then
-    log "Purging my archive metadata archiveId=$archive_id"
-    log "$( nuocmd delete archive --archive-id "$archive_id" --purge 2>&1 )"
-  fi
-}
-
 #=============================
 # main routine
 #=============================
@@ -101,10 +82,7 @@ else
 fi
 
 # ensure the admin layer is intact...
-trace "checking Admin layer"
-status="$(nuocmd check servers --check-leader --timeout 30 2>&1)"
-retval=$?
-[ $retval -ne 0 ] && die 1 "(nuosm) Admin layer is inoperative - exiting: $status"
+checkAdminLayer
 
 
 if ! isRestoreRequestSupported; then
@@ -212,7 +190,6 @@ if ! isRestoreRequestSupported; then
     log "Latest restore for $NUODB_BACKUP_GROUP resolved to $restore_source"
   fi
 
-  restore_source_encoded="$(printf "%s" "${restore_source}" | base64)"
   restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64)"
 
   atomCount=$( ls -l $DB_DIR/*.atm 2>/dev/null | wc -l )
@@ -261,7 +238,7 @@ if ! isRestoreRequestSupported; then
 
       # and restore the data
       trace "performing restore"
-      perform_restore "$restore_source_encoded" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
+      perform_restore "$restore_source" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
       purgeOldArchive "$myArchive"
 
       wotIdid=""
@@ -311,7 +288,7 @@ if ! isRestoreRequestSupported; then
 
       if isRestoreSourceAvailable "$restore_source"; then
         # any error in a SEED restore is a fatal error
-        perform_restore "$restore_source_encoded" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
+        perform_restore "$restore_source" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
         purgeOldArchive "$myArchive"
         log "Restored secondary archive to match primary restore"
       fi
@@ -331,16 +308,10 @@ if ! isRestoreRequestSupported; then
       trace "restoring empty/damaged archive"
       log "Existing archive is empty or damaged - restoring and clearing metadata"
       # any error in a IMPORT restore is a fatal error
-      perform_restore  "$restore_source_encoded" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
-      purgeOldArchive "$myArchive"
-    else
-        if [ "$myArchive" -ne "-1" ]; then
-          # delete damaged archive metadata as new one will be created by nuodocker
-          log "Purging damaged archive metadata archiveId=$myArchive"
-          log "$( nuocmd delete archive --archive-id "$myArchive" --purge )"
-        fi
+      perform_restore  "$restore_source" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
     fi
-
+    # delete damaged archive metadata as new one will be created by nuodocker
+    purgeOldArchive "$myArchive"
   fi
 
   log "$( nuocmd show archives --db-name $DB_NAME )"

@@ -136,6 +136,7 @@ if isRestoreRequestSupported; then
       restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64)"
       user_data="${user_data};restore_credentials_encoded='${restore_credentials_encoded}'"
    fi
+
    log "restore_type=${restore_type}; restore_source=${restore_source}; arguments=${additional_args}"
    nuodocker request restore \
       --db-name "$db_name" \
@@ -160,31 +161,31 @@ else
          --value $restore_credentials \
          --unconditional
    fi
+fi
 
-   log "Setting flag for database $db_name to restore from $restore_source on next database/SM startup"
+log "Setting flag for database $db_name to restore from $restore_source on next database/SM startup"
 
-   if [ "$restore_type" = "database" ]; then
+if [ "$restore_type" = "database" ]; then
 
-      log "Setting flag for database $db_name to initiate a new FULL backup after next restart"
+   log "Setting flag for database $db_name to initiate a new FULL backup after next restart"
 
-      # Set the semaphores to create a new backupset from a full backup
-      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
+   # Set the semaphores to create a new backupset from a full backup
+   nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name --value "true" --unconditional
 
-      for group in $(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
-         nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$group --value "true" --unconditional
-      done
+   for group in $(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
+      nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$group --value "true" --unconditional
+   done
 
-      # optionally do automatic initiation of the restore
-      if [ "$auto" = "true" ]; then
-         log "restore.autoRestart=true - initiating full database restart for database $db_name"
+   # optionally do automatic initiation of the restore
+   if [ "$auto" = "true" ]; then
+      log "restore.autoRestart=true - initiating full database restart for database $db_name"
 
-         nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
-      else
-         log "restore.autoRestart=false. Restore will be performed when the database - or SM(s) - are manually restarted - over to you..."
-      fi
+      nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
    else
-      log "Flag set for $restore_type restore. Restore will be performed when the chosen SM is manually restarted - over to you..."
+      log "restore.autoRestart=false. Restore will be performed when the database - or SM(s) - are manually restarted - over to you..."
    fi
+else
+   log "Flag set for $restore_type restore. Restore will be performed when the chosen SM is manually restarted - over to you..."
 fi
 
 log "Restore job completed"

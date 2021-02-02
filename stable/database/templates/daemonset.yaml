@@ -49,7 +49,8 @@ spec:
       {{- if .Values.database.sm.tolerationsDS }}
       tolerations:
 {{ toYaml .Values.database.sm.tolerationsDS | trim | indent 8 }}
-      {{- end }}          
+      {{- end }}   
+{{- include "database.initContainers" . | indent 6 }}     
       containers:
       - name: engine
         image: {{ template "nuodb.image" . }}
@@ -206,6 +207,14 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
+      - name: restore-archive
+        configMap:
+          name: {{ template "database.fullname" . }}-restore-archive
+          defaultMode: 0777
+      - name: import-archive
+        configMap:
+          name: {{ template "database.fullname" . }}-import-archive
+          defaultMode: 0777
       - name: archive-volume
         persistentVolumeClaim:
           claimName: {{ .Values.database.name }}-archive
@@ -295,6 +304,7 @@ spec:
       tolerations:
 {{ toYaml .Values.database.sm.tolerationsDS | trim | indent 8 }}
       {{- end }}
+{{- include "database.initContainers" . | indent 6 }}
       containers:
       - name: engine
         image: {{ template "nuodb.image" . }}
@@ -452,6 +462,14 @@ spec:
       - name: readinessprobe
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
+          defaultMode: 0777
+      - name: restore-archive
+        configMap:
+          name: {{ template "database.fullname" . }}-restore-archive
+          defaultMode: 0777
+      - name: import-archive
+        configMap:
+          name: {{ template "database.fullname" . }}-import-archive
           defaultMode: 0777
       - name: archive-volume
         persistentVolumeClaim:

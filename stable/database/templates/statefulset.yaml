@@ -59,16 +59,7 @@ spec:
       tolerations:
 {{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
       {{- end }}
-      initContainers:
-      - name: init-disk
-        image: {{ template "init.image" . }}
-        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
-        command: ['chmod' , '770', '/var/opt/nuodb/archive', '/var/log/nuodb']
-        volumeMounts:
-        - name: archive-volume
-          mountPath: /var/opt/nuodb/archive
-        - name: log-volume
-          mountPath: /var/log/nuodb
+{{- include "database.initContainers" . | indent 6 }}
       containers:
       - name: engine
         image: {{ template "nuodb.image" . }}
@@ -247,6 +238,14 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
+      - name: restore-archive
+        configMap:
+          name: {{ template "database.fullname" . }}-restore-archive
+          defaultMode: 0777
+      - name: import-archive
+        configMap:
+          name: {{ template "database.fullname" . }}-import-archive
+          defaultMode: 0777
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert
         secret:
@@ -396,18 +395,7 @@ spec:
       tolerations:
 {{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
       {{- end }}
-      initContainers:
-      - name: init-disk
-        image: {{ template "init.image" . }}
-        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
-        command: ['chmod' , '770', '/var/opt/nuodb/archive', 'var/opt/nuodb/backup', '/var/log/nuodb']
-        volumeMounts:
-        - name: archive-volume
-          mountPath: /var/opt/nuodb/archive
-        - name: backup-volume
-          mountPath: /var/opt/nuodb/backup
-        - name: log-volume
-          mountPath: /var/log/nuodb
+{{- include "database.initContainers" . | indent 6 }}
       containers:
       - name: engine
         image: {{ template "nuodb.image" . }}
@@ -588,6 +576,14 @@ spec:
       - name: readinessprobe
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
+          defaultMode: 0777
+      - name: restore-archive
+        configMap:
+          name: {{ template "database.fullname" . }}-restore-archive
+          defaultMode: 0777
+      - name: import-archive
+        configMap:
+          name: {{ template "database.fullname" . }}-import-archive
           defaultMode: 0777
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert
