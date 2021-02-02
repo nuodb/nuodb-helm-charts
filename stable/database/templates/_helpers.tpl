@@ -264,8 +264,12 @@ Render database restore init container
     subPath: restorearchive
   - mountPath: /var/opt/nuodb/archive
     name: archive-volume
+  {{- if .smType }}
+  {{- if eq .smType "hotcopy" }}
   - mountPath: /var/opt/nuodb/backup
     name: backup-volume
+  {{- end }}
+  {{- end }}
   {{- if .Values.admin.tlsCACert }}
   - name: tls-ca-cert
     mountPath: /etc/nuodb/keys/ca.cert
