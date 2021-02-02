@@ -1,0 +1,36 @@
+#!/bin/bash
+
+. ${NUODB_HOME}/etc/restore_common.sh
+
+LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/importarchive.log
+
+export DB_NAME NUODB_STORAGE_PASSWORDS_DIR
+
+#=============================
+# main routine
+#=============================
+
+if isRestoreRequestSupported; then
+  # Execute archive restore only if NuoDB image is new enough. Otherwise the
+  # legacy code in nuosm will execute
+
+  log "==========================================="
+  wrapLogfile
+
+  checkAdminLayer
+
+  # If archive directory doesn't exist or it's empty, perform autoImport
+  if [ ! -d "$DB_DIR" ] || [ -z "$(ls -A $DB_DIR)" ]; then
+    if [ -n "$NUODB_AUTO_IMPORT" ] && isRestoreSourceAvailable "$NUODB_AUTO_IMPORT"; then
+      restore_source="$NUODB_AUTO_IMPORT"
+      restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64)"
+      restore_type=${NUODB_AUTO_IMPORT_TYPE}
+      strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
+
+      log "Automatic archive import will be performed source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      mkdir -p "${DB_DIR}"
+      trace "restoring empty archive"
+      perform_restore  "$restore_source" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
+    fi
+  fi
+fi

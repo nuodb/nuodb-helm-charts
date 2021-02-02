@@ -1,0 +1,124 @@
+#!/bin/bash
+
+. ${NUODB_HOME}/etc/restore_common.sh
+
+LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/restorearchive.log
+
+export DB_NAME NUODB_STORAGE_PASSWORDS_DIR
+
+archive_id=
+restore_requested=
+restore_type=
+restore_source=
+restore_credentials_encoded=
+
+#=======================================
+# function - resolves :latest and :group-latest backup sources and stores them
+# directly into restore_source variable
+#
+function resolveLatestSource() {
+  local latest_group
+  local latest
+  if [ "$restore_source" != ":latest" ] && [ "$restore_source" != ":group-latest" ]; then
+    return 0
+  fi
+
+  if [ "$restore_source" != ":latest" ]; then
+    # find which backup group performed the latest backup
+    trace "retrieve :latest using nuobackup"
+    latest_group=$( nuobackup --type report-latest --db-name "$DB_NAME" )
+
+    if [ -z "$latest_group" ] || [ "$latest_group" != "$NUODB_BACKUP_GROUP" ]; then
+      log "Latest backup is performed from different backup group ${latest_group}"
+      return 1
+    fi
+  fi
+
+  trace "retrieving latest backup for group ${NUODB_BACKUP_GROUP} using nuobackup"
+  latest=$( nuobackup --type report-latest --db-name "$DB_NAME" --group "$NUODB_BACKUP_GROUP" )
+  if [ -z "$latest" ]; then
+    return 1
+  fi
+  log "Latest restore for $NUODB_BACKUP_GROUP resolved to $latest"
+  restore_source="$latest"
+  return 0
+}
+
+#=============================
+# main routine
+#=============================
+
+if isRestoreRequestSupported; then
+  # Execute archive restore only if NuoDB image is new enough. Otherwise the
+  # legacy code in nuosm will execute
+
+  log "==========================================="
+  wrapLogfile
+
+  checkAdminLayer
+
+  archive_id=$(get_archive_id "${DB_DIR}")
+  atom_count=$( ls -l "$DB_DIR/*.atm" 2>/dev/null | wc -l )
+  catalog_count=$( ls -l "$DB_DIR/*.cat" 2>/dev/null | wc -l )
+
+  if [ -n "$archive_id" ]; then
+    trace "reading restore request for archiveId=${archive_id}"
+    restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" --archive-ids "$archive_id")
+    restore_type="$(echo "$restore_requested" | awk '{print $2}')"
+    user_data="$(echo "$restore_requested" | awk '{print $3}')"
+
+    if [ -n "$restore_requested" ] && [ "$restore_type" == "automatic" ]; then
+      # Automatic restore for this archive has been requested
+      trace "evaluating restore request data"
+      eval "$user_data"
+      if [ -z "$restore_source_encoded" ]; then
+        # restore_source_encoded variable should be passed in the user_data by
+        # `nuorestore` script
+        die 1 "restore source is missing from ${restore_type} restore request"
+      fi
+
+      restore_source="$(printf "%s" "${restore_source_encoded}" | base64 -d)"
+      resolveLatestSource || die 1 "unable to resolve ${restore_source} restore source"
+      # restore chart doesn't have notion of stream|backupset
+      # `nuodocker restore archive` works with both
+      restore_type="backupset"
+      [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64)"
+      [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
+      
+      log "Archive with archiveId=${archive_id} has been requested for a restore source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      trace "performing restore for archiveId=${archive_id}"
+      if isRestoreSourceAvailable "$restore_source"; then
+        perform_restore  "$restore_source" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
+        completeRestoreRequest "$archive_id"
+      else
+        die 1 "${restore_source} is not available"
+      fi
+    fi
+  elif [ "$atom_count" -lt 20 ] && [ "$catalog_count" -lt 2 ]; then
+    archive_id=$( nuocmd show archives \
+      --db-name "$DB_NAME" \
+      --archive-format "archive-id: {id}" | \
+        sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
+    
+    # if there is an archive in domain state previously served by this SM and
+    # autoRestore is configured, try to REPAIR/RESTORE the disk archive
+    if [ -n "$archive_id" ] && [ -n "$NUODB_AUTO_RESTORE" ]; then
+      restore_source="$NUODB_AUTO_RESTORE"
+      resolveLatestSource || log "unable to resolve ${restore_source} restore source"
+      restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64)"
+      restore_type="${NUODB_AUTO_RESTORE_TYPE}"
+      strip_levels="${NUODB_RESTORE_STRIP_LEVELS:-1}"
+
+      log "Automatic archive repair will be performed for archiveId=${archive_id}, source=${restore_source}"
+      trace "restoring damaged archive"
+      if isRestoreSourceAvailable "$restore_source"; then
+        perform_restore  "$restore_source" "$restore_credentials_encoded" "$restore_type" "$strip_levels" || die $? "$error"
+      fi
+      # delete damaged archive metadata as a new one will be created by
+      # nuodocker start sm
+      purgeOldArchive "$archive_id"
+    fi
+  fi
+
+  log "$( nuocmd show archives --db-name "$DB_NAME" )"
+fi
