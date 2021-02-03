@@ -17,7 +17,12 @@ if isRestoreRequestSupported; then
   log "==========================================="
   wrapLogfile
 
-  checkAdminLayer
+  checkAdminLayer 30
+
+  # HashiCorp Vault will mount storage passwords using init container;
+  # vault.hashicorp.com/agent-init-first: "true" annotation should be used to
+  # guarantee that vault-agent-init container runs first
+  checkStoragePasswords
 
   # If archive directory doesn't exist or it's empty, perform autoImport
   if [ ! -d "$DB_DIR" ] || [ -z "$(ls -A $DB_DIR)" ]; then

@@ -82,7 +82,7 @@ else
 fi
 
 # ensure the admin layer is intact...
-checkAdminLayer
+checkAdminLayer 30
 
 
 if ! isRestoreRequestSupported; then

@@ -230,6 +230,7 @@ Render database restore init container
   image: {{ template "nuodb.image" . }}
   imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
   command: ['restorearchive']
+{{- include "database.envFrom" . | indent 2 }}
   env:
   - name: DB_NAME
     valueFrom:
@@ -241,15 +242,18 @@ Render database restore init container
       secretKeyRef:
         name: {{ .Values.database.name }}.nuodb.com
         key: database-restore-credentials
+  {{- if .smType }}
+  {{- if eq .smType "hotcopy" }}
   - name: DATABASE_BACKUP_CREDENTIALS
     valueFrom:
       secretKeyRef:
         name: {{ .Values.database.name }}.nuodb.com
         key: database-backup-credentials
-  - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
   - { name: NUODB_BACKUP_GROUP,  value: "{{ include "hotcopy.group" . }}" }
-  envFrom: 
-  - configMapRef: { name: {{ .Values.database.name }}-restore }
+  {{- end }}
+  {{- end }}
+  - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+{{- include "database.env" . | indent 2 }}
   volumeMounts:
   - name: log-volume
     mountPath: /var/log/nuodb
@@ -303,6 +307,7 @@ Render database auto import init container
   image: {{ template "nuodb.image" . }}
   imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
   command: ['importarchive']
+{{- include "database.envFrom" . | indent 2 }}
   env:
   - name: DB_NAME
     valueFrom:
@@ -315,8 +320,7 @@ Render database auto import init container
         name: {{ .Values.database.name }}.nuodb.com
         key: database-import-credentials
   - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
-  envFrom: 
-  - configMapRef: { name: {{ .Values.database.name }}-restore }
+{{- include "database.env" . | indent 2 }}
   volumeMounts:
   - name: log-volume
     mountPath: /var/log/nuodb

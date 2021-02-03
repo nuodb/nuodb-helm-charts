@@ -108,11 +108,12 @@ function purgeOldArchive() {
 }
 
 function checkAdminLayer() {
+  local timeout="$1"
   local status
   trace "checking Admin layer"
-  status="$(nuocmd check servers --check-leader --timeout 30 2>&1)"
+  status="$(nuocmd check servers --check-leader --timeout "$timeout" 2>&1)"
   if [ $? -ne 0 ]; then
-    die 1 "(nuosm) Admin layer is inoperative - exiting: ${status}"
+    die 1 "Admin layer is inoperative - exiting: ${status}"
   fi
 }
 
@@ -126,6 +127,15 @@ function completeRestoreRequest(){
   if [ "$retcode" -ne 0 ]; then
     die $retcode "$error"
   fi
+}
+
+function checkStoragePasswords() {
+  if [ -n "$NUODB_STORAGE_PASSWORDS_DIR" ] && 
+    [ ! -f "${NUODB_STORAGE_PASSWORDS_DIR}/${DB_NAME}/tde.json" ] && 
+    [ ! -f "${NUODB_STORAGE_PASSWORDS_DIR}/${DB_NAME}/target" ]; then
+    die 1 "TDE is configured for database ${DB_NAME} but storage passwords are not available in ${NUODB_STORAGE_PASSWORDS_DIR}/${DB_NAME}"
+  fi
+  return 0
 }
 
 #=======================================

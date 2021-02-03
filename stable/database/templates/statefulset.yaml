@@ -395,7 +395,7 @@ spec:
       tolerations:
 {{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
       {{- end }}
-{{- include "database.initContainers" (dict "smType" "hotcopy" "Values" .Values "Release" .Release) | indent 6 }}
+{{- include "database.initContainers" (merge (dict "smType" "hotcopy") .) | indent 6 }}
       containers:
       - name: engine
         image: {{ template "nuodb.image" . }}
