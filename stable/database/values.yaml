@@ -253,6 +253,8 @@ database:
       # Eg: At 22:35 on every day-of-month on every day-of-week from Monday through Saturday
       incrementalSchedule: "35 22 * * 0-5"
 
+      restartPolicy: OnFailure
+
       persistence:
         size: 20Gi
         accessModes:
