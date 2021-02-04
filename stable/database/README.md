@@ -348,7 +348,7 @@ Deploy a database without backups:
 
 ```bash
 helm install database nuodb/database \
-    --set database.sm.hotcopy.replicas=0 --set database.sm.nohotcopy.replicas=1 --set nuocollector.enabled=true
+    --set database.sm.hotCopy.replicas=0 --set database.sm.noHotCopy.replicas=1 --set nuocollector.enabled=true
 ```
 
 Wait until the deployment completes:
@@ -361,32 +361,29 @@ Verify the pods are running:
 
 ```bash
 $ kubectl get pods
-NAME                                               READY   STATUS      RESTARTS   AGE
-admin-nuodb-cluster-0-0                            1/1     Running     0          18h
-disable-thp-transparent-hugepage-59f7q             1/1     Running     0          18h
-sm-database-demo-0                                 1/1     Running     0          18h
-sm-database-demo-hotcopy-0                         1/1     Running     0          18h
-te-database-demo-599ff97797-dtqkk                  1/1     Running     0          18h
+NAME                                              READY   STATUS    RESTARTS   AGE
+admin-nuodb-cluster0-0                            1/1     Running   0          62s
+disable-thp-transparent-hugepage-qc7mr            1/1     Running   0          71s
+sm-database-nuodb-cluster0-demo-0                 3/3     Running   0          54s
+te-database-nuodb-cluster0-demo-69d46b46c-2mznz   3/3     Running   0          54s
 ```
+
 
 The command displays the NuoDB Pods running on the Kubernetes cluster. When completed, both the TE and the storage containers should show a **STATUS** of `Running`, and with 0 **RESTARTS**.
 
 Verify the connected states of the database domain:
 
 ```bash
-$ kubectl exec -it admin-nuodb-cluster-0-0 -- nuocmd show domain
+$ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 
-server version: 4.0.7-2-6526a2db74, server license: Community
-server time: 2020-12-10T21:38:06.902, client token: 9d17a2a27edb31bd039ea85391c18197113a7a15
+server version: 4.0.8-2-881d0e5d44, server license: Community
+server time: 2021-02-04T19:42:45.729, client token: d7029e4f34b18b0e3e30444267d4f3ae89b60a3e
 Servers:
-  [admin-nuodb-cluster0-0] admin-nuodb-cluster0-0.nuodb.nuodb-helm.svc.cluster.local:48005 
-     [last_ack = 0.29] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=admin-nuodb-cluster0-0, log=0/51/51) Connected *
+  [admin-nuodb-cluster0-0] admin-nuodb-cluster0-0.nuodb.nuodb.svc.cluster.local:48005 [last_ack = 0.58] [member = ADDED] [raft_state = ACTIVE] (LEADER, Leader=admin-nuodb-cluster0-0, log=0/20/20) Connected *
 Databases:
   demo [state = RUNNING]
-    [SM] sm-demo-nuodb-cluster0-demo-database-hotcopy-0/10.1.0.163:48006 [start_id = 0] 
-        [server_id = admin-nuodb-cluster0-1] [pid = 343] [node_id = 1] [last_ack =  5.39] MONITORED:RUNNING
-    [TE] te-demo-nuodb-cluster0-demo-database-f7799d48d-bbnzv/10.1.0.159:48006 [start_id = 1] 
-        [server_id = admin-nuodb-cluster0-1] [pid = 496] [node_id = 2] [last_ack =  9.30] MONITORED:RUNNING
+    [SM] sm-database-nuodb-cluster0-demo-0/10.1.0.130:48006 [start_id = 0] [server_id = admin-nuodb-cluster0-0] [pid = 168] [node_id = 1] [last_ack =  0.40] MONITORED:RUNNING
+    [TE] te-database-nuodb-cluster0-demo-69d46b46c-2mznz/10.1.0.129:48006 [start_id = 1] [server_id = admin-nuodb-cluster0-0] [pid = 98] [node_id = 2] [last_ack =  4.38] MONITORED:RUNNING
 ```
 
 The command displays the status of NuoDB processes. The Servers section lists admin processes; they should all be **Connected**, one will be the **LEADER** and other designated as a **FOLLOWER**.
@@ -396,8 +393,8 @@ The command displays the status of NuoDB processes. The Servers section lists ad
 to scale-out the TEs, run:
 
 ```bash
-$ kubectl scale deployment te-database-nuodb-demo --replicas=2
-deployment.extensions/te-database-nuodb-demo scaled
+$ kubectl scale deployment te-database-nuodb-cluster0-demo --replicas=2
+deployment.extensions/te-database-nuodb-cluster0-demo scaled
 ```
 
 ## Cleaning Up Archive References
@@ -405,20 +402,20 @@ deployment.extensions/te-database-nuodb-demo scaled
 This will clear the archive references and metadata from the admin layer if the default demo database was recreated
 
 ```bash
-kubectl exec -it admin-nuodb-0  -- /bin/bash
+kubectl exec -it admin-nuodb-cluster0-0  -- /bin/bash
 
 $ nuocmd get archives --db-name demo
-$ nuocmd delete archive --archive-id 0 --purge
 $ nuocmd delete database --db-name demo
+$ nuocmd delete archive --archive-id 0 --purge
 $ nuocmd show domain
 ```
 
 Then you must also clear the PVCs:
 
 ```bash
-kubectl delete pvc archive-volume-sm-database-nuodb-demo-0
-kubectl delete pvc archive-volume-sm-database-nuodb-demo-hotcopy-0
-kubectl delete pvc backup-volume-sm-database-nuodb-demo-hotcopy-0
+kubectl delete pvc archive-volume-sm-database-nuodb-cluster0-demo-0
+kubectl delete pvc archive-volume-sm-database-nuodb-cluster0-demo-hotcopy-0
+kubectl delete pvc backup-volume-sm-database-nuodb-cluster0-demo-hotcopy-0
 ```
 
 ## Uninstalling the Chart
