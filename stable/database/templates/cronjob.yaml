@@ -87,7 +87,7 @@ spec:
               secretName: {{ .Values.admin.tlsClientPEM.secret }}
               defaultMode: 0440
           {{- end }}
-          restartPolicy: Never
+          restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 ---
 apiVersion: batch/v1beta1
@@ -172,7 +172,7 @@ spec:
               secretName: {{ .Values.admin.tlsClientPEM.secret }}
               defaultMode: 0440
           {{- end }}
-          restartPolicy: Never
+          restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 
 {{- if .Values.database.sm.hotCopy.journalBackup.enabled }}
@@ -259,7 +259,7 @@ spec:
               secretName: {{ .Values.admin.tlsClientPEM.secret }}
               defaultMode: 0440
           {{- end }}
-          restartPolicy: Never
+          restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 {{- end }}
 {{- end }}
