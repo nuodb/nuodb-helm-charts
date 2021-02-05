@@ -180,11 +180,14 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		helm.Install(t, options, RESTORE_HELM_CHART_PATH, restName)
 		AddTeardown(TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
+		if restart {
+			// Manually restart all engine pods as restore logic in init container
+			selector := fmt.Sprintf("group=nuodb,domain=nuodb,database=%s", options.SetValues["database.name"])
+			k8s.RunKubectl(t, kubectlOptions, "delete", "pods", "--selector", selector)
+		}
 	}
 
 	if restart {
-		selector := fmt.Sprintf("group=nuodb,domain=nuodb,database=%s", options.SetValues["database.name"])
-		k8s.RunKubectl(t, kubectlOptions, "delete", "pods", "--selector", selector)
 		AwaitDatabaseRestart(t, namespaceName, podName, options.SetValues["database.name"], databaseOptions, restore)
 	} else {
 		restore()
