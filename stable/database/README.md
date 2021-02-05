@@ -235,6 +235,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotcopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
 | `sm.hotcopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
 | `sm.hotcopy.incrementalSchedule` | cron schedule for INCREMENTAL hotcopy jobs | `35 22 * * 0-5` |
+| `sm.hotcopy.restartPolicy` | Restart policy for backup related JOBs and CRON JOBs | `OnFailure` |
 | `sm.hotcopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
 | `sm.hotcopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
 | `sm.hotcopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |

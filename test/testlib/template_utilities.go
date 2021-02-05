@@ -2,6 +2,7 @@ package testlib
 
 import (
 	"fmt"
+	"k8s.io/api/batch/v1beta1"
 	"strings"
 	"testing"
 
@@ -98,6 +99,28 @@ func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int)
 
 		if strings.Contains(part, fmt.Sprintf("kind: %s", "ConfigMap")) {
 			var obj v1.ConfigMap
+			helm.UnmarshalK8SYaml(t, part, &obj)
+
+			objects = append(objects, obj)
+		}
+	}
+
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
+
+	return objects
+}
+
+func SplitAndRenderCronJob(t *testing.T, output string, expectedNrObjects int) []v1beta1.CronJob {
+	objects := make([]v1beta1.CronJob, 0)
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if strings.Contains(part, fmt.Sprintf("kind: %s", "CronJob")) {
+			var obj v1beta1.CronJob
 			helm.UnmarshalK8SYaml(t, part, &obj)
 
 			objects = append(objects, obj)
