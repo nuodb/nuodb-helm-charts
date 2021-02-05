@@ -43,6 +43,12 @@ semaphore=""
 timeout=1800
 backup_root=$BACKUP_DIR
 
+function get_current_backup() {
+   output=$( nuodocker get current-backup \
+      --db-name "${db_name}" \
+      --labels "${labels}" 2>/dev/null)
+   echo "$output" | head -1 | awk '{print $2}'
+}
 
 function execute_backup() {
    local type="$1"
@@ -51,6 +57,7 @@ function execute_backup() {
    local next
    local backupset
    local output
+   local failed
 
    # call nuodocker to perform the actual backup
    echo "Starting ${type} backup for database ${db_name} on processes with labels '${labels}' ..."
@@ -64,19 +71,32 @@ function execute_backup() {
    retval=$?
    if [ $retval != 0 ]; then
       echo >&2 "Error running hotcopy $retval"
+      # Store failed backupset in KV store
+      if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
+         backupset=$(get_current_backup)
+         if [ -n "$backupset" ]; then
+            failed=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed")
+            nuocmd set value \
+               --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed" \
+               --value "${failed} ${backupset}" --expected-value "${failed}"
+         fi
+      fi 
       exit $retval
    fi
 
    if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
+      # clear all previous failed backupsets
+      failed=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed")
+      nuocmd set value \
+         --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed" \
+         --value "" --expected-value "${failed}"
+
       # store the new backupset as latest, and store the new latest index
       latest=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" )
       current=${latest:-0}
       # bump latest, and wrap around (simple ring-buffer)
       next=$(( (current + 1) % $NUODB_MAX_BACKUP_HISTORY ))
-      output=$( nuodocker get current-backup \
-         --db-name "${db_name}" \
-         --labels "${labels}" )
-      backupset=$( echo "$output" | head -1 | awk '{print $2}' )
+      backupset=$(get_current_backup)
 
       if [ -n "$backupset" ]; then
          echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest = $next"
@@ -184,7 +204,7 @@ fi
 if [ "$backup_type" != "full" ]; then
    error="$( nuodocker get current-backup \
       --db-name "${db_name}" \
-      --labels "backup ${backup_group} ${labels}" 2>&1)"
+      --labels "${labels}" 2>&1)"
    if [ $? -ne 0 ] && echo "$error" | grep -q "No existing backup path found"; then
       # Check if full backup has been started already for all archiveIds
       # This will most likely execute in the following scenarious:
@@ -193,6 +213,22 @@ if [ "$backup_type" != "full" ]; then
       # * new HC SM has been started since the last full backup
       echo "Executing full hotcopy as a prerequisite for ${backup_type} hotcopy: ${error}"
       execute_backup "full"
+   fi
+
+   if [ "$backup_type" == "incremental" ] && [ -n "$backup_group" ]; then
+      backupset=$(get_current_backup)
+      failed=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed")
+      if [ -n "$backupset" ] && echo "$failed" | grep -q "${backupset}"; then
+         # Incremental hotcopy requires a full hotcopy element in the backupset;
+         # in case the full hotcopy has failed, all incrementals using that
+         # backupset will fail until next full hotcopy is scheduled; if the
+         # failure is transient or user corrected the problem (like freeing some
+         # disk space), then executing another full will have a great chance to
+         # finish
+         error="full hotcopy in backupset ${backupset} has failed"
+         echo "Executing full hotcopy as a prerequisite for ${backup_type} hotcopy: ${error}"
+         execute_backup "full"
+      fi
    fi
 fi
 
