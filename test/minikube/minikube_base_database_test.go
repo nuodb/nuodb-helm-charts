@@ -218,6 +218,29 @@ func verifyBackup(t *testing.T, namespaceName string, podName string, databaseNa
 	require.True(t, backupset != "")
 }
 
+func isRestoreRequestSupported(t *testing.T, namespaceName string, podName string) bool {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+
+	err := k8s.RunKubectlE(t, kubectlOptions, "exec", podName, "--",
+		"bash", "-c", "nuodocker request restore -h > /dev/null 2>&1")
+	return err != nil
+}
+
+func checkRestoreRequests(t *testing.T, namespaceName string, podName string, databaseName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+
+	restoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+		"nuocmd", "get", "value", "--key", fmt.Sprintf("/nuodb/nuosm/database/%s/restore", databaseName))
+	require.NoError(t, err)
+	require.Empty(t, restoreRequest, "Legacy restore request should be cleared")
+	if isRestoreRequestSupported(t, namespaceName, podName) {
+		restoreRequest, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+			"nuocmd", "get", "restore-requests", "--db-name", databaseName)
+		require.NoError(t, err)
+		require.Empty(t, restoreRequest, "Database restore requests should be cleared")
+	}
+}
+
 func awaitPodLog(t *testing.T, namespaceName string, podName string, fileNameSuffix string) {
 	testlib.AwaitNrReplicasScheduled(t, namespaceName, podName, 1)
 	testlib.AwaitPodPhase(t, namespaceName, podName, corev1.PodRunning, 30*time.Second)
@@ -530,6 +553,9 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
 	require.NoError(t, err, "error running SQL: show schema User")
 	require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
+
+	checkRestoreRequests(t, namespaceName, admin0, opt.DbName)
+
 }
 
 func TestKubernetesImportDatabase(t *testing.T) {
@@ -684,6 +710,7 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		require.NoError(t, err, "error running SQL: show schema User")
 		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
+		checkRestoreRequests(t, namespaceName, admin0, opt.DbName)
 	})
 
 	t.Run("restartInOrder", func(t *testing.T) {
@@ -720,6 +747,7 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		require.NoError(t, err, "error running SQL: show schema User")
 		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
+		checkRestoreRequests(t, namespaceName, admin0, opt.DbName)
 	})
 }
 

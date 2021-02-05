@@ -97,8 +97,6 @@ else
   # Keep the legacy way to perform in-place restore if the NuoDB version is not
   # new enough
 
-  : ${NUODB_SEQUENCE_SYNC:=true}
-
   startup_key="/nuodb/nuosm/startup"
   first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
   restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
