@@ -222,8 +222,8 @@ func isRestoreRequestSupported(t *testing.T, namespaceName string, podName strin
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	err := k8s.RunKubectlE(t, kubectlOptions, "exec", podName, "--",
-		"bash", "-c", "nuodocker request restore -h > /dev/null 2>&1")
-	return err != nil
+		"bash", "-c", "nuodocker request restore -h > /dev/null")
+	return err == nil
 }
 
 func checkRestoreRequests(t *testing.T, namespaceName string, podName string, databaseName string) {
@@ -235,7 +235,7 @@ func checkRestoreRequests(t *testing.T, namespaceName string, podName string, da
 	require.Empty(t, restoreRequest, "Legacy restore request should be cleared")
 	if isRestoreRequestSupported(t, namespaceName, podName) {
 		restoreRequest, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
-			"nuocmd", "get", "restore-requests", "--db-name", databaseName)
+			"nuodocker", "get", "restore-requests", "--db-name", databaseName)
 		require.NoError(t, err)
 		require.Empty(t, restoreRequest, "Database restore requests should be cleared")
 	}
@@ -245,6 +245,13 @@ func awaitPodLog(t *testing.T, namespaceName string, podName string, fileNameSuf
 	testlib.AwaitNrReplicasScheduled(t, namespaceName, podName, 1)
 	testlib.AwaitPodPhase(t, namespaceName, podName, corev1.PodRunning, 30*time.Second)
 	go testlib.GetAppLog(t, namespaceName, podName, fileNameSuffix, &corev1.PodLogOptions{Follow: true})
+}
+
+func awaitContainerLog(t *testing.T, namespaceName string, podName string, containerName string, fileNameSuffix string) {
+	testlib.AwaitNrReplicasScheduled(t, namespaceName, podName, 1)
+	testlib.AwaitContainerStarted(t, namespaceName, podName, containerName, 30*time.Second)
+	go testlib.GetAppLog(t, namespaceName, podName, fileNameSuffix+"-"+containerName,
+		&corev1.PodLogOptions{Container: containerName, Follow: true})
 }
 
 func TestKubernetesBasicDatabase(t *testing.T) {
@@ -521,11 +528,9 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 	// Generate diagnose in case this test fails
-	testlib.AddTeardown(testlib.TEARDOWN_DATABASE, func() {
-		if t.Failed() {
-			testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-			testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
-		}
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
 	})
 
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
@@ -544,6 +549,11 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 	go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+
+	// Dump restore container log in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetAppLog(t, namespaceName, smPodName0, "_restore", &corev1.PodLogOptions{Container: "restore"})
+	})
 
 	// restore database
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
@@ -703,7 +713,9 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		databaseOptions.SetValues["restore.source"] = backupset
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions, true)
 		awaitPodLog(t, namespaceName, smPodName0, "_auto_post-restart")
+		awaitContainerLog(t, namespaceName, smPodName0, "restore", "_auto_post-restart")
 		awaitPodLog(t, namespaceName, hcSmPodName0, "_auto_post-restart")
+		awaitContainerLog(t, namespaceName, hcSmPodName0, "restore", "_auto_post-restart")
 
 		// verify that the database does NOT contain the data from AFTER the backup
 		tables, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "show schema User")
@@ -714,6 +726,9 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 	})
 
 	t.Run("restartInOrder", func(t *testing.T) {
+		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+			testlib.GetAppLog(t, namespaceName, smPodName0, "_manual_restore", &corev1.PodLogOptions{Container: "restore"})
+		})
 		populateCreateDBData(t, namespaceName, admin0)
 		// restore database
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions, false)
@@ -723,13 +738,24 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", hcSmPodNameTemplate, "--replicas=0")
 		testlib.AwaitNoPods(t, namespaceName, smPodNameTemplate)
 
-		// If nonHC SM is started first it should fail as the restore source won't be available
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", smPodNameTemplate, "--replicas=1")
 		awaitPodLog(t, namespaceName, smPodName0, "_manual_post-restart")
-		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPodName0, 1, 120*time.Second)
-		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
-			fmt.Sprintf("Backupset %s cannot be found in /var/opt/nuodb/backup", backupset),
-			&corev1.PodLogOptions{Previous: true}), 1)
+		awaitContainerLog(t, namespaceName, smPodName0, "restore", "_manual_post-restart")
+
+		if isRestoreRequestSupported(t, namespaceName, admin0) {
+			// If nonHC SM is started first it should wait for the database restore to complete
+			testlib.Await(t, func() bool {
+				return testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
+					"Waiting for database restore to complete",
+					&corev1.PodLogOptions{}) == 1
+			}, 60*time.Second)
+		} else {
+			// If nonHC SM is started first it should fail as the restore source won't be available
+			testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPodName0, 1, 120*time.Second)
+			require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
+				fmt.Sprintf("Backupset %s cannot be found in /var/opt/nuodb/backup", backupset),
+				&corev1.PodLogOptions{Previous: true}), 1)
+		}
 
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", smPodNameTemplate, "--replicas=0")
 		testlib.AwaitNoPods(t, namespaceName, smPodNameTemplate)
@@ -737,9 +763,12 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		// Restart SM pods in the correct order so that HC SM performs the restore
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", hcSmPodNameTemplate, "--replicas=1")
 		awaitPodLog(t, namespaceName, hcSmPodName0, "_manual_post-restart")
+		awaitContainerLog(t, namespaceName, hcSmPodName0, "restore", "_manual_post-restart")
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmHotCopyPods+opt.NrTePods)
+
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", smPodNameTemplate, "--replicas=1")
 		awaitPodLog(t, namespaceName, smPodName0, "_manual_post-restore")
+		awaitContainerLog(t, namespaceName, smPodName0, "restore", "_manual_post-restore")
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 		// verify that the database does NOT contain the data from AFTER the backup

@@ -407,6 +407,23 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 	}, timeout)
 }
 
+func AwaitContainerStarted(t *testing.T, namespace string, podName string, containerName string, timeout time.Duration) {
+	Await(t, func() bool {
+		pod, err := findPod(t, namespace, podName)
+		require.NoError(t, err, "AwaitContainerTerminated: could not find pod with name matching ", podName)
+		statuses := append([]corev1.ContainerStatus{}, pod.Status.InitContainerStatuses...)
+		statuses = append(statuses, pod.Status.ContainerStatuses...)
+		for _, status := range statuses {
+			if status.Name == containerName {
+				return status.State.Waiting == nil
+			}
+		}
+		err = errors.New("No container " + containerName + " in pod " + podName)
+		require.NoError(t, err, "awaitPodPhase: could not find container with name matching ", containerName)
+		return false
+	}, timeout)
+}
+
 func AwaitJobSucceeded(t *testing.T, namespace string, jobName string, timeout time.Duration) {
 	Await(t, func() bool {
 		pod, err := findPod(t, namespace, jobName)
