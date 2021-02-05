@@ -250,7 +250,7 @@ func awaitPodLog(t *testing.T, namespaceName string, podName string, fileNameSuf
 func awaitContainerLog(t *testing.T, namespaceName string, podName string, containerName string, fileNameSuffix string) {
 	testlib.AwaitNrReplicasScheduled(t, namespaceName, podName, 1)
 	testlib.AwaitContainerStarted(t, namespaceName, podName, containerName, 30*time.Second)
-	go testlib.GetAppLog(t, namespaceName, podName, fileNameSuffix+"-"+containerName,
+	go testlib.GetAppLog(t, namespaceName, podName, fileNameSuffix+"_"+containerName,
 		&corev1.PodLogOptions{Container: containerName, Follow: true})
 }
 
@@ -606,9 +606,16 @@ func TestKubernetesImportDatabase(t *testing.T) {
 		testlib.AwaitNrReplicasScheduled(t, namespaceName, smPodNameTemplate, opt.NrSmPods)
 		smPodName0 := fmt.Sprintf("%s-hotcopy-0", smPodNameTemplate)
 		awaitPodLog(t, namespaceName, smPodName0, "_invalid-credentials")
+		awaitContainerLog(t, namespaceName, smPodName0, "import", "_invalid-credentials")
 		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPodName0, 0, 120*time.Second)
 		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
 			"Restore: unable to download/unpack backup", &corev1.PodLogOptions{Previous: true}), 1)
+
+		// Dump import container log in case this test fails
+		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+			testlib.GetAppLog(t, namespaceName, smPodName0,
+				"_correct-credentials_import", &corev1.PodLogOptions{Container: "import"})
+		})
 
 		// Use the correct IMPORT URL without credentials
 		databaseOptions.SetValues["database.autoImport.source"] = testlib.IMPORT_ARCHIVE_URL

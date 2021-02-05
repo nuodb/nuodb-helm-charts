@@ -181,7 +181,8 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		AddTeardown(TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
 		if restart {
-			// Manually restart all engine pods as restore logic in init container
+			// Manually restart all engine pods as the restore logic is now in
+			// init container
 			selector := fmt.Sprintf("group=nuodb,domain=nuodb,database=%s", options.SetValues["database.name"])
 			k8s.RunKubectl(t, kubectlOptions, "delete", "pods", "--selector", selector)
 		}
