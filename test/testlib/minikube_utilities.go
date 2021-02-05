@@ -794,7 +794,7 @@ func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOpti
 			container = &pod.Spec.Containers[0]
 		}
 		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if containerStatus.Name == container.Name && containerStatus.Started != nil && (!*containerStatus.Started || containerStatus.State.Waiting != nil) {
+			if containerStatus.Name == container.Name && containerStatus.State.Waiting != nil {
 				err = &ContainerNotStarted{container.Name}
 				return
 			}
