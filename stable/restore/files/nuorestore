@@ -10,7 +10,6 @@
 #   --source         - source to restore from - can be a backupset or a URL
 #   --labels         - additional arbitrary labels to select the SMs for restore
 #   --archive-ids    - set of archive ids which will be restored
-#   --auto           - automatically start the restore operation ( true | false )
 #   --manual         - request manual archives restore ( true | false )
 
 [ "$NUODB_DEBUG" = "verbose" ] && set -X
@@ -113,10 +112,6 @@ do
            manual="$1"; shift;;
         "--manual="* )
            manual="${opt#*=}";;
-        "--auto" )
-           auto="$1"; shift;;
-        "--auto="* )
-           auto="${opt#*=}";;
         *) echo >&2 "Invalid nuorestore option: $opt ($@)"; exit 1;;
    esac
 done
@@ -175,15 +170,6 @@ if [ "$restore_type" = "database" ]; then
    for group in $(nuocmd --api-server $NUOCMD_API_SERVER get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
       nuocmd --api-server $NUOCMD_API_SERVER set value --key $semaphore/$db_name/$group --value "true" --unconditional
    done
-
-   # optionally do automatic initiation of the restore
-   if [ "$auto" = "true" ]; then
-      log "restore.autoRestart=true - initiating full database restart for database $db_name"
-
-      nuocmd --api-server $NUOCMD_API_SERVER shutdown database --db-name $db_name
-   else
-      log "restore.autoRestart=false. Restore will be performed when the database - or SM(s) - are manually restarted - over to you..."
-   fi
 else
    log "Flag set for $restore_type restore. Restore will be performed when the chosen SM is manually restarted - over to you..."
 fi

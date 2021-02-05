@@ -257,9 +257,9 @@ Render database restore init container
   volumeMounts:
   - name: log-volume
     mountPath: /var/log/nuodb
-  - name: restore-common
-    mountPath: /opt/nuodb/etc/restore_common.sh
-    subPath: restore_common.sh
+  - name: restore-lib
+    mountPath: /opt/nuodb/etc/restore_lib.sh
+    subPath: restore_lib.sh
   - name: nuobackup
     mountPath: /usr/local/bin/nuobackup
     subPath: nuobackup
@@ -324,9 +324,9 @@ Render database auto import init container
   volumeMounts:
   - name: log-volume
     mountPath: /var/log/nuodb
-  - name: restore-common
-    mountPath: /opt/nuodb/etc/restore_common.sh
-    subPath: restore_common.sh
+  - name: restore-lib
+    mountPath: /opt/nuodb/etc/restore_lib.sh
+    subPath: restore_lib.sh
   - name: import-archive
     mountPath: /usr/local/bin/importarchive
     subPath: importarchive

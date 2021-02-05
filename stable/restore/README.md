@@ -154,6 +154,11 @@ The following tables list the configurable parameters of the restore chart and t
 | `restore.target` | Where to restore `TO` | `{{ .Values.database.name }}` |
 | `restore.source` | Where to restore `FROM` [ backupset | url | `:latest` ] | `:latest` |
 | `restore.credentials` | Credentials to use for a URL source (user:password) | `""` |
+
+The following table list deprecated configuration parameters:
+
+| Parameter | Description | Default |
+| ----- | ----------- | ------ |
 | `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false). Only valid for a "database" restore | `true` |
 
 ## Detailed Steps

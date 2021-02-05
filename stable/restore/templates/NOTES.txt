@@ -1,5 +1,22 @@
 ** Please be patient while the chart is being deployed **
 
-NuoDB can be accessed via port 48004 on the following DNS name from within your cluster:
+1) Wait for the restore job to finish:
 
-  {{ template "admin.address" . }}.cluster.local - Read/Write connection
+  kubectl wait --for=condition=complete \
+    --namespace "{{ .Release.Namespace }}" \
+    job/restore-{{ include "restore.target" . }}
+
+2) Restart Kubernetes pods for NuoDB engines selected to be restored
+
+To trigger database in-place restore, all Kubernetes pods for NuoDB engines in
+database {{include "restore.target" . }} needs to be restarted. An example
+command to delete all NuoDB engine pods in single cluster and namespace is:
+
+  kubectl delete pods \
+    --selector "group=nuodb,domain={{ .Values.admin.domain }},database={{ include "restore.target" . }}" \
+    --namespace "{{ .Release.Namespace }}"
+
+You could delete all pods in any order which will cause k8s to automatically
+restart all TE and SM. Alternatively, you could scale-down TE and SM
+pods, and then scale up the SM pods in the order of your choosing, and
+then scale-up the TE pods - again in the order of your choosing.

@@ -292,18 +292,6 @@ Any file located in `database.configFilesPath` can be replaced; the YAML key cor
 | ----- | ----------- | ------ |
 | `nuodb.config` | [NuoDB database options][6] | `nil` |
 
-#### restore.*
-
-The following tables list the configurable parameters of the restore chart and their default values.
-
-| Parameter | Description | Default |
-| ----- | ----------- | ------ |
-| `restore.type` | What type of restore to perform: [ "database" | "archive" ]. A "database" restore restarts the entire database at a previous state. An "archive" restore restores/repairs a SINGLE archive in a RUNNING database. | `"database"` |
-| `restore.target` | Where to restore `TO` | `{{ .Values.database.name }}` |
-| `restore.source` | Where to restore `FROM` [ backupset | url | `:latest` | `:group-latest` ] | `:latest` |
-| `restore.credentials` | Credentials to use for a URL source (user:password) | `""` |
-| `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false). Only valid for a "database" restore | `true` |
-
 
 ### Running
 

@@ -185,12 +185,6 @@ args:
 - "{{ $restoreTarget }}"
 - "--source"
 - "{{ include "restore.source" . }}"
-- "--auto"
-{{- if hasKey .Values.restore "autoRestart" }}
-- {{ .Values.restore.autoRestart | quote }}
-{{ else }}
-- "true"
-{{- end -}}
 - "--manual"
 {{- if hasKey .Values.restore "manual" }}
 - {{ .Values.restore.manual | quote }}

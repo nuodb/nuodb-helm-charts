@@ -524,7 +524,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	// restore database
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
-	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions, true)
 
 	// verify that the database does NOT contain the data from AFTER the backup
 	tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
@@ -671,11 +671,11 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 
-	t.Run("autoRestart", func(t *testing.T) {
+	t.Run("restartAllAtOnce", func(t *testing.T) {
 		populateCreateDBData(t, namespaceName, admin0)
 		// restore database
 		databaseOptions.SetValues["restore.source"] = backupset
-		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions, true)
 		awaitPodLog(t, namespaceName, smPodName0, "_auto_post-restart")
 		awaitPodLog(t, namespaceName, hcSmPodName0, "_auto_post-restart")
 
@@ -686,11 +686,10 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	})
 
-	t.Run("manualRestart", func(t *testing.T) {
+	t.Run("restartInOrder", func(t *testing.T) {
 		populateCreateDBData(t, namespaceName, admin0)
 		// restore database
-		databaseOptions.SetValues["restore.autoRestart"] = "false"
-		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions, false)
 
 		// Manually scale down all SMs
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", smPodNameTemplate, "--replicas=0")

@@ -221,7 +221,7 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	testlib.RunSQL(t, namespaceName, admin0, "demo", "drop table USER.HOCKEY")
 	// restore database
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
-	testlib.RestoreDatabase(t, namespaceName, admin0, &options)
+	testlib.RestoreDatabase(t, namespaceName, admin0, &options, true)
 	// verify that the database contains USER.HOCKEY table AFTER the restore
 	tables, _ = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
 	require.True(t, strings.Contains(tables, "HOCKEY"), "Show schema returned: %s", tables)
@@ -234,7 +234,7 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	// Drop USER.HOCKEY table before restore
 	testlib.RunSQL(t, namespaceName, admin0, "demo", "drop table USER.HOCKEY")
 	// Restore backup encrypted with old password
-	testlib.RestoreDatabase(t, namespaceName, admin0, &options)
+	testlib.RestoreDatabase(t, namespaceName, admin0, &options, true)
 	// verify that the database contains USER.HOCKEY table AFTER the restore
 	tables, _ = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
 	require.True(t, strings.Contains(tables, "HOCKEY"), "Show schema returned: ", tables)

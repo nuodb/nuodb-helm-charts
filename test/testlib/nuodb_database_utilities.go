@@ -155,17 +155,16 @@ func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, 
 	k8s.RunKubectl(t, kubectlOptions, "patch", "deployment", deploymentName, "-p", UPGRADE_STRATEGY)
 }
 
-func RestoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options) {
+func RestoreDatabase(t *testing.T, namespaceName string, podName string, databaseOptions *helm.Options, restart bool) {
 	// run the restore chart - which flags the database to restore on next startup
 	randomSuffix := strings.ToLower(random.UniqueId())
 
 	restName := fmt.Sprintf("restore-demo-%s", randomSuffix)
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.name":       "demo",
-			"restore.target":      "demo",
-			"restore.source":      ":latest",
-			"restore.autoRestart": "true",
+			"database.name":  "demo",
+			"restore.target": "demo",
+			"restore.source": ":latest",
 		},
 	}
 	for key, value := range databaseOptions.SetValues {
@@ -183,8 +182,10 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
 	}
 
-	if options.SetValues["restore.autoRestart"] == "true" {
-		AwaitDatabaseRestart(t, namespaceName, podName, "demo", databaseOptions, restore)
+	if restart {
+		selector := fmt.Sprintf("group=nuodb,domain=nuodb,database=%s", options.SetValues["database.name"])
+		k8s.RunKubectl(t, kubectlOptions, "delete", "pods", "--selector", selector)
+		AwaitDatabaseRestart(t, namespaceName, podName, options.SetValues["database.name"], databaseOptions, restore)
 	} else {
 		restore()
 	}

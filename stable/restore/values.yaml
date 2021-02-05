@@ -108,10 +108,6 @@ restore:
   # credentials for the specified target - if different to the database.autoRestore.credentials
   credentials: ""
 
-  # autoRestart
-  # if set to "true", running the restore chart causes the database to be restarted automatically
-  autoRestart: "true"
-
   # If set to "true", archives restore should be done manually once the SM pod
   # is started. The engine statup will block waiting for the user to complete
   # the archives restore. Otherwise the archives restore will be  performed by
