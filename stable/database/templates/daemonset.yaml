@@ -109,7 +109,7 @@ spec:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-password
-        - name: NUODB_IMPORT_CREDENTIALS
+        - name: DATABASE_IMPORT_CREDENTIALS
           valueFrom:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
@@ -342,7 +342,7 @@ spec:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-password
-        - name: NUODB_IMPORT_CREDENTIALS
+        - name: DATABASE_IMPORT_CREDENTIALS
           valueFrom:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com

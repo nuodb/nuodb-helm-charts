@@ -224,6 +224,29 @@ func awaitPodLog(t *testing.T, namespaceName string, podName string, fileNameSuf
 	go testlib.GetAppLog(t, namespaceName, podName, fileNameSuffix, &corev1.PodLogOptions{Follow: true})
 }
 
+func isRestoreRequestSupported(t *testing.T, namespaceName string, podName string) bool {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+
+	err := k8s.RunKubectlE(t, kubectlOptions, "exec", podName, "--",
+		"bash", "-c", "nuodocker request restore -h > /dev/null")
+	return err == nil
+}
+
+func checkRestoreRequests(t *testing.T, namespaceName string, podName string, databaseName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+
+	restoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+		"nuocmd", "get", "value", "--key", fmt.Sprintf("/nuodb/nuosm/database/%s/restore", databaseName))
+	require.NoError(t, err)
+	require.Empty(t, restoreRequest, "Legacy restore request should be cleared")
+	if isRestoreRequestSupported(t, namespaceName, podName) {
+		restoreRequest, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+			"nuodocker", "get", "restore-requests", "--db-name", databaseName)
+		require.NoError(t, err)
+		require.Empty(t, restoreRequest, "Database restore requests should be cleared")
+	}
+}
+
 func TestKubernetesBasicDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
@@ -538,6 +561,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
 	require.NoError(t, err, "error running SQL: show schema User")
 	require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
+	checkRestoreRequests(t, namespaceName, admin0, opt.DbName)
 }
 
 func TestKubernetesImportDatabase(t *testing.T) {
@@ -692,6 +716,7 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		require.NoError(t, err, "error running SQL: show schema User")
 		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
+		checkRestoreRequests(t, namespaceName, admin0, opt.DbName)
 	})
 
 	t.Run("manualRestart", func(t *testing.T) {
@@ -705,13 +730,23 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", hcSmPodNameTemplate, "--replicas=0")
 		testlib.AwaitNoPods(t, namespaceName, smPodNameTemplate)
 
-		// If nonHC SM is started first it should fail as the restore source won't be available
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", smPodNameTemplate, "--replicas=1")
 		awaitPodLog(t, namespaceName, smPodName0, "_manual_post-restart")
-		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPodName0, 1, 120*time.Second)
-		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
-			fmt.Sprintf("Backupset %s cannot be found in /var/opt/nuodb/backup", backupset),
-			&corev1.PodLogOptions{Previous: true}), 1)
+
+		if isRestoreRequestSupported(t, namespaceName, admin0) {
+			// If nonHC SM is started first it should wait for the database restore to complete
+			testlib.Await(t, func() bool {
+				return testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
+					"Waiting for database restore to complete",
+					&corev1.PodLogOptions{}) == 1
+			}, 60*time.Second)
+		} else {
+			// If nonHC SM is started first it should fail as the restore source won't be available
+			testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPodName0, 1, 120*time.Second)
+			require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
+				fmt.Sprintf("Backupset %s cannot be found in /var/opt/nuodb/backup", backupset),
+				&corev1.PodLogOptions{Previous: true}), 1)
+		}
 
 		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", smPodNameTemplate, "--replicas=0")
 		testlib.AwaitNoPods(t, namespaceName, smPodNameTemplate)
@@ -729,12 +764,13 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		require.NoError(t, err, "error running SQL: show schema User")
 		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
+		checkRestoreRequests(t, namespaceName, admin0, opt.DbName)
 	})
 }
 
 func TestKubernetesAutoRestore(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
-		t.Skip("Cannot test autoRestore without the Enterprise Edition")
+		t.Skip("Cannot test auto restore without the Enterprise Edition")
 	}
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
@@ -811,4 +847,78 @@ func TestKubernetesAutoRestore(t *testing.T) {
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	})
+}
+
+func TestKubernetesRestoreSingleArchive(t *testing.T) {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
+		t.Skip("Cannot test single archive restore without the Enterprise Edition")
+	}
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "demo",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.noHotCopy.replicas":        "1",
+			"database.te.logPersistence.enabled":    "true",
+			"database.env[0].name":                  "NUODB_DEBUG",
+			"database.env[0].value":                 "debug",
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+	})
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	databaseOptions.KubectlOptions = kubectlOptions
+
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	hcSmPodNameTemplate := fmt.Sprintf("%s-hotcopy", smPodNameTemplate)
+	smPodName0 := fmt.Sprintf("%s-0", smPodNameTemplate)
+	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
+
+	// Execute initial backup
+	backupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", opt.ClusterName)
+
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, hcSmPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+
+	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+
+	populateCreateDBData(t, namespaceName, admin0)
+	archiveToRestore, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
+		"bash", "-c", "nuocmd show domain --process-format '###{hostname} {archive_id::-1}' | grep '###.*hotcopy' | awk '{print $1}'")
+	require.NoError(t, err, "error running SQL: show schema User")
+	// restore database
+	databaseOptions.SetValues["restore.source"] = backupset
+	databaseOptions.SetValues["restore.archiveIds[0]"] = archiveToRestore
+	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+	awaitPodLog(t, namespaceName, smPodName0, "_post-restart")
+	awaitPodLog(t, namespaceName, hcSmPodName0, "_post-restart")
+
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+	// HC SM should restore the archive from selected backup
+	require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
+		fmt.Sprintf("Finished restoring /var/opt/nuodb/backup/%s to /var/opt/nuodb/archive/nuodb/demo", backupset),
+		&corev1.PodLogOptions{}), 1)
+	testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 }
