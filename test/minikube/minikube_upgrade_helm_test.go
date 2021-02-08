@@ -63,12 +63,8 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *Updat
 
 	if updateOptions.adminJobWasCreated {
 		testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
+		testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 	}
-
-	// all jobs need to be deleted before an upgrade can be performed
-	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
-	// if we find it, this line can be removed and the test should still pass
-	testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 
 	adminPod := testlib.GetPod(t, namespaceName, admin0)
 
@@ -134,12 +130,8 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
 
-	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
-
-	// all jobs need to be deleted before an upgrade can be performed
-	// so far we have not found an automated way to delete them as part of a pre-upgrade hook
-	// if we find it, this line can be removed and the test should still pass
 	if updateOptions.adminJobWasCreated {
+		testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 		testlib.DeletePod(t, namespaceName, "jobs/job-lb-policy-nearest")
 	}
 	if updateOptions.databaseJobWasCreated {
@@ -195,6 +187,18 @@ func TestUpgradeHelm(t *testing.T) {
 			adminJobWasCreated:         true,
 		})
 	})
+
+	t.Run("NuoDB40X_From300_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "3.0.0", &UpdateOptions{
+			adminPodShouldGetRecreated: true,
+			adminJobWasCreated:         true,
+		})
+	})
+
+	t.Run("NuoDB40X_From310_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "3.1.0", &UpdateOptions{
+		})
+	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
@@ -222,6 +226,19 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 			adminPodShouldGetRecreated: true,
 			adminJobWasCreated:         true,
 			databaseJobWasCreated:      true,
+		})
+	})
+
+	t.Run("NuoDB40X_From300_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "3.0.0", &UpdateOptions{
+			adminPodShouldGetRecreated: true,
+			adminJobWasCreated:         true,
+			databaseJobWasCreated:      true,
+		})
+	})
+
+	t.Run("NuoDB40X_From310_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "3.1.0", &UpdateOptions{
 		})
 	})
 }
