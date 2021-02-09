@@ -101,7 +101,7 @@ do
            auto="$1"; shift;;
         "--auto="* )
            auto="${opt#*=}";;
-         "--labels" )
+        "--labels" )
            labels="$1"; shift;;
         "--labels="* )
            labels="${opt#*=}";;

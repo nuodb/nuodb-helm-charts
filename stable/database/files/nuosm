@@ -23,7 +23,9 @@ DB_DIR=${DB_PARENTDIR}/${DB_NAME}
 
 LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuosm.log
 
-NUODB_BINDIR=$NUODB_HOME/bin
+first_in=
+myArchive=
+restore_source=
 
 # attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
 crashcount=$(find $NUODB_CRASHDIR/core* -maxdepth 0 ! -type d 2>/dev/null | wc -l)
@@ -48,7 +50,7 @@ function die() {
   [ -n "$wotIdid" ] && error="Error while ${wotIdid}: ${error}"
   log "$error"
 
-  if [ -n "$first_req" ]; then
+  if [ -n "$first_in" ]; then
     # cleanup legacy restore locks if defined
     nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
     nuocmd set value --key $startup_key/$DB_NAME --value '' --expected-value $HOSTNAME

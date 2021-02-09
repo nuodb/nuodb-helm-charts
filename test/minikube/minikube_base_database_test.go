@@ -770,7 +770,7 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 
 func TestKubernetesAutoRestore(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
-		t.Skip("Cannot test auto restore without the Enterprise Edition")
+		t.Skip("Cannot test autoRestore without the Enterprise Edition")
 	}
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)

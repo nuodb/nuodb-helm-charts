@@ -152,9 +152,12 @@ The following tables list the configurable parameters of the restore chart and t
 | ----- | ----------- | ------ |
 | `restore.type` | What type of restore to perform: [ "database" | "archive" ]. A "database" restore restarts the entire database at a previous state. An "archive" restore restores/repairs a SINGLE archive in a RUNNING database. | `"database"` |
 | `restore.target` | Where to restore `TO` | `{{ .Values.database.name }}` |
-| `restore.source` | Where to restore `FROM` [ backupset | url | `:latest` ] | `:latest` |
+| `restore.source` | Where to restore `FROM` [ backupset | url | `:latest` | `:group-latest` ] | `:latest` |
 | `restore.credentials` | Credentials to use for a URL source (user:password) | `""` |
 | `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false). Only valid for a "database" restore | `true` |
+| `restore.labels` | Process labels used to filter the complete set of archiveIds that should be restored which then defines the new state of the database upon restore. The setting works with NuoDB 4.2.1+ | `backup {{ .Values.cloud.cluster.name }}` |
+| `restore.archiveIds` | Complete set of archiveIds that should be restored which then defines the new state of the database upon restore. Either `restore.labels` or `restore.archiveIds` should be specified. The setting works with NuoDB 4.2.1+ | `[]` |
+| `restore.manual` | If set to "true", archives restore should be done manually once the SM pod is started. The engine startup will block waiting for the user to complete the archives restore. The setting works with NuoDB 4.2.1+ | `false` |
 
 ## Detailed Steps
 
@@ -193,6 +196,10 @@ Or if you are using command line parameters, the setting would be:
 ... --set restore.source=20190904T160352 ...
 ```
 
+In multi-cluster deployments, different backup cron jobs execute with different schedules.
+Specific backupsets are produced for database deployment in each cluster.
+To perform a database restore in multi-cluster deployment, select the hotcopy SMs in one of the clusters and provide a backupset available in that cluster or `:group-latest` as `restore.source`.
+
 ### Install Restore chart
 
 If we have not set the values in `restore/values.yaml` then we can override it while installing the restore chart:
@@ -210,12 +217,12 @@ The job should finish with a `Completed` status.
 
 ### Optionally manually restart the database
 
-If `restore.autoRestart` was set to `true`, then the `restore` chart will restart the database, and the restore will proceeed automatically.
+If `restore.autoRestart` was set to `true`, then the `restore` chart will restart the database, and the restore will proceed automatically.
 
 However, if `restore.autoRestart` is set to `false`, then you retain control to manually stop and restart the pods you wish.
 
-* You could shut down all processes in any order using `nuocmd shutdown database`. This will cause k8s to autmatically restart all TE and SM pods in any order
-* Alternatively, you could scale-doen TE and SM pods, and then scale up the SM pods in the order of your choosing; and then scale-up the TE pods - again in the order of your choosing.
+* You could shut down all processes in any order using `nuocmd shutdown database`. This will cause k8s to automatically restart all TE and SM pods in any order
+* Alternatively, you could scale-down TE and SM pods, and then scale up the SM pods in the order of your choosing; and then scale-up the TE pods - again in the order of your choosing.
 
 ### Validate the restore
 
@@ -224,6 +231,24 @@ Verify the restore completed successfully; view the log output from the restarte
 ```bash
 Finished restoring /var/opt/nuodb/backup/20190619T101450 to /var/opt/nuodb/archive/nuodb/demo. Created archive with archive ID 8
 ```
+
+### Manual archive restore
+
+For complex requirements where automatic archive restore is not sufficient, `restore.manual="true"` can be set during restore chart installation.
+The NuoDB SM engine startup will block waiting for the user to perform the archives restore manually.
+All archive ids requested for restore can be seen using:
+
+```bash
+nuodocker get restore-requests --db-name demo
+```
+
+Once the archive restore is done, it should be marked as completed using the following command:
+
+```bash
+nuodocker complete restore --db-name demo --archive-ids <archive_id>
+```
+
+The SM startup will unblock and the restored archives will be used to define the new database state.
 
 ## Uninstalling the Chart
 

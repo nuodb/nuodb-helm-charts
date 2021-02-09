@@ -113,7 +113,7 @@ restore:
   labels: {}
 
   # If set to "true", archives restore should be done manually once the SM pod
-  # is started. The engine statup will block waiting for the user to complete
+  # is started. The engine startup will block waiting for the user to complete
   # the archives restore. Otherwise the archives restore will be  performed by
   # init container in the SM pod. The setting works with NuoDB 4.2.1+.
   manual: "false"
