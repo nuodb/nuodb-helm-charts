@@ -155,9 +155,9 @@ The following tables list the configurable parameters of the restore chart and t
 | `restore.source` | Where to restore `FROM` [ backupset | url | `:latest` | `:group-latest` ] | `:latest` |
 | `restore.credentials` | Credentials to use for a URL source (user:password) | `""` |
 | `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false). Only valid for a "database" restore | `true` |
-| `restore.labels` | Process labels used to filter the complete set of archiveIds that should be restored which then defines the new state of the database upon restore. The setting works with NuoDB 4.2.1+ | `backup {{ .Values.cloud.cluster.name }}` |
-| `restore.archiveIds` | Complete set of archiveIds that should be restored which then defines the new state of the database upon restore. Either `restore.labels` or `restore.archiveIds` should be specified. The setting works with NuoDB 4.2.1+ | `[]` |
-| `restore.manual` | If set to "true", archives restore should be done manually once the SM pod is started. The engine startup will block waiting for the user to complete the archives restore. The setting works with NuoDB 4.2.1+ | `false` |
+| `restore.labels` | Process labels used to filter the complete set of archiveIds that should be restored which then defines the new state of the database upon restore. The setting works with NuoDB 4.2+ | `backup {{ .Values.cloud.cluster.name }}` |
+| `restore.archiveIds` | Complete set of archiveIds that should be restored which then defines the new state of the database upon restore. Either `restore.labels` or `restore.archiveIds` should be specified. The setting works with NuoDB 4.2+ | `[]` |
+| `restore.manual` | If set to "true", archives restore should be done manually once the SM pod is started. The engine startup will block waiting for the user to complete the archives restore. The setting works with NuoDB 4.2+ | `false` |
 
 ## Detailed Steps
 
