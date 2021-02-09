@@ -137,11 +137,12 @@ function clearRestoreRequest() {
 # On error, any copy of the replaced archive is retained.
 #
 function perform_restore() {
+  
   local restore_credentials="$(printf "%s" "${restore_credentials_encoded}" | base64 -d)"
   local retval=0
-  local arch_size=
-  local arch_space=
-  local save_name=
+  local archSize=
+  local archSpace=
+  local saveName=
   local undo=
   local tarfile=
   local download_dir=
@@ -153,13 +154,13 @@ function perform_restore() {
   log "Restoring $restore_source; existing archive directores: $( ls -l $DB_PARENTDIR )"
 
   # work out available space
-  arch_size="$(du -s $DB_DIR | grep -o '^ *[0-9]\+')"
-  arch_space="$(df --output=avail $DB_DIR | grep -o ' *[0-9]\+')"
+  archSize="$(du -s $DB_DIR | grep -o '^ *[0-9]\+')"
+  archSpace="$(df --output=avail $DB_DIR | grep -o ' *[0-9]\+')"
 
-  if [ $(( arch_space > arch_size * 2)) ]; then
-    save_name="${DB_DIR}-save-$( date +%Y%m%dT%H%M%S )"
-    undo="mv $save_name $DB_DIR"
-    mv $DB_DIR "$save_name"
+  if [ $(( archSpace > archSize * 2)) ]; then
+    saveName="${DB_DIR}-save-$( date +%Y%m%dT%H%M%S )"
+    undo="mv $saveName $DB_DIR"
+    mv $DB_DIR $saveName
      
     retval=$?
     if [ $retval -ne 0 ]; then
@@ -169,18 +170,18 @@ function perform_restore() {
     fi
   else
     tarfile="${DB_DIR}-$( date +%Y%m%dT%H%M%S ).tar.gz"
-    tar czf "$tarfile" -C $DB_PARENTDIR $DB_NAME
+    tar czf $tarfile -C $DB_PARENTDIR $DB_NAME
 
     retval=$?
     if [ $retval -ne 0 ]; then
-      rm -rf "$tarfile"
+      rm -rf $tarfile
       error="Restore: unable to save existing archive to TAR file"
       return $retval
     fi
 
-    arch_space="$(df --output=avail $DB_DIR | grep -o ' *[0-9]\+')"
-    if [ $(( arch_size + 1024000 > arch_space )) ]; then
-      rm -rf "$tarfile"
+    archSpace="$(df --output=avail $DB_DIR | grep -o ' *[0-9]\+')"
+    if [ $(( archSize + 1024000 > archSpace )) ]; then
+      rm -rf $tarfile
       error="Insufficient space for restore after archive has been saved to TAR."
       return 1
     fi
@@ -191,7 +192,7 @@ function perform_restore() {
 
   mkdir $DB_DIR
 
-  log "(restore) recreated $DB_DIR; atoms=$( ls -l "$DB_DIR/*.atm" 2>/dev/null | wc -l)"
+  log "(restore) recreated $DB_DIR; atoms=$( ls -l $DB_DIR/*.atm 2>/dev/null | wc -l)"
 
   # restore request is a URL - so retrieve the backup using curl
   if isUrl "$restore_source"; then
@@ -202,16 +203,16 @@ function perform_restore() {
     else
       # It is a backupset so switch the download to somewhere temporary available on all SMs (it will be removed later)
       # This will also run if TYPE is unrecognised, since it works for either type, but will be less efficient.
-      download_dir=$(basename "$restore_source")
-      download_dir="${DB_PARENTDIR}/$(basename "$download_dir" ".${download_dir#*.}")-downloaded"
-      mkdir "$download_dir"
+      download_dir=$(basename $restore_source)
+      download_dir="${DB_PARENTDIR}/$(basename $download_dir .${download_dir#*.})-downloaded"
+      mkdir $download_dir
     fi
 
-    [ -n "$restore_credentials" ] && [ "$restore_credentials" != ":" ] && curl_creds="--user $restore_credentials"
+    [ -n "$restore_credentials" -a "$restore_credentials" != ":" ] && curl_creds="--user $restore_credentials"
     [ -n "$curl_creds" ] && curl_opts="--user *:*"
 
     log "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $download_dir"
-    curl -k "$curl_creds" "$restore_source" | tar xzf - --strip-components "$strip_levels" -C "$download_dir"
+    curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $download_dir
 
     retval=$?
     if [ $retval -ne 0 ]; then
@@ -220,28 +221,28 @@ function perform_restore() {
       return $retval
     fi
 
-    chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') "$download_dir"
+    chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $download_dir
 
     # restore data and/or fix the metadata
     log "restoring archive and/or clearing restored archive physical metadata"
     status="$(nuodocker restore archive \
-      --origin-dir "$download_dir" \
-      --restore-dir "$DB_DIR" \
-      --db-name "$DB_NAME" \
+      --origin-dir $download_dir \
+      --restore-dir $DB_DIR \
+      --db-name $DB_NAME \
       --clean-metadata 2>&1)"
     retval=$?
     log "$status"
 
     if [ "$download_dir" != "$DB_DIR" ]; then
       log "removing $download_dir"
-      rm -rf "$download_dir"
+      rm -rf $download_dir
     fi
 
   else
     # log "Calling nuoarchive to restore $restore_source into $DB_DIR"
     log "Calling nuodocker to restore $restore_source into $DB_DIR"
     status="$(nuodocker restore archive \
-      --origin-dir "$NUODB_BACKUPDIR/$restore_source" \
+      --origin-dir $NUODB_BACKUPDIR/$restore_source \
       --restore-dir $DB_DIR \
       --db-name $DB_NAME \
       --clean-metadata 2>&1)"
@@ -254,7 +255,7 @@ function perform_restore() {
     error="Restore: unable to restore source=$restore_source type=$restore_type into $DB_DIR"
     return $retval
   fi
-  
+
   [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
 
   return 0
@@ -283,21 +284,6 @@ function isRestoreRequestSupported() {
    else
       return 0
    fi
-}
-
-#=======================================
-# function - fetch archiveId from info.json file
-#
-# It doesn't parse the whole JSON content of the file but extracts only the
-# archiveId value.
-#
-function getArchiveId() {
-  local archive_dir="$1"
-  if [ -f "$archive_dir/info.json" ]; then
-    sed -e 's|.*"id":\s*\([0-9]\+\).*|\1|' "$archive_dir/info.json"
-    return 0
-  fi
-  return 1
 }
 
 #=======================================
@@ -379,96 +365,89 @@ fi
 # ensure the admin layer is intact...
 checkAdminLayer 30
 
+[ -f "$DB_DIR/info.json" ] && myArchive=$(sed -e 's|.*"id":\s*\([0-9]\+\).*|\1|' "$DB_DIR/info.json")
+trace "checking archive raft metadata"
+[ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
+  --db-name $DB_NAME \
+  --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
+[ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
+  --db-name $DB_NAME \
+  --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
+log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
+[ -z "$myArchive" ] && myArchive="-1"
+[ -n "$NUODB_DEBUG" ] && [ "$myArchive" -eq "-1" ] && log "$(nuocmd show archives --db-name $DB_NAME)"
+
 atomCount=$( ls -l $DB_DIR/*.atm 2>/dev/null | wc -l )
 catalogCount=$( ls -l $DB_DIR/*.cat 2>/dev/null | wc -l )
 
 if isRestoreRequestSupported; then
   # Use nuodocker machinery only if NuoDB image is new enough
 
-  archive_id=$(getArchiveId "${DB_DIR}")
+  log "path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
 
-  log "path=$DB_DIR; archiveId=${archive_id}; atoms=${atomCount}; catalogs=${catalogCount}"
-
-  if [ -n "$archive_id" ]; then
-    trace "reading restore request for archiveId=${archive_id}"
-    restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" --archive-ids "$archive_id")
+  if [ "$myArchive" -ne "-1" ]; then
+    trace "reading restore request for archiveId=${myArchive}"
+    restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" --archive-ids "$myArchive")
     restore_type="$(echo "$restore_requested" | awk '{print $2}')"
     user_data="$(echo "$restore_requested" | awk '{print $3}')"
 
-    if [ -n "$restore_requested" ] && [ "$restore_type" == "automatic" ]; then
-      # Automatic restore for this archive has been requested
-      trace "evaluating restore request data"
-      eval "$user_data"
-      if [ -z "$restore_source_encoded" ]; then
-        # restore_source_encoded variable should be passed in the user_data by
-        # `nuorestore` script
-        die 1 "restore source is missing from restore request for archiveId=${archive_id}, userData='${user_data}'"
+    if [ -n "$restore_requested" ]; then
+      if [ "$restore_type" == "automatic" ]; then
+        # automatic restore for this archive has been requested
+        log "Archive with archiveId=${myArchive} has been requested for a restore"
+        trace "evaluating restore request data"
+        eval "$user_data"
+        if [ -z "$restore_source_encoded" ]; then
+          # restore_source_encoded variable should be passed in the user_data by
+          # `nuorestore` script
+          die 1 "restore source is missing from restore request for archiveId=${myArchive}, userData='${user_data}'"
+        fi
+        restore_source="$(printf "%s" "${restore_source_encoded}" | base64 -d)"
+        resolveLatestSource || die 1 "unable to resolve ${restore_source} restore source"
+        # restore chart doesn't have notion of stream|backupset
+        # `nuodocker restore archive` works with both
+        restore_type="backupset"
+        [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64)"
+        [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
+        
+        log "Archive restore will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+        trace "performing restore for archiveId=${myArchive}"
+        if isRestoreSourceAvailable "$restore_source"; then
+          perform_restore || die $? "$error"
+          completeRestoreRequest "$myArchive"
+        else
+          error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
+          die 1 "$error"
+        fi
       fi
-
-      restore_source="$(printf "%s" "${restore_source_encoded}" | base64 -d)"
-      resolveLatestSource || die 1 "unable to resolve ${restore_source} restore source"
-      # restore chart doesn't have notion of stream|backupset
-      # `nuodocker restore archive` works with both
-      restore_type="backupset"
-      [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64)"
-      [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
-      
-      log "Archive with archiveId=${archive_id} has been requested for a restore source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
-      trace "performing restore for archiveId=${archive_id}"
-      if isRestoreSourceAvailable "$restore_source"; then
-        perform_restore || die $? "$error"
-        completeRestoreRequest "$archive_id"
-      else
-        error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
-        die 1 "$error"
-      fi
-    fi
-  elif [ "$atomCount" -lt 20 ] && [ "$catalogCount" -lt 2 ]; then
-    trace "fetching last served archiveId from archives"
-    archive_id=$( nuocmd show archives \
-      --db-name "$DB_NAME" \
-      --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-    if [ -z "$archive_id" ]; then
-      trace "fetching last served archiveId from removed archives"
-      archive_id=$( nuocmd show archives \
-        --db-name "$DB_NAME" \
-        --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-    fi
-  
-    if [ -n "$archive_id" ]; then
-      log "${HOSTNAME} previously served archiveId=${archive_id}"
-      
-      # if there is an archive in domain state previously served by this SM and
-      # autoRestore is configured, try to REPAIR/RESTORE the disk archive
+    elif [ "$atomCount" -lt 20 ] && [ "$catalogCount" -lt 2 ]; then
       if [ -n "$NUODB_AUTO_RESTORE" ]; then
+        # autoRestore is configured, try to REPAIR the disk archive
         restore_source="$NUODB_AUTO_RESTORE"
         resolveLatestSource || log "unable to resolve ${restore_source} restore source"
         restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64)"
         restore_type="${NUODB_AUTO_RESTORE_TYPE}"
         strip_levels="${NUODB_RESTORE_STRIP_LEVELS:-1}"
 
-        log "Automatic archive repair will be performed for archiveId=${archive_id}, source=${restore_source}"
+        log "Automatic archive repair will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
         trace "restoring damaged archive"
         if isRestoreSourceAvailable "$restore_source"; then
           perform_restore || die $? "$error"
         fi
         # delete damaged archive metadata as a new one will be created by
         # nuodocker start sm
-        purgeOldArchive "$archive_id"
+        purgeOldArchive "$myArchive"
       fi
-    else
-      log "No previous archiveId found for pod ${HOSTNAME}"
-      log "$( nuocmd show archives --db-name "$DB_NAME" )"
-      log "$( nuocmd show archives --db-name "$DB_NAME" --removed )"
     fi
   elif [ ! -f "$DB_DIR/1.atm" ]; then
     if [ -n "$NUODB_AUTO_IMPORT" ] && isRestoreSourceAvailable "$NUODB_AUTO_IMPORT"; then
+      # autoImport is configured, try to IMPORT the disk archive
       restore_source="$NUODB_AUTO_IMPORT"
       restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64)"
       restore_type=${NUODB_AUTO_IMPORT_TYPE}
       strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
 
-      log "Automatic archive import will be performed source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      log "Automatic archive import will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
       trace "restoring empty archive"
       perform_restore || die $? "$error"
     fi
@@ -479,15 +458,6 @@ else
 
   trace "retrieving restore request from raft"
   restore_requested="$( nuocmd get value --key $restore_req )"
-
-  trace "checking archive raft metadata"
-  myArchive=$( nuocmd show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-  [ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
-    --db-name $DB_NAME \
-    --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-  [ -z "$myArchive" ] && myArchive="-1"
-  log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
-  [ -n "$NUODB_DEBUG" -a "$myArchive" -eq "-1" ] && log "$(nuocmd show archives --db-name $DB_NAME)"
 
   wotIdid=""
 
