@@ -25,6 +25,7 @@ LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuosm.log
 
 first_in=
 myArchive=
+restore_requested=
 restore_source=
 
 # attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
@@ -258,15 +259,54 @@ function perform_restore() {
     return $retval
   fi
 
+  if isRestoreRequestSupported && [ -n "$restore_requested" ] && [ "$myArchive" -ne "-1" ]; then
+    # complete restore request for this archive in retry loop because there
+    # could be concurrent requests due to all archives restored at the same time
+    retry 5 completeRestoreRequest "$myArchive"
+    retval=$?
+    if [ $retval -ne 0 ]; then
+      $undo
+      error="Restore: unable to complete restore request for archiveId=$myArchive"
+      return $retval
+    fi
+    log "Restore request for archiveId=${myArchive} marked as completed"
+  else
+    purgeArchive "$myArchive"
+  fi
+
   [ -n "$NUODB_DEBUG" ] && ls -l $DB_DIR
 
   return 0
 }
 
 #=======================================
+# function - retry the provided function 
+#
+# Retry the passed function with arguments until succees or max retry count is
+# reached.
+#
+function retry() {
+  local max="$1"
+  shift
+  local count=0
+  local rc=0
+  while [ "$count" -lt "$max" ]; do
+    [ $count -gt 0 ] && log "'$*' exited with code $rc - retrying ..."
+    "$@"
+    rc=$?
+    if [ $rc -eq 0 ]; then
+      return $rc
+    fi
+    count=$(( count + 1 ))
+    sleep 1
+  done
+  return $rc
+}
+
+#=======================================
 # function - removes an archive metadata with `--purge` from the admin layer
 #
-function purgeOldArchive() {
+function purgeArchive() {
   local archive_id="$1"
   if [ -n "$archive_id" ] && [ "$archive_id" -ne "-1" ]; then
     trace "completely deleting the raft metadata for archiveId=${archive_id}"
@@ -307,13 +347,9 @@ function checkAdminLayer() {
 function completeRestoreRequest(){
   local archive_id="$1"
   local error
-  local retcode
   trace "completing restore request for archiveId=${archive_id}"
-  error=$(nuodocker complete restore --db-name "$DB_NAME" --archive-ids "$archive_id")
-  retcode=$?
-  if [ "$retcode" -ne 0 ]; then
-    die $retcode "$error"
-  fi
+  nuodocker complete restore --db-name "$DB_NAME" --archive-ids "$archive_id"
+  return $?
 }
 
 #=======================================
@@ -375,8 +411,8 @@ trace "checking archive raft metadata"
 [ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
   --db-name $DB_NAME \
   --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
 [ -z "$myArchive" ] && myArchive="-1"
+log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
 [ -n "$NUODB_DEBUG" ] && [ "$myArchive" -eq "-1" ] && log "$(nuocmd show archives --db-name $DB_NAME)"
 
 atomCount=$( ls -l $DB_DIR/*.atm 2>/dev/null | wc -l )
@@ -416,7 +452,6 @@ if isRestoreRequestSupported; then
         trace "performing restore for archiveId=${myArchive}"
         if isRestoreSourceAvailable "$restore_source"; then
           perform_restore || die $? "$error"
-          completeRestoreRequest "$myArchive"
         else
           error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
           die 1 "$error"
@@ -438,7 +473,7 @@ if isRestoreRequestSupported; then
         fi
         # delete damaged archive metadata as a new one will be created by
         # nuodocker start sm
-        purgeOldArchive "$myArchive"
+        [ ! -f "$DB_DIR/info.json" ] && purgeArchive "$myArchive"
       fi
     fi
   elif [ ! -f "$DB_DIR/1.atm" ]; then
@@ -597,7 +632,6 @@ else
       # and restore the data
       trace "performing restore"
       perform_restore || die $? "$error"
-      purgeOldArchive "$myArchive"
 
       wotIdid=""
 
@@ -647,7 +681,6 @@ else
       if isRestoreSourceAvailable "$restore_source"; then
         # any error in a SEED restore is a fatal error
         perform_restore || die $? "$error"
-        purgeOldArchive "$myArchive"
         log "Restored secondary archive to match primary restore"
       fi
     fi
@@ -667,9 +700,10 @@ else
       log "Existing archive is empty or damaged - restoring and clearing metadata"
       # any error in a IMPORT restore is a fatal error
       perform_restore || die $? "$error"
+    else
+      # delete damaged archive metadata as new one will be created by nuodocker
+      [ ! -f "$DB_DIR/info.json" ] && purgeArchive "$myArchive"
     fi
-    # delete damaged archive metadata as new one will be created by nuodocker
-    purgeOldArchive "$myArchive"
   fi
 fi
 
