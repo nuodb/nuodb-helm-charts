@@ -25,6 +25,7 @@ LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuosm.log
 
 first_in=
 myArchive=
+legacy_restore_requested=
 restore_requested=
 restore_source=
 
@@ -259,7 +260,10 @@ function perform_restore() {
     return $retval
   fi
 
-  if isRestoreRequestSupported && [ -n "$restore_requested" ] && [ "$myArchive" -ne "-1" ]; then
+  if isRestoreRequestSupported \
+    && [ -z "$legacy_restore_requested" ] \
+    && [ -n "$restore_requested" ] \
+    && [ "$myArchive" -ne "-1" ]; then
     # complete restore request for this archive in retry loop because there
     # could be concurrent requests due to all archives restored at the same time
     retry 5 completeRestoreRequest "$myArchive"
@@ -403,6 +407,9 @@ fi
 # ensure the admin layer is intact...
 checkAdminLayer 30
 
+trace "retrieving restore request from raft"
+legacy_restore_requested="$( nuocmd get value --key "$restore_req" )"
+
 [ -f "$DB_DIR/info.json" ] && myArchive=$(sed -e 's|.*"id":\s*\([0-9]\+\).*|\1|' "$DB_DIR/info.json")
 trace "checking archive raft metadata"
 [ -z "$myArchive" ] && myArchive=$( nuocmd show archives \
@@ -418,8 +425,9 @@ log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
 atomCount=$( ls -l $DB_DIR/*.atm 2>/dev/null | wc -l )
 catalogCount=$( ls -l $DB_DIR/*.cat 2>/dev/null | wc -l )
 
-if isRestoreRequestSupported; then
-  # Use nuodocker machinery only if NuoDB image is new enough
+if isRestoreRequestSupported && [ -z "$legacy_restore_requested" ]; then
+  # Use nuodocker machinery only if NuoDB image is new enough and legacy restore
+  # request is not placed
 
   log "path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
 
@@ -490,11 +498,9 @@ if isRestoreRequestSupported; then
     fi
   fi
 else
-  # Keep the legacy way to perform in-place restore if the NuoDB version is not
-  # new enough
+  # Keep the legacy way to perform in-place restore for backwards compatibility
 
-  trace "retrieving restore request from raft"
-  restore_requested="$( nuocmd get value --key $restore_req )"
+  restore_requested="$legacy_restore_requested"
 
   wotIdid=""
 
