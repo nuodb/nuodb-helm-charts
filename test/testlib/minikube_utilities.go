@@ -836,6 +836,12 @@ func GetAdminEventLog(t *testing.T, namespace string, podName string) {
 	)
 }
 
+func AwaitPodLog(t *testing.T, namespaceName string, podName string, fileNameSuffix string) {
+	AwaitNrReplicasScheduled(t, namespaceName, podName, 1)
+	AwaitPodPhase(t, namespaceName, podName, corev1.PodRunning, 30*time.Second)
+	go GetAppLog(t, namespaceName, podName, fileNameSuffix, &corev1.PodLogOptions{Follow: true})
+}
+
 func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret {
 	options := k8s.NewKubectlOptions("", "", namespace)
 

@@ -320,7 +320,7 @@ function purgeArchive() {
 }
 
 #=======================================
-# function - NuoDB 4.2.2+ supports new way of requesting database in-place
+# function - NuoDB 4.2+ supports new way of requesting database in-place
 # restore build into nuodocker.
 #
 function isRestoreRequestSupported() {

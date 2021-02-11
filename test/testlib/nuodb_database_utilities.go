@@ -238,3 +238,50 @@ func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName s
 	require.Equal(t, numExpectedRemoved, len(removedArchives), output)
 	return
 }
+
+func CreateQuickstartSchema(t *testing.T, namespaceName string, adminPod string) {
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+
+	k8s.RunKubectl(t, opts,
+		"exec", adminPod, "--",
+		"/opt/nuodb/bin/nuosql",
+		"--user", "dba",
+		"--password", "secret",
+		"demo",
+		"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
+	)
+
+	// verify that the database contains the populated data
+	tables, err := RunSQL(t, namespaceName, adminPod, "demo", "show schema User")
+	require.NoError(t, err, "error running SQL: show schema User")
+	require.True(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
+}
+
+func IsRestoreRequestSupported(t *testing.T, namespaceName string, podName string) bool {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+
+	err := k8s.RunKubectlE(t, kubectlOptions, "exec", podName, "--",
+		"bash", "-c", "nuodocker request restore -h > /dev/null")
+	return err == nil
+}
+
+func CheckRestoreRequests(t *testing.T, namespaceName string, podName string, databaseName string,
+	expectedValue string, expectedLegacyValue string) (string, string) {
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	legacyRestoreRequest := ""
+	restoreRequest := ""
+	Await(t, func() bool {
+		legacyRestoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+			"nuocmd", "get", "value", "--key", fmt.Sprintf("/nuodb/nuosm/database/%s/restore", databaseName))
+		// Legacy restore request is cleared async
+		return err == nil && legacyRestoreRequest == expectedLegacyValue
+	}, 30*time.Second)
+	if IsRestoreRequestSupported(t, namespaceName, podName) {
+		restoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+			"nuodocker", "get", "restore-requests", "--db-name", databaseName)
+		require.NoError(t, err)
+		require.Equal(t, expectedValue, restoreRequest)
+	}
+	return restoreRequest, legacyRestoreRequest
+}

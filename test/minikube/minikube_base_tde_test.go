@@ -191,18 +191,7 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	require.False(t, strings.Contains(output, "Error"), "Failed to enable TDE: %s", output)
 
 	// populate some data
-	k8s.RunKubectl(t, kubectlOptions,
-		"exec", admin0, "--",
-		"/opt/nuodb/bin/nuosql",
-		"--user", "dba",
-		"--password", "secret",
-		"demo",
-		"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
-	)
-
-	// verify that the database contains the populated data
-	tables, _ := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-	require.True(t, strings.Contains(tables, "HOCKEY"), "tables returned: %s", tables)
+	testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
@@ -223,7 +212,7 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 	testlib.RestoreDatabase(t, namespaceName, admin0, &options)
 	// verify that the database contains USER.HOCKEY table AFTER the restore
-	tables, _ = testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+	tables, _ := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
 	require.True(t, strings.Contains(tables, "HOCKEY"), "Show schema returned: %s", tables)
 
 	// Perform TDE password rotation
