@@ -206,6 +206,8 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 		// restore database using pre 4.2 version of NuoDB image for the restore
 		// chart; this should place "legacy" restore request
+		options.SetValues["nuodb.image.registry"] = "docker.io"
+		options.SetValues["nuodb.image.repository"] = "nuodb/nuodb-ce"
 		options.SetValues["nuodb.image.tag"] = "4.0.8"
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		testlib.RestoreDatabase(t, namespaceName, admin0, &options)
