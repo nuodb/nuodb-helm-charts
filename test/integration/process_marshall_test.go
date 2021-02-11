@@ -74,6 +74,8 @@ func TestUnmarshall(t *testing.T) {
 	_, ok = obj.Labels["zone"]
 	assert.True(t, ok)
 
+	_, ok = obj.Options["mem"]
+	assert.True(t, ok)
 }
 
 func TestUnmarshallMany(t *testing.T) {
@@ -127,6 +129,7 @@ func TestUnmarshallMany(t *testing.T) {
 
 		_, ok = obj.Labels["zone"]
 		assert.True(t, ok)
+
 	}
 
 }
