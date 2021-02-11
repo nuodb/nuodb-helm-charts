@@ -183,27 +183,20 @@ func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
 	t.Log("tar contents: ", output)
 }
 
-func verifyEngineAltAddress(t *testing.T, namespaceName string, admin0 string, expectedNrEngines int) {
+func verifyEngineAltAddress(t *testing.T, namespaceName string, adminPod string, expectedNrEngines int) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
-	podNames, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
-		"bash", "-c",
-		"nuocmd get processes | grep -o \"(address=[^/]*\"| cut -f2 -d'='")
-	require.NoError(t, err)
-	podNamesSlice := strings.Split(strings.TrimSuffix(podNames, "\n"), "\n")
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
+	require.NoError(t, err, output)
 
-	actualAltAddresses, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
-		"bash", "-c",
-		"nuocmd get processes | grep -o \"alt-address: [^}]*\" | cut -f2 -d' '")
-	require.NoError(t, err)
-	actualAltAddressesSlice := strings.Split(strings.TrimSuffix(actualAltAddresses, "\n"), "\n")
+	err, objects := testlib.Unmarshal(output)
+	require.NoError(t, err, output)
+	require.EqualValues(t, len(objects), expectedNrEngines)
 
-	require.True(t, len(podNamesSlice) == expectedNrEngines, "Expected number of process names don't match")
-	require.True(t, len(actualAltAddressesSlice) == expectedNrEngines, "Expected number of process addresses don't match")
-
-	for index, podName := range podNamesSlice {
-		pod := k8s.GetPod(t, kubectlOptions, podName)
-		require.True(t, pod.Status.PodIP == actualAltAddressesSlice[index], "Expected alt-address doesn't match")
+	for _, obj := range objects {
+		pod := k8s.GetPod(t, kubectlOptions, obj.Hostname)
+		require.EqualValues(t, pod.Status.PodIP, obj.Options["alt-address"])
 	}
 }
 
