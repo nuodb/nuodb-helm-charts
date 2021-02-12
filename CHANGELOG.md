@@ -1,8 +1,39 @@
 # Changelog
 
-## [3.0.0](https://github.com/nuodb/nuodb-helm-charts/tree/3.0.0) (2020-11-09)
+## [3.1.0](https://github.com/nuodb/nuodb-helm-charts/tree/3.1.0) (2021-02-08)
 
-[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.4.1...3.0.0)
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.0.0...3.1.0)
+
+**Implemented enhancements:**
+
+- Made database backup job/cronjob restart policy configurable and switched from Never to OnFailure [\#181](https://github.com/nuodb/nuodb-helm-charts/pull/181) ([vegichan](https://github.com/vegichan))
+- Added evicted-servers configuration to admin StatefulSet used to restore majority due to a catastrophic loss of admin servers [\#180](https://github.com/nuodb/nuodb-helm-charts/pull/180) ([vegichan](https://github.com/vegichan))
+- Replaced initial backup and post-restore jobs with prerequisites in backup cron jobs to streamline the database helm upgrade process [\#179](https://github.com/nuodb/nuodb-helm-charts/pull/179) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Added Transparent Data Encryption \(TDE\) support for NuoDB Storage Manager database pods [\#168](https://github.com/nuodb/nuodb-helm-charts/pull/168) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Improved admin readiness probes by using a single-admin "nuocmd check server" command available in NuoDB 4.1.2+ [\#166](https://github.com/nuodb/nuodb-helm-charts/pull/166) ([adriansuarez](https://github.com/adriansuarez))
+
+**Fixed bugs:**
+
+- Fixed failure in incremental hotcopy due to missing full backup element by re-scheduling failed full hotcopy [\#182](https://github.com/nuodb/nuodb-helm-charts/pull/182) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Fixed an intermittent timing issue during concurrent restore of multiple Storage Managers [\#176](https://github.com/nuodb/nuodb-helm-charts/pull/176) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Improved database backup and restore behavior. This improvement guarantees that the newest created backup set will be used for journal hotcopy instead of the latest successful one [\#173](https://github.com/nuodb/nuodb-helm-charts/pull/173) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- The nuobackup script has been enhanced so that it can wait for a certain number of SMs with requested labels to become RUNNING before performing a backup [\#172](https://github.com/nuodb/nuodb-helm-charts/pull/172) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+
+**Deprecated:**
+
+- Made the admin LoadBalancer job optional. This streamlines the helm upgrade process. This legacy feature has been superseded by Kubernetes Aware Admin [\#177](https://github.com/nuodb/nuodb-helm-charts/pull/177) ([vegichan](https://github.com/vegichan))
+
+**Removed:**
+
+- Removed obsolete and unused Red Hat OpenShift flag from the database chart [\#175](https://github.com/nuodb/nuodb-helm-charts/pull/175) ([vegichan](https://github.com/vegichan))
+
+**Merged pull requests:**
+
+- Bumped NuoDB Version to 4.0.8 [\#169](https://github.com/nuodb/nuodb-helm-charts/pull/169) ([vegichan](https://github.com/vegichan))
+
+## [v3.0.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.0.0) (2020-11-09)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v2.4.1...v3.0.0)
 
 **Implemented enhancements:**
 
@@ -10,7 +41,6 @@
 - Moved custom NuoDB admin podAnnotations from StatefulSet metadata to the admin pod itself [\#156](https://github.com/nuodb/nuodb-helm-charts/pull/156) ([acabrele](https://github.com/acabrele))
 - Simplified the required configuration changes for NuoDB admin domains not utilizing TLS network encryption [\#155](https://github.com/nuodb/nuodb-helm-charts/pull/155) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
 - To support Red Hat OpenShift - Added "nuodb" service account for the admin's Load Balancer job [\#153](https://github.com/nuodb/nuodb-helm-charts/pull/153) ([kmabda](https://github.com/kmabda))
-- Added the ability to pass through custom annotations \(`podAnnotations`\) to be applied to pods to enable 3rd party integrations \(Vault, CNIs, ...\) [\#149](https://github.com/nuodb/nuodb-helm-charts/pull/149) ([acabrele](https://github.com/acabrele))
 - Changed all database container names to "engine" inside of the StatefulSet and Deployment pods [\#135](https://github.com/nuodb/nuodb-helm-charts/pull/135) ([adriansuarez](https://github.com/adriansuarez))
 - Replaced Transaction Engine \(TE\) Load Balancer job \(lbConfig\) with Load Balancer Specification via Kubernetes object annotations \(depends on NuoDB Kubernetes Aware Admin\) [\#133](https://github.com/nuodb/nuodb-helm-charts/pull/133) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
 - Switched to Helm 3 testing by default [\#129](https://github.com/nuodb/nuodb-helm-charts/pull/129) ([vegichan](https://github.com/vegichan))
@@ -33,6 +63,7 @@
 
 **Implemented enhancements:**
 
+- Added the ability to pass through custom annotations \(`podAnnotations`\) to be applied to pods to enable 3rd party integrations \(Vault, CNIs, ...\) [\#149](https://github.com/nuodb/nuodb-helm-charts/pull/149) ([acabrele](https://github.com/acabrele))
 - Added DaemonSets to list of NuoDB Kubernetes Aware Admin permissions [\#141](https://github.com/nuodb/nuodb-helm-charts/pull/141) ([vegichan](https://github.com/vegichan))
 
 **Fixed bugs:**
