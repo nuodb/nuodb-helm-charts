@@ -175,6 +175,12 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 	options.KubectlOptions = kubectlOptions
 
 	restore := func() {
+		// Get restore pod logs and events on failure
+		AddDiagnosticTeardown(TEARDOWN_RESTORE, t, func() {
+			restorePodName := GetPodName(t, namespaceName, "restore-demo-")
+			k8s.RunKubectl(t, kubectlOptions, "describe", "pod", restorePodName)
+			GetAppLog(t, namespaceName, restorePodName, "restore-job", &v12.PodLogOptions{})
+		})
 		// Remove restore job if exist as it's not unique for a restore chart release
 		k8s.RunKubectlE(t, kubectlOptions, "delete", "job", "restore-"+options.SetValues["database.name"])
 		InjectTestValues(t, options)
