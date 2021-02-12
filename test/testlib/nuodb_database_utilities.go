@@ -186,7 +186,9 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		InjectTestValues(t, options)
 		helm.Install(t, options, RESTORE_HELM_CHART_PATH, restName)
 		AddTeardown(TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
-		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
+		// Using a bit longer timeout here as we might be performing restore using
+		// older image which needs to be pulled
+		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 300*time.Second)
 	}
 
 	if options.SetValues["restore.autoRestart"] == "true" {
