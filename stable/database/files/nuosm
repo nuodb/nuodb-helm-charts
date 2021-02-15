@@ -98,18 +98,28 @@ function wrapLogfile() {
   fi
 }
 
+#=======================================
+# function - checks if URL is provided in a form of scheme:[//authority]path
+#
 function isUrl() {
   local url="$1"
   echo "$url" | grep -q '^[a-z]\+:/[^ ]\+'
   return $?
 }
 
+#=======================================
+# function - checks if backupset directory exist in case a backupset is proveded
+# as restore source
+#
 function isRestoreSourceAvailable() {
   local source="$1"
   isUrl "$source" || [ -d "$NUODB_BACKUPDIR/$source" ]
   return $?
 }
 
+#=======================================
+# function - resurrects already removed but not purged archive metadata
+#
 function resurrectRemovedArchive() {
   trace "resurrecting removed archive metadata"
   # Find archiveId associated with process which address is the same as this pod hostname
@@ -121,6 +131,10 @@ function resurrectRemovedArchive() {
   fi
 }
 
+#=======================================
+# function - clears legacy restore request once the database transitions into
+# RUNNING state which means that first-in process became running
+#
 function clearRestoreRequest() {
     local expected_state="$1"
     nuocmd check database --db-name $DB_NAME --check-running --wait-forever
@@ -486,15 +500,21 @@ if isRestoreRequestSupported && [ -z "$legacy_restore_requested" ]; then
     fi
   elif [ ! -f "$DB_DIR/1.atm" ]; then
     if [ -n "$NUODB_AUTO_IMPORT" ] && isRestoreSourceAvailable "$NUODB_AUTO_IMPORT"; then
-      # autoImport is configured, try to IMPORT the disk archive
-      restore_source="$NUODB_AUTO_IMPORT"
-      restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64)"
-      restore_type=${NUODB_AUTO_IMPORT_TYPE}
-      strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
+      trace "checking for database restore request"
+      database_restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" | grep "^Database ${DB_NAME} restore requested")
+      if [ -z "$database_restore_requested" ]; then
+        # autoImport is configured, try to IMPORT the disk archive
+        restore_source="$NUODB_AUTO_IMPORT"
+        restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64)"
+        restore_type=${NUODB_AUTO_IMPORT_TYPE}
+        strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
 
-      log "Automatic archive import will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
-      trace "restoring empty archive"
-      perform_restore || die $? "$error"
+        log "Automatic archive import will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+        trace "restoring empty archive"
+        perform_restore || die $? "$error"
+      else
+        log "${database_restore_requested}: skipping automatic archive import"
+      fi
     fi
   fi
 else
