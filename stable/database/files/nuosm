@@ -467,7 +467,7 @@ if isRestoreRequestSupported && [ -z "$legacy_restore_requested" ]; then
         # restore chart doesn't have notion of stream|backupset
         # `nuodocker restore archive` works with both
         restore_type="backupset"
-        [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64)"
+        [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
         [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
         
         log "Archive restore will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
@@ -484,7 +484,7 @@ if isRestoreRequestSupported && [ -z "$legacy_restore_requested" ]; then
         # autoRestore is configured, try to REPAIR the disk archive
         restore_source="$NUODB_AUTO_RESTORE"
         resolveLatestSource || log "unable to resolve ${restore_source} restore source"
-        restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64)"
+        restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
         restore_type="${NUODB_AUTO_RESTORE_TYPE}"
         strip_levels="${NUODB_RESTORE_STRIP_LEVELS:-1}"
 
@@ -505,7 +505,7 @@ if isRestoreRequestSupported && [ -z "$legacy_restore_requested" ]; then
       if [ -z "$database_restore_requested" ]; then
         # autoImport is configured, try to IMPORT the disk archive
         restore_source="$NUODB_AUTO_IMPORT"
-        restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64)"
+        restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64 -w 0)"
         restore_type=${NUODB_AUTO_IMPORT_TYPE}
         strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
 
@@ -611,7 +611,7 @@ else
     log "Latest restore for $NUODB_BACKUP_GROUP resolved to $restore_source"
   fi
 
-  restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64)"
+  restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64 -w 0)"
 
   log "restore_source=$restore_source; restore_requested=$restore_requested; path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
 

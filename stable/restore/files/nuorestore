@@ -124,13 +124,13 @@ auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 if isRestoreRequestSupported; then
    # Use nuodocker to place restore request
    additional_args=""
-   restore_source_encoded="$(printf "%s" "${restore_source}" | base64)"
+   restore_source_encoded="$(printf "%s" "${restore_source}" | base64 -w 0)"
    user_data="restore_source_encoded='${restore_source_encoded}'"
    [ -n "$labels" ] && additional_args="${additional_args} --labels ${labels}"
    [ -n "$archive_ids" ] && additional_args="${additional_args} --archive-ids ${archive_ids}"
    [ "$manual" == "true" ] && additional_args="${additional_args} --manual"
    if [ -n "$restore_credentials" ]; then
-      restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64)"
+      restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64 -w 0)"
       user_data="${user_data};restore_credentials_encoded='${restore_credentials_encoded}'"
    fi
 
