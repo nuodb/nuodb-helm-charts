@@ -152,7 +152,7 @@ if isRestoreRequestSupported; then
       else
          for archive_id in $(nuodocker get restore-requests --db-name "$db_name" | grep '[0-9]\+ automatic' | awk '{print $1}'); do
             start_id=$(nuocmd show domain \
-               --process-format "###{archive_id::-1} {start_id}" | grep "###${archive_id}" | awk '{print $2}')
+               --process-format "###{archive_id::-1} {start_id}" | grep "###${archive_id} " | awk '{print $2}')
             if [ -n "$start_id" ]; then
                log "restore.autoRestart=true - initiating process startId=${start_id} restart"
                nuocmd shutdown process --start-id "$start_id"
