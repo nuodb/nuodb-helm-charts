@@ -154,3 +154,48 @@ Return the restore source.
 {{- define "restore.source" -}}
 {{- default ":latest" .Values.restore.source | trimSuffix "-" -}}
 {{- end -}}
+
+{{/*
+Return the arguments for nuorestore script which defines the archives 
+selector. If archiveIds are specified, they take precedence over labels.
+*/}}
+{{- define "restore.archives" -}}
+{{- if .Values.restore.archiveIds }}
+- "--archive-ids"
+- {{ join " " .Values.restore.archiveIds | quote }}
+{{- else if .Values.restore.labels }}
+- "--labels"
+- {{ range $opt, $val := .Values.restore.labels }} {{$opt}} {{$val}} {{- end}}
+{{- else -}}
+- "--labels"
+- "backup {{ .Values.cloud.cluster.name }}"
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the nuorestore script arguments section
+*/}}
+{{- define "restore.args" -}}
+{{- $restoreTarget := include "restore.target" . }}
+args:
+- "nuorestore"
+- "--type"
+- "{{ default "database" .Values.restore.type }}"
+- "--db-name"
+- "{{ $restoreTarget }}"
+- "--source"
+- "{{ include "restore.source" . }}"
+- "--auto"
+{{- if hasKey .Values.restore "autoRestart" }}
+- {{ .Values.restore.autoRestart | quote }}
+{{ else }}
+- "true"
+{{- end -}}
+- "--manual"
+{{- if hasKey .Values.restore "manual" }}
+- {{ .Values.restore.manual | quote }}
+{{ else }}
+- "false"
+{{- end }}
+{{ template "restore.archives" . }}
+{{- end -}}

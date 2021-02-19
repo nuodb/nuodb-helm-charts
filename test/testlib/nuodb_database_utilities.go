@@ -175,12 +175,20 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 	options.KubectlOptions = kubectlOptions
 
 	restore := func() {
+		// Get restore pod logs and events on failure
+		AddDiagnosticTeardown(TEARDOWN_RESTORE, t, func() {
+			restorePodName := GetPodName(t, namespaceName, "restore-demo-")
+			k8s.RunKubectl(t, kubectlOptions, "describe", "pod", restorePodName)
+			GetAppLog(t, namespaceName, restorePodName, "restore-job", &v12.PodLogOptions{})
+		})
 		// Remove restore job if exist as it's not unique for a restore chart release
 		k8s.RunKubectlE(t, kubectlOptions, "delete", "job", "restore-"+options.SetValues["database.name"])
 		InjectTestValues(t, options)
 		helm.Install(t, options, RESTORE_HELM_CHART_PATH, restName)
 		AddTeardown(TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
-		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 120*time.Second)
+		// Using a bit longer timeout here as we might be performing restore using
+		// older image which needs to be pulled
+		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 300*time.Second)
 	}
 
 	if options.SetValues["restore.autoRestart"] == "true" {
@@ -237,4 +245,51 @@ func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName s
 	require.NoError(t, err)
 	require.Equal(t, numExpectedRemoved, len(removedArchives), output)
 	return
+}
+
+func CreateQuickstartSchema(t *testing.T, namespaceName string, adminPod string) {
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+
+	k8s.RunKubectl(t, opts,
+		"exec", adminPod, "--",
+		"/opt/nuodb/bin/nuosql",
+		"--user", "dba",
+		"--password", "secret",
+		"demo",
+		"--file", "/opt/nuodb/samples/quickstart/sql/create-db.sql",
+	)
+
+	// verify that the database contains the populated data
+	tables, err := RunSQL(t, namespaceName, adminPod, "demo", "show schema User")
+	require.NoError(t, err, "error running SQL: show schema User")
+	require.True(t, strings.Contains(tables, "HOCKEY"), "tables returned: ", tables)
+}
+
+func IsRestoreRequestSupported(t *testing.T, namespaceName string, podName string) bool {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+
+	err := k8s.RunKubectlE(t, kubectlOptions, "exec", podName, "--",
+		"bash", "-c", "nuodocker request restore -h > /dev/null")
+	return err == nil
+}
+
+func CheckRestoreRequests(t *testing.T, namespaceName string, podName string, databaseName string,
+	expectedValue string, expectedLegacyValue string) (string, string) {
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	legacyRestoreRequest := ""
+	restoreRequest := ""
+	Await(t, func() bool {
+		legacyRestoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+			"nuocmd", "get", "value", "--key", fmt.Sprintf("/nuodb/nuosm/database/%s/restore", databaseName))
+		// Legacy restore request is cleared async
+		return err == nil && legacyRestoreRequest == expectedLegacyValue
+	}, 30*time.Second)
+	if IsRestoreRequestSupported(t, namespaceName, podName) {
+		restoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+			"nuodocker", "get", "restore-requests", "--db-name", databaseName)
+		require.NoError(t, err)
+		require.Equal(t, expectedValue, restoreRequest)
+	}
+	return restoreRequest, legacyRestoreRequest
 }

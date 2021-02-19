@@ -1,5 +1,23 @@
 ** Please be patient while the chart is being deployed **
 
-NuoDB can be accessed via port 48004 on the following DNS name from within your cluster:
+1) Wait for the restore job to finish:
 
-  {{ template "admin.address" . }}.cluster.local - Read/Write connection
+  kubectl wait --for=condition=complete \
+    --namespace "{{ .Release.Namespace }}" \
+    job/restore-{{ include "restore.target" . }}
+
+2) Optionally restart NuoDB SM engines which archives are selected to be restored
+
+To trigger database in-place restore, NuoDB database needs to be restarted. If
+`restore.autoRestart` was set to `true`, then the `restore` chart will restart
+the database, and the restore will proceed automatically. However, if
+`restore.autoRestart` is set to `false`, then you retain control to manually
+stop and restart the pods you wish. To shutdown all NuoDB processes in database
+{{include "restore.target" . }}, the following command can be used:
+
+  nuocmd shutdown database --db-name {{include "restore.target" . }}
+
+You could shutdown NuoDB engines in any order which will cause Kubernetes to
+automatically restart all TE and SM. Alternatively, you could scale-down TE and
+SM pods, and then scale up the SM pods in the order of your choosing, and then
+scale-up the TE pods - again in the order of your choosing.

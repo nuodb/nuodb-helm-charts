@@ -25,20 +25,7 @@ spec:
         ##
         # call the nuorestore script
         ##
-        args:
-        - "nuorestore"
-        - "--type"
-        - "{{ default "database" .Values.restore.type }}"
-        - "--db-name"
-        - "{{ $restoreTarget }}"
-        - "--source"
-        - "{{ include "restore.source" . }}"
-        - "--auto"
-        {{- if hasKey .Values.restore "autoRestart" }}
-        - {{ .Values.restore.autoRestart | quote }}
-        {{ else }}
-        - "true"
-        {{- end }}
+{{- include "restore.args" . | indent 8 }}
     {{- include "restore.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
