@@ -177,16 +177,6 @@ The purpose of this section is to allow customisation of the names of the cluste
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
 | `balancer` | suffix for the balancer service | "balancer" |
 
-#### backup.*
-
-The following tables list the configurable parameters of the `backup` portion of the `database` chart and their default values.
-
-| Parameter | Description | Default |
-| ----- | ----------- | ------ |
-| `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
-| `persistence.size` | Amount of disk space allocated for database backup storage | `20Gi` |
-| `persistence.storageClass` | Storage class for volume backing database backup storage | `-` |
-
 #### database.*
 
 The following tables list the configurable parameters of the `database` chart and their default values.
