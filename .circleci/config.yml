@@ -1,9 +1,42 @@
-# Golang CircleCI 2.0 configuration file
+# Golang CircleCI 2.1 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
-version: 2
+version: 2.1
+orbs:
+  azure-cli: circleci/azure-cli@1.1.0
 jobs:
-  build:
+  go-test:
+    parameters:
+      test-suite:
+        description: |
+          Terratest suites to be included in the path.
+        type: string
+      tag:
+        default: ''
+        description: |
+          Go test tags to be included.
+        type: string
+      timeout:
+        default: '60m'
+        description: |
+          Go test timeout.
+        type: string
+      requires-minikube:
+        default: false
+        description: |
+          The test suite requires that minikube cluster to be available.
+        type: boolean
+      requires-minishift:
+        default: false
+        description: |
+          The test suite requires that minishift cluster to be available.
+        type: boolean
+      requires-aks:
+        default: false
+        description: |
+          The test suite requires that Azure AKS cluster to be available.
+        type: boolean
+
     machine:
       image: ubuntu-1604:202007-01
 
@@ -18,29 +51,53 @@ jobs:
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       CHANGE_MINIKUBE_NONE_USER: true
-      REQUIRES_MINIKUBE: true
+      AZURE_AKS_RESOURCE_GROUP: "orca-ying-yang"
+      AZURE_AKS_CLUSTERS: "yin yang"
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
-
-    parallelism: 4
     
     steps:
       - checkout
 
+      - when:
+          condition: <<parameters.requires-aks>>
+          steps:
+            - azure-cli/install # install Azure CLI is faster if done by CircleCI orb
+            - azure-cli/login-with-service-principal # login using service principal
+
       - run:
           name: Install Dependencies
           command: |
+            export REQUIRES_MINIKUBE="<< parameters.requires-minikube >>"
+            export REQUIRES_MINISHIFT="<< parameters.requires-minishift >>"
+            export REQUIRES_AKS="<< parameters.requires-aks >>"
             export KUBECONFIG="$HOME/.kube/config"
             export MINIKUBE_HOME="$HOME"
             chmod a+x scripts/ci/*.sh
             scripts/ci/install_deps.sh
 
+      - restore_cache: # restores saved cache if no changes are detected since last run
+          keys:
+            - go-mod-v4-custom-<< parameters.test-suite >>-<< parameters.tag >>-{{ checksum "go.sum" }}
+      
       - run:
           name: Run the tests
           command: |
+            TEST_SUITE="<< parameters.test-suite >>"
+            TEST_TAG="<< parameters.tag >>"
+            TEST_TIMEOUT="<< parameters.timeout >>"
+            set -- "$@" ${TEST_SUITE}
+            if [ -n "${TEST_TAG}" ]; then
+              set -- "$@" -tags=${TEST_TAG}
+            fi
             mkdir -p $TEST_RESULTS # create the test results directory
-            test_suites=("./test/integration ./test/minikube -tags=short" "./test/minikube -tags=long" "./test/minikube -tags=diagnostics" "./test/minikube -tags=upgrade")
-            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-$CIRCLE_NODE_INDEX.xml --format testname -- -timeout 50m ${test_suites[$CIRCLE_NODE_INDEX]}
+            go clean -testcache
+            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@" 
           no_output_timeout: 60m
+
+      - save_cache: # store unique cache for each test suite and tag combination
+          key: go-mod-v4-custom-<< parameters.test-suite >>-<< parameters.tag >>-{{ checksum "go.sum" }}
+          paths:
+            - "/home/circleci/.go_workspace/pkg/mod"
 
       - store_test_results: # upload test results for display in Test Summary
           path: /tmp/test-results
@@ -50,3 +107,38 @@ jobs:
 
       - store_artifacts:
           path: ./results/
+
+workflows:
+  version: 2
+  nuodb-helm-charts-test:
+    # jobs are run in parallel by default, so any dependencies must be explicitly requires
+    jobs:
+      - go-test:
+          name: "Integration tests"
+          test-suite: "./test/integration"
+      - go-test:
+          name: "Short tests"
+          test-suite: "./test/minikube"
+          tag: "short"
+          requires-minikube: true
+      - go-test:
+          name: "Long tests"
+          test-suite: "./test/minikube"
+          tag: "long"
+          requires-minikube: true
+          timeout: "90m"
+      - go-test:
+          name: "Diagnostics tests"
+          test-suite: "./test/minikube"
+          tag: "diagnostics"
+          requires-minikube: true
+      - go-test:
+          name: "Upgrade tests"
+          test-suite: "./test/minikube"
+          tag: "upgrade"
+          requires-minikube: true
+      - go-test:
+          name: "Multi-cluster tests"
+          test-suite: "./test/multicluster"
+          requires-aks: true
+

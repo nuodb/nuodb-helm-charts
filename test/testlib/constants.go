@@ -25,6 +25,7 @@ const TEARDOWN_RESTORE = "restore"
 const TEARDOWN_SECRETS = "secrets"
 const TEARDOWN_YCSB = "ycsb"
 const TEARDOWN_COLLECTOR = "nuocollector"
+const TEARDOWN_MULTICLUSTER = "multicluster"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"
@@ -35,6 +36,7 @@ const YCSB_HELM_CHART_PATH = "../../incubator/demo-ycsb"
 const RESULT_DIR = "../../results"
 const INJECT_FILE = "../../versionInject.yaml"
 const INJECT_VALUES_FILE = "../../valuesInject.yaml"
+const INJECT_CLUSTERS_FILE = "../../clustersInject.yaml"
 
 const IMPORT_ARCHIVE_URL = "https://download.nuohub.org/ce_releases/restore.bak.tz"
 

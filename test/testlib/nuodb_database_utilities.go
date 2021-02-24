@@ -25,12 +25,13 @@ spec:
 `
 
 type ExtractedOptions struct {
-	NrTePods          int
-	NrSmHotCopyPods   int
-	NrSmNoHotCopyPods int
-	NrSmPods          int
-	DbName            string
-	ClusterName       string
+	NrTePods              int
+	NrSmHotCopyPods       int
+	NrSmNoHotCopyPods     int
+	NrSmPods              int
+	DbName                string
+	ClusterName           string
+	EntrypointClusterName string
 }
 
 func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
@@ -61,6 +62,11 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 	opt.ClusterName = options.SetValues["cloud.cluster.name"]
 	if len(opt.ClusterName) == 0 {
 		opt.ClusterName = "cluster0"
+	}
+
+	opt.EntrypointClusterName = options.SetValues["cloud.cluster.entrypointName"]
+	if len(opt.EntrypointClusterName) == 0 {
+		opt.EntrypointClusterName = "cluster0"
 	}
 
 	return
@@ -102,13 +108,20 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 	AddTeardown(TEARDOWN_DATABASE, func() {
 		helm.Delete(t, options, helmChartReleaseName, true)
 		AwaitNoPods(t, namespaceName, helmChartReleaseName)
-		EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
-		DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
+		// Delete database only when tearing down the entrypoint cluster
+		if opt.ClusterName == opt.EntrypointClusterName {
+			EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
+			DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
+		}
 	})
 
 	installationStep(t, options, helmChartReleaseName)
 
 	if awaitDatabase {
+		AddDiagnosticTeardown(TEARDOWN_DATABASE, t, func() {
+			DescribePods(t, namespaceName, tePodNameTemplate)
+			DescribePods(t, namespaceName, smPodName)
+		})
 		AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, opt.NrTePods)
 		AwaitNrReplicasScheduled(t, namespaceName, smPodName, opt.NrSmPods)
 
@@ -128,7 +141,12 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		})
 		AwaitPodUp(t, namespaceName, smPodName0, 240*time.Second)
 
-		AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
+		// Await num of database processes only for single cluster deployment;
+		// in multi-clusters the await logic should be called once all clusters
+		// are installed with the database chart
+		if opt.ClusterName == opt.EntrypointClusterName {
+			AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
+		}
 	}
 
 	return
