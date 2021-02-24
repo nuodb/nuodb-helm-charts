@@ -4,7 +4,7 @@
 
 NuoDB provides several automated mechanisms for backing up and restoring a database in a Kubernetes environment when deploying NuoDB using the NuoDB Helm Charts.
 
-After database installation, the available backup and restore features supported by these mechanisms are: 
+After database installation, the available backup and restore mechanisms are: 
 
 1. [Automatic archive initial import](#automatic-archive-initial-import)
 2. [Scheduled online database backups](#scheduled-online-database-backups)
@@ -15,7 +15,7 @@ After database installation, the available backup and restore features supported
 7. [Distributed Database restore with storage groups](#distributed-database-restore-with-storage-groups)
 8. [Assisted database restore](#assisted-database-restore)
 
-Several of these features require additional configuration before using.
+Several of these mechanisms require additional configuration before using.
 
 > **NOTE**: For information on NuoDB backup and restore operations in non-Kubernetes deployments of NuoDB, see [Backing Up and Restoring Databases](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/database-operations/backing-up-and-restoring-databases/). 
 The documentation in this repository expands on the product documentation and is specific to this Helm Chart repository.
@@ -46,7 +46,7 @@ Normally used to speed up the SYNC process for the so-called "accelerated" sync 
 
 ## Compatibility Matrix
 
-The table below shows the compatibility matrix for different backup and restore features in combination with the NuoDB product version and NuoDB Helm Charts.
+The table below shows the compatibility matrix for different backup and restore mechanisms in combination with the NuoDB product version and NuoDB Helm Charts.
 
 |                                       | NuoDB 4.0.x+ Helm Charts 2.x.x | NuoDB 4.0.x+ Helm Charts 3.0.x | NuoDB 4.0.x+ Helm Charts 3.1.x | NuoDB 4.2.x+ Helm Charts 3.2.x+ |
 |---------------------------------------|--------------------------------|--------------------------------|---------------------------------|---------------------------------|
@@ -64,9 +64,9 @@ Additional capability was added into the `nuobackup` script allowing the removal
 
 [2] - For deployments that contain nonHC SMs, it's recommended that database in-place restore is done by manually starting database engines in sequential order. First start the HC SMs, then nonHC SMs and last the TEs.
 
-[3] - Automatic archive import is recommended when restoring a backup set taken from a different environment.
+[3] - _Automatic archive initial import_ is recommended when restoring a backup set taken from a different environment.
 
-[4] - Archive seed restore is not deterministic. Once the restore request is created, the first SM that starts or is restarted will perform the restore of its archive.
+[4] - _Archive seed restore_ is not deterministic. Once the restore request is created, the first SM that starts or is restarted will perform the restore of its archive.
 
 For detailed information about features, enhancements, and fixed problems, please check [NuoDB Release Notes](https://doc.nuodb.com/nuodb/latest/release-notes/) and [NuoDB Helm Charts Release Notes](https://github.com/nuodb/nuodb-helm-charts/releases)
 
@@ -75,7 +75,7 @@ For detailed information about features, enhancements, and fixed problems, pleas
 ### Scheduled online database backups
 
 Multiple backup cron jobs are scheduled as part of the [database](../stable/database) chart deployment by default.
-The backup schedules can be customized to meetdifferent backup and recovery objectives.
+The backup schedules can be customized to meet different backup and recovery objectives.
 They are exposed as Helm chart values in particular:
 - `database.hotCopy.fullSchedule` - configures the schedule of _full_ backup Kubernetes job
 - `database.hotCopy.incrementalSchedule` - configures the schedule of _incremental_ backup Kubernetes job
@@ -249,8 +249,8 @@ All TEs will wait for the database restore to complete before starting, hence we
 ...
 ```
 
-The database restore request will be cleared after a successful database in-place restore and can be checked using `nuodocker get restore requests --db-name <db>` command.
-The database state should be manually verified by `nuocmd show domain` and using SQL queries to ensure that it's the desired one after a successful restore.
+The database restore request will be cleared after a successful database in-place restore and can be viewed using `nuodocker get restore requests --db-name <db>`.
+The database state should be manually verified by `nuocmd show domain` and using SQL queries to ensure that it's in the desired state after a successful restore.
 
 If there is a need to modify the database restore request, a new database shutdown and restart cycle is needed so that the request can be completed.
 The same applies if the reason for the previously failed database restore is corrected.
@@ -258,7 +258,7 @@ When troubleshooting distributed database restore failures, it's important to co
 
 > **NOTE**: In multi-cluster deployments, different backup cron jobs execute with different schedules unless they are configured to be part of the same backup group.
 
-Backup sets produced by different backup groups can't be used together to perform distributed database in-place restore.
+Backup sets produced by different backup groups can't be used together to perform _distributed database in-place restore_.
 To perform a database restore in multi-cluster deployment, proceed with one of the approaches described below.
 
 1. [Select the hot copy SMs in one of the clusters](#fine-grained-archive-selection) and provide a backup set available in that cluster or `:group-latest` as `restore.source`.
@@ -279,13 +279,13 @@ For instance, this can be used to easily select all SMs in a specific backup gro
 
 ### Archive seed restore
 
-The archive seed restore operation restores a corrupted or lost archive while the database is running.
+The _archive seed restore_ operation restores a corrupted or lost archive while the database is running.
 This operation will reset the existing archive state, and once it joins the database, the new SM will sync to the current state of the running database.
 For this reason, you cannot restore the entire database by restoring a single SM in a running database.
-The _seed restore_ reduces the _SYNCing_ time from other running SMs as only the changed atoms will be transferred.
+The _seed restore_ has the potential to reduce the _SYNCing_ time from other running SMs as only the changed atoms will be transferred.
 The database will remain running throughout this operation.
 
-The high-level steps to perform archive seed restore are the following:
+The high-level steps to perform _archive seed restore_ are the following:
 
 1. Identify which archives will be restored.
 2. Ensure that the restore source is available either locally in the backup volume or as a remote URL.
@@ -297,7 +297,7 @@ In this example, there is an SM exited because it experienced archive data corru
 One way to fix the issue is to completely delete the corrupted archive and let the SM sync the whole archive from one of the running processes in the database.
 To reduce the sync time, we can upload one of the recent online database backups to a remote location and restore the corrupted archive.
 
-> **NOTE**: A copy of an archive or backup set from another database can't be used to perform archive seed restore. Otherwise the Storage Manager process will fail to start with error _Archive "/var/opt/nuodb/archive/nuodb/demo" doesn't match database.  Expected UUID \*\*\*, got \*\*\*._
+> **NOTE**: A copy of an archive or backup set from another database can't be used to perform _archive seed restore_. Otherwise the Storage Manager process will fail to start with error _Archive "/var/opt/nuodb/archive/nuodb/demo" doesn't match database.  Expected UUID \*\*\*, got \*\*\*._
 
 Identify its archive id using `nuocmd show archives` commands and select it for restore by installing the _restore_ chart with `restore.type="archive"`.
 
@@ -343,9 +343,9 @@ drwxr-xr-x  2 nuodb root 4096 Feb 19 10:32 demo-save-20210219T103236
 
 ### Automatic archive initial import
 
-The automatic archive initial import is a special case of a database restore.
-It allows specifying an external URL that contains a `tar.gz` archive copy or a backup set which will be automatically downloaded and used to define the database initial state, avoiding the need to do a post-deployment database load manually.
-Initial import can be used for importing a backup taken from a different environment. It is configured in the `database.autoImport` section and will execute for every Storage Manager in the database deployment when all of the below conditions are met:
+The _automatic archive initial import_ is a special case of a database restore operation.
+This operation allows the user to specify an external URL that contains a `tar.gz` archive copy or a backup set which will be automatically downloaded and used to define the database initial state, avoiding the need to do a post-deployment database load manually.
+Initial import is used for importing a backup taken from a different environment. It is configured in the `database.autoImport` section and will execute for every Storage Manager in the database deployment when all of the below conditions are met:
 
 - `database.autoImport.source` and `database.autoImport.type` are configured
 - the archive hasn't been initialized yet - `1.atm` is missing from the archive directory
@@ -359,7 +359,7 @@ To use automatic archive import in a pre-existing environment, it should be dest
 4. List removed archives associated with the database by using `nuocmd show archives --db-name demo --removed`.
 5. Remove all archives associated with the database by using `nuocmd delete archive --archive-id <id> --purge`.
 
-The high-level steps to configure automatic archive import to bootstrap a new database are the following:
+The high-level steps to configure the automatic archive import operation to bootstrap a new database are the following:
 
 1. Prepare the import source and upload it to a remote location available to NuoDB Storage Manager pods.
 2. Set `database.autoImport` variables during NuoDB database chart installation.
@@ -387,7 +387,7 @@ nginx_pod=$(kubectl get pod \
 kubectl cp "${file}" --namespace web "${nginx_pod}:/usr/share/nginx/html/${file}"
 ```
 
-To avoid connectivity issues it's recommended to verify that the remote source is available to pods in the NuoDB namespace.
+To avoid connectivity issues, it's recommended to verify that the remote source is available to pods in the NuoDB namespace.
 We'll start a sample busybox pod to validate the URL.
 
 ```bash
@@ -395,7 +395,7 @@ kubectl run -ti busybox --rm --image=busybox --restart=Never -n nuodb -- \
   wget --spider http://nginx.web.svc.cluster.local/$file
 ```
 
-Automatic archive import is typically used to create new database deployment.
+Automatic archive import is typically used to create a new database deployment.
 After installing the NuoDB admin chart, deploy the NuoDB database chart and enable automatic archive import.
 
 ```bash
@@ -435,25 +435,25 @@ drwxr-xr-x 2 nuodb root 4096 Feb 19 10:32 demo
 
 ### Automatic archive restore
 
-Automatic archive restore is a special case of seed restore.
+_Automatic archive restore_ is a special case of the seed restore operation.
 It allows SM to automatically restore its archive if it is corrupted or missing from a predefined restore source so that the accelerated sync use case is supported automatically.
-Although this feature can be used with a remote URL, it is typically used with `:latest` or `:group-latest` configured as a restore source.
+Although this mechanism can be used with a remote URL, it is typically used with `:latest` or `:group-latest` configured as a restore source.
 
-Automatic archive restore is configured in the `database.autoRestore` section and will execute for every Storage Manager in the database deployment when all of the below conditions are met:
+_Automatic archive restore_ is configured in the `database.autoRestore` section and will execute for every Storage Manager in the database deployment when all of the below conditions are met:
 
 - `database.autoRestore.source` and `database.autoRestore.type` are configured
 - archive metadata is found for the archive in the admin layer or on disk
 - configured restore source is available in the SM pod
 - the archive is detected as corrupted or missing - if the atom files count is less than 20 and catalog atom files count is less than 2
 
-> **NOTE**: Automatic archive restore using local hot copy as restore source can be used only for HC SMs.
+> **NOTE**: _Automatic archive restore_ with a local hot copy is used only for HC SMs.
 Alternatively, a remote _URL_ containing recent backup can be configured to perform a seed restore for all SMs.
 
-To see the feature in action, we can simulate a situation where archive data in a running database for one of the HC SMs is lost.
+To demonstrate, we can simulate a situation where archive data in a running database for one of the HC SMs is lost.
 This will cause the Storage Manager process to assert once it hits the disk and Kubernetes will automatically restart the _engine_ container.
-After the restart automatic archive restore will be performed reducing the archive sync time and making sure that the database is back in the original capacity as soon as possible.
+After, the restart _automatic archive restore_ will be performed, reducing the archive sync time and returning the database back to its original capacity as soon as possible.
 
-Configure automatic archive restore during initial installation of the database chart or later on:
+Configure _automatic archive restore_ during initial installation of the database chart or later on:
 
 ```bash
 helm upgrade --install database nuodb/database \
@@ -463,7 +463,7 @@ helm upgrade --install database nuodb/database \
     --set database.autoRestore.type="backupset"
 ```
 
-> **NOTE**: For multi-cluster deployments `:latest` should not be used as an automatic archive restore source unless the database deployments in all clusters are configured to be part of the same backup group.
+> **NOTE**: For multi-cluster deployments `:latest` should not be used as an _automatic archive restore_ source unless the database deployments in all clusters are configured to be part of the same backup group.
 
 Simulate a total loss of an archive for an HC SM by moving the archive directory to some other location.
 
@@ -472,7 +472,7 @@ kubectl exec -ti sm-database-nuodb-cluster0-demo-hotcopy-0 -- \
   mv /var/opt/nuodb/archive/nuodb/demo /var/opt/nuodb/archive/nuodb/demo_moved
 ```
 
-Wait for the engine container to assert and be restarted and check that automatic archive restore is performed for its archive.
+Wait for the engine container to assert and restart. Then, check that the _automatic archive restore_ operation is performed for its archive.
 If there is no SQL workload running against the database, a sample SQL query can be executed to accelerate the engine exit.
 The SM pod log will indicate a successful archive restore similar to the log snippet below.
 
@@ -497,26 +497,26 @@ drwxr-xr-x  2 nuodb root 4096 Feb 19 10:32 demo-save-20210219T103238
 
 ### Distributed database restore with storage groups
 
-Database restore using user-defined storage groups is a special case of a database restore.
+Database restore using user-defined storage groups is a special case of a database restore operation.
 The process is documented in the [Distributed database in-place restore](#distributed-database-in-place-restore) section. Several considerations need to be taken into account:
 
 - a complete set of archives serving all storage groups must be restored when performing database in-place restore
 - to ensure that backup coverage is complete, each storage group must be served by at least one HC SM
 
-A complete set of archives can be selected by some of the methods described in [Fine-grained archive selection](#fine-grained-archive-selection) section. NuoDB won't perform any special checks during database restore to ensure that the archives selected for a restore are a complete set of archives.
+A complete set of archives can be selected using several of the methods described in [Fine-grained archive selection](#fine-grained-archive-selection) section. NuoDB won't perform any special checks during database restore to ensure that the archives selected for a restore are a complete set of archives.
 If some of the storage groups are missing from the selection, their state won't be restored.
 
 > **NOTE**: For more information about storage groups, check [Using Table Partitions and Storage Groups](https://doc.nuodb.com/nuodb/latest/database-administration/using-table-partitions-and-storage-groups/)
 
 ### Assisted database restore
 
-Assisted database restore is a special case of database restore and allows complex restore operations to be executed easier in Kubernetes deployments.
-It is initiated by installing the _restore_ chart with `restore.manual="true"` which creates a manual restore request.
+_Assisted database restore_ is a special case of database restore operation and allows complex restore operations to be executed easier in Kubernetes deployments.
+The _assisted database restore_ operation is initiated by installing the _restore_ chart with `restore.manual="true"` which creates a manual restore request.
 Once the database is restarted all database processes will block waiting for the user to perform the selected archives restore.
 After the archive restore is marked as completed, NuoDB will unblock the processes, a restore coordinator will be selected and the restore process will continue as documented in the [Distributed database in-place restore](#distributed-database-in-place-restore) section.
 
-As an example a point-in-time (PiT) restore in a new environment will be demonstrated to fix a "fat-finger" error in production.
-Currently, the automatic initial archive restore doesn't support restore to a specific point in time, hence an assisted database restore can be used.
+As an example, a point-in-time (PiT) restore in a new environment will be demonstrated to fix a "fat-finger" error in production.
+Currently, the automatic initial archive restore doesn't support restore to a specific point in time, hence an _assisted database restore_ is used.
 
 > **NOTE**: For more information on PiT restore and `nuoarchive`, please check [here](https://doc.nuodb.com/nuodb/latest/reference-information/command-line-tools/nuodb-archive/nuodb-archive---restoring/).
 
@@ -535,7 +535,7 @@ We have selected to restore from a backup set that has several journal backup el
 
 The target for the restore will be a pre-production database that is already running.
 Since the backup set used here is taken from a different environment, all database archives will need to be restored.
-We are going to use a database with two SMs for simplicity and request both database archive for a restore.
+We are using a database with two SMs for simplicity and request both database archives for a restore.
 
 ```bash
 helm install -n nuodb restore nuodb/restore \
@@ -550,22 +550,22 @@ helm install -n nuodb restore nuodb/restore \
 ```
 
 The SM process serving archive IDs 0 and 1 will block and wait for their archives to be restored which is visible in the log below.
-All TEs will wait for the database restore to complete.
+All TEs will wait for the database restore to complete before they attempt to start.
 
 ```
 ...
 2021-02-19T17:10:13.019+0000 INFO  root Manual restore has been requested for archiveId=0, database=demo. Waiting for archive restore to complete ...
 ```
 
-Once connected to the corresponding SM pod, the archive restore will be done manually by using `nuoarchive restore --report-timestamps` and `nuoarchive restore --restore-snapshot` commands.
-The first one will report timestamp and transaction ID mappings available for PiT restore, and the next one will restore the snapshot identified by a transaction ID.
+Once connected to the corresponding SM pod, the archive restore is done manually by using `nuoarchive restore --report-timestamps` and `nuoarchive restore --restore-snapshot` commands.
+The first command will report timestamp and transaction ID mappings available for PiT restore, and the second command will restore the snapshot identified by a transaction ID.
 
 ```
 2021-02-19T17:00:30 4484
 2021-02-19T17:00:31 4868
 ```
 
-In this example transaction ID 4484 will be used during the restore.
+In this example, transaction ID 4484 will be used during the restore.
 
 ```bash
 cd /var/opt/nuodb/archive/nuodb
@@ -579,7 +579,7 @@ nuoarchive restore --restore-snapshot 4484 --restore-dir ../demo $PWD/20210219T1
 ```
 
 After successful archive restore, its original archive ID should be marked as complete.
-This will delete the archive metadata from the NuoDB Admin layer and will cause the SM to proceed with its startup operations.
+This will delete the archive metadata from the NuoDB Admin tier and will cause the SM to proceed with its startup operations.
 
 ```
 nuodocker complete restore --db-name demo --archive-ids 0
@@ -587,8 +587,8 @@ nuodocker complete restore --db-name demo --archive-ids 0
 
 Repeat the above steps for archive ID 1.
 
-> **NOTE**: If the database is having only one archive, you will need to delete the database by using `nuocmd delete database --db-name <db>` before the last archive can be removed.
-`nuodocker start sm` will automatically recreate the database and the archive once the archive restore is marked as completed.
+> **NOTE**: If the database has only one archive, you will need to delete the database by using `nuocmd delete database --db-name <db>` before the last archive can be removed.
+`nuodocker start sm` will automatically recreate the database and the archive once the archive restore is marked complete.
 
-The database restore request will be cleared after a successful database in-place restore and can be checked using `nuodocker get restore requests --db-name <db>` command.
-The database state should be manually verified by `nuocmd show domain` and using SQL queries to ensure that it's the desired one after a successful restore.
+The database restore request will be cleared after a successful database in-place restore and can be viewed using `nuodocker get restore requests --db-name <db>`.
+The database state should be manually verified by `nuocmd show domain` and using SQL queries to ensure that it's in the desired state after a successful restore.
