@@ -139,7 +139,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		AddTeardown(TEARDOWN_DATABASE, func() {
 			go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{Follow: true})
 		})
-		AwaitPodUp(t, namespaceName, smPodName0, 240*time.Second)
+		AwaitPodUp(t, namespaceName, smPodName0, 300*time.Second)
 
 		// Await num of database processes only for single cluster deployment;
 		// in multi-clusters the await logic should be called once all clusters
