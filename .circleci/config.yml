@@ -110,7 +110,7 @@ jobs:
 
 workflows:
   version: 2
-  nuodb-helm-charts-test:
+  build:
     # jobs are run in parallel by default, so any dependencies must be explicitly requires
     jobs:
       - go-test:
