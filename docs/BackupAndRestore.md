@@ -152,7 +152,8 @@ Standard protocols such as _HTTP/s_, _FTP_ and _SFTP_ can be used as a source.
 Any other protocols that have built-in support in the shipped `cURL` binary in the NuoDB image can be used as well.
 Basic authentication or an authentication token that is embedded in the URL are supported.
 The remote URL should point to the `tar.gz` file which will be automatically extracted using the configured `stripLevels` setting (by default `1`). 
-These are the number of leading path elements removed by the `tar` command during archive extraction.
+These are the number of leading path elements removed by the `tar` command during archive extraction so that the root data (e.g for a _stream_, the *.atm files) can be accessed.
+Typically, the `tar.gz` only contains one parent level folder, being the database name, for example _demo_. 
 
 - backupset available in the backup root directory.
 HC SMs have a backup volume attached and are selected for hot copy operation during the scheduled backups. Only these SMs have access to local hot copies and their archives can be restored using a local backup set.
