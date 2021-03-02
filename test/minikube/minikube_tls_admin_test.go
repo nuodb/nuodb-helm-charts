@@ -138,11 +138,9 @@ func TestHashiCorpVault(t *testing.T) {
 	namespaceName := fmt.Sprintf("testvault-%s", randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 
-	options := helm.Options{}
-
 	defer testlib.Teardown(testlib.TEARDOWN_VAULT)
 
-	helmChartReleaseName := testlib.StartVault(t, &options, namespaceName)
+	helmChartReleaseName := testlib.StartVault(t, &helm.Options{}, namespaceName)
 	vaultName := fmt.Sprintf("%s-vault-0", helmChartReleaseName)
 
 	testlib.CreateVault(t, namespaceName, vaultName)

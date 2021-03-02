@@ -33,7 +33,6 @@ func StartVault(t *testing.T, options *helm.Options, namespaceName string) strin
 		helm.Delete(t, options, helmChartReleaseName, true)
 	})
 
-
 	// there are two pods here, the vault itself and an agent-injector
 	AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, 2)
 
@@ -105,19 +104,16 @@ func EnableVaultKubernetesIntegration(t *testing.T, namespaceName string, vaultN
 	// enable Kubernetes Vault Auth
 	k8s.RunKubectl(t, kubectlOptions, "exec", vaultName, "--", "vault", "auth", "enable", "kubernetes")
 
-	// install write policy
-	token, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", vaultName, "--", "cat", "/var/run/secrets/kubernetes.io/serviceaccount/token")
-	require.NoError(t, err)
-	reviewer := fmt.Sprintf("token_reviewer_jwt=%s", token)
-	k8s.RunKubectl(t, kubectlOptions, "exec", vaultName, "--", "vault", "write", "auth/kubernetes/config",
-		reviewer,
-		"kubernetes_host=https://10.96.0.1:443", //TODO FIX
-		"kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt")
+	k8s.RunKubectl(t, kubectlOptions, "exec", vaultName, "--", "sh", "-x", "-c",
+		`vault write auth/kubernetes/config \
+		token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
+		kubernetes_host="https://${KUBERNETES_PORT_443_TCP_ADDR}:443" \
+		kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt`)
 
 	// give permissions to test namespace
 	namespaces := fmt.Sprintf("bound_service_account_namespaces=%s", namespaceName)
 	k8s.RunKubectl(t, kubectlOptions, "exec", vaultName, "--", "vault", "write", "auth/kubernetes/role/nuodb",
-		"bound_service_account_names=nuodb", namespaces, "policies=nuodb-policy", "ttl=1h" )
+		"bound_service_account_names=nuodb", namespaces, "policies=nuodb-policy", "ttl=1h")
 }
 
 func CreateVault(t *testing.T, namespaceName string, vaultName string) {
