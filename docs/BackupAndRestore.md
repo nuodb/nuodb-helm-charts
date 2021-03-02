@@ -13,7 +13,7 @@ After database installation, the available backup and restore mechanisms are:
 5. [Distributed database in-place restore](#distributed-database-in-place-restore)
 6. [Fine-grained archive selection](#fine-grained-archive-selection)
 7. [Distributed Database restore with storage groups](#distributed-database-restore-with-storage-groups)
-8. [Assisted database restore](#assisted-database-restore)
+8. [Manual database restore](#manual-database-restore)
 
 Several of these mechanisms require additional configuration before using.
 
@@ -57,7 +57,7 @@ The table below shows the compatibility matrix for different backup and restore 
 | Automatic archive restore             | ✓                              | ✓                              | ✓                               | ✓                               |
 | Fine-grained archive selection        | -                              | -                              | -                               | ✓                               |
 | Database restore with storage groups  | -                              | -                              | -                               | ✓                               |
-| Assisted database restore             | -                              | -                              | -                               | ✓                               |
+| Manual database restore               | -                              | -                              | -                               | ✓                               |
 
 [1] - Scheduled online backups workflow is supported by _initial_ database backup job and _post-restore_ cron job.
 Additional capability was added into the `nuobackup` script allowing the removal of these jobs in [Helm Charts v3.1.0](https://github.com/nuodb/nuodb-helm-charts/releases/tag/v3.1.0).
@@ -69,6 +69,8 @@ Additional capability was added into the `nuobackup` script allowing the removal
 [4] - _Archive seed restore_ is not deterministic. Once the restore request is created, the first SM that starts or is restarted will perform the restore of its archive.
 
 For detailed information about features, enhancements, and fixed problems, please check [NuoDB Release Notes](https://doc.nuodb.com/nuodb/latest/release-notes/) and [NuoDB Helm Charts Release Notes](https://github.com/nuodb/nuodb-helm-charts/releases)
+
+> **NOTE**: The examples and the sample output shown in this document are specific to NuoDB 4.2.x+ and Helm Charts 3.2.x+.
 
 ## Backup and Restore Mechanisms
 
@@ -87,14 +89,17 @@ An HC SM has a backup volume attached and is selected for hot copy operation dur
 Each _full_ hot copy will create a backup set with the same name in the backup root directory (by default `/var/opt/nuodb/backup`) on all HC SMs in a single database and a single backup group.
 By default, all HC SMs in a single Kubernetes cluster are part of one backup group.
 This can be adjusted by changing the `database.hotcopy.backupGroup` value for multiple Kubernetes clusters in multi-cluster deployment.
+
 _Incremental_ and _journal_ hot copies are always stored in the current backup set if one exists.
 If there is no current backup set for some of the archives served by a HC SM when _incremental_ or _journal_ backup is requested, a _full_ hot copy is triggered automatically.
+The current backup set is the backup set created by the latest issued hotcopy and can be seen using `nuodocker get current backup --db-name <db>`.
+
 The `nuobackup` script is made available as a configMap and is used by all backup cron jobs to send a hot copy request of the specified type to the HC SMs.
 The _Full_ hot copy result is recorded into the NuoDB Admin domain key-value (KV) store upon successful finish.
+Use `nuobackup --type report-latest --db-name <db> --group <backup group>` to show the latest successful _full_ hot copy backup set for a specific backup group.
 
 The backup jobs execution should be monitored on a regular basis to ensure that they complete successfully.
 By default, each backup job execution will be retried on failure which can be configured by the  `database.hotCopy.restartPolicy` setting.
-There are no backup retention policies currently available. The admin user is responsible to make sure that there is enough space in the backup volume of each SM for new hot copies to be created.
 The number of pods kept for failed backup jobs is defined by the `database.hotcopy.failureHistory` setting.
 This setting is useful when debugging failed backup job execution.
 The logs of the pod executing the job should be checked for errors.
@@ -132,6 +137,12 @@ sm-database-nuodb-cluster0-demo-hotcopy   0/0     3h41m
 It is possible to disable backup jobs creation by setting `hotcopy.enableBackups` to `false`.
 Custom backup jobs that use the `nuobackup` script can be configured to support more complex workflows and backup strategies.
 
+#### Backup retention management
+
+There are no backup retention policies currently available.
+The admin user is responsible to make sure that there is enough space in the backup volume of each SM for new hot copies to be created.
+Customer provided `ReadWriteMany` backup volumes, such as Elastic Block Store (EBS) and Azure Files, can be used  to enable retention management using cloud tooling.
+
 ### Restore/Import source and type
 
 The restore/import source location can be one of the following:
@@ -139,7 +150,7 @@ The restore/import source location can be one of the following:
 The restore logic uses [cURL](https://curl.se/) to download a stream of data into an SM pod and restore the archive from it.
 Standard protocols such as _HTTP/s_, _FTP_ and _SFTP_ can be used as a source.
 Any other protocols that have built-in support in the shipped `cURL` binary in the NuoDB image can be used as well.
-Only basic authentication can be specified for remote sources. A remote location that has an authentication token embedded into the _URL_ can also be used.
+Basic authentication or an authentication token that is embedded in the URL are supported.
 The remote URL should point to the `tar.gz` file which will be automatically extracted using the configured `stripLevels` setting (by default `1`). 
 These are the number of leading path elements removed by the `tar` command during archive extraction.
 
@@ -151,9 +162,10 @@ The most recent successful backup set name can be referenced in one of the follo
 - `:group-latest` - The latest backup set name for the backup group in current database deployment.
 
 Two restore/import source types are available:
-- _stream_ - Used as a synonym for a copy of NuoDB archive which contains both the archive and journal directories.
+- _stream_ - Used as a synonym for an offline backup.
 A remote _stream_ source is downloaded and extracted directly into the archive directory which doesn't require extra space for holding the restore/import source file.
 - _backupset_ - Hot copy backup set which is either fetched from a remote source or available in the backup directory.
+A remote _backupset_ requires additional space as it is downloaded and extracted temporarily in the archive volume to be used during archive restore operation.
 
 ### Distributed database in-place restore
 
@@ -177,11 +189,12 @@ The high-level steps to perform database in-place restore are the following:
 2. Identify which archives need to be restored.
 By default, all archives served by HC SMs in a single Kubernetes cluster will be selected for a restore as they can define the database state by restoring from a backup set available in the backup volumes.
 3. Ensure that the restore source is available on all SMs selected for restore.
-4. Ensure that there is enough free disk space in the archive volume of each SM so that a copy of the archive before the restore is taken.
+4. Ensure that there is enough free disk space in the archive volume of each SM selected for restore so that it can accommodate a backup of the existing archive contents and the restored archive.
+If a backup set using URL is selected as a restore source, it will be downloaded temporarily in the archive directory.
 5. Invoke the database restore request by installing NuoDB _restore_ chart.
 By default, the database set as `restore.target` will be **shutdown** and restarted.
 
-Restoring to a previous point in time starts by installing the `restore` chart which will invoke the database restore request.
+Distributed database restore starts by installing the `restore` chart which will invoke the database restore request.
 In this example, a specific backup set that is available on all HC SMs will be used as a restore source.
 
 > **NOTE**: If the restore source is set to `:latest` or `:group-latest`, it's recommended that the incremental and journal backups are temporarily suspended. This is to ensure that another backup is not accidentally taken.
@@ -277,6 +290,15 @@ The process for each archive can be seen under the archive info which makes it e
 Any configured label and value that matches an SM process will add its archive to the list of selected archives for a restore.
 For instance, this can be used to easily select all SMs in a specific backup group - `--set restore.labels.backup="<backup group>"`.
 
+NuoDB will automatically assign the following process labels:
+
+- archive-pvc - the name of the archive PVC associated to this pod (available only for SMs)
+- container-id - the ID of the container
+- pod-name - Kubernetes pod name
+- pod-uid - Kubernetes pod UID
+- backup - The name of the backup group (available only for HC SMs)
+- host - Kubernetes node hostname on which the pod is running (available only for TEs)
+
 ### Archive seed restore
 
 The _archive seed restore_ operation restores a corrupted or lost archive while the database is running.
@@ -289,8 +311,9 @@ The high-level steps to perform _archive seed restore_ are the following:
 
 1. Identify which archives will be restored.
 2. Ensure that the restore source is available either locally in the backup volume or as a remote URL.
-3. Ensure that there is enough free disk space in the archive volume of each SM so that a copy of the archive before the restore is taken.
-4. Invoke the database restore request by installing the NuoDB _restore_ chart by specifying the archive IDs for the selected archives.
+3. Ensure that there is enough free disk space in the archive volume of each SM selected for restore so that it can accommodate a backup of the existing archive contents and the restored archive.
+If a backup set using URL is selected as a restore source, it will be downloaded temporarily in the archive directory.
+4. Invoke the database restore request by installing the NuoDB _restore_ chart and selecting archives for restore.
 5. Start or restart the selected SM
 
 In this example, there is an SM exited because it experienced archive data corruption.
@@ -299,25 +322,26 @@ To reduce the sync time, we can upload one of the recent online database backups
 
 > **NOTE**: A copy of an archive or backup set from another database can't be used to perform _archive seed restore_. Otherwise the Storage Manager process will fail to start with error _Archive "/var/opt/nuodb/archive/nuodb/demo" doesn't match database.  Expected UUID \*\*\*, got \*\*\*._
 
-Identify its archive id using `nuocmd show archives` commands and select it for restore by installing the _restore_ chart with `restore.type="archive"`.
+Select the archive for restore by specifying either `restore.archiveIds` or `restore.labels` and install the _restore_ chart with `restore.type="archive"`.
+We are using the `pod-name` process label to select the desired SM.
 
 ```bash
-helm install -n nuodb restore nuodb/restore \
+helm install restore nuodb/restore \
   --namespace nuodb \
   --set cloud.cluster.name="cluster0" \
   --set admin.domain="nuodb" \
   --set restore.target=demo \
   --set restore.type=archive \
   --set restore.source="http://nginx.web.svc.cluster.local/20210219T160002.tar.gz" \
-  --set restore.archiveIds="{1}"
+  --set restore.labels.pod-name="sm-database-nuodb-cluster0-demo-1"
 ```
 
 By default the database process selected for a restore will be restarted if it is running which can be seen from the logs of the restore pod.
 
 ```
-2021-02-19T16:25:24.123+0000 restore_type=archive; restore_source=http://nginx.web.svc.cluster.local/20210219T160002.tar.gz; arguments= --archive-ids 1
-2021-02-19T16:25:25.992+0000 restore.autoRestart=true - initiating process startId=19 restart
-2021-02-19T16:25:26.634+0000 Restore job completed
+2021-03-02T11:25:44.199+0000 restore_type=archive; restore_source=http://nginx.web.svc.cluster.local/20210219T160002.tar.gz; arguments= --labels pod-name sm-database-nuodb-cluster0-demo-1
+2021-03-02T11:25:46.838+0000 restore.autoRestart=true - initiating process startId=0 restart
+2021-03-02T11:25:47.509+0000 Restore job completed
 ```
 
 The SM will download the remote source and perform the requested restore while the rest of the database is running.
@@ -358,6 +382,8 @@ To use automatic archive import in a pre-existing environment, it should be dest
 3. Remove the database from the domain by using `nuocmd delete database --db-name <db>`.
 4. List removed archives associated with the database by using `nuocmd show archives --db-name demo --removed`.
 5. Remove all archives associated with the database by using `nuocmd delete archive --archive-id <id> --purge`.
+
+NuoDB Admin tear raft PVs and PVCs can be removed instead of steps 3 to 5.
 
 The high-level steps to configure the automatic archive import operation to bootstrap a new database are the following:
 
@@ -508,15 +534,15 @@ If some of the storage groups are missing from the selection, their state won't 
 
 > **NOTE**: For more information about storage groups, check [Using Table Partitions and Storage Groups](https://doc.nuodb.com/nuodb/latest/database-administration/using-table-partitions-and-storage-groups/)
 
-### Assisted database restore
+### Manual database restore
 
-_Assisted database restore_ is a special case of database restore operation and allows complex restore operations to be executed easier in Kubernetes deployments.
-The _assisted database restore_ operation is initiated by installing the _restore_ chart with `restore.manual="true"` which creates a manual restore request.
-Once the database is restarted all database processes will block waiting for the user to perform the selected archives restore.
+_Manual database restore_ is a special case of database restore operation and allows complex restore operations to be executed easier in Kubernetes deployments.
+The _Manual database restore_ operation is initiated by installing the _restore_ chart with `restore.manual="true"` which creates a manual restore request.
+This mode blocks all database pods before allowing them to form a database, in order to give the user access to the persistent volumes used by an SM.
 After the archive restore is marked as completed, NuoDB will unblock the processes, a restore coordinator will be selected and the restore process will continue as documented in the [Distributed database in-place restore](#distributed-database-in-place-restore) section.
 
 As an example, a point-in-time (PiT) restore in a new environment will be demonstrated to fix a "fat-finger" error in production.
-Currently, the automatic initial archive restore doesn't support restore to a specific point in time, hence an _assisted database restore_ is used.
+Currently, the automatic initial archive restore doesn't support restore to a specific point in time, hence an _Manual database restore_ is used.
 
 > **NOTE**: For more information on PiT restore and `nuoarchive`, please check [here](https://doc.nuodb.com/nuodb/latest/reference-information/command-line-tools/nuodb-archive/nuodb-archive---restoring/).
 
