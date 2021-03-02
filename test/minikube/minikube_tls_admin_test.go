@@ -126,3 +126,49 @@ func TestKubernetesTLS(t *testing.T) {
 		testlib.VerifyCertificateInLog(t, namespaceName, tePodName, expectedLogLine)
 	})
 }
+
+func TestHashiCorpVault(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	randomSuffix := strings.ToLower(random.UniqueId())
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	namespaceName := fmt.Sprintf("testvault-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_VAULT)
+
+	helmChartReleaseName := testlib.StartVault(t, &options, namespaceName)
+	vaultName := fmt.Sprintf("%s-vault-0", helmChartReleaseName)
+
+	testlib.CreateVault(t, namespaceName, vaultName)
+	testlib.EnableVaultKubernetesIntegration(t, namespaceName, vaultName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
+
+	initialTLSCommands := []string{
+		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
+		"setup-keys.sh",
+	}
+
+	_, tlsKeyLocation := testlib.GenerateTLSConfiguration(t, namespaceName, initialTLSCommands)
+	testlib.CreateSecretsInVault(t, namespaceName, vaultName, tlsKeyLocation)
+
+	adminOptions := helm.Options{
+		ValuesFiles: []string{"../files/vault-annotations.yaml"},
+		SetValues: map[string]string {
+			"vault.hashicorp.com/log-level": "trace", // increase debug level for testing
+			"admin.replicas": "3",
+		},
+	}
+
+	adminHelmChartReleaseName, _ := testlib.StartAdmin(t, &adminOptions, 3, namespaceName)
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
+
+	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
+}

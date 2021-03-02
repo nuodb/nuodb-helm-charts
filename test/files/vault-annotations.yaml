@@ -9,7 +9,7 @@ admin:
     vault.hashicorp.com/agent-inject-secret-nuocmd.pem: nuodb.com/TLS
     vault.hashicorp.com/agent-inject-template-ca.cert: |
       {{- with secret "nuodb.com/TLS" -}}
-        {{ .Data.data.tlsCACert }}
+        {{ .Data.data.tlsCACert | base64Decode }}
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuoadmin-truststore.p12: |
       {{- with secret "nuodb.com/TLS" -}}
@@ -29,8 +29,7 @@ admin:
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuocmd.pem: |
       {{- with secret "nuodb.com/TLS" -}}
-        {{ .Data.data.tlsClientPEM }}
+        {{ .Data.data.tlsClientPEM | base64Decode }}
       {{- end }}
     vault.hashicorp.com/role: nuodb
     vault.hashicorp.com/secret-volume-path: /etc/nuodb/keys
-    vault.hashicorp.com/log-level: trace

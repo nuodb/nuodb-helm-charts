@@ -5,10 +5,8 @@ package minikube
 import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	v12 "k8s.io/api/core/v1"
-	"strings"
 	"testing"
 	"time"
 
@@ -61,42 +59,4 @@ func TestKubernetesYCSB(t *testing.T) {
 
 	// let YCSB run for a couple of seconds
 	time.Sleep(5 * time.Second)
-}
-
-func TestHashiCorpVault(t *testing.T) {
-	testlib.AwaitTillerUp(t)
-	defer testlib.VerifyTeardown(t)
-
-	randomSuffix := strings.ToLower(random.UniqueId())
-
-	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-
-	namespaceName := fmt.Sprintf("testvault-%s", randomSuffix)
-	testlib.CreateNamespace(t, namespaceName)
-
-	options := helm.Options{}
-
-	defer testlib.Teardown(testlib.TEARDOWN_VAULT)
-
-	helmChartReleaseName := testlib.StartVault(t, &options, namespaceName)
-	vaultName := fmt.Sprintf("%s-vault-0", helmChartReleaseName)
-
-	testlib.CreateVault(t, namespaceName, vaultName)
-	testlib.EnableVaultKubernetesIntegration(t, namespaceName, vaultName)
-
-	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
-
-	initialTLSCommands := []string{
-		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
-		"setup-keys.sh",
-	}
-
-	_, tlsKeyLocation := testlib.GenerateTLSConfiguration(t, namespaceName, initialTLSCommands)
-	testlib.CreateSecretsInVault(t, namespaceName, vaultName, tlsKeyLocation)
-
-	adminOptions := helm.Options{
-		ValuesFiles: []string{"../files/vault-annotations.yaml"},
-	}
-	testlib.StartAdmin(t, &adminOptions, 1, namespaceName)
-
 }
