@@ -25,6 +25,7 @@ const TEARDOWN_RESTORE = "restore"
 const TEARDOWN_SECRETS = "secrets"
 const TEARDOWN_YCSB = "ycsb"
 const TEARDOWN_COLLECTOR = "nuocollector"
+const TEARDOWN_VAULT = "vault"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"

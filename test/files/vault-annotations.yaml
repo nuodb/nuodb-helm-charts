@@ -1,0 +1,36 @@
+admin:
+  podAnnotations:
+    vault.hashicorp.com/agent-inject: "true"
+    vault.hashicorp.com/agent-inject-secret-ca.cert: nuodb.com/TLS
+    vault.hashicorp.com/agent-inject-secret-nuoadmin-truststore.p12: nuodb.com/TLS
+    vault.hashicorp.com/agent-inject-secret-nuoadmin-truststore.password: nuodb.com/TLS
+    vault.hashicorp.com/agent-inject-secret-nuoadmin.p12: nuodb.com/TLS
+    vault.hashicorp.com/agent-inject-secret-nuoadmin.password: nuodb.com/TLS
+    vault.hashicorp.com/agent-inject-secret-nuocmd.pem: nuodb.com/TLS
+    vault.hashicorp.com/agent-inject-template-ca.cert: |
+      {{- with secret "nuodb.com/TLS" -}}
+        {{ .Data.data.tlsCACert }}
+      {{- end }}
+    vault.hashicorp.com/agent-inject-template-nuoadmin-truststore.p12: |
+      {{- with secret "nuodb.com/TLS" -}}
+        {{ .Data.data.tlsTrustStore | base64Decode }}
+      {{- end }}
+    vault.hashicorp.com/agent-inject-template-nuoadmin-truststore.password: |
+      {{- with secret "nuodb.com/TLS" -}}
+        export NUODB_TRUSTSTORE_PASSWORD=”{{ .Data.data.tlsTrustStorePassword }}”
+      {{- end }}
+    vault.hashicorp.com/agent-inject-template-nuoadmin.p12: |
+      {{- with secret "nuodb.com/TLS" -}}
+        {{ .Data.data.tlsKeyStore | base64Decode }}
+      {{- end }}
+    vault.hashicorp.com/agent-inject-template-nuoadmin.password: |
+      {{- with secret "nuodb.com/TLS" -}}
+        export NUODB_KEYSTORE_PASSWORD=”{{ .Data.data.tlsKeyStorePassword }}”
+      {{- end }}
+    vault.hashicorp.com/agent-inject-template-nuocmd.pem: |
+      {{- with secret "nuodb.com/TLS" -}}
+        {{ .Data.data.tlsClientPEM }}
+      {{- end }}
+    vault.hashicorp.com/role: nuodb
+    vault.hashicorp.com/secret-volume-path: /etc/nuodb/keys
+    vault.hashicorp.com/log-level: trace
