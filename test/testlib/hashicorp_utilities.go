@@ -55,7 +55,14 @@ func StartVault(t *testing.T, options *helm.Options, namespaceName string) strin
 	return helmChartReleaseName
 }
 
-func CreateSecretsInVault(t *testing.T, namespaceName string, vaultName string, tlsKeyLocation string) {
+func CreateSecretsInVault(t *testing.T, namespaceName string, vaultName string) {
+	initialTLSCommands := []string{
+		"export DEFAULT_PASSWORD='" + SECRET_PASSWORD + "'",
+		"setup-keys.sh",
+	}
+
+	_, tlsKeyLocation := GenerateTLSConfiguration(t, namespaceName, initialTLSCommands)
+
 	createSecretFromFile(t, namespaceName, vaultName, filepath.Join(tlsKeyLocation, CA_CERT_FILE), "tlsCACert")
 	patchSecretFromFile(t, namespaceName, vaultName, filepath.Join(tlsKeyLocation, NUOCMD_FILE), "tlsClientPEM")
 	patcSecretFromString(t, namespaceName, vaultName, SECRET_PASSWORD, "tlsKeyStorePassword")

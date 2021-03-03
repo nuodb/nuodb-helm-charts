@@ -147,17 +147,10 @@ func TestHashiCorpVault(t *testing.T) {
 	testlib.EnableVaultKubernetesIntegration(t, namespaceName, vaultName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
-
-	initialTLSCommands := []string{
-		"export DEFAULT_PASSWORD='" + testlib.SECRET_PASSWORD + "'",
-		"setup-keys.sh",
-	}
-
-	_, tlsKeyLocation := testlib.GenerateTLSConfiguration(t, namespaceName, initialTLSCommands)
-	testlib.CreateSecretsInVault(t, namespaceName, vaultName, tlsKeyLocation)
+	testlib.CreateSecretsInVault(t, namespaceName, vaultName)
 
 	adminOptions := helm.Options{
-		ValuesFiles: []string{"../files/vault-annotations.yaml"},
+		ValuesFiles: []string{"../files/vault-annotations-admin.yaml"},
 		SetValues: map[string]string {
 			"vault.hashicorp.com/log-level": "trace", // increase debug level for testing
 			"admin.replicas": "3",
@@ -169,4 +162,21 @@ func TestHashiCorpVault(t *testing.T) {
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
+
+	t.Run("testDatabaseHashiCorpVault", func(t *testing.T) {
+		engineOptions := helm.Options{
+			ValuesFiles: []string{"../files/vault-annotations-database.yaml"},
+			SetValues: map[string]string{
+				"vault.hashicorp.com/log-level":         "trace", // increase debug level for testing
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			},
+		}
+
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+		testlib.StartDatabase(t, namespaceName, admin0, &engineOptions)
+	})
 }

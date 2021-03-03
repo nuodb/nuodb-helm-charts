@@ -377,7 +377,7 @@ database:
     # Some clusters require longer readiness probe timeouts
     readinessTimeoutSeconds: 5
   
-  # These annotations will pass throgh to the pod as supplied, useful for integrating 3rd party products such as Vault.
+  # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
 
