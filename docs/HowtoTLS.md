@@ -43,7 +43,8 @@ To use this model in Kubernetes, do the following:
 3. Bind secrets
 
 ### Creating Keys
-NuoDB does not recommend using the pre-generated TLS keys shipped with the NuoDB container.
+NuoDB does not recommend using the pre-generated TLS keys shipped with the NuoDB container. 
+Starting with NuoDB 4.2, the NuoDB container no longer contains pre-generated keys. 
 You can either create your own TLS keys or create them using the convenience script provided with the docker image:
 
 ```docker run --rm -d --name create-tls-keys nuodb/nuodb-ce:latest -- \ 
