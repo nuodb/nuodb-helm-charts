@@ -3,12 +3,13 @@
 ## Introduction
 
 NuoDB supports TLS encryption for all processes in the domain.
-`NuoDB Admin` is responsible for propagating certificates to database processes, so to enable TLS encryption for all processes, it is necessary to configure NuoDB Admin with a set of certificates, and also configure NuoDB Command (`nuocmd`) clients to be able to communicate with `NuoDB Admin`.
+`NuoDB Admin` is responsible for propagating certificates to database processes
+To enable TLS encryption for all processes, it is necessary to configure NuoDB Admin with a set of certificates, and also configure NuoDB Command (`nuocmd`) clients to be able to communicate with `NuoDB Admin`.
 
 This document expands on [Security Model of NuoDB in Kubernetes](./HowtoTLS.md) and explains the usage of HashiCorp Vault for the management of TLS keys.
 
 HashiCorp uses sidecar containers to inject keys into another container.
-For more info, explore the blog post [Injecting Vault Secrets](https://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar)
+For more info, explore the blog post [Injecting Vault Secrets](https://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar).
 
 
 > **NOTE**: For information on enabling  TLS encryption in non-Kubernetes deployments of NuoDB, see [here](http://doc.nuodb.com/Latest/Content/Nuoadmin-Configuring-TLS-Security.htm). 
@@ -18,11 +19,11 @@ This document expands on the product documentation and is specific to this Helm 
 
 - `Key` = a combination of a private key with its corresponding X509 certificate chain. 
 These are usually saved in a PKCS12 file such as `nuoadmin.p12`.
-- `NuoDB Admin` = admin interface for domain and database management. Started by the [Admin Chart](../stable/admin/README.md).
+- `NuoDB Admin` = admin interface for domain and database management. For information on how to start the NuoDB Admin tier, see [Admin Chart](../stable/admin/README.md).
 - `CA` = Certificate Authority
 
 ## Generating NuoDB Keys
-You can either create your own TLS keys or create them using the convenience script provided with the docker image:
+You can either create your own TLS keys or create them using the convenience script included in the NuoDB docker image:
 
 ```
 docker run --rm -d --name create-tls-keys nuodb/nuodb-ce:latest -- tail -f /dev/null 
@@ -58,7 +59,8 @@ helm install vault hashicorp/vault -n vault --set server.dev.enabled=true
 
 ### Create Vault Policy
 Next, connect to Vault and configure a policy named “nuodb-policy”.
-This is a very non-restrictive policy, and in a production setting, you would typically want to lock this down more, but it serves as an example while you play around with this feature.
+This is a very non-restrictive policy.
+In a production deployment, you would typically configure additional security settings, but it serves as a good example while you test and familiarize yourself with this feature.
 
 ```
 kubectl exec -it -n vault vault-0 -- sh
@@ -102,11 +104,11 @@ kubectl exec -it -n vault vault-0 -- sh
 $ vault secrets enable -version=2 -path=nuodb.com kv
 ```
 
-## Adding NuoDB Keys to Vault
+## Adding NuoDB Keys to HashiCorp Vault
 
 In the previous step [Generating NuoDB Keys](##generating-nuodb-keys) we generated a set of keys required to run NuoDB.
 We saved those keys in `/tmp/keys`.
-In this step, we will save these keys in HC Vault.
+In this step, we will save these keys in HashiCorp Vault.
 
 ```
 kubectl exec -it -n vault vault-0 -- \
@@ -122,11 +124,12 @@ kubectl exec -it -n vault vault-0 -- \
 ## Configuration of NuoDB
 
 HashiCorp Vault uses annotations to identify pods that require a Vault Agent.
-For more info please consult the [Template Documentation](https://www.vaultproject.io/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-inject-template)
+For more information please consult the [Template Documentation](https://www.vaultproject.io/docs/platform/k8s/injector/annotations#vault-hashicorp-com-agent-inject-template)
 
 ### Annotations for the NuoDB Admin Tier
 
-The NuoDB admin tier requires all 4 key files. For convenience we list them here again:
+The NuoDB admin tier requires all four key files. 
+For convenience, we list them here again:
 - `nuodb-keystore.p12` containing the X509 that identifies the admin;
 - `nuodb-truststore.p12` usually containing the root CA and the primordial admin user;
 - `ca.cert` containing the public certificate of the Certificate Authority;
@@ -174,7 +177,7 @@ admin:
     vault.hashicorp.com/secret-volume-path: /etc/nuodb/keys
 ```
 
-Start the NuoDB admin tier with 3 processes and the Vault annotations:
+Start the NuoDB admin tier with three admin processes and the Vault annotations:
 ```
 $ helm install -n nuodb --set admin.replicas=3 -f vault-annotations-admin.yaml admin nuodb/admin
 ```
@@ -201,15 +204,16 @@ Servers:
 Databases:
 ```
 
-Validate that there are no errors in the Vault container.
+Validate that there are no errors in the HashiCorp Vault container.
 ```
 $ kubectl logs -n nuodb  admin-nuodb-cluster0-0 -c vault-agent
 ```
 
 ### Annotations for the NuoDB Engine Tier
 
-With the admin running, we can now start the NuoDB engines (Storage Managers and Transaction Engines).
-To do so, we will use the Database Helm chart with the following Vault annotations:
+With the admin running, we can now start the NuoDB database processes (Storage Managers and Transaction Engines).
+To perform this task, we will use the NuoDB Database Helm chart with the following HashiCorp Vault annotations:
+
 ```
 $ cat vault-annotations-database.yaml
 database:
@@ -229,16 +233,17 @@ database:
     vault.hashicorp.com/secret-volume-path: /etc/nuodb/keys
 ```
 
-The engine pod only requires the client credentials (`nuocmd.pem`) and the public CA certificate (`ca.cert`).
+The NuoDB database engine pod only requires the client credentials (`nuocmd.pem`) and the public CA certificate (`ca.cert`).
 These files are not password protected.
 
 ```
 helm install -n nuodb -f vault-annotations-database.yaml database nuodb/database
 ```
 
-The NuoDB domain should now consist of 3 admin tier pods, 1 TE and 1 SM.
-All pods should contain 2 init containers and 2 containers.
+The NuoDB domain should now consist of three admin tier pods and a TE, and SM pod.
+All pods should contain two init containers and two containers.
 Validate that the pods are ready:
+
 ```
 $ kubectl get pods -n nuodb
 NAME                                               READY   STATUS    RESTARTS   AGE

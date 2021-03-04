@@ -3,7 +3,8 @@
 ## Introduction
 
 NuoDB supports TLS encryption for all processes in the domain.
-`NuoDB Admin` is responsible for propagating certificates to database processes, so to enable TLS encryption for all processes, it is necessary to configure NuoDB Admin with a set of certificates, and also configure NuoDB Command (`nuocmd`) clients to be able to communicate with `NuoDB Admin`.
+`NuoDB Admin` is responsible for propagating certificates to database processes
+To enable TLS encryption for all processes, it is necessary to configure NuoDB Admin with a set of certificates, and also configure NuoDB Command (`nuocmd`) clients to be able to communicate with `NuoDB Admin`.
 
 > **NOTE**: For information on enabling  TLS encryption in non-Kubernetes deployments of NuoDB, see [here](http://doc.nuodb.com/Latest/Content/Nuoadmin-Configuring-TLS-Security.htm). 
 This document expands on the product documentation and is specific to this Helm Chart repository.
@@ -12,7 +13,7 @@ This document expands on the product documentation and is specific to this Helm 
 
 - `Key` = a combination of a private key with its corresponding X509 certificate chain. 
 These are usually saved in a PKCS12 file such as `nuoadmin.p12`.
-- `NuoDB Admin` = admin interface for domain and database management. Started by the [Admin Chart](../stable/admin/README.md).
+- `NuoDB Admin` = admin interface for domain and database management. For information on how to start the NuoDB Admin tier, see [Admin Chart](../stable/admin/README.md).
 - `CA` = Certificate Authority
 
 ## Admin Trust Models
