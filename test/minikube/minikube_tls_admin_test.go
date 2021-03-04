@@ -162,6 +162,8 @@ func TestHashiCorpVault(t *testing.T) {
 		ValuesFiles: []string{"../files/vault-annotations-admin.yaml"},
 		SetValues: map[string]string {
 			"vault.hashicorp.com/log-level": "trace", // increase debug level for testing
+			"admin.options.truststore-password": "$(</etc/nuodb/keys/nuoadmin-truststore.password)",
+			"admin.options.keystore-password": "$(</etc/nuodb/keys/nuoadmin.password)",
 		},
 	}
 

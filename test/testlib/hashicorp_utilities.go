@@ -56,8 +56,10 @@ func StartVault(t *testing.T, options *helm.Options, namespaceName string) strin
 }
 
 func CreateSecretsInVault(t *testing.T, namespaceName string, vaultName string) {
+	nonDefaultPassword := "SuperS3cret!"
+
 	initialTLSCommands := []string{
-		"export DEFAULT_PASSWORD='" + SECRET_PASSWORD + "'",
+		"export DEFAULT_PASSWORD='" + nonDefaultPassword + "'",
 		"setup-keys.sh",
 	}
 
@@ -65,8 +67,8 @@ func CreateSecretsInVault(t *testing.T, namespaceName string, vaultName string) 
 
 	createSecretFromFile(t, namespaceName, vaultName, filepath.Join(tlsKeyLocation, CA_CERT_FILE), "tlsCACert")
 	patchSecretFromFile(t, namespaceName, vaultName, filepath.Join(tlsKeyLocation, NUOCMD_FILE), "tlsClientPEM")
-	patcSecretFromString(t, namespaceName, vaultName, SECRET_PASSWORD, "tlsKeyStorePassword")
-	patcSecretFromString(t, namespaceName, vaultName, SECRET_PASSWORD, "tlsTrustStorePassword")
+	patcSecretFromString(t, namespaceName, vaultName, nonDefaultPassword, "tlsKeyStorePassword")
+	patcSecretFromString(t, namespaceName, vaultName, nonDefaultPassword, "tlsTrustStorePassword")
 	patchSecretFromFile(t, namespaceName, vaultName, filepath.Join(tlsKeyLocation, KEYSTORE_FILE), "tlsKeyStore")
 	patchSecretFromFile(t, namespaceName, vaultName, filepath.Join(tlsKeyLocation, TRUSTSTORE_FILE), "tlsTrustStore")
 }

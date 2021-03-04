@@ -17,7 +17,7 @@ admin:
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuoadmin-truststore.password: |
       {{- with secret "nuodb.com/TLS" -}}
-        export NUODB_TRUSTSTORE_PASSWORD=”{{ .Data.data.tlsTrustStorePassword }}”
+        {{ .Data.data.tlsTrustStorePassword }}
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuoadmin.p12: |
       {{- with secret "nuodb.com/TLS" -}}
@@ -25,7 +25,7 @@ admin:
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuoadmin.password: |
       {{- with secret "nuodb.com/TLS" -}}
-        export NUODB_KEYSTORE_PASSWORD=”{{ .Data.data.tlsKeyStorePassword }}”
+        {{ .Data.data.tlsKeyStorePassword }}
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuocmd.pem: |
       {{- with secret "nuodb.com/TLS" -}}

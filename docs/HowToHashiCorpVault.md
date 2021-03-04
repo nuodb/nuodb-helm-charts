@@ -159,7 +159,7 @@ admin:
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuoadmin-truststore.password: |
       {{- with secret "nuodb.com/TLS" -}}
-        export NUODB_TRUSTSTORE_PASSWORD=”{{ .Data.data.tlsTrustStorePassword }}”
+        {{ .Data.data.tlsTrustStorePassword }}
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuoadmin.p12: |
       {{- with secret "nuodb.com/TLS" -}}
@@ -167,7 +167,7 @@ admin:
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuoadmin.password: |
       {{- with secret "nuodb.com/TLS" -}}
-        export NUODB_KEYSTORE_PASSWORD=”{{ .Data.data.tlsKeyStorePassword }}”
+        {{ .Data.data.tlsKeyStorePassword }}
       {{- end }}
     vault.hashicorp.com/agent-inject-template-nuocmd.pem: |
       {{- with secret "nuodb.com/TLS" -}}
@@ -177,9 +177,17 @@ admin:
     vault.hashicorp.com/secret-volume-path: /etc/nuodb/keys
 ```
 
-Start the NuoDB admin tier with three admin processes and the Vault annotations:
+Start the NuoDB admin tier with three admin processes and the Vault annotations.
+The truststore and keystore PKCS12 files are password protected.
+NuoDB admin can read the password file from disk using the `$(<<path-to-file>)` [format](https://doc.nuodb.com/nuodb/4.0.x/reference-information/configuration-files/host-properties-nuoadmin.conf/#_expansion_of_files_and_variables). 
+
 ```
-$ helm install -n nuodb --set admin.replicas=3 -f vault-annotations-admin.yaml admin nuodb/admin
+$ helm install -n nuodb \
+--set admin.replicas=3 \
+--set admin.options.truststore-password=$(</etc/nuodb/keys/nuoadmin-truststore.password) \
+--set admin.options.keystore-password=$(</etc/nuodb/keys/nuoadmin.password)
+-f vault-annotations-admin.yaml \
+admin nuodb/admin
 ```
 
 The NuoDB admin pods should now contain two init containers and two containers.
