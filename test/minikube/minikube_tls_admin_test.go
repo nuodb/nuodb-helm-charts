@@ -140,7 +140,16 @@ func TestHashiCorpVault(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_VAULT)
 
-	helmChartReleaseName := testlib.StartVault(t, &helm.Options{}, namespaceName)
+	vaultOptions := helm.Options{
+		SetValues: map[string]string {
+			"server.resources.requests.memory": "256Mi",
+			"server.resources.requests.cpu": "250m",
+			"injector.resources.requests.memory": "100Mi",
+			"injector.resources.requests.cpu": "100m",
+		},
+	}
+
+	helmChartReleaseName := testlib.StartVault(t, &vaultOptions, namespaceName)
 	vaultName := fmt.Sprintf("%s-vault-0", helmChartReleaseName)
 
 	testlib.CreateVault(t, namespaceName, vaultName)
@@ -153,11 +162,10 @@ func TestHashiCorpVault(t *testing.T) {
 		ValuesFiles: []string{"../files/vault-annotations-admin.yaml"},
 		SetValues: map[string]string {
 			"vault.hashicorp.com/log-level": "trace", // increase debug level for testing
-			"admin.replicas": "3",
 		},
 	}
 
-	adminHelmChartReleaseName, _ := testlib.StartAdmin(t, &adminOptions, 3, namespaceName)
+	adminHelmChartReleaseName, _ := testlib.StartAdmin(t, &adminOptions, 1, namespaceName)
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
 
@@ -168,10 +176,10 @@ func TestHashiCorpVault(t *testing.T) {
 			ValuesFiles: []string{"../files/vault-annotations-database.yaml"},
 			SetValues: map[string]string{
 				"vault.hashicorp.com/log-level":         "trace", // increase debug level for testing
-				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.resources.requests.cpu":    "250m",
+				"database.sm.resources.requests.memory": "250Mi",
+				"database.te.resources.requests.cpu":    "250m",
+				"database.te.resources.requests.memory": "250Mi",
 			},
 		}
 
