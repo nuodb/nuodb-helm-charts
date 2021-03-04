@@ -140,14 +140,7 @@ func TestHashiCorpVault(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_VAULT)
 
-	vaultOptions := helm.Options{
-		SetValues: map[string]string {
-			"server.resources.requests.memory": "256Mi",
-			"server.resources.requests.cpu": "250m",
-			"injector.resources.requests.memory": "100Mi",
-			"injector.resources.requests.cpu": "100m",
-		},
-	}
+	vaultOptions := helm.Options{}
 
 	helmChartReleaseName := testlib.StartVault(t, &vaultOptions, namespaceName)
 	vaultName := fmt.Sprintf("%s-vault-0", helmChartReleaseName)
@@ -162,26 +155,28 @@ func TestHashiCorpVault(t *testing.T) {
 		ValuesFiles: []string{"../files/vault-annotations-admin.yaml"},
 		SetValues: map[string]string {
 			"vault.hashicorp.com/log-level": "trace", // increase debug level for testing
+			"admin.replicas": "3",
 			"admin.options.truststore-password": "$(</etc/nuodb/keys/nuoadmin-truststore.password)",
 			"admin.options.keystore-password": "$(</etc/nuodb/keys/nuoadmin.password)",
 		},
 	}
 
-	adminHelmChartReleaseName, _ := testlib.StartAdmin(t, &adminOptions, 1, namespaceName)
+	adminHelmChartReleaseName, _ := testlib.StartAdmin(t, &adminOptions, 3, namespaceName)
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 
 	t.Run("testDatabaseHashiCorpVault", func(t *testing.T) {
+		t.Skip("CircleCI K8s nodes do not have enough CPU to run Vault+admin+engines")
 		engineOptions := helm.Options{
 			ValuesFiles: []string{"../files/vault-annotations-database.yaml"},
 			SetValues: map[string]string{
 				"vault.hashicorp.com/log-level":         "trace", // increase debug level for testing
-				"database.sm.resources.requests.cpu":    "250m",
-				"database.sm.resources.requests.memory": "250Mi",
-				"database.te.resources.requests.cpu":    "250m",
-				"database.te.resources.requests.memory": "250Mi",
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			},
 		}
 
