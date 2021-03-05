@@ -12,7 +12,7 @@ HashiCorp uses sidecar containers to inject keys into another container.
 For more info, explore the blog post [Injecting Vault Secrets](https://www.hashicorp.com/blog/injecting-vault-secrets-into-kubernetes-pods-via-a-sidecar).
 
 
-> **NOTE**: For information on enabling  TLS encryption in non-Kubernetes deployments of NuoDB, see [here](http://doc.nuodb.com/Latest/Content/Nuoadmin-Configuring-TLS-Security.htm). 
+> **NOTE**: For information on enabling  TLS encryption in non-Kubernetes deployments of NuoDB, see [here](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/domain-operations/enabling-tls-encryption/). 
 This document expands on the product documentation and is specific to this Helm Chart repository.
 
 ### Terminology
