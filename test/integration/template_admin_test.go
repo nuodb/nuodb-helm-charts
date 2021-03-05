@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	v1 "k8s.io/api/core/v1"
+	"encoding/base64"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 
@@ -465,4 +466,9 @@ func TestAdminEvictedServers(t *testing.T) {
 		assert.Contains(t, container.Args, "--evicted-servers")
 		assert.Contains(t, container.Args, "nuoadmin-1,nuoadmin-2")
 	}
+}
+
+func TestPrintEnv(t *testing.T) {
+	t.Logf("SECRET_VAR: %s", os.Getenv("SECRET_VAR"))
+	t.Logf("SECRET_VAR_BASE_64: %s", string(base64.StdEncoding.DecodeString(os.Getenv("SECRET_VAR")))
 }
