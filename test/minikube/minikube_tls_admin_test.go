@@ -158,6 +158,7 @@ func TestHashiCorpVault(t *testing.T) {
 			"admin.replicas": "3",
 			"admin.options.truststore-password": "$(</etc/nuodb/keys/nuoadmin-truststore.password)",
 			"admin.options.keystore-password": "$(</etc/nuodb/keys/nuoadmin.password)",
+			"admin.options.ssl": "true",
 		},
 	}
 

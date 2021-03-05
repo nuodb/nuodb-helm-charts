@@ -3,7 +3,7 @@
 ## Introduction
 
 NuoDB supports TLS encryption for all processes in the domain.
-`NuoDB Admin` is responsible for propagating certificates to database processes
+`NuoDB Admin` is responsible for propagating certificates to database processes.
 To enable TLS encryption for all processes, it is necessary to configure NuoDB Admin with a set of certificates, and also configure NuoDB Command (`nuocmd`) clients to be able to communicate with `NuoDB Admin`.
 
 This document expands on [Security Model of NuoDB in Kubernetes](./HowtoTLS.md) and explains the usage of HashiCorp Vault for the management of TLS keys.
@@ -26,24 +26,33 @@ These are usually saved in a PKCS12 file such as `nuoadmin.p12`.
 You can either create your own TLS keys or create them using the convenience script included in the NuoDB docker image:
 
 ```
-docker run --rm -d --name create-tls-keys nuodb/nuodb-ce:latest -- tail -f /dev/null 
+mkdir /tmp/keys
 
-docker exec -it create-tls-keys bash -c "mkdir /tmp/keys && \ 
-cd /tmp/keys && DEFAULT_PASSWORD=changeIt setup-keys.sh"
+kubectl run generate-nuodb-certs \
+  --image nuodb/nuodb-ce \
+  --env="DEFAULT_PASSWORD=changeMe" \
+  --command -- 'tail' '-f' '/dev/null'
 
-docker cp create-tls-keys:/tmp/keys /tmp/keys
-docker stop create-tls-keys
+kubectl exec -ti generate-nuodb-certs -- \
+  bash -c "mkdir /tmp/keys && cd /tmp/keys && setup-keys.sh"
+
+kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
+
+kubectl delete pod generate-nuodb-certs
 ```
 
-The convenience script will generate 4 files:
+The convenience script will generate six files:
+- `ca.p12` which is the private/public keypair of the Certificate Authority;
+- `ca.cert` containing the public certificate of the Certificate Authority;
 - `nuodb-keystore.p12` containing the X509 that identifies the admin;
 - `nuodb-truststore.p12` usually containing the root CA and the primordial admin user;
-- `ca.cert` containing the public certificate of the Certificate Authority;
-- `nuocmd.pem` which is the private/public keypair for the primordial admin user.
+- `nuocmd.p12` which is the private/public keypair for the primordial admin user;
+- `nuocmd.pem` which is the private/public keypair for the primordial admin user;
 
 ## Installation of HashiCorp Vault
 
 This document will use the `dev` mode of HashiCorp vault for simplicity.
+The `dev` has no persistence guarantees and automatically unseals the secrets.
 This mode is not suited for production and `seals` should be used instead.
 For more info on `HashiCorp tokens` please refer to the [Documentation](https://www.vaultproject.io/docs/concepts/seal)
 
@@ -76,7 +85,7 @@ $ vault policy write nuodb-policy /home/vault/nuodb-policy.hcl
 ### Enable Kubernetes Integration
 
 The next step is to enable the [Vault Kubernetes Auth](https://www.vaultproject.io/docs/auth/kubernetes) method.
-The `nuodb-policy` created above in step [Create Vault Policy](###create-vault-policy) will get attached to the `nuodb` namespace.
+The `nuodb-policy` created above in step [Create Vault Policy](#create-vault-policy) will get attached to the `nuodb` namespace.
 
 ```
 kubectl exec -it -n vault vault-0 -- sh
@@ -97,7 +106,7 @@ $ vault write auth/kubernetes/role/nuodb \
 ### Create a NuoDB Secrets Engine
 
 The final step is to create a [Secrets KV Engine](https://www.vaultproject.io/docs/secrets/kv/index.html) to store the NuoDB keys.
-All keys will be base64 encoded.
+The `path` needs to match the policy we created in step [Create Vault Policy](#create-vault-policy).
 
 ```
 kubectl exec -it -n vault vault-0 -- sh
@@ -106,9 +115,10 @@ $ vault secrets enable -version=2 -path=nuodb.com kv
 
 ## Adding NuoDB Keys to HashiCorp Vault
 
-In the previous step [Generating NuoDB Keys](##generating-nuodb-keys) we generated a set of keys required to run NuoDB.
+In the previous step [Generating NuoDB Keys](##generating-nuodb-keys) we generated a set of keys required to run NuoDB with TLS enabled.
 We saved those keys in `/tmp/keys`.
 In this step, we will save these keys in HashiCorp Vault.
+All keys will be base64 encoded.
 
 ```
 kubectl exec -it -n vault vault-0 -- \
@@ -128,12 +138,12 @@ For more information please consult the [Template Documentation](https://www.vau
 
 ### Annotations for the NuoDB Admin Tier
 
-The NuoDB admin tier requires all four key files. 
+The NuoDB admin tier requires four key files. 
 For convenience, we list them here again:
 - `nuodb-keystore.p12` containing the X509 that identifies the admin;
 - `nuodb-truststore.p12` usually containing the root CA and the primordial admin user;
 - `ca.cert` containing the public certificate of the Certificate Authority;
-- `nuocmd.pem` which is the private/public keypair for the primordial admin user.
+- `nuocmd.pem` which is the private/public keypair for the primordial admin user;
 
 Both the keystore and the truststore PKCS12 files are password protected.
 The passwords need to be exported as environmental variables.
@@ -185,7 +195,8 @@ NuoDB admin can read the password file from disk using the `$(<<path-to-file>)` 
 $ helm install -n nuodb \
 --set admin.replicas=3 \
 --set admin.options.truststore-password=$(</etc/nuodb/keys/nuoadmin-truststore.password) \
---set admin.options.keystore-password=$(</etc/nuodb/keys/nuoadmin.password)
+--set admin.options.keystore-password=$(</etc/nuodb/keys/nuoadmin.password) \
+--set admin.options.ssl="true" \
 -f vault-annotations-admin.yaml \
 admin nuodb/admin
 ```

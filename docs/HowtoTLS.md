@@ -3,7 +3,7 @@
 ## Introduction
 
 NuoDB supports TLS encryption for all processes in the domain.
-`NuoDB Admin` is responsible for propagating certificates to database processes
+`NuoDB Admin` is responsible for propagating certificates to database processes.
 To enable TLS encryption for all processes, it is necessary to configure NuoDB Admin with a set of certificates, and also configure NuoDB Command (`nuocmd`) clients to be able to communicate with `NuoDB Admin`.
 
 > **NOTE**: For information on enabling  TLS encryption in non-Kubernetes deployments of NuoDB, see [here](http://doc.nuodb.com/Latest/Content/Nuoadmin-Configuring-TLS-Security.htm). 
