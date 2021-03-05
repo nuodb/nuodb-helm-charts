@@ -115,7 +115,7 @@ $ vault secrets enable -version=2 -path=nuodb.com kv
 
 ## Adding NuoDB Keys to HashiCorp Vault
 
-In the previous step [Generating NuoDB Keys](##generating-nuodb-keys) we generated a set of keys required to run NuoDB with TLS enabled.
+In the previous step [Generating NuoDB Keys](#generating-nuodb-keys) we generated a set of keys required to run NuoDB with TLS enabled.
 We saved those keys in `/tmp/keys`.
 In this step, we will save these keys in HashiCorp Vault.
 All keys will be base64 encoded.
