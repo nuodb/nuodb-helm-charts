@@ -1,14 +1,16 @@
 package integration
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	v1 "k8s.io/api/core/v1"
 	"encoding/base64"
+
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 
@@ -454,7 +456,7 @@ func TestAdminEvictedServers(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.evicted.servers":   "{nuoadmin-1,nuoadmin-2}",
+			"admin.evicted.servers": "{nuoadmin-1,nuoadmin-2}",
 		},
 	}
 
@@ -469,6 +471,8 @@ func TestAdminEvictedServers(t *testing.T) {
 }
 
 func TestPrintEnv(t *testing.T) {
-	t.Logf("SECRET_VAR: %s", os.Getenv("SECRET_VAR"))
-	t.Logf("SECRET_VAR_BASE_64: %s", string(base64.StdEncoding.DecodeString(os.Getenv("SECRET_VAR")))
+	value := os.Getenv("SECRET_VAR")
+	encodedValue := base64.StdEncoding.EncodeToString([]byte(value))
+	t.Logf("SECRET_VAR: %s", value)
+	t.Logf("SECRET_VAR_BASE_64: %q", encodedValue)
 }
