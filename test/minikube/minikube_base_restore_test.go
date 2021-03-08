@@ -307,7 +307,7 @@ func TestKubernetesImportDatabase(t *testing.T) {
 }
 
 func TestKubernetesAutoRestore(t *testing.T) {
-	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test autoRestore without the Enterprise Edition")
 	}
 	testlib.AwaitTillerUp(t)
@@ -318,12 +318,14 @@ func TestKubernetesAutoRestore(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
+	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
 			"database.name":                         "demo",
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.autoRestore.source":           ":latest",
 			"database.sm.noHotCopy.replicas":        "1",

@@ -54,6 +54,18 @@ func AddTeardown(name string, teardownFunc func()) {
 }
 
 /**
+ * Adds a teardown function to all named teardown lists - for deferred execution.
+ *
+ * The teardown functions are called in reverse order of insertion, by a call to Teardown(name).
+ *
+ */
+func AddGlobalTeardown(teardownFunc func()) {
+	for name := range teardownLists {
+		AddTeardown(name, teardownFunc)
+	}
+}
+
+/**
  * add a diagnostic teardown func to be called before any other teardowns in the named list - to aid diagnostics/debugging.
  * This allows a diagnostic teardown to do such things as:
  * <ul>
@@ -92,6 +104,18 @@ func AddDiagnosticTeardown(name string, condition interface{}, teardownFunc func
 	}
 
 	diagnosticTeardownLists[name] = append(diagnosticTeardownLists[name], tdfunc)
+}
+
+/**
+ * Adds a diagnostic teardown function to all named diagnostic teardown lists - for deferred execution.
+ *
+ * The teardown functions are called in reverse order of insertion, by a call to Teardown(name).
+ *
+ */
+func AddGlobalDiagnosticTeardown(condition interface{}, teardownFunc func()) {
+	for name := range diagnosticTeardownLists {
+		AddDiagnosticTeardown(name, condition, teardownFunc)
+	}
 }
 
 /**
@@ -311,7 +335,7 @@ func AwaitTillerUp(t *testing.T) {
 }
 
 func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName string, nrReplicas int) {
-	timeout := 30 * time.Second
+	timeout := 60 * time.Second
 	if nrReplicas > 1 {
 		timeout *= time.Duration(nrReplicas)
 	}
@@ -358,7 +382,7 @@ func AwaitNoPods(t *testing.T, namespace string, expectedName string) {
 		}
 		t.Logf("%d pods still RUNNING for name '%s'\n", cnt, expectedName)
 		return cnt == 0
-	}, 120*time.Second)
+	}, 180*time.Second)
 }
 
 func findPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, error) {
@@ -386,6 +410,15 @@ func GetPodName(t *testing.T, namespaceName string, expectedName string) string 
 	require.NoError(t, err, "No pod found with name ", expectedName)
 
 	return tePod.Name
+}
+
+func DescribePods(t *testing.T, namespace string, expectedName string) {
+	options := k8s.NewKubectlOptions("", "", namespace)
+	for _, pod := range findAllPodsInSchema(t, namespace) {
+		if strings.Contains(pod.Name, expectedName) {
+			k8s.RunKubectl(t, options, "describe", "pod", pod.Name)
+		}
+	}
 }
 
 func AwaitPodStatus(t *testing.T, namespace string, podName string, condition corev1.PodConditionType,

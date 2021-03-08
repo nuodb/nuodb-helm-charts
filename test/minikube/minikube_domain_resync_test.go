@@ -307,7 +307,7 @@ func TestAdminScaleDown(t *testing.T) {
 }
 
 func TestDomainResync(t *testing.T) {
-	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test resync without the Enterprise Edition")
 	}
 
@@ -318,6 +318,8 @@ func TestDomainResync(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
