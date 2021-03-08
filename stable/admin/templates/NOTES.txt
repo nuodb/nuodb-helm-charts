@@ -6,4 +6,4 @@ NuoDB can be accessed via port 48004 on the following DNS name from within your 
 
 To display your NuoDB cluster state run:
 
-  $ kubectl exec admin-{{ .Values.admin.domain }}-0 -- nuocmd show domain
+  $ kubectl exec {{ include "admin.fullname" . }}-0 -- nuocmd show domain
