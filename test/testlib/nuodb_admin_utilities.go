@@ -1,7 +1,10 @@
 package testlib
 
 import (
+	"encoding/base64"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -13,6 +16,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
 )
 
 var AdminRolesRequirePatching = false
@@ -45,10 +49,13 @@ func CreateNamespace(t *testing.T, namespaceName string) {
 
 type AdminInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
 
-func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, namespace string, installStep AdminInstallationStep) (helmChartReleaseName string, namespaceName string) {
+func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, namespace string, releaseName string, installStep AdminInstallationStep) (helmChartReleaseName string, namespaceName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
-	helmChartReleaseName = fmt.Sprintf("admin-%s", randomSuffix)
+	helmChartReleaseName = releaseName
+	if helmChartReleaseName == "" {
+		helmChartReleaseName = fmt.Sprintf("admin-%s", randomSuffix)
+	}
 
 	if namespace == "" {
 		callerName := getFunctionCallerName()
@@ -64,6 +71,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	options.KubectlOptions.Namespace = namespaceName
 
 	InjectTestValues(t, options)
+	opt := GetExtractedOptions(options)
 	installStep(t, options, helmChartReleaseName)
 
 	AddTeardown(TEARDOWN_ADMIN, func() {
@@ -78,10 +86,10 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 			adminStatefulSet = fmt.Sprintf("%s", options.SetValues["admin.fullnameOverride"])
 			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 		} else if options.SetValues["admin.nameOverride"] != "" {
-			adminStatefulSet = fmt.Sprintf("%s-nuodb-cluster0-%s", helmChartReleaseName, options.SetValues["admin.nameOverride"])
+			adminStatefulSet = fmt.Sprintf("%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, options.SetValues["admin.nameOverride"])
 			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 		} else {
-			adminStatefulSet = fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+			adminStatefulSet = fmt.Sprintf("%s-nuodb-%s", helmChartReleaseName, opt.ClusterName)
 			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 		}
 	}
@@ -132,15 +140,30 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		})
 	}
 
-	for i := 0; i < replicaCount; i++ {
-		AwaitAdminFullyConnected(t, namespaceName, adminNames[i], replicaCount)
+	// Await num of admin servers only for single cluster deployment; in
+	// multi-clusters the await logic should be called once all clusters are
+	// installed with the admin chart
+	if opt.ClusterName == opt.EntrypointClusterName {
+		for i := 0; i < replicaCount; i++ {
+			AwaitAdminFullyConnected(t, namespaceName, adminNames[i], replicaCount)
+		}
 	}
 
 	return
 }
 
 func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (string, string) {
-	return StartAdminTemplate(t, options, replicaCount, namespace, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
+	return StartAdminTemplate(t, options, replicaCount, namespace, "", func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
+		if options.Version == "" {
+			helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
+		} else {
+			helm.Install(t, options, "nuodb/admin ", helmChartReleaseName)
+		}
+	})
+}
+
+func StartAdminCustomRelease(t *testing.T, options *helm.Options, replicaCount int, namespace string, releaseName string) (string, string) {
+	return StartAdminTemplate(t, options, replicaCount, namespace, releaseName, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
 		if options.Version == "" {
 			helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 		} else {
@@ -176,4 +199,27 @@ func AwaitNrLoadBalancerPolicies(t *testing.T, namespace string, podName string,
 		policies, err := GetLoadBalancerPoliciesE(t, namespace, podName)
 		return err == nil && len(policies) == expectedNumber
 	}, 30*time.Second)
+}
+
+func ApplyNuoDBLicense(t *testing.T, namespace string, adminPod string) {
+	options := k8s.NewKubectlOptions("", "", namespace)
+	licenseContent := os.Getenv("NUODB_LICENSE_CONTENT")
+	if licenseContent != "" {
+		licenseContentBytes, err := base64.StdEncoding.DecodeString(licenseContent)
+		require.NoError(t, err)
+		tmpfile, err := ioutil.TempFile("", "license")
+		require.NoError(t, err)
+		defer os.Remove(tmpfile.Name())
+		_, err = tmpfile.Write(licenseContentBytes)
+		require.NoError(t, err)
+		tmpBaseName := filepath.Base(tmpfile.Name())
+		k8s.RunKubectl(t, options, "cp", tmpfile.Name(), adminPod+":/tmp/"+tmpBaseName)
+		k8s.RunKubectl(t, options, "exec", adminPod, "--",
+			"nuocmd", "set", "license", "--license-file", "/tmp/"+tmpBaseName)
+		k8s.RunKubectl(t, options, "exec", adminPod, "--",
+			"rm", "-f", "/tmp/"+tmpBaseName)
+		output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+			"nuocmd", "--show-json-fields", "effectiveForDomain", "get", "effective-license")
+		require.True(t, strings.Contains(output, "true"), "NuoDB license key is not effective: %s", output)
+	}
 }

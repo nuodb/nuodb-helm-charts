@@ -5,6 +5,7 @@ package minikube
 import (
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -20,7 +21,7 @@ import (
 )
 
 func TestKubernetesRestoreMultipleSMs(t *testing.T) {
-	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
 	testlib.AwaitTillerUp(t)
@@ -31,12 +32,14 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
+	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
 			"database.name":                         "demo",
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.sm.noHotCopy.replicas":        "1",
 			"database.te.logPersistence.enabled":    "true",
@@ -140,7 +143,7 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 }
 
 func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
-	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
 	testlib.AwaitTillerUp(t)
@@ -151,12 +154,14 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
+	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
 			"database.name":                         "demo",
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.sm.hotCopy.replicas":          "2",
 			"database.te.logPersistence.enabled":    "true",
@@ -224,10 +229,11 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	testlib.AwaitPodLog(t, namespaceName, hcSmPodName0, "_post-restart")
 
 	// verify that the database does NOT contain the data from AFTER the backup
+
 	output, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "select sg, count(*) from codes group by sg")
 	require.NoError(t, err, "error running SQL: select sg, count(*) from codes group by sg")
-	require.True(t, strings.Contains(output, "sg0    1"), "Unexpected data in sg0: ", output)
-	require.True(t, strings.Contains(output, "sg1    1"), "Unexpected data in sg0: ", output)
+	require.True(t, regexp.MustCompile(`sg0\s+1`).MatchString(output), "Unexpected data in sg0: ", output)
+	require.True(t, regexp.MustCompile(`sg1\s+1`).MatchString(output), "Unexpected data in sg1: ", output)
 	testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
 }
