@@ -360,17 +360,17 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
 
-	removeArchiveData := func(podName string) {
+	moveArchiveData := func(podName string) {
 		// Move the archive data which will cause the SM to ASSERT when a atom needs to be loaded
 		k8s.RunKubectl(t, kubectlOptions, "exec", podName, "--",
-			"mv", "/var/opt/nuodb/archive/nuodb/demo", "/var/opt/nuodb/archive/nuodb/demo-moved")
+			"mv", "-f", "/var/opt/nuodb/archive/nuodb/demo", "/var/opt/nuodb/archive/nuodb/demo-moved")
 		testlib.RunSQL(t, namespaceName, admin0, "demo", "select * from system.nodes")
 		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 30*time.Second)
 		testlib.AwaitPodLog(t, namespaceName, podName, "_post-restart")
 	}
 
 	t.Run("restartHotCopySM", func(t *testing.T) {
-		removeArchiveData(hcSmPodName0)
+		moveArchiveData(hcSmPodName0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 		// HC SM should restore the archive from the latest backup
 		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
@@ -380,7 +380,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	})
 
 	t.Run("restartNonHotCopySM", func(t *testing.T) {
-		removeArchiveData(smPodName0)
+		moveArchiveData(smPodName0)
 		// nonHC SM should remove the archive metadata and SYNC the data from other SM
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
