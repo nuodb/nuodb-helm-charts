@@ -363,7 +363,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
 
 	moveArchiveData := func(podName string) {
-		// Move the archive data which will cause the SM to ASSERT when a atom needs to be loaded
+		// Move the archive data which will cause the SM to ASSERT when an atom needs to be loaded
 		k8s.RunKubectl(t, kubectlOptions, "exec", podName, "--",
 			"mv", "-f", "/var/opt/nuodb/archive/nuodb/demo", "/var/opt/nuodb/archive/nuodb/demo-moved")
 		testlib.RunSQL(t, namespaceName, admin0, "demo", "select * from system.nodes")
