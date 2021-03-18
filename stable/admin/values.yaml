@@ -270,7 +270,7 @@ nuocollector:
   watcher:
     registry: docker.io
     repository: kiwigrid/k8s-sidecar
-    tag: 0.1.259
+    tag: 1.10.8
     pullPolicy: IfNotPresent
   plugins:
     ## NuoDB Collector compatible plugins specific for admin services
