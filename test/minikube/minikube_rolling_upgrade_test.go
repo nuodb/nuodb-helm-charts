@@ -108,7 +108,7 @@ func TestAdminReadinessProbeFallback(t *testing.T) {
 			"admin.bootstrapServers": "0",
 		},
 	}
-	testlib.OverrideUpgradeRepository(t, &helmOptions)
+	testlib.OverrideUpgradeContainerImage(t, &helmOptions)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -141,7 +141,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 			"admin.bootstrapServers": "0",
 		},
 	}
-	testlib.OverrideUpgradeRepository(t, &options)
+	testlib.OverrideUpgradeContainerImage(t, &options)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -173,7 +173,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 			"admin.bootstrapServers": "0",
 		},
 	}
-	testlib.OverrideUpgradeRepository(t, &options)
+	testlib.OverrideUpgradeContainerImage(t, &options)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -196,7 +196,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 			"nuodb.image.tag":                       OLD_RELEASE,
 		},
 	}
-	testlib.OverrideUpgradeRepository(t, &databaseOptions)
+	testlib.OverrideUpgradeContainerImage(t, &databaseOptions)
 
 	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
@@ -257,7 +257,7 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 			"nuodb.image.tag":        OLD_RELEASE,
 		},
 	}
-	testlib.OverrideUpgradeRepository(t, &options)
+	testlib.OverrideUpgradeContainerImage(t, &options)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
 	namespaceName := fmt.Sprintf("rollingupgradeadminminorversion-%s", randomSuffix)

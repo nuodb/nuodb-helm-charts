@@ -239,18 +239,26 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 		options.SetValues = make(map[string]string)
 	}
 
-	options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
-	options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
-	options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+	if image.Nuodb.Image.Repository != "" {
+		options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
+	}
+
+	if image.Nuodb.Image.Registry != "" {
+		options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
+	}
+
+	if image.Nuodb.Image.Tag != "" {
+		options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+	}
 }
 
-func OverrideUpgradeRepository(t *testing.T, options *helm.Options) {
+func OverrideUpgradeContainerImage(t *testing.T, options *helm.Options) {
 	dat, err := ioutil.ReadFile(UPGRADE_INJECT_FILE)
 	if err != nil {
 		return
 	}
 
-	t.Log("Overriding upgrade repository with injected values:\n", string(dat))
+	t.Log("Overriding upgrade container image with injected values:\n", string(dat))
 
 	err, image := UnmarshalImageYAML(string(dat))
 	require.NoError(t, err)
@@ -259,9 +267,17 @@ func OverrideUpgradeRepository(t *testing.T, options *helm.Options) {
 		options.SetValues = make(map[string]string)
 	}
 
-	options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
-	options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
-	options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+	if image.Nuodb.Image.Repository != "" {
+		options.SetValues["nuodb.image.repository"] = image.Nuodb.Image.Repository
+	}
+
+	if image.Nuodb.Image.Registry != "" {
+		options.SetValues["nuodb.image.registry"] = image.Nuodb.Image.Registry
+	}
+
+	if image.Nuodb.Image.Tag != "" {
+		options.SetValues["nuodb.image.tag"] = image.Nuodb.Image.Tag
+	}
 }
 
 func InjectTestValues(t *testing.T, options *helm.Options) {
