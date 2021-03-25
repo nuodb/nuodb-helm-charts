@@ -36,6 +36,7 @@ const YCSB_HELM_CHART_PATH = "../../incubator/demo-ycsb"
 
 const RESULT_DIR = "../../results"
 const INJECT_FILE = "../../versionInject.yaml"
+const UPGRADE_INJECT_FILE = "../../upgradeInject.yaml"
 const INJECT_VALUES_FILE = "../../valuesInject.yaml"
 const INJECT_CLUSTERS_FILE = "../../clustersInject.yaml"
 
