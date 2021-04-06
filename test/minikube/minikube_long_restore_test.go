@@ -286,7 +286,7 @@ func TestKubernetesRestoreDatabaseWithURL(t *testing.T) {
 		fmt.Sprintf("cd /var/opt/nuodb/ && tar -czvf %s backup/%s", tarFilePath, backupset))
 	remoteUrl := testlib.ServePodFileViaHTTP(t, namespaceName, smPodName0, tarFilePath)
 
-	// restore database and customize stripLevels setting
+	// restore database and set stripLevels setting
 	options.SetValues["restore.source"] = remoteUrl
 	options.SetValues["restore.stripLevels"] = "2"
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
