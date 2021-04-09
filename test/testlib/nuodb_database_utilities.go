@@ -323,10 +323,15 @@ func CreateNginxDeployment(t *testing.T, namespaceName string) {
 	podName := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
 	AwaitPodUp(t, namespaceName, podName, 60*time.Second)
 
-	AddDiagnosticTeardown(TEARDOWN_DATABASE, t, func() {
+	AddDiagnosticTeardown(TEARDOWN_NGINX, t, func() {
 		k8s.RunKubectl(t, kubectlOptions, "describe", "deployment", NGINX_DEPLOYMENT)
 		podName := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
 		GetAppLog(t, namespaceName, podName, "_nginx", &corev1.PodLogOptions{})
+	})
+
+	AddTeardown(TEARDOWN_NGINX, func() {
+		k8s.RunKubectl(t, kubectlOptions, "delete", "service", NGINX_DEPLOYMENT)
+		k8s.RunKubectl(t, kubectlOptions, "delete", "deployment", NGINX_DEPLOYMENT)
 	})
 }
 

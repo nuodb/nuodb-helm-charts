@@ -27,6 +27,7 @@ const TEARDOWN_YCSB = "ycsb"
 const TEARDOWN_COLLECTOR = "nuocollector"
 const TEARDOWN_VAULT = "vault"
 const TEARDOWN_MULTICLUSTER = "multicluster"
+const TEARDOWN_NGINX = "nginx"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"

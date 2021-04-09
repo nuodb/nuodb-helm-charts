@@ -280,6 +280,8 @@ func TestKubernetesRestoreDatabaseWithURL(t *testing.T) {
 
 	testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 
+	defer testlib.Teardown(testlib.TEARDOWN_NGINX)
+
 	// prepare backupset tarball and upload it on HTTP server
 	tarFilePath := fmt.Sprintf("/tmp/%s.tar.gz", backupset)
 	k8s.RunKubectl(t, opts, "exec", smPodName0, "--", "bash", "-c",
@@ -300,6 +302,6 @@ func TestKubernetesRestoreDatabaseWithURL(t *testing.T) {
 	// verify that the database does NOT contain the data from AFTER the backup
 	tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
 	require.NoError(t, err, "error running SQL: show schema User")
-	require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
+	require.Contains(t, tables, "No tables found in schema ", "Show schema returned: ", tables)
 	testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
 }
