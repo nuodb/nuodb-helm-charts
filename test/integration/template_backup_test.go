@@ -38,7 +38,7 @@ func TestDatabaseBackupCronJobDisabled(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
 
-	assert.Contains(t, err, "could not find template")
+	assert.Contains(t, err.Error(), "could not find template")
 }
 
 func TestDatabaseBackupCronJobRestartPolicyDefault(t *testing.T) {
