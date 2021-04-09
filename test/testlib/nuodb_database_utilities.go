@@ -223,6 +223,7 @@ func BackupDatabase(t *testing.T, namespaceName string, podName string,
 		"exec", podName, "--",
 		"nuobackup", "--type", backupType, "--db-name", databaseName,
 		"--group", backupGroup, "--backup-root", "/var/opt/nuodb/backup",
+		"--timeout", "300",
 	)
 	require.NoError(t, err, "Error creating backup")
 	require.True(t, strings.Contains(output, "completed"), "Error nuobackup: %s", output)
