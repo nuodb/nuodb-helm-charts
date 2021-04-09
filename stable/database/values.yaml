@@ -234,8 +234,11 @@ database:
       # Deadline for starting a hotcopy job - if a job hasn't started in this time - give up
       deadline: 1800
 
-      # timeout for completing a hotcopy job - if a job hasn't completed in this time - stop waiting for it
-      timeout: 1800
+      # timeout for completing a full or incremental hotcopy job - if a job
+      # hasn't completed in this time - stop waiting for it; the default timeout
+      # of "0" will force the backup jobs to wait forever for the requested
+      # hotcopy operation to complete
+      timeout: 0
 
       successHistory: 5
       failureHistory: 5
@@ -269,7 +272,11 @@ database:
         enabled: false
         intervalMinutes: 15
         deadline: 90
-        timeout: 950
+        # timeout for completing a journal hotcopy job - if a job hasn't
+        # completed in this time - stop waiting for it; the default timeout of
+        # "0" will force the backup jobs to wait forever for
+        # the requested hotcopy operation to complete
+        timeout: 0
 
     # Number of storage manager (SM) nodes that do not have hotcopy backup enabled.
     # SM Limit is 1 in CE version of NuoDB

@@ -218,7 +218,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
 | `sm.hotCopy.enableBackups` | Enable full/incremental/journal backups | `true` |
 | `sm.hotcopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
-| `sm.hotcopy.timeout` | Timeout for a started hotcopy job to complete (seconds) | `1800` |
+| `sm.hotcopy.timeout` | Timeout for a started `full` or `incremental` hotcopy job to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
 | `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
 | `sm.hotcopy.failureHostory` | Number of failed jobs to keep | `5` |
 | `sm.hotcopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
@@ -232,7 +232,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotcopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
 | `sm.hotcopy.journalBackup.intervalMinutes` | Frequency of running `journal hotcopy` (minutes) | `15` |
 | `sm.hotcopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
-| `sm.hotcopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds) | `950` |
+| `sm.hotcopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
 | `sm.hotcopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create DS/SS for non-hot-copy SMs | `true` |

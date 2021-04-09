@@ -54,7 +54,6 @@ spec:
             - { name: DB_NAME,             value: "{{ .Values.database.name }}"     }
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
-            - { name: TIMEOUT,             value: "{{ .Values.database.sm.hotCopy.timeout }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             volumeMounts:
             - name: nuobackup
@@ -139,7 +138,6 @@ spec:
             - { name: DB_NAME,             value: "{{ .Values.database.name }}"     }
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
-            - { name: TIMEOUT,             value: "{{ .Values.database.sm.hotCopy.timeout }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             volumeMounts:
             - name: nuobackup
@@ -207,7 +205,7 @@ spec:
             - "--group"
             - "{{ include "hotcopy.group" . }}"
             - "--timeout"
-            - "{{ .Values.database.sm.hotCopy.timeout }}"      
+            - "{{ .Values.database.sm.hotCopy.journalBackup.timeout }}"      
             - "--backup-root"
             - "{{ .Values.database.sm.hotCopy.backupDir }}"
             env:
@@ -226,7 +224,6 @@ spec:
             - { name: DB_NAME,             value: "{{ .Values.database.name }}"     }
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
-            - { name: TIMEOUT,             value: "{{ .Values.database.sm.hotCopy.journalBackup.timeout }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             volumeMounts:
             - name: nuobackup

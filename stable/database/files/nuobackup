@@ -26,7 +26,7 @@
 #   --group    - arbitrary group to select the SMs to backup. Often the datacentre or cloud name
 #   --semaphore - an optional key in the KV store that will be referenced - with appended database and backup-group - to see if a backup has been requested.
 #   --labels   - additional arbitrary labels to select the SMs to backup
-#   --timeout  - timeout (in seconds) to synchronously wait for the backup to complete. 0 => async backup.
+#   --timeout  - timeout (in seconds) to synchronously wait for the backup to complete. 0 => wait forever.
 #   --backup-root - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
 
 # for debugging...
@@ -40,7 +40,7 @@ db_name=$DB_NAME
 backup_group=""
 labels=""
 semaphore=""
-timeout=1800
+timeout=""
 backup_root=$BACKUP_DIR
 
 function get_current_backup() {
@@ -59,6 +59,9 @@ function execute_backup() {
    local output
    local failed
 
+   extra_flags=()
+   [ -n "$timeout" ] && extra_flags+=("--timeout" "${timeout}")
+
    # call nuodocker to perform the actual backup
    echo "Starting ${type} backup for database ${db_name} on processes with labels '${labels}' ..."
    nuodocker backup database \
@@ -66,7 +69,7 @@ function execute_backup() {
       --type "${type}" \
       --backup-root "${backup_root}" \
       --labels "${labels}" \
-      --timeout "${timeout}"
+      "${extra_flags[@]}"
 
    retval=$?
    if [ $retval != 0 ]; then
@@ -163,6 +166,8 @@ backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
 if [ -n "$backup_group" ]; then
    labels="backup ${backup_group} ${labels}"
 fi
+# Wait forever for a backup to complete if timeout is set to 0
+[ "$timeout" -eq 0 ] && timeout="9999999999"
 
 # Return which group made the latest backup
 if [ "$backup_type" = "report-latest" ]; then
