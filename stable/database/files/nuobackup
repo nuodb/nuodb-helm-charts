@@ -167,7 +167,7 @@ if [ -n "$backup_group" ]; then
    labels="backup ${backup_group} ${labels}"
 fi
 # Wait forever for a backup to complete if timeout is set to 0
-[ "$timeout" -eq 0 ] && timeout="9999999999"
+[ "$timeout" == "0" ] && timeout="9999999999"
 
 # Return which group made the latest backup
 if [ "$backup_type" = "report-latest" ]; then
