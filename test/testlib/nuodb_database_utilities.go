@@ -2,6 +2,10 @@ package testlib
 
 import (
 	"fmt"
+	"io/ioutil"
+	"os"
+	"path"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
@@ -310,4 +314,43 @@ func CheckRestoreRequests(t *testing.T, namespaceName string, podName string, da
 		require.Equal(t, expectedValue, restoreRequest)
 	}
 	return restoreRequest, legacyRestoreRequest
+}
+
+func CreateNginxDeployment(t *testing.T, namespaceName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	k8s.RunKubectl(t, kubectlOptions, "create", "deployment", NGINX_DEPLOYMENT, "--image=nginx")
+	k8s.RunKubectl(t, kubectlOptions, "create", "service", "clusterip", NGINX_DEPLOYMENT, "--tcp=80:80")
+	podName := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
+	AwaitPodUp(t, namespaceName, podName, 60*time.Second)
+
+	AddDiagnosticTeardown(TEARDOWN_NGINX, t, func() {
+		k8s.RunKubectl(t, kubectlOptions, "describe", "deployment", NGINX_DEPLOYMENT)
+		podName := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
+		GetAppLog(t, namespaceName, podName, "_nginx", &corev1.PodLogOptions{})
+	})
+
+	AddTeardown(TEARDOWN_NGINX, func() {
+		k8s.RunKubectl(t, kubectlOptions, "delete", "service", NGINX_DEPLOYMENT)
+		k8s.RunKubectl(t, kubectlOptions, "delete", "deployment", NGINX_DEPLOYMENT)
+	})
+}
+
+func ServePodFileViaHTTP(t *testing.T, namespaceName string, srcPodName string, filePath string) string {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "deployment", NGINX_DEPLOYMENT)
+	if !strings.Contains(output, NGINX_DEPLOYMENT) || err != nil {
+		CreateNginxDeployment(t, namespaceName)
+	}
+
+	prefix := "nginx-html"
+	tmpDir, err := ioutil.TempDir("", prefix)
+	require.NoError(t, err, "Unable to create TMP directory with prefix ", prefix)
+	defer os.RemoveAll(tmpDir)
+	fileName := filepath.Base(filePath)
+	localFilePath := path.Join(tmpDir, fileName)
+
+	k8s.RunKubectl(t, kubectlOptions, "cp", srcPodName+":"+filePath, localFilePath)
+	nginxPod := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
+	k8s.RunKubectl(t, kubectlOptions, "cp", localFilePath, nginxPod+":/usr/share/nginx/html/"+fileName)
+	return fmt.Sprintf("http://nginx.%s.svc.cluster.local/%s", namespaceName, fileName)
 }
