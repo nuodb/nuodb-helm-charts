@@ -57,6 +57,7 @@ spec:
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888"}
         - { name: NUODB_RESTORE_URL,   value: "{{ include "restore.source" . }}" }
         - { name: NUODB_RESTORE_CREDENTIALS, value: "{{ .Values.restore.credentials }}" }
+        - { name: NUODB_RESTORE_REQUEST_STRIP_LEVELS, value: {{ default "1" .Values.restore.stripLevels | quote }} }
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb
