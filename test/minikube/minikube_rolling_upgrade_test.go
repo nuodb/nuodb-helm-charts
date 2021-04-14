@@ -167,17 +167,30 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"nuodb.image.registry":   "docker.io",
-			"nuodb.image.repository": "nuodb/nuodb-ce",
-			"nuodb.image.tag":        OLD_RELEASE,
-			"admin.bootstrapServers": "0",
+			"nuodb.image.registry":                  "docker.io",
+			"nuodb.image.repository":                "nuodb/nuodb-ce",
+			"nuodb.image.tag":                       OLD_RELEASE,
+			"admin.bootstrapServers":                "0",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 		},
 	}
 	testlib.OverrideUpgradeContainerImage(t, &options)
 
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("upgradefulldatabaseminorversion-%s", randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
+
+	// Enable TLS during upgrade because NuoDB 4.2+ doesn't include
+	// pre-generated keys and the engines can't reconnect to the upgraded admin tier
+	testlib.GenerateAndSetTLSKeys(t, &options, namespaceName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	adminHelmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+	adminHelmChartReleaseName, _ := testlib.StartAdmin(t, &options, 1, namespaceName)
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
 
 	// get the OLD log
@@ -185,20 +198,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-	databaseOptions := helm.Options{
-		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"nuodb.image.registry":                  "docker.io",
-			"nuodb.image.repository":                "nuodb/nuodb-ce",
-			"nuodb.image.tag":                       OLD_RELEASE,
-		},
-	}
-	testlib.OverrideUpgradeContainerImage(t, &databaseOptions)
-
-	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
@@ -209,7 +209,7 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 
-	opt := testlib.GetExtractedOptions(&databaseOptions)
+	opt := testlib.GetExtractedOptions(&options)
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 	t.Run("expectAllEnginesReconnect", func(t *testing.T) {
@@ -226,9 +226,9 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 	})
 
 	t.Run("upgradeDatabaseHelm", func(t *testing.T) {
-		expectedNewDatabaseVersion := testlib.GetUpgradedReleaseVersion(t, &databaseOptions)
+		expectedNewDatabaseVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
-		helm.Upgrade(t, &databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
+		helm.Upgrade(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
 
 		// make sure that we only have 1 TE and not 2
 		testlib.SetDeploymentUpgradeStrategyToRecreate(t, namespaceName, fmt.Sprintf("te-%s-nuodb-cluster0-demo", databaseHelmChartReleaseName))
