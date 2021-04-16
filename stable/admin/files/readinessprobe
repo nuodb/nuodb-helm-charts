@@ -20,6 +20,23 @@ nuocmd_fallback() {
     fi
 }
 
+get_check_server_timeout() {
+    # local admin server will receive the remote peers info (including Raft
+    # indexes) by exchanging ping messages every "peerPingDelay" interval (by
+    # default 2000ms); wait for at least two intervals for the local peer to
+    # converge with the leader
+    ping_delay=$(nuocmd get server-config  \
+        --this-server \
+        --property-key peerPingDelay | sed -Ee '/.* = [0-9]+/!d; s/.* = //')
+    if [ $? -ne 0 ] || [ -z "$ping_delay" ]; then
+        # Use the default value for "peerPingDelay"
+        ping_delay="2000"
+    fi
+    timeout=$(( 2*ping_delay/1000 ))
+    [ $timeout -le 0 ] && timeout="1"
+    echo $timeout
+}
+
 # 'nuocmd check server' is introduced in versions >4.1.1; this checks that the
 # --api-server satisfies the following conditions:
 #   1. It is ACTIVE and able to service REST requests.
@@ -29,7 +46,10 @@ nuocmd_fallback() {
 #      for the nuoadmin entrypoint script.
 #   3. It has the same commit index as the current Raft leader, which means
 #      that its Raft state is up-to-date.
-nuocmd_fallback check server --check-active --check-connected --check-converged
+nuocmd_fallback check server --check-active \
+    --check-connected \
+    --check-converged \
+    --timeout "$(get_check_server_timeout)"
 
 # 'nuocmd check server' is unsupported; use the 'nuocmd check servers' (plural)
 # subcommand, which was used as the readiness probe in releases of
