@@ -163,6 +163,14 @@ database:
       - ReadWriteOnce
     # storageClass: "-"
 
+  journalPath:
+    enabled: true
+    persistence:
+      size: 20Gi
+      accessModes:
+        - ReadWriteOnce
+      # storageClass: "-"
+
   ## database-wide options.
   # These are applied using the --database-options on the startup command
   # change these to values appropriate for this database

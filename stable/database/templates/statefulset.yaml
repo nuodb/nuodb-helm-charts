@@ -63,10 +63,14 @@ spec:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
-        command: ['chmod' , '770', '/var/opt/nuodb/archive', '/var/log/nuodb']
+        command: ['chmod' , '770', '/var/opt/nuodb/archive', '/var/log/nuodb', '/var/opt/nuodb/journal']
         volumeMounts:
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
+        {{- if .Values.database.journalPath.enabled }}
+        - name: journal-volume
+          mountPath: /var/opt/nuodb/journal
+        {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
       containers:
@@ -176,6 +180,10 @@ spec:
           subPath: readinessprobe
         - mountPath: /var/opt/nuodb/archive
           name: archive-volume
+        {{- if .Values.database.journalPath.enabled }}
+        - name: journal-volume
+          mountPath: /var/opt/nuodb/journal
+        {{- end }}
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert
           mountPath: /etc/nuodb/keys/ca.cert
@@ -301,6 +309,37 @@ spec:
       resources:
         requests:
           storage: {{ .Values.database.persistence.size }}
+  {{- if .Values.database.journalPath.enabled }}
+  - metadata:
+      name: journal-volume
+      labels:
+        app: {{ template "database.fullname" . }}
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      accessModes:
+      {{- range .Values.database.journalPath.persistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+    {{- if .Values.database.journalPath.persistence.storageClass }}
+      {{- if (eq "-" .Values.database.journalPath.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.database.journalPath.persistence.storageClass }}
+      {{- end }}
+    {{- end }}
+{{- if .Values.database.isManualVolumeProvisioning }}
+      selector:
+        matchLabels:
+          database: {{ .Values.database.name }}
+{{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.journalPath.persistence.size }}
+  {{- end }}
   {{- if .Values.database.sm.logPersistence.enabled }}
   - metadata:
       name: log-volume
@@ -393,10 +432,14 @@ spec:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
-        command: ['chmod' , '770', '/var/opt/nuodb/archive', 'var/opt/nuodb/backup', '/var/log/nuodb']
+        command: ['chmod' , '770', '/var/opt/nuodb/archive', 'var/opt/nuodb/backup', '/var/log/nuodb', '/var/opt/nuodb/journal']
         volumeMounts:
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
+        {{- if .Values.database.journalPath.enabled }}
+        - name: journal-volume
+          mountPath: /var/opt/nuodb/journal
+        {{- end }}
         - name: backup-volume
           mountPath: /var/opt/nuodb/backup
         - name: log-volume
@@ -509,6 +552,10 @@ spec:
           subPath: readinessprobe
         - mountPath: /var/opt/nuodb/archive
           name: archive-volume
+        {{- if .Values.database.journalPath.enabled }}
+        - name: journal-volume
+          mountPath: /var/opt/nuodb/journal
+        {{- end }}
         - mountPath: /var/opt/nuodb/backup
           name: backup-volume
         {{- if .Values.admin.tlsCACert }}
@@ -636,6 +683,37 @@ spec:
       resources:
         requests:
           storage: {{ .Values.database.persistence.size }}
+  {{- if .Values.database.journalPath.enabled }}
+  - metadata:
+      name: journal-volume
+      labels:
+        app: {{ template "database.fullname" . }}
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      accessModes:
+      {{- range .Values.database.journalPath.persistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+    {{- if .Values.database.journalPath.persistence.storageClass }}
+      {{- if (eq "-" .Values.database.journalPath.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.database.journalPath.persistence.storageClass }}
+      {{- end }}
+    {{- end }}
+{{- if .Values.database.isManualVolumeProvisioning }}
+      selector:
+        matchLabels:
+          database: {{ .Values.database.name }}
+{{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.journalPath.persistence.size }}
+  {{- end }}
   - metadata:
       name: backup-volume
       labels:

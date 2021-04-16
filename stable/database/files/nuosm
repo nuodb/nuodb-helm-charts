@@ -127,7 +127,7 @@ function resurrectRemovedArchive() {
   removed_archive=$( nuocmd show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
   if [ -n "$removed_archive" ]; then
     log "Resurrecting removed archiveId=${removed_archive}"
-    nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $removed_archive
+    nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --journal-path /var/opt/nuodb/journal/nuodb/t24 --is-external --restored --archive-id $removed_archive
   fi
 }
 
@@ -747,7 +747,7 @@ nuodocker_flags=()
 
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
-    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" --journal-dir /var/opt/nuodb/journal/nuodb/t24 --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
 else
-    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" --journal-dir /var/opt/nuodb/journal/nuodb/t24 --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "$@"
 fi
