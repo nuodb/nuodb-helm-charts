@@ -237,3 +237,71 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
 }
+
+func TestKubernetesRestoreDatabaseWithURL(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "demo",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &options)
+
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+	})
+
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = opts
+
+	opt := testlib.GetExtractedOptions(&options)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+
+	// Execute initial backup
+	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
+
+	testlib.CreateQuickstartSchema(t, namespaceName, admin0)
+
+	defer testlib.Teardown(testlib.TEARDOWN_NGINX)
+
+	// prepare backupset tarball and upload it on HTTP server
+	tarFilePath := fmt.Sprintf("/tmp/%s.tar.gz", backupset)
+	k8s.RunKubectl(t, opts, "exec", smPodName0, "--", "bash", "-c",
+		fmt.Sprintf("cd /var/opt/nuodb/ && tar -czvf %s backup/%s", tarFilePath, backupset))
+	remoteUrl := testlib.ServePodFileViaHTTP(t, namespaceName, smPodName0, tarFilePath)
+
+	// restore database and set stripLevels setting
+	options.SetValues["restore.source"] = remoteUrl
+	options.SetValues["restore.stripLevels"] = "2"
+	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+	testlib.RestoreDatabase(t, namespaceName, admin0, &options)
+
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+
+	go testlib.GetAppLog(t, namespaceName, smPodName0, "_post-restart", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, tePodName, "_post-restart", &corev1.PodLogOptions{Follow: true})
+
+	// verify that the database does NOT contain the data from AFTER the backup
+	tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+	require.NoError(t, err, "error running SQL: show schema User")
+	require.Contains(t, tables, "No tables found in schema ", "Show schema returned: ", tables)
+	testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
+}

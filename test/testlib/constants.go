@@ -27,6 +27,7 @@ const TEARDOWN_YCSB = "ycsb"
 const TEARDOWN_COLLECTOR = "nuocollector"
 const TEARDOWN_VAULT = "vault"
 const TEARDOWN_MULTICLUSTER = "multicluster"
+const TEARDOWN_NGINX = "nginx"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"
@@ -50,3 +51,5 @@ const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
 const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
 
 const ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS = "ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS"
+
+const NGINX_DEPLOYMENT = "nginx"

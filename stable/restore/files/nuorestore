@@ -74,6 +74,7 @@ auto="false"
 
 restore_credentials=$NUODB_RESTORE_CREDENTIALS
 [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:=:}
+strip_levels="$NUODB_RESTORE_REQUEST_STRIP_LEVELS"
 
 while [ $# -gt 0 ];
 do
@@ -133,6 +134,9 @@ if isRestoreRequestSupported; then
       restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64 -w 0)"
       user_data="${user_data};restore_credentials_encoded='${restore_credentials_encoded}'"
    fi
+   if [ -n "$strip_levels" ]; then
+      user_data="${user_data};strip_levels='${strip_levels}'"
+   fi
 
    log "restore_type=${restore_type}; restore_source=${restore_source}; arguments=${additional_args}"
    nuodocker request restore \
@@ -173,6 +177,12 @@ else
    if [ -n "$restore_credentials" ]; then
       nuocmd set value --key $NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/credentials \
          --value $restore_credentials \
+         --unconditional
+   fi
+
+   if [ -n "$strip_levels" ]; then
+      nuocmd set value --key "$NUODB_RESTORE_REQUEST_PREFIX/$db_name/restore/strip-levels" \
+         --value "$strip_levels" \
          --unconditional
    fi
 

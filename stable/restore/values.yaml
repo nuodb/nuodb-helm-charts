@@ -96,6 +96,10 @@ restore:
   # credentials for the specified target - if different to the database.autoRestore.credentials
   credentials: ""
 
+  # The number of leading path elements removed by the `tar` command during
+  # archive extraction
+  stripLevels: "1"
+
   # autoRestart
   # if set to "true", running the restore chart causes the database to be restarted automatically
   autoRestart: "true"
