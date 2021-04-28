@@ -221,3 +221,13 @@ The configuration is imported only in the entrypoint cluster.
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{- define "autoRestore.type" -}}
+{{- $valid := list "stream" "backupset" "" }}
+{{- if not (has .Values.database.autoRestore.type $valid) }}
+{{- fail "Invalid autorestore type" }}
+{{- end }}
+{{- with .Values.database.autoRestore.type }}
+{{- . }}
+{{- end -}}
+{{- end -}}
