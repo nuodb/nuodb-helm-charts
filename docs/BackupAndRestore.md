@@ -92,7 +92,7 @@ This can be adjusted by changing the `database.hotcopy.backupGroup` value for mu
 
 _Incremental_ and _journal_ hot copies are always stored in the current backup set if one exists.
 If there is no current backup set for some of the archives served by a HC SM when _incremental_ or _journal_ backup is requested, a _full_ hot copy is triggered automatically.
-The current backup set is the backup set created by the latest issued hotcopy and can be seen using `nuodocker get current backup --db-name <db>`.
+The current backup set is the backup set created by the latest issued hotcopy and can be seen using `nuodocker get current-backup --db-name <db>`.
 
 The `nuobackup` script is made available as a configMap and is used by all backup cron jobs to send a hot copy request of the specified type to the HC SMs.
 The _Full_ hot copy result is recorded into the NuoDB Admin domain key-value (KV) store upon successful finish.
@@ -263,7 +263,7 @@ All TEs will wait for the database restore to complete before starting, hence we
 ...
 ```
 
-The database restore request will be cleared after a successful database in-place restore and can be viewed using `nuodocker get restore requests --db-name <db>`.
+The database restore request will be cleared after a successful database in-place restore and can be viewed using `nuodocker get restore-requests --db-name <db>`.
 The database state should be manually verified by `nuocmd show domain` and using SQL queries to ensure that it's in the desired state after a successful restore.
 
 If there is a need to modify the database restore request, a new database shutdown and restart cycle is needed so that the request can be completed.
@@ -617,5 +617,5 @@ Repeat the above steps for archive ID 1.
 > **NOTE**: If the database has only one archive, you will need to delete the database by using `nuocmd delete database --db-name <db>` before the last archive can be removed.
 `nuodocker start sm` will automatically recreate the database and the archive once the archive restore is marked complete.
 
-The database restore request will be cleared after a successful database in-place restore and can be viewed using `nuodocker get restore requests --db-name <db>`.
+The database restore request will be cleared after a successful database in-place restore and can be viewed using `nuodocker get restore-requests --db-name <db>`.
 The database state should be manually verified by `nuocmd show domain` and using SQL queries to ensure that it's in the desired state after a successful restore.
