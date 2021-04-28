@@ -42,8 +42,7 @@ func TestAutoRestoreDefault(t *testing.T) {
 	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
 		if obj.Name == "demo-restore" {
 			found = true
-			assert.Empty(t, obj.Data["NUODB_AUTO_RESTORE"])
-			assert.Empty(t, obj.Data["NUODB_AUTO_RESTORE_TYPE"])
+			assert.EqualValues(t, "stream", obj.Data["NUODB_AUTO_RESTORE_TYPE"])
 		}
 	}
 
