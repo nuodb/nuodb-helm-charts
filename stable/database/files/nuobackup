@@ -62,30 +62,47 @@ function execute_backup() {
    extra_flags=()
    [ -n "$timeout" ] && extra_flags+=("--timeout" "${timeout}")
 
-   # call nuodocker to perform the actual backup
-   echo "Starting ${type} backup for database ${db_name} on processes with labels '${labels}' ..."
-   nuodocker backup database \
-      --db-name "${db_name}" \
-      --type "${type}" \
-      --backup-root "${backup_root}" \
-      --labels "${labels}" \
-      "${extra_flags[@]}"
+   # max 1 retry (at the moment...)
+   for retry in {0..1}; do
+      # call nuodocker to perform the actual backup
+      [ $retry > 0 ] && echo "Retry $retry..."
+      echo "Starting ${type} backup for database ${db_name} on processes with labels '${labels}' ..."
+      statusMsg=$(nuodocker backup database \
+         --db-name "${db_name}" \
+         --type "${type}" \
+         --backup-root "${backup_root}" \
+         --labels "${labels}" \
+         "${extra_flags[@]}")
 
-   retval=$?
-   if [ $retval != 0 ]; then
-      echo >&2 "Error running hotcopy $retval"
-      # Store failed backupset in KV store
-      if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
-         backupset=$(get_current_backup)
-         if [ -n "$backupset" ]; then
-            failed=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed")
-            nuocmd set value \
-               --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed" \
-               --value "${failed} ${backupset}" --expected-value "${failed}"
+      retval=$?
+      if [ $retval != 0 ]; then
+         echo >&2 "Error running hotcopy $retval"
+
+         # if it seems the expected backupset has vanished - eg been deleted - then create a new one
+         if [ "$type" != "full" ] && [ echo $statusMsg | grep -iq 'No such file or directory') ];  then
+            echo "Running a FULL backup to create a new backupset..."
+            execute_backup "full"
+            
+            recursiveRetval=$?
+            if [ $recursiveRetval = 0 ]; then
+               echo "New backupset created - retrying ${type} backup..."
+               continue;
+            fi
          fi
-      fi 
-      exit $retval
-   fi
+
+         # Store failed backupset in KV store
+         if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
+            backupset=$(get_current_backup)
+            if [ -n "$backupset" ]; then
+               failed=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed")
+               nuocmd set value \
+                  --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed" \
+                  --value "${failed} ${backupset}" --expected-value "${failed}"
+            fi
+         fi
+         exit $retval
+      fi
+   done
 
    if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
       # clear all previous failed backupsets
