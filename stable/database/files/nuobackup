@@ -80,12 +80,15 @@ function execute_backup() {
 
          # if it seems the expected backupset has vanished - eg been deleted - then create a new one
          if [ "$type" != "full" ] && [ echo $statusMsg | grep -iq 'No such file or directory') ];  then
-            echo "Running a FULL backup to create a new backupset..."
+            backupset=$(get_current_backup)
+            echo "Current bckupset ${backupset} seems to be missing. Running a new FULL backup to create a new backupset..."
+
             execute_backup "full"
             
             recursiveRetval=$?
             if [ $recursiveRetval = 0 ]; then
-               echo "New backupset created - retrying ${type} backup..."
+               backupset=$(get_current_backup)
+               echo "New backupset ${backupset} created - retrying ${type} backup..."
                continue;
             fi
          fi
