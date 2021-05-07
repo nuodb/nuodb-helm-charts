@@ -62,10 +62,11 @@ function execute_backup() {
    extra_flags=()
    [ -n "$timeout" ] && extra_flags+=("--timeout" "${timeout}")
 
-   # max 1 retry (at the moment...)
+   # 2 attempts max: 1 initial + 1 retry (at the moment)
    for retry in {0..1}; do
-      # call nuodocker to perform the actual backup
       [ $retry > 0 ] && echo "Retry $retry..."
+
+      # call nuodocker to perform the actual backup
       echo "Starting ${type} backup for database ${db_name} on processes with labels '${labels}' ..."
       statusMsg=$(nuodocker backup database \
          --db-name "${db_name}" \
@@ -83,13 +84,14 @@ function execute_backup() {
             backupset=$(get_current_backup)
             echo "Current bckupset ${backupset} seems to be missing. Running a new FULL backup to create a new backupset..."
 
+            # execute a new FULL backup to create a new backupset...
             execute_backup "full"
             
             recursiveRetval=$?
             if [ $recursiveRetval = 0 ]; then
                backupset=$(get_current_backup)
                echo "New backupset ${backupset} created - retrying ${type} backup..."
-               continue;
+               continue
             fi
          fi
 
@@ -105,6 +107,9 @@ function execute_backup() {
          fi
          exit $retval
       fi
+
+      # if we get here - we have succeeded...
+      break
    done
 
    if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
