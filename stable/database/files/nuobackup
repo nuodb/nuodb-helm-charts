@@ -79,7 +79,7 @@ function execute_backup() {
          echo >&2 "Error running hotcopy $retval"
 
          # if it seems the expected backupset has vanished - eg been deleted - then create a new one
-         if [ "$type" != "full" ] && [ echo $statusMsg | grep -iq 'No such file or directory') ];  then
+         if [ "$type" != "full" ] && [ echo "$statusMsg" | grep -iq "No such file or directory" ];  then
             backupset=$(get_current_backup)
             echo "Current bckupset ${backupset} seems to be missing. Running a new FULL backup to create a new backupset..."
 
