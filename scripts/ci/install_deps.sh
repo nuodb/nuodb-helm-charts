@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+# (C) Copyright NuoDB, Inc. 2019-2021  All Rights Reserved
+# This file is licensed under the BSD 3-Clause License.
+# See https://github.com/nuodb/nuodb-helm-charts/blob/master/LICENSE
+
 # exit when any command fails
 set -e
 
