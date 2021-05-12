@@ -496,6 +496,8 @@ if isRestoreRequestSupported && [ -z "$legacy_restore_requested" ]; then
         trace "restoring damaged archive"
         if isRestoreSourceAvailable "$restore_source"; then
           perform_restore || die $? "$error"
+        else
+          log "restore source ${restore_source} is not available: skipping automatic archive repair"
         fi
         # delete damaged archive metadata as a new one will be created by
         # nuodocker start sm

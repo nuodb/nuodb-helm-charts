@@ -19,9 +19,12 @@ if [ $crashcount -ge 1 ]; then
   fi
 fi
 
+nuodocker_flags=()
+[ -n "$NUODB_DEBUG" ] && nuodocker_flags+=("--debug")
+
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
-    exec nuodocker start te --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start te --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
 else
-    exec nuodocker start te --db-name "${DB_NAME}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start te --db-name "${DB_NAME}" "$@"
 fi
