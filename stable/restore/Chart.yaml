@@ -12,6 +12,6 @@ maintainers:
 - name: NuoDB
   email: support@nuodb.com
 engine: gotpl
-icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
 appVersion: 4.0.0
 tillerVersion: ">=2.9"
