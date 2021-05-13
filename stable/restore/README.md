@@ -71,7 +71,7 @@ For example, when using GlusterFS storage class, you would supply the following 
 
 ```bash
   ...
-  --set buzybox.image.registry=acme-dockerv2-virtual.jfrog.io
+  --set busybox.image.registry=acme-dockerv2-virtual.jfrog.io
   ...
 ```
 
