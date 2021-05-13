@@ -201,6 +201,10 @@ it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
 {{- if typeIs "bool" . -}}
 {{- . -}}
 {{- else -}}
+{{- $valid := list "true" "false" "" }}
+{{- if not (has . $valid) }}
+{{- fail (printf "Invalid boolean value: %s" .) }}
+{{- end }}
 {{- default true . -}}
 {{- end -}}
 {{- end -}}
