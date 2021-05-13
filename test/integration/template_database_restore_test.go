@@ -1,9 +1,10 @@
 package integration
 
 import (
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
@@ -24,14 +25,30 @@ func TestAutoRestoreGarbage(t *testing.T) {
 	require.Error(t, err)
 }
 
+func TestAutoRestoreSource(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.autoRestore.source": ":garbage",
+		},
+	}
+
+	// There are reserved restore sources starting with ":" which are ":latest"
+	// and ":group-latest"; special sources that are not in allowed fails helm
+	// rendering; we can't really validate other sources as URLs and backup set
+	// names are also allowed
+	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
+	require.Error(t, err)
+}
 
 func TestAutoRestoreDefault(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
-		SetValues: map[string]string{
-		},
+		SetValues: map[string]string{},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
@@ -74,7 +91,6 @@ func TestAutoRestoreValidValueStream(t *testing.T) {
 
 	require.True(t, found)
 }
-
 
 func TestAutoRestoreValidValueBackupset(t *testing.T) {
 	// Path to the helm chart we will test

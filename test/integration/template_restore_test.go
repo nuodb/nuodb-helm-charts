@@ -200,3 +200,21 @@ func TestRestoreRequestStripLevels(t *testing.T) {
 		assert.True(t, testlib.EnvContains(restoreContainer.Env, "NUODB_RESTORE_REQUEST_STRIP_LEVELS", "2"))
 	}
 }
+
+func TestRestoreRequestSource(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.RESTORE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"restore.source": ":garbage",
+		},
+	}
+
+	// There are reserved restore sources starting with ":" which are ":latest"
+	// and ":group-latest"; special sources that are not in allowed fails helm
+	// rendering; we can't really validate other sources as URLs and backup set
+	// names are also allowed
+	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/job.yaml"})
+	require.Error(t, err)
+}
