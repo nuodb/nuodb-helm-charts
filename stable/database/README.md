@@ -217,23 +217,23 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
 | `sm.hotCopy.enableBackups` | Enable full/incremental/journal backups | `true` |
-| `sm.hotcopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
-| `sm.hotcopy.timeout` | Timeout for a started `full` or `incremental` hotcopy job to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
-| `sm.hotcopy.successHistory` | Number of successful Jobs to keep | `5` |
-| `sm.hotcopy.failureHostory` | Number of failed jobs to keep | `5` |
-| `sm.hotcopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
-| `sm.hotcopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
-| `sm.hotcopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
-| `sm.hotcopy.incrementalSchedule` | cron schedule for INCREMENTAL hotcopy jobs | `35 22 * * 0-5` |
-| `sm.hotcopy.restartPolicy` | Restart policy for backup related JOBs and CRON JOBs | `OnFailure` |
-| `sm.hotcopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
-| `sm.hotcopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
-| `sm.hotcopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
-| `sm.hotcopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
-| `sm.hotcopy.journalBackup.intervalMinutes` | Frequency of running `journal hotcopy` (minutes) | `15` |
-| `sm.hotcopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
-| `sm.hotcopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
-| `sm.hotcopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
+| `sm.hotCopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
+| `sm.hotCopy.timeout` | Timeout for a started `full` or `incremental` hotcopy job to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
+| `sm.hotCopy.successHistory` | Number of successful Jobs to keep | `5` |
+| `sm.hotCopy.failureHostory` | Number of failed jobs to keep | `5` |
+| `sm.hotCopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
+| `sm.hotCopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
+| `sm.hotCopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
+| `sm.hotCopy.incrementalSchedule` | cron schedule for INCREMENTAL hotcopy jobs | `35 22 * * 0-5` |
+| `sm.hotCopy.restartPolicy` | Restart policy for backup related JOBs and CRON JOBs | `OnFailure` |
+| `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
+| `sm.hotCopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
+| `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
+| `sm.hotCopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
+| `sm.hotCopy.journalBackup.intervalMinutes` | Frequency of running `journal hotcopy` (minutes) | `15` |
+| `sm.hotCopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
+| `sm.hotCopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
+| `sm.hotCopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create DS/SS for non-hot-copy SMs | `true` |
 | `sm.labels` | Labels given to the SMs started | `{}` |

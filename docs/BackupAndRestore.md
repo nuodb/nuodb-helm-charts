@@ -81,14 +81,14 @@ The backup schedules can be customized to meet different backup and recovery obj
 They are exposed as Helm chart values in particular:
 - `database.hotCopy.fullSchedule` - configures the schedule of _full_ backup Kubernetes job
 - `database.hotCopy.incrementalSchedule` - configures the schedule of _incremental_ backup Kubernetes job
-- `database.hotcopy.journalBackup.intervalMinutes` - configures the schedule of _journal_ backup Kubernetes job. _journal_ hot copy must be explicitly enabled using `database.hotcopy.journalBackup.enabled`.
+- `database.hotCopy.journalBackup.intervalMinutes` - configures the schedule of _journal_ backup Kubernetes job. _journal_ hot copy must be explicitly enabled using `database.hotCopy.journalBackup.enabled`.
 
 [Cron expression format](https://en.wikipedia.org/wiki/Cron) documents the format of the first two schedules listed above.
 
 An HC SM has a backup volume attached and is selected for hot copy operation during a scheduled backup.
 Each _full_ hot copy will create a backup set with the same name in the backup root directory (by default `/var/opt/nuodb/backup`) on all HC SMs in a single database and a single backup group.
 By default, all HC SMs in a single Kubernetes cluster are part of one backup group.
-This can be adjusted by changing the `database.hotcopy.backupGroup` value for multiple Kubernetes clusters in multi-cluster deployment.
+This can be adjusted by changing the `database.hotCopy.backupGroup` value for multiple Kubernetes clusters in multi-cluster deployment.
 
 _Incremental_ and _journal_ hot copies are always stored in the current backup set if one exists.
 If there is no current backup set for some of the archives served by a HC SM when _incremental_ or _journal_ backup is requested, a _full_ hot copy is triggered automatically.
@@ -100,7 +100,7 @@ Use `nuobackup --type report-latest --db-name <db> --group <backup group>` to sh
 
 The backup jobs execution should be monitored on a regular basis to ensure that they complete successfully.
 By default, each backup job execution will be retried on failure which can be configured by the  `database.hotCopy.restartPolicy` setting.
-The number of pods kept for failed backup jobs is defined by the `database.hotcopy.failureHistory` setting.
+The number of pods kept for failed backup jobs is defined by the `database.hotCopy.failureHistory` setting.
 This setting is useful when debugging failed backup job execution.
 The logs of the pod executing the job should be checked for errors.
 
