@@ -1,5 +1,27 @@
 # Changelog
 
+## [v3.2.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.2.0) (2021-05-14)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.1.0...v3.2.0)
+
+**Implemented enhancements:**
+
+- Added helm template value validation for database.sm.hotCopy.enableBackups [\#204](https://github.com/nuodb/nuodb-helm-charts/pull/204) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Added helm template value validation for restore.source. Accepted values are ':latest', ':group-latest' or any valid URL [\#202](https://github.com/nuodb/nuodb-helm-charts/pull/202) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Added helm template value validation for database.autoRestore.type. Accepted types are either 'stream' or 'backupset' [\#199](https://github.com/nuodb/nuodb-helm-charts/pull/199) ([mkysel](https://github.com/mkysel))
+- Changed the default timeout for all backup jobs from 30 min to infinite [\#197](https://github.com/nuodb/nuodb-helm-charts/pull/197) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Upgraded kiwigrid/sidecar NuoDB Collector dependency to 1.10.8 [\#193](https://github.com/nuodb/nuodb-helm-charts/pull/193) ([butson](https://github.com/butson))
+- Added database in-place restore support based on new NuoDB 4.2+ functionality. Fine-graned selection of archive ids to restore. Database in-place restore with storage group. Manual restore option and many more... [\#184](https://github.com/nuodb/nuodb-helm-charts/pull/184) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+
+**Fixed bugs:**
+
+- Updated Chart.yaml icon image references from nuodb.com to GitHub [\#203](https://github.com/nuodb/nuodb-helm-charts/pull/203) ([mkysel](https://github.com/mkysel))
+- Set levels to strip off path names when unpacking a TAR file of an archive or backup set via the restore.stripLevels option [\#195](https://github.com/nuodb/nuodb-helm-charts/pull/195) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+
+**Merged pull requests:**
+
+- Updated default version to use the NuoDB image 4.2.1 [\#207](https://github.com/nuodb/nuodb-helm-charts/pull/207) ([mkysel](https://github.com/mkysel))
+
 ## [v3.1.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.1.0) (2021-02-08)
 
 [Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.0.0...v3.1.0)
