@@ -41,6 +41,22 @@ func TestDatabaseBackupCronJobDisabled(t *testing.T) {
 	assert.Contains(t, err.Error(), "could not find template")
 }
 
+func TestDatabaseBackupCronJobGarbage(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.enableBackups": "garbage",
+		},
+	}
+
+	// Garbage value fails helm rendering
+	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid boolean value: garbage")
+}
+
 func TestDatabaseBackupCronJobRestartPolicyDefault(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
