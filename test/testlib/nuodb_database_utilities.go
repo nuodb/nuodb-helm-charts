@@ -358,8 +358,8 @@ func ServePodFileViaHTTP(t *testing.T, namespaceName string, srcPodName string, 
 	return fmt.Sprintf("http://nginx.%s.svc.cluster.local/%s", namespaceName, fileName)
 }
 
-func GetNuoDBVersion(t *testing.T, options *helm.Options) string {
-	kubectlOptions := k8s.NewKubectlOptions("", "", "default")
+func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) string {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	podName := "nuodb-version"
 	InferVersionFromTemplate(t, options)
 	InjectTestValues(t, options)
@@ -383,7 +383,9 @@ func GetNuoDBVersion(t *testing.T, options *helm.Options) string {
 }
 
 func SkipTestOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool) {
-	versionString := GetNuoDBVersion(t, &helm.Options{})
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("nuodbversioncheck-%s", randomSuffix)
+	versionString := GetNuoDBVersion(t, namespaceName, &helm.Options{})
 	// Select only the main NuoDB version (i.e 4.2.1) from the full version string
 	versionString = regexp.MustCompile(`^([0-9]+\.[0-9]+(?:\.[0-9]+)?).*$`).
 		ReplaceAllString(versionString, "${1}")
