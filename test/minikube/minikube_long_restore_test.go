@@ -226,6 +226,12 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 
+	// Get SM pod logs if the test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetAppLog(t, namespaceName, hcSmPodName0, "_post-restore", &corev1.PodLogOptions{})
+		testlib.GetAppLog(t, namespaceName, hcSmPodName1, "_post-restore", &corev1.PodLogOptions{})
+	})
+
 	// restore database
 	databaseOptions.SetValues["restore.source"] = backupset
 	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
