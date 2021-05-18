@@ -385,6 +385,7 @@ func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) 
 func SkipTestOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 	namespaceName := fmt.Sprintf("nuodbversioncheck-%s", randomSuffix)
+	CreateNamespace(t, namespaceName)
 	versionString := GetNuoDBVersion(t, namespaceName, &helm.Options{})
 	// Select only the main NuoDB version (i.e 4.2.1) from the full version string
 	versionString = regexp.MustCompile(`^([0-9]+\.[0-9]+(?:\.[0-9]+)?).*$`).
