@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"testing"
@@ -14,6 +15,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	v12 "k8s.io/api/core/v1"
 
+	"github.com/Masterminds/semver"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
@@ -354,4 +356,59 @@ func ServePodFileViaHTTP(t *testing.T, namespaceName string, srcPodName string, 
 	nginxPod := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
 	k8s.RunKubectl(t, kubectlOptions, "cp", localFilePath, nginxPod+":/usr/share/nginx/html/"+fileName)
 	return fmt.Sprintf("http://nginx.%s.svc.cluster.local/%s", namespaceName, fileName)
+}
+
+func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) string {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	podName := "nuodb-version"
+	InferVersionFromTemplate(t, options)
+	InjectTestValues(t, options)
+	defer func() {
+		// Delete the pod just in case "--rm" doesn't do it
+		k8s.RunKubectlE(t, kubectlOptions, "delete", "pod", podName)
+	}()
+	nuodbImage := fmt.Sprintf(
+		"%s/%s:%s",
+		options.SetValues["nuodb.image.registry"],
+		options.SetValues["nuodb.image.repository"],
+		options.SetValues["nuodb.image.tag"])
+	output, err := k8s.RunKubectlAndGetOutputE(
+		t, kubectlOptions, "run", podName,
+		"--image", nuodbImage, "--restart=Never", "--rm", "--attach", "--command", "--",
+		"nuodb", "--version")
+	require.NoError(t, err, "Unable to check NuoDB version in helper pod")
+	match := regexp.MustCompile("NuoDB Server build (.*)").FindStringSubmatch(output)
+	require.NotNil(t, match, "Unable to match NuoDB version from output")
+	return match[1]
+}
+
+func SkipTestOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool) {
+	randomSuffix := strings.ToLower(random.UniqueId())
+	defer Teardown(TEARDOWN_ADMIN)
+	namespaceName := fmt.Sprintf("nuodbversioncheck-%s", randomSuffix)
+	CreateNamespace(t, namespaceName)
+	versionString := GetNuoDBVersion(t, namespaceName, &helm.Options{})
+	// Select only the main NuoDB version (i.e 4.2.1) from the full version string
+	versionString = regexp.MustCompile(`^([0-9]+\.[0-9]+(?:\.[0-9]+)?).*$`).
+		ReplaceAllString(versionString, "${1}")
+	version, err := semver.NewVersion(versionString)
+	require.NoError(t, err, "Unable to parse NuoDB version", versionString)
+	if versionCheckFunc(version) {
+		t.Skip("Skipping test when using NuoDB version", version)
+	}
+}
+
+/**
+ * Skip test if NuoDB version matches the provided condition.
+ *
+ * For more information about supported condition strings, please
+ * check https://github.com/Masterminds/semver.
+ *
+ */
+func SkipTestOnNuoDBVersionCondition(t *testing.T, condition string) {
+	SkipTestOnNuoDBVersion(t, func(version *semver.Version) bool {
+		c, err := semver.NewConstraint(condition)
+		require.NoError(t, err)
+		return c.Check(version)
+	})
 }

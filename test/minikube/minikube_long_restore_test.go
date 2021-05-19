@@ -146,6 +146,7 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
+	testlib.SkipTestOnNuoDBVersionCondition(t, "< 4.2")
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -186,6 +187,7 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	hcSmPodNameTemplate := fmt.Sprintf("%s-hotcopy", smPodNameTemplate)
 	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
+	hcSmPodName1 := fmt.Sprintf("%s-1", hcSmPodNameTemplate)
 
 	// Create 2 storage groups, each served by only one archive
 	k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "--",
@@ -220,13 +222,21 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 	go testlib.GetAppLog(t, namespaceName, hcSmPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, hcSmPodName1, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+
+	// Get SM pod logs if the test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetAppLog(t, namespaceName, hcSmPodName0, "_post-restore", &corev1.PodLogOptions{})
+		testlib.GetAppLog(t, namespaceName, hcSmPodName1, "_post-restore", &corev1.PodLogOptions{})
+	})
 
 	// restore database
 	databaseOptions.SetValues["restore.source"] = backupset
 	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 	testlib.AwaitPodLog(t, namespaceName, hcSmPodName0, "_post-restart")
+	testlib.AwaitPodLog(t, namespaceName, hcSmPodName1, "_post-restart")
 
 	// verify that the database does NOT contain the data from AFTER the backup
 

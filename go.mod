@@ -4,6 +4,7 @@ go 1.14
 
 require (
 	cloud.google.com/go v0.61.0 // indirect
+	github.com/Masterminds/semver v1.5.0
 	github.com/aws/aws-sdk-go v1.33.9 // indirect
 	github.com/ghodss/yaml v1.0.0
 	github.com/go-errors/errors v1.1.1 // indirect
