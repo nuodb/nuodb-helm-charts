@@ -103,6 +103,42 @@ Use `nuobackup --type report-latest --db-name <db> --group <backup group>` to sh
 It is possible to disable backup jobs creation by setting `hotcopy.enableBackups` to `false`.
 Custom backup jobs that use the `nuobackup` script can be configured to support more complex workflows and backup strategies.
 
+The logs for each backup job can be seen using `kubectl get logs <job pod name>`. For example:
+
+```bash
+kubectl logs full-hotcopy-demo-cronjob-1621415040-vxlq8 --namespace nuodb
+```
+
+A successful hot copy will mark the job pod status as `Completed` and will report hot copy status as `completed`.
+An example logs from _full_ hot copy can be seen below.
+
+```
+Starting full backup for database demo on processes with labels 'backup cluster0 ' ...
+{
+  "beginTimestamp": "2021-05-19 09:04:06",
+  "coordinatorStartId": "1",
+  "destinationDirectory": "/var/opt/nuodb/backup/20210519T090406/tmp/full/data",
+  "endTimestamp": "2021-05-19 09:04:07",
+  "hotCopyId": "e5b8b9ba-f29f-440e-8c67-1c71cef34292",
+  "message": "Hot copy successfully completed",
+  "stage": 3,
+  "status": "completed",
+  "uri": "http://nuodb.nuodb.svc:8888/api/1/databases/hotCopyStatus?coordinatorStartId=1&hotCopyId=e5b8b9ba-f29f-440e-8c67-1c71cef34292"
+}
+/nuodb/nuobackup/demo/cluster0/latest = 2
+/nuodb/nuobackup/demo/cluster0/2 = 20210519T090406
+/nuodb/nuobackup/demo/latest = cluster0
+```
+
+The above _full_ backup will be available in all _RUNNING_ HC SMs at `/var/opt/nuodb/backup/20210519T090406` with the following content:
+
+```
+$ kubectl exec -ti --namespace nuodb \
+    sm-database-nuodb-cluster0-demo-hotcopy-0 -- \
+    ls /var/opt/nuodb/backup/20210519T090406
+full  state.xml  tmp
+```
+
 #### Backup retention management
 
 There are no backup retention policies currently available.
@@ -272,7 +308,7 @@ This will ensure that all HC SMs backups will be coordinated during hot copy req
 
 #### Distributed database restore with storage groups
 
-Database restore using user-defined storage groups is a special case of a database restore operation.
+Database restore using user-defined storage groups (TP/SG) is a special case of a database restore operation.
 The process is documented in the [Distributed database restore from source](#distributed-database-restore-from-source) section. Several considerations need to be taken into account:
 
 - a complete set of archives serving all storage groups must be restored when performing database in-place restore
@@ -594,18 +630,20 @@ drwxr-xr-x  2 nuodb root 4096 Feb 19 10:32 demo-save-20210219T103236
 
 ### Backup failure
 
-The backup jobs execution should be monitored on a regular basis to ensure that they complete successfully.
-By default, each backup job execution will be retried on failure which can be configured by the  `database.hotCopy.restartPolicy` setting.
+The backup jobs execution should be monitored regularly to ensure that they complete successfully.
+By default, each backup job execution will be retried on failure which can be configured by the `database.hotCopy.restartPolicy` setting.
 The number of pods kept for failed backup jobs is defined by the `database.hotCopy.failureHistory` setting.
 This setting is useful when debugging failed backup job execution.
 The logs of the pod executing the job should be checked for errors.
 
+For more examples, check [Examples of Hotcopy Errors](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/database-operations/backing-up-and-restoring-databases/monitoring-hot-copy-execution/examples-of-hot-copy-errors/).
+
 #### No SM matching backup labels
 
-For example, the output below shows a failed full hot copy job:
+The output below shows a failed _full_ hot copy job:
 
 ```bash
-kubectl get pods --selector job-name
+$ kubectl get pods --selector job-name
 NAME                                                READY   STATUS             RESTARTS   AGE
 full-hotcopy-demo-cronjob-1613661840-rgpxv          0/1     Completed          0          32m
 full-hotcopy-demo-cronjob-1613663760-r8lm8          0/1     Error              1          14s
@@ -614,34 +652,173 @@ full-hotcopy-demo-cronjob-1613663760-r8lm8          0/1     Error              1
 The logs from the pod indicate that there are no running SMs that match the provided labels.
 
 ```bash
-kubectl logs full-hotcopy-demo-cronjob-1613663760-r8lm8
+$ kubectl logs full-hotcopy-demo-cronjob-1613663760-r8lm8
 Starting full backup for database demo on processes with labels 'backup cluster0 ' ...
 'backup database' failed: No SMs found matching the provided labels backup cluster0
 Error running hotcopy 1
 ```
 
+> **ACTION**: Check if there are _RUNNING_ HC SMs that match the configured labels using `nuocmd show domain` and `nuocmd get processes` commands.
+
 Further investigation shows that the HC SMs statefulset has been scaled down to 0 replicas.
 
 ```bash
-kubectl get statefulsets.apps
+$ kubectl get statefulsets.apps
 NAME                                      READY   AGE
 admin-nuodb-cluster0                      1/1     3h41m
 sm-database-nuodb-cluster0-demo           2/2     3h41m
 sm-database-nuodb-cluster0-demo-hotcopy   0/0     3h41m
 ```
 
+#### Backup not completed in the specified timeout
+
+The hot copy operation timeout can be configured in `database.sm.hotCopy.timeout` and `sm.hotCopy.journalBackup.timeout` settings which defines the number of seconds to wait for the hot copy operation to finish.
+In NuoDB Helm Charts 3.2.0+ the timeout has been changed to `0` by default and backup jobs will wait forever for the operation to finish.
+NuoDB doesn't cancel the underlying hot copy operation when the client timeout waiting for it to finish.
+
+The following output shows logs from a failed backup job due to timeout.
+
+```
+Starting full backup for database demo on processes with labels 'backup cluster0 ' ...
+{
+  "beginTimestamp": "2021-05-20 08:35:01",
+  "coordinatorStartId": "4",
+  "destinationDirectory": "/var/opt/nuodb/backup/20210520T083501/tmp/full/data",
+  "hotCopyId": "e9552478-9b91-4ca0-bfb3-e7e8b63c2572",
+  "message": "Stage1: Begin: timeout while waiting for hot copy operation to finish",
+  "stage": 1,
+  "status": "running",
+  "uri": "http://nuodb.nuodb.svc:8888/api/1/databases/hotCopyStatus?coordinatorStartId=4&hotCopyId=e9552478-9b91-4ca0-bfb3-e7e8b63c2572"
+}
+Error running hotcopy 1
+```
+
+> **ACTION**: Check the current status of the hot copy operation using `nuocmd get hotcopy-status` command by supplying the `hotCopyId` and `coordinatorStartId` taken from the output above.
+Ensure that those timeout settings are properly configured in your environment.
+
 #### Overlapping backups
 
-TBD
+NuoDB is preventing from running concurrent hot copy operations of the same type.
+The check is done at the archive level. If TP/SG is involved, then multiple archives could be participating in a single hot copy operation.
+
+The following error message can be found in backup job pod logs if it fails because another hot copy operation is already running.
+
+```
+Starting full backup for database demo on processes with labels 'backup cluster0 ' ...
+'backup database' failed: Failure while performing hot-copy: Error while sending engine request: Only one full hot copy at a time allowed
+Error running hotcopy 1
+```
+
+> **ACTION**: No immediate action is needed as Kubernetes will restart the failed backup job based on the `database.hotCopy.restartPolicy` setting.
+It's recommended to check the reason why there are concurrent backups from the same type and adjust the backup schedules if needed.
 
 #### Backup storage full
 
-TBD
+A backup job will fail if there is no more disk space available in the backup volume for all or some of the HC SMs.
+NuoDB doesn't remove old backups automatically so manual action is required to extend the backup volume size or free more disk space.
+
+Sample output can be seen below.
+
+```
+Starting journal backup for database demo on processes with labels 'backup cluster0 ' ...
+{
+  "beginTimestamp": "2021-05-20 09:00:54",
+  "coordinatorStartId": "5",
+  "destinationDirectory": "/var/opt/nuodb/backup/20210520T085520/tmp/full/data",
+  "hotCopyId": "95ce5791-c582-448c-a059-52719480a564",
+  "message": "Hot copy failed: Node 6: /var/opt/nuodb/backup/20210520T085520/tmp/full/data/journal/9558a2fb-ac45-a94e-edba-9af0a0f1e958/njf_0/2.njf: File read failed: No space left on device",
+  "stage": 1,
+  "status": "failed",
+  "uri": "http://nuodb.nuodb.svc:8888/api/1/databases/hotCopyStatus?coordinatorStartId=5&hotCopyId=95ce5791-c582-448c-a059-52719480a564"
+}
+Error running hotcopy 1
+```
+
+> **ACTION**: Increase backup volume size or free more disk space.
+When using backup sets, the `data` directories may be compressed and moved to cold storage or deleted from local storage.
+
+It may be desirable to delete old hot copies to save space, or to comply with data retention requirements.
+When using backup sets, the minimum unit of deletion is the backup set. Delete backup sets in order from oldest to newest.
+If a backup set contains a transaction of interest, do not delete the prior backup set.
+
+For more information on how to work with backup sets, please see [Using Backup Sets](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/database-operations/backing-up-and-restoring-databases/using-online-backup/using-backup-sets/).
 
 ### Restore failure
 
-TBD
+[Distributed database in-place restore](#distributed-database-restore-from-source) begins with requesting restore operation which is executed only after the database is restarted.
+At a high level the restore failures can be classified into two groups:
+
+1. Failures during the `restore` job execution.
+These are easier to investigate by looking into the job pod logs.
+2. Failures during distributed database restore operations.
+To investigate the reason for the failure, the container logs from all database processes should be collected.
+NuoDB SMs maintain `nuosm.log` file in `/var/log/nuodb` directory which contains historical logs from SM containers startup procedures.
+The log file will be available between pod restarts if `database.sm.logPersistence.enabled` setting is enabled.
+
+#### Invalid archive ID
+
+Database archive IDs can be provided when requesting in-place restore.
+The restore request will fail if an invalid archive ID is provided.
+To investigate the reason, check the logs from the restore job pod. For example:
+
+```bash
+$ kubectl logs restore-demo-tzgfw --namespace nuodb
+2021-05-20T09:41:09.187+0000 restore_type=database; restore_source=1T234; arguments= --archive-ids 5
+'request restore' failed: Unexpected archiveIds for database demo: 5
+Restore request failed
+```
+
+> **ACTION**: Check the available database archive IDs using `nuocmd show archives` command and update the necessary values. In this specific case the `restore.archiveIds` setting much be corrected.
+Delete the old `restore` chart release and install new one with the updated Helm values file.
 
 #### Invalid restore source
 
-TBD
+The selected restore source should be available to all SMs requested for a restore.
+Monitor the database processes pods status after the database has been restarted to check for any failures.
+In the bellow output, an error is seen on _sm-database-nuodb-cluster0-demo-hotcopy-1_ pod.
+
+```
+NAME                                                READY   STATUS             RESTARTS   AGE
+sm-database-nuodb-cluster0-demo-hotcopy-1           0/1     Error              2          12m
+```
+
+Checking the pod logs shows that the archive served by this SM has been requested for a restore using restore source _20210520T085520_ which is not available in its backup volume.
+
+```
+$ kubectl logs sm-database-nuodb-cluster0-demo-hotcopy-1
+2021-05-20T09:52:15.198+0000 ===========================================
+2021-05-20T09:52:15.234+0000 logsize=8154; maxlog=5000000
+2021-05-20T09:52:15.236+0000 Directory /var/opt/nuodb/archive/nuodb/demo exists
+2021-05-20T09:52:18.547+0000 archiveId=2; DB=demo; hostname=sm-database-nuodb-cluster0-demo-hotcopy-1
+2021-05-20T09:52:20.283+0000 path=/var/opt/nuodb/archive/nuodb/demo; atoms=68; catalogs=183
+2021-05-20T09:52:21.982+0000 Archive with archiveId=2 has been requested for a restore
+2021-05-20T09:52:21.995+0000 Archive restore will be performed for archiveId=2, source=20210520T085520, type=backupset, strip=1
+2021-05-20T09:52:22.010+0000 Error while performing restore for archiveId=2: Backupset 20210520T085520 cannot be found in /var/opt/nuodb/backup
+```
+
+The pod status will soon transition to `CrashLoopBackOff` and all other database processes will wait until the database restore completes which will never happen.
+
+Sample output including current database pods can be seen below.
+
+```
+NAME                                                READY   STATUS             RESTARTS   AGE
+restore-demo-d7jwn                                  0/1     Completed          0          10m
+sm-database-nuodb-cluster0-demo-0                   0/1     Running            1          21m
+sm-database-nuodb-cluster0-demo-hotcopy-0           0/1     Running            1          20m
+sm-database-nuodb-cluster0-demo-hotcopy-1           0/1     CrashLoopBackOff   6          21m
+te-database-nuodb-cluster0-demo-6c47c5c696-r5dg2    0/1     Running            1          31m
+```
+
+```bash
+$ kubectl logs sm-database-nuodb-cluster0-demo-hotcopy-0
+2021-05-20T09:52:15.276+0000 ===========================================
+2021-05-20T09:52:15.283+0000 logsize=9821; maxlog=5000000
+2021-05-20T09:52:15.288+0000 Directory /var/opt/nuodb/archive/nuodb/demo exists
+2021-05-20T09:52:18.536+0000 archiveId=1; DB=demo; hostname=sm-database-nuodb-cluster0-demo-hotcopy-0
+2021-05-20T09:52:20.272+0000 path=/var/opt/nuodb/archive/nuodb/demo; atoms=68; catalogs=183
+2021-05-20T09:52:25.020+0000 INFO  root Waiting for database restore to complete ...
+```
+
+> **ACTION**: Ensure that the selected backup set is available on all SMs requested for restore.
+Once the restore source is verified and updated, delete the old `restore` chart release and install a new one with the updated Helm values file.
+Delete all pods for database processes using `kubectl delete pods` command so that Kubernetes restart them at once.
