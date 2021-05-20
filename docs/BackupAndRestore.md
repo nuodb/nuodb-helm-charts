@@ -694,12 +694,12 @@ Error running hotcopy 1
 ```
 
 > **ACTION**: Check the current status of the hot copy operation using `nuocmd get hotcopy-status` command by supplying the `hotCopyId` and `coordinatorStartId` taken from the output above.
-Ensure that those timeout settings are properly configured in your environment.
+Ensure that the backup timeout settings are properly configured in your environment.
 
 #### Overlapping backups
 
 NuoDB is preventing from running concurrent hot copy operations of the same type.
-The check is done at the archive level. If TP/SG is involved, then multiple archives could be participating in a single hot copy operation.
+The check is done at the archive level. Multiple archives can be participating in a single hot copy operation. By default single hot copy request targets all HC SMs in a single cluster.
 
 The following error message can be found in backup job pod logs if it fails because another hot copy operation is already running.
 
@@ -763,7 +763,7 @@ To investigate the reason, check the logs from the restore job pod. For example:
 
 ```bash
 $ kubectl logs restore-demo-tzgfw --namespace nuodb
-2021-05-20T09:41:09.187+0000 restore_type=database; restore_source=1T234; arguments= --archive-ids 5
+2021-05-20T09:41:09.187+0000 restore_type=database; restore_source=20210520T085520; arguments= --archive-ids 5
 'request restore' failed: Unexpected archiveIds for database demo: 5
 Restore request failed
 ```
@@ -809,12 +809,14 @@ sm-database-nuodb-cluster0-demo-hotcopy-1           0/1     CrashLoopBackOff   6
 te-database-nuodb-cluster0-demo-6c47c5c696-r5dg2    0/1     Running            1          31m
 ```
 
+Example logs from another SM which was not selected for a restore:
+
 ```bash
-$ kubectl logs sm-database-nuodb-cluster0-demo-hotcopy-0
+$ kubectl logs sm-database-nuodb-cluster0-demo-0
 2021-05-20T09:52:15.276+0000 ===========================================
 2021-05-20T09:52:15.283+0000 logsize=9821; maxlog=5000000
 2021-05-20T09:52:15.288+0000 Directory /var/opt/nuodb/archive/nuodb/demo exists
-2021-05-20T09:52:18.536+0000 archiveId=1; DB=demo; hostname=sm-database-nuodb-cluster0-demo-hotcopy-0
+2021-05-20T09:52:18.536+0000 archiveId=0; DB=demo; hostname=sm-database-nuodb-cluster0-demo-0
 2021-05-20T09:52:20.272+0000 path=/var/opt/nuodb/archive/nuodb/demo; atoms=68; catalogs=183
 2021-05-20T09:52:25.020+0000 INFO  root Waiting for database restore to complete ...
 ```
