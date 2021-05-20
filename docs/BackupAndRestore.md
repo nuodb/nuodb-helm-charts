@@ -720,7 +720,7 @@ NuoDB doesn't remove old backups automatically so manual action is required to e
 Sample output can be seen below.
 
 ```
-Starting journal backup for database demo on processes with labels 'backup cluster0 ' ...
+Starting full backup for database demo on processes with labels 'backup cluster0 ' ...
 {
   "beginTimestamp": "2021-05-20 09:00:54",
   "coordinatorStartId": "5",
