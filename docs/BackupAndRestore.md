@@ -138,10 +138,10 @@ A remote _backupset_ requires additional space as it is downloaded and extracted
 
 ### Fine-grained archive selection
 
-NuoDB _restore_ chart provides several ways to select which archives should be restored during the [distributed database restore](#distributed-database-restore-from-source) or [archive seed restore](#archive-seed-restore).
+NuoDB _restore_ chart provides several ways to select which archives should be restored during the [Distributed database restore](#distributed-database-restore-from-source) or [Archive seed restore](#archive-seed-restore).
 
 - explicitly selecting specific archive IDs - `restore.archiveIds` variable can be set to specific archive IDs in the domain state for the target database.
-To list all archives for a database, the `nuocmd show archives --db-name <db>` is used.
+To list all archives for a database, the `nuocmd show archives --db-name <db>` command is used.
 The process for each archive can be seen under the archive info which makes it easier for the user to mark the archives for restore.
 - selecting archives served by database processes with specific labels - `restore.labels` can be used to configure process labels, which then define the archives which will be selected for a restore.
 Any configured label and value that matches an SM process will add its archive to the list of selected archives for a restore.
@@ -290,7 +290,7 @@ The _Manual database restore_ operation is initiated by installing the _restore_
 This mode blocks all database pods before allowing them to form a database, in order to give the user access to the persistent volumes used by an SM.
 After the archive restore is marked as completed, NuoDB will unblock the processes, a restore coordinator will be selected and the restore process will continue as documented in the [Distributed database restore from source](#distributed-database-restore-from-source) section.
 
-As an example, a point-in-time (PiT) restore in a new environment will be demonstrated to fix a "fat-finger" error in production.
+As an example, a Point-in-Time (PiT) restore in a new environment will be demonstrated to fix a "fat-finger" error in production.
 Currently, the automatic initial archive restore doesn't support restore to a specific point in time, hence an _Manual database restore_ is used.
 
 > **NOTE**: For more information on PiT restore and `nuoarchive`, please check [here](https://doc.nuodb.com/nuodb/latest/reference-information/command-line-tools/nuodb-archive/nuodb-archive---restoring/).
