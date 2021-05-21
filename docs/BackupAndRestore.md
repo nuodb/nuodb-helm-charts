@@ -1,5 +1,39 @@
 # NuoDB Backup and Restore in Kubernetes
 
+<details>
+<summary>Table of Contents</summary>
+<!-- TOC -->
+
+- [NuoDB Backup and Restore in Kubernetes](#nuodb-backup-and-restore-in-kubernetes)
+    - [Introduction](#introduction)
+        - [Terminology](#terminology)
+    - [Compatibility Matrix](#compatibility-matrix)
+    - [Backup](#backup)
+        - [Scheduled online database backups](#scheduled-online-database-backups)
+            - [Backup retention management](#backup-retention-management)
+    - [Restore](#restore)
+        - [Restore/Import source and type](#restoreimport-source-and-type)
+        - [Fine-grained archive selection](#fine-grained-archive-selection)
+        - [Distributed restore](#distributed-restore)
+            - [Distributed database restore from source](#distributed-database-restore-from-source)
+            - [Distributed database restore with storage groups](#distributed-database-restore-with-storage-groups)
+            - [Manual database restore](#manual-database-restore)
+        - [Automatic archive initial import](#automatic-archive-initial-import)
+        - [Automatic archive restore](#automatic-archive-restore)
+        - [Archive seed restore](#archive-seed-restore)
+    - [Troubleshooting](#troubleshooting)
+        - [Backup failure](#backup-failure)
+            - [No SM matching backup labels](#no-sm-matching-backup-labels)
+            - [Backup not completed in the specified timeout](#backup-not-completed-in-the-specified-timeout)
+            - [Overlapping backups](#overlapping-backups)
+            - [Backup storage full](#backup-storage-full)
+        - [Restore failure](#restore-failure)
+            - [Invalid archive ID](#invalid-archive-id)
+            - [Invalid restore source](#invalid-restore-source)
+
+<!-- /TOC -->
+</details>
+
 ## Introduction
 
 NuoDB provides several automated mechanisms for backing up and restoring a database in a Kubernetes environment when deploying NuoDB using the NuoDB Helm Charts.
@@ -100,7 +134,7 @@ Use `nuobackup --type report-latest --db-name <db> --group <backup group>` to sh
 
 > **IMPORTANT**: It is important to take periodic journal hot copies when journal hot copy is enabled. Otherwise, the journal will keep growing which can lead to filling the archive volume space.
 
-It is possible to disable backup jobs creation by setting `hotcopy.enableBackups` to `false`.
+It is possible to disable backup jobs creation by setting `hotCopy.enableBackups` to `false`.
 Custom backup jobs that use the `nuobackup` script can be configured to support more complex workflows and backup strategies.
 
 The logs for each backup job can be seen using `kubectl get logs <job pod name>`. For example:
@@ -456,7 +490,7 @@ To avoid connectivity issues, it's recommended to verify that the remote source 
 We'll start a sample busybox pod to validate the URL.
 
 ```bash
-kubectl run -ti busybox --rm --image=busybox --restart=Never -n nuodb -- \
+kubectl run -ti busybox --rm --image=busybox --restart=Never --namespace nuodb -- \
   wget --spider http://nginx.web.svc.cluster.local/$file
 ```
 
@@ -533,7 +567,7 @@ helm upgrade --install database nuodb/database \
 Simulate a total loss of an archive for an HC SM by moving the archive directory to some other location.
 
 ```bash
-kubectl exec -ti sm-database-nuodb-cluster0-demo-hotcopy-0 -- \
+kubectl exec -ti sm-database-nuodb-cluster0-demo-hotcopy-0 --namespace nuodb -- \
   mv /var/opt/nuodb/archive/nuodb/demo /var/opt/nuodb/archive/nuodb/demo_moved
 ```
 
@@ -643,7 +677,7 @@ For more examples, check [Examples of Hotcopy Errors](https://doc.nuodb.com/nuod
 The output below shows a failed _full_ hot copy job:
 
 ```bash
-$ kubectl get pods --selector job-name
+$ kubectl get pods --selector job-name --namespace nuodb
 NAME                                                READY   STATUS             RESTARTS   AGE
 full-hotcopy-demo-cronjob-1613661840-rgpxv          0/1     Completed          0          32m
 full-hotcopy-demo-cronjob-1613663760-r8lm8          0/1     Error              1          14s
@@ -652,7 +686,7 @@ full-hotcopy-demo-cronjob-1613663760-r8lm8          0/1     Error              1
 The logs from the pod indicate that there are no running SMs that match the provided labels.
 
 ```bash
-$ kubectl logs full-hotcopy-demo-cronjob-1613663760-r8lm8
+$ kubectl logs full-hotcopy-demo-cronjob-1613663760-r8lm8 --namespace nuodb
 Starting full backup for database demo on processes with labels 'backup cluster0 ' ...
 'backup database' failed: No SMs found matching the provided labels backup cluster0
 Error running hotcopy 1
@@ -663,7 +697,7 @@ Error running hotcopy 1
 Further investigation shows that the HC SMs statefulset has been scaled down to 0 replicas.
 
 ```bash
-$ kubectl get statefulsets.apps
+$ kubectl get statefulsets.apps --namespace nuodb
 NAME                                      READY   AGE
 admin-nuodb-cluster0                      1/1     3h41m
 sm-database-nuodb-cluster0-demo           2/2     3h41m
@@ -812,7 +846,7 @@ te-database-nuodb-cluster0-demo-6c47c5c696-r5dg2    0/1     Running            1
 Example logs from another SM which was not selected for a restore:
 
 ```bash
-$ kubectl logs sm-database-nuodb-cluster0-demo-0
+$ kubectl logs sm-database-nuodb-cluster0-demo-0 --namespace nuodb
 2021-05-20T09:52:15.276+0000 ===========================================
 2021-05-20T09:52:15.283+0000 logsize=9821; maxlog=5000000
 2021-05-20T09:52:15.288+0000 Directory /var/opt/nuodb/archive/nuodb/demo exists
