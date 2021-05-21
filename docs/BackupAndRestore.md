@@ -23,7 +23,7 @@ The documentation in this repository expands on the product documentation and is
 ### Terminology
 
 - `SM` = A Kubernetes container that runs NuoDB Storage Manager. 
-In Kubernetes deployments, all database processes are started externally by a helper script called `nuodocker` which allows for greater control  including the execution of prerequisite actions like database or archive creation in NuoDB Admin tier that must occur prior to actual database process start up.
+In Kubernetes deployments, all database processes are started externally by a helper script called `nuodocker` which allows for greater control including the execution of prerequisite actions like database or archive creation in the NuoDB Admin tier that must occur prior to actual database process start up.
 - `Archive` =  The persistent storage on disk of a NuoDB database served by a Storage Manager process (SM).
 A single NuoDB archive is represented by an archive directory and journal directory located on persistent storage.
 In Kubernetes, the journal directory is internal to the archive and normally located inside the archive directory.
@@ -88,7 +88,7 @@ They are exposed as Helm chart values in particular:
 An HC SM has a backup volume attached and is selected for hot copy operation during a scheduled backup.
 Each _full_ hot copy will create a backup set with the same name in the backup root directory (by default `/var/opt/nuodb/backup`) on all HC SMs in a single database and a single backup group.
 By default, all HC SMs in a single Kubernetes cluster are part of one backup group.
-This can be adjusted by changing the `database.hotCopy.backupGroup` value for multiple Kubernetes clusters in multi-cluster deployment.
+This can be adjusted by changing the `database.hotCopy.backupGroup` value for multiple Kubernetes clusters in a multi-cluster deployment.
 
 _Incremental_ and _journal_ hot copies are always stored in the current backup set if one exists.
 If there is no current backup set for some of the archives served by a HC SM when _incremental_ or _journal_ backup is requested, a _full_ hot copy is triggered automatically.
