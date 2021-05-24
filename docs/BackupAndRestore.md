@@ -12,7 +12,6 @@
         - [Scheduled online database backups](#scheduled-online-database-backups)
             - [Backup retention management](#backup-retention-management)
     - [Restore](#restore)
-        - [Restore/Import source and type](#restoreimport-source-and-type)
         - [Fine-grained archive restore selection](#fine-grained-archive-selection)
         - [Distributed restore](#distributed-restore)
             - [Distributed database restore from source](#distributed-database-restore-from-source)
@@ -180,8 +179,6 @@ The admin user is responsible to make sure that there is enough space in the bac
 Customer provided `ReadWriteMany` backup volumes, such as Elastic Block Store (EBS) and Azure Files, can be used  to enable retention management using cloud tooling.
 
 ## Restore
-
-### Restore/Import source and type
 
 The restore/import source location can be one of the following:
 - remote _URL_ in a form of `protocol://authority/path`.
