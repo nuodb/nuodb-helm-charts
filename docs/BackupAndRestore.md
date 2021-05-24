@@ -39,14 +39,17 @@ NuoDB provides several automated mechanisms for backing up and restoring a datab
 
 After database installation, the available backup and restore mechanisms are: 
 
+Backup:
 1. [Scheduled online database backups](#scheduled-online-database-backups)
-2. [Fine-grained archive restore selection](#fine-grained-archive-selection)
-3. [Distributed database restore from source](#distributed-database-restore-from-source)
-4. [Distributed database restore with storage groups](#distributed-database-restore-with-storage-groups)
-5. [Manual database restore](#manual-database-restore)
-6. [Automatic archive initial import](#automatic-archive-initial-import)
-7. [Automatic archive restore](#automatic-archive-restore)
-8. [Archive seed restore](#archive-seed-restore)
+   
+Restore:
+1. [Fine-grained archive restore selection](#fine-grained-archive-selection)
+2. [Distributed database restore from source](#distributed-database-restore-from-source)
+3. [Distributed database restore with storage groups](#distributed-database-restore-with-storage-groups)
+4. [Manual database restore](#manual-database-restore)
+5. [Automatic archive initial import](#automatic-archive-initial-import)
+6. [Automatic archive restore](#automatic-archive-restore)
+7. [Archive seed restore](#archive-seed-restore)
 
 Several of these mechanisms require additional configuration before using.
 
