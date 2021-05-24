@@ -13,7 +13,7 @@
             - [Backup retention management](#backup-retention-management)
     - [Restore](#restore)
         - [Restore/Import source and type](#restoreimport-source-and-type)
-        - [Fine-grained archive selection](#fine-grained-archive-selection)
+        - [Fine-grained archive restore selection](#fine-grained-archive-selection)
         - [Distributed restore](#distributed-restore)
             - [Distributed database restore from source](#distributed-database-restore-from-source)
             - [Distributed database restore with storage groups](#distributed-database-restore-with-storage-groups)
@@ -41,7 +41,7 @@ NuoDB provides several automated mechanisms for backing up and restoring a datab
 After database installation, the available backup and restore mechanisms are: 
 
 1. [Scheduled online database backups](#scheduled-online-database-backups)
-2. [Fine-grained archive selection](#fine-grained-archive-selection)
+2. [Fine-grained archive restore selection](#fine-grained-archive-selection)
 3. [Distributed database restore from source](#distributed-database-restore-from-source)
 4. [Distributed database restore with storage groups](#distributed-database-restore-with-storage-groups)
 5. [Manual database restore](#manual-database-restore)
@@ -85,7 +85,7 @@ The table below shows the compatibility matrix for different backup and restore 
 |                                       | NuoDB 4.0.x+ Helm Charts 2.x.x | NuoDB 4.0.x+ Helm Charts 3.0.x | NuoDB 4.0.x+ Helm Charts 3.1.x | NuoDB 4.2.x+ Helm Charts 3.2.x+ |
 |---------------------------------------|--------------------------------|--------------------------------|---------------------------------|---------------------------------|
 | Scheduled online database backups     | ✓<sup>[1]</sup>                | ✓<sup>[1]</sup>                | ✓                               | ✓                               |
-| Fine-grained archive selection        | -                              | -                              | -                               | ✓                               |
+| Fine-grained archive restore selection        | -                              | -                              | -                               | ✓                               |
 | Distributed database restore from source | ✓<sup>[2]</sup><sup>[3]</sup>  | ✓<sup>[2]</sup><sup>[3]</sup>  | ✓<sup>[3]</sup>                 | ✓<sup>[3]</sup>                 |
 | Distributed database restore with storage groups  | -                              | -                              | -                               | ✓                               |
 | Manual database restore               | -                              | -                              | -                               | ✓                               |
@@ -206,7 +206,7 @@ A remote _stream_ source is downloaded and extracted directly into the archive d
 - _backupset_ - Hot copy backup set which is either fetched from a remote source or available in the backup directory.
 A remote _backupset_ requires additional space as it is downloaded and extracted temporarily in the archive volume to be used during archive restore operation.
 
-### Fine-grained archive selection
+### Fine-grained archive restore selection
 
 NuoDB _restore_ chart provides several ways to select which archives should be restored during the [distributed database restore](#distributed-database-restore-from-source) or [Archive seed restore](#archive-seed-restore).
 
@@ -349,7 +349,7 @@ The process is documented in the [Distributed database restore from source](#dis
 - a complete set of archives serving all storage groups must be restored when performing database in-place restore
 - to ensure that backup coverage is complete, each storage group must be served by at least one HC SM
 
-A complete set of archives can be selected using several of the methods described in [Fine-grained archive selection](#fine-grained-archive-selection) section. NuoDB won't perform any special checks during database restore to ensure that the archives selected for a restore are a complete set of archives.
+A complete set of archives can be selected using several of the methods described in [Fine-grained archive restore selection](#fine-grained-archive-selection) section. NuoDB won't perform any special checks during database restore to ensure that the archives selected for a restore are a complete set of archives.
 If some of the storage groups are missing from the selection, their state won't be restored.
 
 > **NOTE**: For more information about storage groups, check [Using Table Partitions and Storage Groups](https://doc.nuodb.com/nuodb/latest/database-administration/using-table-partitions-and-storage-groups/)
