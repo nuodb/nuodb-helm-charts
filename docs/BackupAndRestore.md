@@ -120,7 +120,7 @@ Standard protocols such as _HTTP/s_, _FTP_ and _SFTP_ can be used as a source.
 Any other protocols that have built-in support in the shipped `cURL` binary in the NuoDB image can be used as well.
 Basic authentication or an authentication token that is embedded in the URL are supported.
 The remote URL should point to the `tar.gz` file which will be automatically extracted using the configured `stripLevels` setting (by default `1`). 
-These are the number of leading path elements removed by the `tar` command during archive extraction so that the root data (e.g for a _stream_, the *.atm files) can be accessed.
+These are the number of leading path elements removed by the `tar` command during archive extraction so that the root data (e.g for a _stream_, the .atm files) can be accessed.
 Typically, the `tar.gz` only contains one parent level folder, being the database name, for example _demo_. 
 
 - backupset available in the backup root directory.
@@ -265,7 +265,7 @@ When troubleshooting distributed database restore failures, it's important to co
 Backup sets produced by different backup groups can't be used together to perform _distributed database in-place restore_.
 To perform a database restore in multi-cluster deployment, proceed with one of the approaches described below.
 
-1. [Select the hot copy SMs in one of the clusters](#fine-grained-archive-selection) and provide a backup set available in that cluster or `:group-latest` as `restore.source`.
+1. Select the hot copy SMs in one of the clusters, see section [Fine grained archive restore selection](#fine-grained-archive-selection), and provide a backup set available in that cluster or `:group-latest` as `restore.source`.
 2. Make the selected backup set available as a remote URL in both clusters. It can be used as a restore source for all the SMs in the database only if no custom storage groups are configured.
 3. Configure HC SMs in all clusters to be part of a single backup group and leave one set of backup jobs enabled in only one of the clusters to control this backup group.
 This will ensure that all HC SMs backups will be coordinated during hot copy requests.
@@ -465,7 +465,7 @@ drwxr-xr-x 2 nuodb root 4096 Feb 19 10:32 demo
 ### Automatic archive restore
 
 _Automatic archive restore_ is a special case of the seed restore operation.
-It allows SM to automatically restore its archive if it is corrupted or missing from a predefined restore source so that the accelerated sync use case is supported automatically.
+It allows the SM to automatically restore its archive if it is corrupted or missing from a predefined restore source so that the accelerated sync use case is supported automatically.
 Although this mechanism can be used with a remote URL, it is typically used with `:latest` or `:group-latest` configured as a restore source.
 
 _Automatic archive restore_ is configured in the `database.autoRestore` section and will execute for every Storage Manager in the database deployment when all of the below conditions are met:
