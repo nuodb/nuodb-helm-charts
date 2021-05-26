@@ -732,10 +732,11 @@ Ensure that the backup timeout settings are properly configured in your environm
 
 #### Overlapping backups
 
-NuoDB is preventing from running concurrent hot copy operations of the same type.
-The check is done at the archive level. Multiple archives can be participating in a single hot copy operation. By default single hot copy request targets all HC SMs in a single cluster.
+NuoDB prevents running concurrent hot copy operations of the same type.
+The check is done at the archive level. Multiple archives can participate in a single hot copy operation.
+By default, a single hot copy request targets all HC SMs in a single cluster.
 
-The following error message can be found in backup job pod logs if it fails because another hot copy operation is already running.
+The following error message can be found in the backup job pod logs if it fails because another hot copy operation is already running.
 
 ```
 Starting full backup for database demo on processes with labels 'backup cluster0 ' ...
@@ -783,9 +784,9 @@ For more information on how to work with backup sets, please see [Using Backup S
 At a high level the restore failures can be classified into two groups:
 
 1. Failures during the `restore` job execution.
-These are easier to investigate by looking into the job pod logs.
-2. Failures during distributed database restore operations.
-To investigate the reason for the failure, the container logs from all database processes should be collected.
+To investigate, review the job pod logs.
+2. Failures during distributed database restore operations. 
+To investigate, collect the container logs from all database processes.
 NuoDB SMs maintain `nuosm.log` file in `/var/log/nuodb` directory which contains historical logs from SM containers startup procedures.
 The log file will be available between pod restarts if `database.sm.logPersistence.enabled` setting is enabled.
 
@@ -816,7 +817,7 @@ NAME                                                READY   STATUS             R
 sm-database-nuodb-cluster0-demo-hotcopy-1           0/1     Error              2          12m
 ```
 
-Checking the pod logs shows that the archive served by this SM has been requested for a restore using restore source _20210520T085520_ which is not available in its backup volume.
+Checking the pod logs shows that the archive served by this SM was requested for a restore using restore source _20210520T085520_ which is not available in its backup volume.
 
 ```bash
 kubectl logs full-hotcopy-demo-cronjob-1613663760-r8lm8
@@ -825,6 +826,7 @@ Starting full backup for database demo on processes with labels 'backup cluster0
 Error running hotcopy 1
 ```
 
+```bash
 $ kubectl logs sm-database-nuodb-cluster0-demo-hotcopy-1
 2021-05-20T09:52:15.198+0000 ===========================================
 2021-05-20T09:52:15.234+0000 logsize=8154; maxlog=5000000
