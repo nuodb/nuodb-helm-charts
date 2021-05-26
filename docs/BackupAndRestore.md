@@ -12,7 +12,7 @@
         - [Scheduled online database backups](#scheduled-online-database-backups)
             - [Backup retention management](#backup-retention-management)
     - [Restore](#restore)
-        - [Fine-grained archive restore selection](#fine-grained-archive-selection)
+        - [Fine-grained archive restore selection](#fine-grained-restore-archive-selection)
         - [Distributed restore](#distributed-restore)
             - [Distributed database restore from source](#distributed-database-restore-from-source)
             - [Distributed database restore with storage groups](#distributed-database-restore-with-storage-groups)
