@@ -393,6 +393,15 @@ function resolveLatestSource() {
   return 0
 }
 
+#=======================================
+# function - fetch the legacy restore request from KV store
+#
+function get_legacy_restore_request() {
+  trace "retrieving legacy restore request from KV store"
+  legacy_restore_requested="$( nuocmd get value --key "$restore_req" 2>&1 )"
+  return $?
+}
+
 #=============================
 # main routine
 #=============================
@@ -409,8 +418,9 @@ else
   log "Directory $DB_DIR exists"
 fi
 
-trace "retrieving restore request from raft"
-legacy_restore_requested="$( nuocmd get value --key "$restore_req" 2>&1 )"
+# Retry the first request against the admin layer to make sure that Raft
+# commands can be committed and fail fast on error
+retry 3 get_legacy_restore_request
 if [ $? -ne 0 ]; then
   die 1 "Unable to retrieve legacy restore request: ${legacy_restore_requested}"
 fi
