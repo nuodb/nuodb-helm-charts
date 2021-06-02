@@ -86,7 +86,7 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 	foundBackupEnabled := false
 	foundBackupDisabled := false
 
-	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 		containers := &obj.Spec.Template.Spec.Containers
 
 		assert.NotEmpty(t, containers)
@@ -139,7 +139,7 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 	foundBackupEnabled := false
 	foundBackupDisabled := false
 
-	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 		containers := &obj.Spec.Template.Spec.Containers
 
 		assert.NotEmpty(t, containers)
