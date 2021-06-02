@@ -138,7 +138,7 @@ func executeSidecarTests(t *testing.T, options *helm.Options) {
 		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			t.Logf("Inspecting database statefulset: %s", obj.Name)
 			checkSpecVolumes(t, obj.Spec.Template.Spec.Volumes, options, helmChartPath)
 			checkSidecarContainers(t, obj.Spec.Template.Spec.Containers, options, helmChartPath)
