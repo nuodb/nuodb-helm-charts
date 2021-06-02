@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -332,4 +333,57 @@ func TestKubernetesAltAddress(t *testing.T) {
 		expectedNrEngines := 2
 		t.Run("verifyEnginesAltAddress", func(t *testing.T) { verifyEngineAltAddress(t, namespaceName, admin0, expectedNrEngines) })
 	})
+}
+
+func TestKubernetesEngineRestartShrinkedAdmin(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas": "3",
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
+
+	opt := testlib.GetExtractedOptions(&options)
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-0", admin)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		},
+	})
+
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
+	smPodName0 := fmt.Sprintf("%s-hotcopy-0", smPodNameTemplate)
+
+	// scale down the APs to 2; KAA will automatically evict the shut down AP
+	k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", admin, "--replicas=2")
+	testlib.AwaitServerState(
+		t, namespaceName, admin0, fmt.Sprintf("%s-2", admin), "Disconnected", 30*time.Second)
+	testlib.AwaitNrReplicasReady(t, namespaceName, admin, 2)
+	// restart the current leader to bounce it
+	testlib.AwaitDomainLeader(t, namespaceName, admin0, func(leader string) {
+		testlib.DeletePod(t, namespaceName, "pod/"+leader)
+		testlib.AwaitNrReplicasScheduled(t, namespaceName, leader, 1)
+		testlib.AwaitPodUp(t, namespaceName, leader, 90*time.Second)
+	}, 20*time.Second)
+
+	// restart the only SM which will cause database restart and make sure that
+	// it can start successfully
+	testlib.DeletePod(t, namespaceName, "pod/"+smPodName0)
+	testlib.AwaitNrReplicasScheduled(t, namespaceName, smPodNameTemplate, opt.NrSmPods)
+	testlib.AwaitPodUp(t, namespaceName, smPodName0, 90*time.Second)
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 }
