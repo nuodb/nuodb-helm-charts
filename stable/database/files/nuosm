@@ -667,7 +667,7 @@ else
       log "Restored from $restore_source"
       restore_successful="true"
 
-      # clear/release shared state only if restore is successfull
+      # clear/release shared state only if restore is successful
       log "Clearing restore credential request from raft"
       nuocmd set value --key $credential_req --value '' --unconditional
     fi
@@ -739,7 +739,7 @@ fi
 log "$( nuocmd show archives --db-name $DB_NAME )"
 
 if [ -n "$restore_requested" ] && [ -n "$restore_successful" ]; then 
-    # clear the restore_request only if restore is successfull
+    # clear the restore_request only if restore is successful
     clearRestoreRequest "$restore_requested" &
 fi
 

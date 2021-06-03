@@ -166,6 +166,11 @@ admin:
     # packet to close the admin connection, leaving a database process entry
     # in the domain state that has no running Pod associated with it
     processLivenessCheckSec: 30
+    # increase maximum message size that can be sent between admin processes;
+    # if catching up a server using a snapshot, we may have to serialize our
+    # entire Raft state into one message; set maximum message size to 1GB to
+    # allow Raft state to grow to 1GB
+    thrift.message.max: "1073741824"
 
   ## nuodb-admin resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/

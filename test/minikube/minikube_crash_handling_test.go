@@ -38,7 +38,7 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 	testlib.AwaitPodUp(t, namespaceName, podName, 100*time.Second)
 	testlib.AwaitDatabaseUp(t, namespaceName, adminPodName, "demo", 2)
 
-	oldPodLogFileName := <- ch
+	oldPodLogFileName := <-ch
 	buf, err := ioutil.ReadFile(oldPodLogFileName)
 	require.NoError(t, err)
 	fullLog := string(buf)
@@ -48,7 +48,7 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--", "find", "/var/log/nuodb/", "-type", "d")
 	require.NoError(t, err, output)
-	require.Regexp(t, regexp.MustCompile("crash-[0-9]{8}T[0-9]{6}") ,output)
+	require.Regexp(t, regexp.MustCompile("crash-[0-9]{8}T[0-9]{6}"), output)
 }
 
 func TestKubernetesPrintCores(t *testing.T) {
@@ -69,9 +69,9 @@ func TestKubernetesPrintCores(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.logPersistence.enabled": 	 "true",
-			"database.sm.logPersistence.enabled": 	 "true",
-			"database.options.ping-timeout": 		 "0", // disable network fault handling
+			"database.te.logPersistence.enabled":    "true",
+			"database.sm.logPersistence.enabled":    "true",
+			"database.options.ping-timeout":         "0", // disable network fault handling
 		},
 	})
 
@@ -87,7 +87,7 @@ func TestKubernetesPrintCores(t *testing.T) {
 		smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 		smPodName := testlib.GetPodName(t, namespaceName, smPodTemplate)
 		verifyKillAndInfoInLog(t, namespaceName, admin0, smPodName)
-		
+
 		smLogPvc := fmt.Sprintf("log-volume-%s", smPodName)
 		testlib.RecoverCoresFromEngine(t, namespaceName, "sm", smLogPvc)
 	})
@@ -102,7 +102,7 @@ func TestPermanentLossOfAdmin(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t,
-		&helm.Options{SetValues: map[string]string{"admin.replicas":  "3"}},
+		&helm.Options{SetValues: map[string]string{"admin.replicas": "3"}},
 		3, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
@@ -138,7 +138,7 @@ func TestPermanentLossOfAdmin(t *testing.T) {
 
 	testlib.Await(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, adminToKill,
-			"Reconnected with process with connectKey", &corev1.PodLogOptions{} ) >= 1
+			"Reconnected with process with connectKey", &corev1.PodLogOptions{}) >= 1
 	}, 30*time.Second)
 
 }
@@ -253,4 +253,63 @@ func TestNuoDBKubeDiagnostics(t *testing.T) {
 	smPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 	smPodName := testlib.GetPodName(t, namespaceName, smPodTemplate)
 	require.True(t, func() bool { _, ok := config.Pods[smPodName]; return ok }())
+}
+
+func TestGetDiagnoseInfoAdminLogPersistence(t *testing.T) {
+	// start an admin with log persistence enabled
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{
+		SetValues: map[string]string{
+			"admin.logPersistence.enabled": "true",
+		},
+	}, 1, "")
+
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	admin := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// simulate the creation of a real filesystem by creating a lost+found
+	// directory; with certain PV provisioners, the directory is owned by
+	// root and has permissions 700 (not group-writable); remove all access
+	// (read or write) to make the file inaccessible when streaming the
+	// contents of NUODB_LOGDIR
+	k8s.RunKubectl(t, options, "exec", admin, "--", "mkdir", "/var/log/nuodb/lost+found")
+	k8s.RunKubectl(t, options, "exec", admin, "--", "chmod", "-rwx", "/var/log/nuodb/lost+found")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "stat", "-c", "%a", "/var/log/nuodb/lost+found")
+	require.NoError(t, err, output)
+	require.Equal(t, "0", strings.TrimSpace(output))
+
+	// invoke 'nuocmd get diagnose-info', which should download the contents
+	// of NUODB_LOGDIR as a ZIP file, unzip the file, and repackage it with
+	// some other diagnostic info; this can fail either when unzipping the
+	// file, or while streaming the response; in newer versions of the
+	// product we skip inaccessible files rather than failing the request,
+	// so check for presence of logging to decide if the request should have
+	// failed
+	output, _ = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "nuocmd", "get", "diagnose-info", "--include-cores", "--output-dir", "/tmp")
+	msgCount := testlib.GetStringOccurrenceInLog(t, namespaceName, admin,
+		"Unable to package file /var/log/nuodb/lost+found in ZIP file", &corev1.PodLogOptions{})
+	if msgCount == 0 {
+		require.True(t, strings.Contains(output, "Unable to download diagnose info for "+admin))
+	} else {
+		require.Equal(t, 1, msgCount)
+	}
+
+	// kill the admin pod and wait for it to be re-created
+	verifyPodKill(t, namespaceName, admin, helmChartReleaseName, 1)
+
+	// check that the lost+found directory has the correct permissions
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "stat", "-c", "%a", "/var/log/nuodb/lost+found")
+	require.NoError(t, err, output)
+	require.Equal(t, "770", strings.TrimSpace(output))
+
+	// check that 'nuocmd get diagnose-info' does not generate any errors or
+	// logging about inaccessible files
+	output, _ = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "nuocmd", "get", "diagnose-info", "--include-cores", "--output-dir", "/tmp")
+	msgCount = testlib.GetStringOccurrenceInLog(t, namespaceName, admin,
+		"Unable to package file /var/log/nuodb/lost+found in ZIP file", &corev1.PodLogOptions{})
+	require.Equal(t, 0, msgCount)
+	require.False(t, strings.Contains(output, "Unable to download diagnose info for "+admin))
 }
