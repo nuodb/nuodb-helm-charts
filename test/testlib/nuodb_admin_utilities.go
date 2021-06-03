@@ -249,16 +249,13 @@ func GetDomainLeaderE(t *testing.T, namespace string, adminPod string) (string, 
 	return "", errors.New("no leader found")
 }
 
-func AwaitDomainLeader(t *testing.T, namespace string, adminPod string, actionFn func(string),
-	timeout time.Duration) {
+func AwaitDomainLeader(t *testing.T, namespace string, adminPod string, timeout time.Duration) (leader string) {
 	Await(t, func() bool {
-		leader, err := GetDomainLeaderE(t, namespace, adminPod)
-		if err != nil {
-			return false
-		}
-		actionFn(leader)
-		return true
+		var err error
+		leader, err = GetDomainLeaderE(t, namespace, adminPod)
+		return err == nil
 	}, timeout)
+	return
 }
 
 func AwaitServerState(t *testing.T, namespace string, adminPod string,

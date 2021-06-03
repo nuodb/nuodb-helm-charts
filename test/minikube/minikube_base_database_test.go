@@ -120,14 +120,8 @@ func verifyDBService(t *testing.T, namespaceName string, podName string, service
 }
 
 func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
-	options := k8s.NewKubectlOptions("", "", namespaceName)
-
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
-		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
-
-	require.NoError(t, err, output)
-
-	err, objects := testlib.Unmarshal(output)
+	objects, err := testlib.GetDatabaseProcessesE(t, namespaceName, adminPod, "demo")
+	require.NoError(t, err)
 
 	for _, obj := range objects {
 		val, ok := obj.Labels["cloud"]
@@ -147,13 +141,8 @@ func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
 
 func verifyEngineAltAddress(t *testing.T, namespaceName string, adminPod string, expectedNrEngines int) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "--",
-		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
-	require.NoError(t, err, output)
-
-	err, objects := testlib.Unmarshal(output)
-	require.NoError(t, err, output)
+	objects, err := testlib.GetDatabaseProcessesE(t, namespaceName, adminPod, "demo")
+	require.NoError(t, err)
 	require.EqualValues(t, len(objects), expectedNrEngines)
 
 	for _, obj := range objects {
@@ -335,7 +324,7 @@ func TestKubernetesAltAddress(t *testing.T) {
 	})
 }
 
-func TestKubernetesEngineRestartShrinkedAdmin(t *testing.T) {
+func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -349,24 +338,9 @@ func TestKubernetesEngineRestartShrinkedAdmin(t *testing.T) {
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
 
-	opt := testlib.GetExtractedOptions(&options)
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
 	admin0 := fmt.Sprintf("%s-0", admin)
-
-	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-
-	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-		},
-	})
-
-	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
-	smPodName0 := fmt.Sprintf("%s-hotcopy-0", smPodNameTemplate)
 
 	// scale down the APs to 2; KAA will automatically evict the shut down AP
 	k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", admin, "--replicas=2")
@@ -374,16 +348,20 @@ func TestKubernetesEngineRestartShrinkedAdmin(t *testing.T) {
 		t, namespaceName, admin0, fmt.Sprintf("%s-2", admin), "Disconnected", 30*time.Second)
 	testlib.AwaitNrReplicasReady(t, namespaceName, admin, 2)
 	// restart the current leader to bounce it
-	testlib.AwaitDomainLeader(t, namespaceName, admin0, func(leader string) {
-		testlib.DeletePod(t, namespaceName, "pod/"+leader)
-		testlib.AwaitNrReplicasScheduled(t, namespaceName, leader, 1)
-		testlib.AwaitPodUp(t, namespaceName, leader, 90*time.Second)
-	}, 20*time.Second)
+	leader := testlib.AwaitDomainLeader(t, namespaceName, admin0, 20*time.Second)
+	testlib.DeletePod(t, namespaceName, "pod/"+leader)
+	testlib.AwaitNrReplicasScheduled(t, namespaceName, leader, 1)
+	testlib.AwaitPodUp(t, namespaceName, leader, 90*time.Second)
 
-	// restart the only SM which will cause database restart and make sure that
-	// it can start successfully
-	testlib.DeletePod(t, namespaceName, "pod/"+smPodName0)
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, smPodNameTemplate, opt.NrSmPods)
-	testlib.AwaitPodUp(t, namespaceName, smPodName0, 90*time.Second)
-	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	// make sure that SM database processes can start
+	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		},
+	})
 }

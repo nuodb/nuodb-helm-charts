@@ -412,3 +412,14 @@ func SkipTestOnNuoDBVersionCondition(t *testing.T, condition string) {
 		return c.Check(version)
 	})
 }
+
+func GetDatabaseProcessesE(t *testing.T, namespaceName string, adminPod string, dbName string) (processes []NuoDBProcess, err error) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "--",
+		"nuocmd", "--show-json", "get", "processes", "--db-name", dbName)
+	if err != nil {
+		return nil, err
+	}
+	err, processes = Unmarshal(output)
+	return
+}
