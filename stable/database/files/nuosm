@@ -351,19 +351,6 @@ function isRestoreRequestSupported() {
 }
 
 #=======================================
-# function - ensures that admin layer has an elected leader
-#
-function checkAdminLayer() {
-  local timeout="$1"
-  local status
-  trace "checking Admin layer"
-  status="$(nuocmd check servers --check-leader --timeout "$timeout" 2>&1)"
-  if [ $? -ne 0 ]; then
-    die 1 "Admin layer is inoperative - exiting: ${status}"
-  fi
-}
-
-#=======================================
 # function - completes archive restore request
 #
 function completeRestoreRequest(){
@@ -406,6 +393,15 @@ function resolveLatestSource() {
   return 0
 }
 
+#=======================================
+# function - fetch the legacy restore request from KV store
+#
+function get_legacy_restore_request() {
+  trace "retrieving legacy restore request from KV store"
+  legacy_restore_requested="$( nuocmd get value --key "$restore_req" 2>&1 )"
+  return $?
+}
+
 #=============================
 # main routine
 #=============================
@@ -422,11 +418,12 @@ else
   log "Directory $DB_DIR exists"
 fi
 
-# ensure the admin layer is intact...
-checkAdminLayer 30
-
-trace "retrieving restore request from raft"
-legacy_restore_requested="$( nuocmd get value --key "$restore_req" )"
+# Retry the first request against the admin layer to make sure that Raft
+# commands can be committed and fail fast on error
+retry 3 get_legacy_restore_request
+if [ $? -ne 0 ]; then
+  die 1 "Unable to retrieve legacy restore request: ${legacy_restore_requested}"
+fi
 
 [ -f "$DB_DIR/info.json" ] && myArchive=$(sed -e 's|.*"id":\s*\([0-9]\+\).*|\1|' "$DB_DIR/info.json")
 trace "checking archive raft metadata"

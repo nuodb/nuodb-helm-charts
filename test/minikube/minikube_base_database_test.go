@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -119,14 +120,8 @@ func verifyDBService(t *testing.T, namespaceName string, podName string, service
 }
 
 func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
-	options := k8s.NewKubectlOptions("", "", namespaceName)
-
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
-		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
-
-	require.NoError(t, err, output)
-
-	err, objects := testlib.Unmarshal(output)
+	objects, err := testlib.GetDatabaseProcessesE(t, namespaceName, adminPod, "demo")
+	require.NoError(t, err)
 
 	for _, obj := range objects {
 		val, ok := obj.Labels["cloud"]
@@ -146,13 +141,8 @@ func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
 
 func verifyEngineAltAddress(t *testing.T, namespaceName string, adminPod string, expectedNrEngines int) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "--",
-		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
-	require.NoError(t, err, output)
-
-	err, objects := testlib.Unmarshal(output)
-	require.NoError(t, err, output)
+	objects, err := testlib.GetDatabaseProcessesE(t, namespaceName, adminPod, "demo")
+	require.NoError(t, err)
 	require.EqualValues(t, len(objects), expectedNrEngines)
 
 	for _, obj := range objects {
@@ -331,5 +321,47 @@ func TestKubernetesAltAddress(t *testing.T) {
 		})
 		expectedNrEngines := 2
 		t.Run("verifyEnginesAltAddress", func(t *testing.T) { verifyEngineAltAddress(t, namespaceName, admin0, expectedNrEngines) })
+	})
+}
+
+func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas": "3",
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 3, "")
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-0", admin)
+
+	// scale down the APs to 2; KAA will automatically evict the shut down AP
+	k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", admin, "--replicas=2")
+	testlib.AwaitServerState(
+		t, namespaceName, admin0, fmt.Sprintf("%s-2", admin), "Disconnected", 30*time.Second)
+	testlib.AwaitNrReplicasReady(t, namespaceName, admin, 2)
+	// restart the current leader to bounce it
+	leader := testlib.AwaitDomainLeader(t, namespaceName, admin0, 20*time.Second)
+	testlib.DeletePod(t, namespaceName, "pod/"+leader)
+	testlib.AwaitNrReplicasScheduled(t, namespaceName, leader, 1)
+	testlib.AwaitPodUp(t, namespaceName, leader, 90*time.Second)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	// make sure that SM database processes can start
+	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		},
 	})
 }
