@@ -221,6 +221,14 @@ database:
         - ReadWriteOnce
       # storageClass: "-"
 
+    journalPath:
+      enabled: false
+      persistence:
+        size: 20Gi
+        accessModes:
+          - ReadWriteOnce
+        # storageClass: "-"
+
     # Settings for storage manager (SM) nodes with hotcopy enabled.
     # Total SM Limit is 1 in CE version of NuoDB
     # These SMs have hotcopy backup enabled. To start SMs without hotcopy use

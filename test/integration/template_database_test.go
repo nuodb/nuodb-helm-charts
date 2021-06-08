@@ -248,6 +248,10 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		assert.True(t, testlib.EnvContains(args, "NUODOCKER_KEYSTORE_PASSWORD", "changeIt"))
 	}
 
+	basicInitContainerCommandChecks := func(commands []string) {
+		assert.NotContains(t, commands, "/var/opt/nuodb/journal")
+	}
+
 	t.Run("testDeployment", func(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
@@ -267,6 +271,9 @@ func TestDatabaseOtherOptions(t *testing.T) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
+
+			require.NotEmpty(t, obj.Spec.Template.Spec.InitContainers)
+			basicInitContainerCommandChecks(obj.Spec.Template.Spec.InitContainers[0].Command)
 		}
 	})
 
@@ -715,4 +722,96 @@ func TestDatabaseStoragePasswordsRender(t *testing.T) {
 			assert.Equal(t, options.SetValues["admin.tde.secrets."+database], volume.VolumeSource.Secret.SecretName)
 		}
 	})
+}
+
+func TestDatabaseSeparateJournal(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	t.Run("testStatefulSetDefaults", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.journalPath.enabled": "true",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			container := obj.Spec.Template.Spec.Containers[0]
+
+			assert.True(t, testlib.EnvContains(container.Env, "SEPARATE_JOURNAL", "true"))
+
+			mount, ok := testlib.GetMount(container.VolumeMounts, "journal-volume")
+			assert.True(t, ok, "mount journal-volume not found")
+			assert.EqualValues(t, "/var/opt/nuodb/journal", mount.MountPath)
+
+			initContainer := obj.Spec.Template.Spec.InitContainers[0]
+			assert.Contains(t, initContainer.Command, "/var/opt/nuodb/journal")
+
+			claim, ok := testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
+			assert.True(t, ok, "volume journal-volume not found")
+			assert.Equal(t, v1.ReadWriteOnce, claim.Spec.AccessModes[0])
+			assert.Nil(t, claim.Spec.StorageClassName)
+		}
+	})
+
+	t.Run("testStatefulSetOverrides", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.journalPath.enabled": "true",
+				"database.sm.journalPath.persistence.accessModes[0]": "ReadWriteMany",
+				"database.sm.journalPath.persistence.storageClass": "non-default",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			container := obj.Spec.Template.Spec.Containers[0]
+
+			assert.True(t, testlib.EnvContains(container.Env, "SEPARATE_JOURNAL", "true"))
+
+			mount, ok := testlib.GetMount(container.VolumeMounts, "journal-volume")
+			assert.True(t, ok, "mount journal-volume not found")
+			assert.EqualValues(t, "/var/opt/nuodb/journal", mount.MountPath)
+
+			initContainer := obj.Spec.Template.Spec.InitContainers[0]
+			assert.Contains(t, initContainer.Command, "/var/opt/nuodb/journal")
+
+			claim, ok := testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
+			assert.True(t, ok, "volume journal-volume not found")
+			assert.Equal(t, v1.ReadWriteMany, claim.Spec.AccessModes[0])
+			assert.EqualValues(t, "non-default", *claim.Spec.StorageClassName)
+		}
+	})
+
+	t.Run("testStatefulDefaultFalse", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.journalPath.enabled": "",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			container := obj.Spec.Template.Spec.Containers[0]
+
+			assert.True(t, testlib.EnvContains(container.Env, "SEPARATE_JOURNAL", "false"))
+
+			_, ok := testlib.GetMount(container.VolumeMounts, "journal-volume")
+			assert.False(t, ok, "mount journal-volume not found")
+
+			initContainer := obj.Spec.Template.Spec.InitContainers[0]
+			assert.NotContains(t, initContainer.Command, "/var/opt/nuodb/journal")
+
+			_, ok = testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
+			assert.False(t, ok, "volume journal-volume not found")
+		}
+	})
+
 }
