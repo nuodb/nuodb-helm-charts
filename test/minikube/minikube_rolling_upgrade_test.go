@@ -322,13 +322,13 @@ func TestChangingJournalLocationFails(t *testing.T) {
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.sm.journalPath.enabled": "false",
+				"database.sm.hotCopy.journalPath.enabled": "false",
 			},
 		}
 
 		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
-		options.SetValues["database.sm.journalPath.enabled"] = "true"
+		options.SetValues["database.sm.hotCopy.journalPath.enabled"] = "true"
 
 		err := helm.UpgradeE(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
 		require.Error(t, err)

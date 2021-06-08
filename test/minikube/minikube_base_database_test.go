@@ -387,7 +387,7 @@ func TestKubernetesSeparateJournalLocation(t *testing.T) {
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.sm.journalPath.enabled":       "true",
+				"database.sm.hotCopy.journalPath.enabled":       "true",
 			},
 		}
 

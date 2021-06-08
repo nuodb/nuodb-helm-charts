@@ -795,7 +795,7 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 	t.Run("testStatefulDefaultFalse", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.journalPath.enabled": "",
+				"database.sm.hotCopy.journalPath.enabled": "",
 			},
 		}
 
