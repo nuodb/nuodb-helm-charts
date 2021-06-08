@@ -222,7 +222,7 @@ database:
       # storageClass: "-"
 
     journalPath:
-      enabled: true
+      enabled: false
       persistence:
         size: 20Gi
         accessModes:
