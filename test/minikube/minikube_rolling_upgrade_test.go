@@ -297,7 +297,7 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 }
 
-func TestChangeJournalLocation(t *testing.T) {
+func TestChangingJournalLocationFails(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -318,6 +318,7 @@ func TestChangeJournalLocation(t *testing.T) {
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.journalPath.enabled": "false",
 			},
 		}
 
@@ -327,7 +328,5 @@ func TestChangeJournalLocation(t *testing.T) {
 
 		err := helm.UpgradeE(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
 		require.Error(t, err)
-		t.Log(err)
-
 	})
 }

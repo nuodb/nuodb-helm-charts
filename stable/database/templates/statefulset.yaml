@@ -67,7 +67,6 @@ spec:
           - 'chmod'
           - '770'
           - '/var/opt/nuodb/archive'
-          - 'var/opt/nuodb/backup'
           - '/var/log/nuodb'
   {{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
           - '/var/opt/nuodb/journal'

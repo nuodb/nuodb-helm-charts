@@ -214,6 +214,10 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
 | `sm.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
+| `sm.journalPath.enabled` | Whether to enable separate SM journal directory. For more info, read the [Journal HowTo](https://github.com/nuodb/nuodb-helm-charts/docs/HowToArchiveJournal.md) | `false` |
+| `sm.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
+| `sm.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
+| `sm.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
 | `sm.hotCopy.enableBackups` | Enable full/incremental/journal backups | `true` |
