@@ -731,7 +731,8 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 	t.Run("testStatefulSetDefaults", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.noHotCopy.journalPath.enabled": "true",
 			},
 		}
 
@@ -760,9 +761,12 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 	t.Run("testStatefulSetOverrides", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.journalPath.enabled": "true",
-				"database.sm.journalPath.persistence.accessModes[0]": "ReadWriteMany",
-				"database.sm.journalPath.persistence.storageClass": "non-default",
+				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.noHotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.persistence.accessModes[0]": "ReadWriteMany",
+				"database.sm.noHotCopy.journalPath.persistence.accessModes[0]": "ReadWriteMany",
+				"database.sm.hotCopy.journalPath.persistence.storageClass": "non-default",
+				"database.sm.noHotCopy.journalPath.persistence.storageClass": "non-default",
 			},
 		}
 

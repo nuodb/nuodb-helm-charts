@@ -22,9 +22,10 @@ On the other hand, the `archive` can be located on slightly slower disks since w
 
 By default, the `journal` is located in a subdirectory of the `archive`.
 To achieve the best cost vs speed tradeoff, you can separate the journal from the archive.
-To achieve that set the database helm template value `database.sm.journalPath.enabled` to `true` and configure it with the desired persistence settings.
+To achieve that set the database helm template values `database.sm.noHotCopy.journalPath.enabled` and `database.sm.hotCopy.journalPath.enabled` to `true` and configure it with the desired persistence settings.
 
 Kubernetes stateful sets volume mounts are immutable and as such, the setting can not not be changed easily on an existing database.
 More on upgrades below [Upgrading existing domains](#upgrading-existing-domains).
 
 ## Upgrading existing domains
+TODO

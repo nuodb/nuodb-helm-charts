@@ -68,13 +68,13 @@ spec:
           - '770'
           - '/var/opt/nuodb/archive'
           - '/var/log/nuodb'
-  {{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
+  {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
           - '/var/opt/nuodb/journal'
   {{- end }}
         volumeMounts:
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
-        {{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
+        {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
         - name: journal-volume
           mountPath: /var/opt/nuodb/journal
         {{- end }}
@@ -155,7 +155,7 @@ spec:
         - { name: COMPONENT_NAME,      value: "sm" }
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
-        - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.journalPath.enabled}}" }
+        - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled}}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -188,7 +188,7 @@ spec:
           subPath: readinessprobe
         - mountPath: /var/opt/nuodb/archive
           name: archive-volume
-        {{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
+        {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
         - name: journal-volume
           mountPath: /var/opt/nuodb/journal
         {{- end }}
@@ -317,7 +317,7 @@ spec:
       resources:
         requests:
           storage: {{ .Values.database.persistence.size }}
-  {{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
+  {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
   - metadata:
       name: journal-volume
       labels:
@@ -329,14 +329,14 @@ spec:
         release: {{ .Release.Name | quote }}
     spec:
       accessModes:
-      {{- range .Values.database.sm.journalPath.persistence.accessModes }}
+      {{- range .Values.database.sm.noHotCopy.journalPath.persistence.accessModes }}
         - {{ . }}
       {{- end }}
-    {{- if .Values.database.sm.journalPath.persistence.storageClass }}
-      {{- if (eq "-" .Values.database.sm.journalPath.persistence.storageClass) }}
+    {{- if .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
+      {{- if (eq "-" .Values.database.sm.noHotCopy.journalPath.persistence.storageClass) }}
       storageClassName: ""
       {{- else }}
-      storageClassName: {{ .Values.database.sm.journalPath.persistence.storageClass }}
+      storageClassName: {{ .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
       {{- end }}
     {{- end }}
 {{- if .Values.database.isManualVolumeProvisioning }}
@@ -346,7 +346,7 @@ spec:
 {{- end }}
       resources:
         requests:
-          storage: {{ .Values.database.sm.journalPath.persistence.size }}
+          storage: {{ .Values.database.sm.noHotCopy.journalPath.persistence.size }}
   {{- end }}
   {{- if .Values.database.sm.logPersistence.enabled }}
   - metadata:
@@ -446,13 +446,13 @@ spec:
           - '/var/opt/nuodb/archive'
           - 'var/opt/nuodb/backup'
           - '/var/log/nuodb'
-{{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
+{{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
           - '/var/opt/nuodb/journal'
 {{- end }}
         volumeMounts:
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
-        {{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
+        {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
         - name: journal-volume
           mountPath: /var/opt/nuodb/journal
         {{- end }}
@@ -536,7 +536,7 @@ spec:
         - { name: COMPONENT_NAME,      value: "sm" }
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
-        - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.journalPath.enabled}}" }
+        - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled}}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -569,7 +569,7 @@ spec:
           subPath: readinessprobe
         - mountPath: /var/opt/nuodb/archive
           name: archive-volume
-        {{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
+        {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
         - name: journal-volume
           mountPath: /var/opt/nuodb/journal
         {{- end }}
@@ -700,7 +700,7 @@ spec:
       resources:
         requests:
           storage: {{ .Values.database.persistence.size }}
-  {{- if eq (include "defaultfalse" .Values.database.sm.journalPath.enabled) "true"}}
+  {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
   - metadata:
       name: journal-volume
       labels:
@@ -712,14 +712,14 @@ spec:
         release: {{ .Release.Name | quote }}
     spec:
       accessModes:
-      {{- range .Values.database.sm.journalPath.persistence.accessModes }}
+      {{- range .Values.database.sm.hotCopy.journalPath.persistence.accessModes }}
         - {{ . }}
       {{- end }}
-    {{- if .Values.database.sm.journalPath.persistence.storageClass }}
-      {{- if (eq "-" .Values.database.sm.journalPath.persistence.storageClass) }}
+    {{- if .Values.database.sm.hotCopy.journalPath.persistence.storageClass }}
+      {{- if (eq "-" .Values.database.sm.hotCopy.journalPath.persistence.storageClass) }}
       storageClassName: ""
       {{- else }}
-      storageClassName: {{ .Values.database.sm.journalPath.persistence.storageClass }}
+      storageClassName: {{ .Values.database.sm.hotCopy.journalPath.persistence.storageClass }}
       {{- end }}
     {{- end }}
 {{- if .Values.database.isManualVolumeProvisioning }}
@@ -729,7 +729,7 @@ spec:
 {{- end }}
       resources:
         requests:
-          storage: {{ .Values.database.sm.journalPath.persistence.size }}
+          storage: {{ .Values.database.sm.hotCopy.journalPath.persistence.size }}
   {{- end }}
   - metadata:
       name: backup-volume

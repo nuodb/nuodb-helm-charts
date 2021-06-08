@@ -364,22 +364,50 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.sm.noHotCopy.replicas":        "1",
-				"database.sm.journalPath.enabled": "false",
+				"database.sm.noHotCopy.journalPath.enabled": "false",
+				"database.sm.hotCopy.journalPath.enabled": "false",
 			},
 		}
+
+		// Stage 1: start a database with 2 SMs and journalPath false
 
 		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
 
 		statefulSets := findAllStatefulSets(t, namespaceName)
 
-		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.smNonHCSet.Name)
+		// Stage 2: Delete non-HC SM, upgrade to journalPath and restart
+
+		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.smNonHCSet.Name, 0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
-		options.SetValues["database.sm.journalPath.enabled"] = "true"
+		nonHCPVC := fmt.Sprintf("backup-volume-sm-%s-nuodb-cluster0-demo-0", databaseReleaseName)
+		testlib.DeletePVC(t, namespaceName, nonHCPVC)
 
-		err := helm.UpgradeE(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
-		require.Error(t, err)
+		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.smNonHCSet.Name)
+
+		options.SetValues["database.sm.noHotCopy.journalPath.enabled"] = "true"
+
+		helm.Upgrade(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
+
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
+
+		// Stage 3: Delete HC SM, upgrade to journalPath and restart
+
+		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.smHCSet.Name, 0)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
+
+		smHCPVC := fmt.Sprintf("backup-volume-sm-%s-nuodb-cluster0-demo-hotcopy-0", databaseReleaseName)
+		testlib.DeletePVC(t, namespaceName, smHCPVC)
+
+		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.smHCSet.Name)
+
+		options.SetValues["database.sm.hotCopy.journalPath.enabled"] = "true"
+
+		helm.Upgrade(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
+
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
+
 	})
 }
 

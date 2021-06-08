@@ -214,10 +214,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
 | `sm.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
-| `sm.journalPath.enabled` | Whether to enable separate SM journal directory. For more info, read the [Journal HowTo](https://github.com/nuodb/nuodb-helm-charts/docs/HowToArchiveJournal.md) | `false` |
-| `sm.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
-| `sm.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
-| `sm.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create DS/SS for hot-copy enabled SMs | `true` |
 | `sm.hotCopy.enableBackups` | Enable full/incremental/journal backups | `true` |
@@ -238,8 +234,16 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
 | `sm.hotCopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
 | `sm.hotCopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
+| `sm.hotCopy.journalPath.enabled` | Whether to enable separate SM journal directory. For more info, read the [Journal HowTo](https://github.com/nuodb/nuodb-helm-charts/docs/HowToArchiveJournal.md) | `false` |
+| `sm.hotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
+| `sm.hotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
+| `sm.hotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create DS/SS for non-hot-copy SMs | `true` |
+| `sm.noHotCopy.journalPath.enabled` | Whether to enable separate SM journal directory. For more info, read the [Journal HowTo](https://github.com/nuodb/nuodb-helm-charts/docs/HowToArchiveJournal.md) | `false` |
+| `sm.noHotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
+| `sm.noHotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
+| `sm.noHotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.labels` | Labels given to the SMs started | `{}` |
 | `sm.engineOptions` | Additional NuoDB engine options | `{}` |
 | `sm.resources` | Labels to apply to all resources | `{}` |
