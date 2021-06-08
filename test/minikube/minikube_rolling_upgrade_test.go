@@ -4,6 +4,8 @@ package minikube
 
 import (
 	"fmt"
+	v1 "k8s.io/api/apps/v1"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -30,6 +32,8 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 		return strings.Count(output, "MONITORED:RUNNING") == expectedNrProcesses
 	}, 30*time.Second)
 }
+
+
 
 func TestAdminReadinessProbe(t *testing.T) {
 	testlib.AwaitTillerUp(t)
@@ -329,4 +333,87 @@ func TestChangingJournalLocationFails(t *testing.T) {
 		err := helm.UpgradeE(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
 		require.Error(t, err)
 	})
+}
+
+
+func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+		t.Skip("Cannot test autoRestore without the Enterprise Edition")
+	}
+
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+
+	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+		options := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.noHotCopy.replicas":        "1",
+				"database.sm.journalPath.enabled": "false",
+			},
+		}
+
+		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
+
+		statefulSets := findAllStatefulSets(t, namespaceName)
+
+		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.smNonHCSet.Name)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
+
+		options.SetValues["database.sm.journalPath.enabled"] = "true"
+
+		err := helm.UpgradeE(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
+		require.Error(t, err)
+	})
+}
+
+type NuoDBStatefulSets struct {
+	adminSet v1.StatefulSet
+	smNonHCSet v1.StatefulSet
+	smHCSet v1.StatefulSet
+}
+
+func findAllStatefulSets(t *testing.T, namespaceName string) NuoDBStatefulSets {
+	statefulSets := testlib.GetStatefulSets(t, namespaceName).Items
+	require.Equal(t, 3, len(statefulSets), "Expected 3 StatefulSets: Admin, SM, and hotcopy SM")
+
+	var sets NuoDBStatefulSets
+
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.HasPrefix(name, "sm-") && !strings.Contains(name, "hotcopy") {
+			sets.smNonHCSet = statefulSet
+		}
+	}
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.Contains(name, "hotcopy") {
+			sets.smHCSet = statefulSet
+		}
+	}
+
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.Contains(name, "admin") {
+			sets.adminSet = statefulSet
+		}
+	}
+
+	return sets
 }
