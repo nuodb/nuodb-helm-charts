@@ -1128,3 +1128,37 @@ func GetDatabaseLoadBalancerConfigE(t *testing.T, dbName string, loadBalancerCon
 	}
 	return nil, errors.New("Unable to find load balancer configuration for database=" + dbName)
 }
+
+type NuoDBStatefulSets struct {
+	AdminSet   v1.StatefulSet
+	SmNonHCSet v1.StatefulSet
+	SmHCSet    v1.StatefulSet
+}
+
+func FindAllStatefulSets(t *testing.T, namespaceName string) NuoDBStatefulSets {
+	statefulSets := GetStatefulSets(t, namespaceName).Items
+
+	var sets NuoDBStatefulSets
+
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.HasPrefix(name, "sm-") && !strings.Contains(name, "hotcopy") {
+			sets.SmNonHCSet = statefulSet
+		}
+	}
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.Contains(name, "hotcopy") {
+			sets.SmHCSet = statefulSet
+		}
+	}
+
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.Contains(name, "admin") {
+			sets.AdminSet = statefulSet
+		}
+	}
+
+	return sets
+}

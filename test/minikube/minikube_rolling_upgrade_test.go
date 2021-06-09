@@ -374,7 +374,7 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
 
-		statefulSets := findAllStatefulSets(t, namespaceName)
+		statefulSets := testlib.FindAllStatefulSets(t, namespaceName)
 
 		// Stage 2: Delete non-HC SM, upgrade to journalPath and restart
 
@@ -409,39 +409,4 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
 
 	})
-}
-
-type NuoDBStatefulSets struct {
-	adminSet v1.StatefulSet
-	smNonHCSet v1.StatefulSet
-	smHCSet v1.StatefulSet
-}
-
-func findAllStatefulSets(t *testing.T, namespaceName string) NuoDBStatefulSets {
-	statefulSets := testlib.GetStatefulSets(t, namespaceName).Items
-	require.Equal(t, 3, len(statefulSets), "Expected 3 StatefulSets: Admin, SM, and hotcopy SM")
-
-	var sets NuoDBStatefulSets
-
-	for _, statefulSet := range statefulSets {
-		name := statefulSet.Name
-		if strings.HasPrefix(name, "sm-") && !strings.Contains(name, "hotcopy") {
-			sets.smNonHCSet = statefulSet
-		}
-	}
-	for _, statefulSet := range statefulSets {
-		name := statefulSet.Name
-		if strings.Contains(name, "hotcopy") {
-			sets.smHCSet = statefulSet
-		}
-	}
-
-	for _, statefulSet := range statefulSets {
-		name := statefulSet.Name
-		if strings.Contains(name, "admin") {
-			sets.adminSet = statefulSet
-		}
-	}
-
-	return sets
 }
