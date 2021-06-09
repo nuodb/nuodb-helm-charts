@@ -92,7 +92,7 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.SmNonHCSet.Name, 0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
-		nonHCPVC := fmt.Sprintf("backup-volume-sm-%s-nuodb-cluster0-demo-0", databaseReleaseName)
+		nonHCPVC := fmt.Sprintf("archive-volume-sm-%s-nuodb-cluster0-demo-0", databaseReleaseName)
 		testlib.DeletePVC(t, namespaceName, nonHCPVC)
 
 		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.SmNonHCSet.Name)
@@ -108,7 +108,7 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.SmHCSet.Name, 0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
-		smHCPVC := fmt.Sprintf("backup-volume-sm-%s-nuodb-cluster0-demo-hotcopy-0", databaseReleaseName)
+		smHCPVC := fmt.Sprintf("archive-volume-sm-%s-nuodb-cluster0-demo-hotcopy-0", databaseReleaseName)
 		testlib.DeletePVC(t, namespaceName, smHCPVC)
 
 		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.SmHCSet.Name)
