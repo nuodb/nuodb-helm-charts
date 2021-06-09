@@ -4,7 +4,6 @@ package minikube
 
 import (
 	"fmt"
-	v1 "k8s.io/api/apps/v1"
 	"os"
 	"strings"
 	"testing"
@@ -378,13 +377,13 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 
 		// Stage 2: Delete non-HC SM, upgrade to journalPath and restart
 
-		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.smNonHCSet.Name, 0)
+		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.SmNonHCSet.Name, 0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
 		nonHCPVC := fmt.Sprintf("backup-volume-sm-%s-nuodb-cluster0-demo-0", databaseReleaseName)
 		testlib.DeletePVC(t, namespaceName, nonHCPVC)
 
-		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.smNonHCSet.Name)
+		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.SmNonHCSet.Name)
 
 		options.SetValues["database.sm.noHotCopy.journalPath.enabled"] = "true"
 
@@ -394,13 +393,13 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 
 		// Stage 3: Delete HC SM, upgrade to journalPath and restart
 
-		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.smHCSet.Name, 0)
+		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.SmHCSet.Name, 0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
 		smHCPVC := fmt.Sprintf("backup-volume-sm-%s-nuodb-cluster0-demo-hotcopy-0", databaseReleaseName)
 		testlib.DeletePVC(t, namespaceName, smHCPVC)
 
-		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.smHCSet.Name)
+		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.SmHCSet.Name)
 
 		options.SetValues["database.sm.hotCopy.journalPath.enabled"] = "true"
 
