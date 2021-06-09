@@ -65,6 +65,7 @@ spec:
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
         command:
           - 'chmod'
+          - '-R'
           - '770'
           - '/var/opt/nuodb/archive'
           - '/var/log/nuodb'
@@ -442,9 +443,10 @@ spec:
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
         command:
           - 'chmod'
+          - '-R'
           - '770'
           - '/var/opt/nuodb/archive'
-          - 'var/opt/nuodb/backup'
+          - '/var/opt/nuodb/backup'
           - '/var/log/nuodb'
 {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
           - '/var/opt/nuodb/journal'
