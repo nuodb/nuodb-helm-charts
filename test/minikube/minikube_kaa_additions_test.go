@@ -1,4 +1,4 @@
-// +build enterprise
+// +build short
 
 package minikube
 
@@ -94,7 +94,6 @@ func TestKaaLimitedPermissions(t *testing.T) {
 }
 
 func TestKaaRolebindingDisabled(t *testing.T) {
-	// This test requires NuoDB 4.2+ or 4.1.2+
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
