@@ -174,6 +174,55 @@ func StartDatabaseNoWait(t *testing.T, namespace string, adminPod string, option
 	return StartDatabaseTemplate(t, namespace, adminPod, options, InstallDatabase, false)
 }
 
+type UpgradeDatabaseOptions struct {
+	TePodShouldGetRecreated bool
+	SmPodShouldGetRecreated bool
+}
+func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName string, adminPod string, options *helm.Options, upgradeOptions *UpgradeDatabaseOptions) {
+	opt := GetExtractedOptions(options)
+
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = kubectlOptions
+
+	// get the OLD log
+	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
+	tePod := GetPod(t, namespaceName, tePodName)
+	go GetAppLog(t, namespaceName, tePodName, "-previous", &v12.PodLogOptions{Follow: true})
+
+	smPodName0 := GetPodName(t, namespaceName, smPodName)
+	smPod0 := GetPod(t, namespaceName, smPodName0)
+	go GetAppLog(t, namespaceName, smPodName0, "-previous", &v12.PodLogOptions{Follow: true})
+
+	AddDiagnosticTeardown(TEARDOWN_DATABASE, t, func() {
+		_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "show", "domain")
+		_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "show", "archives")
+		_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "show", "database", "--db-name", "demo", "--all-incarnations")
+	})
+
+	helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
+
+	if upgradeOptions.TePodShouldGetRecreated {
+		AwaitPodObjectRecreated(t, namespaceName, tePod, 30*time.Second)
+	}
+	AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
+
+	if upgradeOptions.SmPodShouldGetRecreated {
+		AwaitPodObjectRecreated(t, namespaceName, smPod0, 30*time.Second)
+	}
+	AwaitPodUp(t, namespaceName, smPodName0, 300*time.Second)
+
+	// Await num of database processes only for single cluster deployment;
+	// in multi-clusters the await logic should be called once all clusters
+	// are installed with the database chart
+	if opt.ClusterName == opt.EntrypointClusterName {
+		AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
+	}
+}
+
+
 func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, deploymentName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.RunKubectl(t, kubectlOptions, "patch", "deployment", deploymentName, "-p", UPGRADE_STRATEGY)
