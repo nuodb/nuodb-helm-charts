@@ -171,6 +171,9 @@ admin:
     # entire Raft state into one message; set maximum message size to 1GB to
     # allow Raft state to grow to 1GB
     thrift.message.max: "1073741824"
+    # force reconnecting processes that are not in the domain state to shut
+    # themselves down
+    evictUnknownProcesses: true
 
   ## nuodb-admin resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
