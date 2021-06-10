@@ -120,9 +120,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 	// make sure the DB is properly reconnected before restarting
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
-	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, &testlib.UpgradeDatabaseOptions{
-		TePodShouldGetRecreated: true,
-	})
+	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, &testlib.UpgradeDatabaseOptions{})
 }
 
 func TestUpgradeHelm(t *testing.T) {
