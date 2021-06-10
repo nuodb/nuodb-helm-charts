@@ -1,0 +1,37 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "hockey.fullname" . }}
+    group: nuodb
+    chart: {{ template "hockey.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ template "hockey.fullname" . }}-startup
+data:
+{{ (.Files.Glob "files/startup.sh").AsConfig | indent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "hockey.fullname" . }}
+    group: nuodb
+    chart: {{ template "hockey.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ template "hockey.fullname" . }}-create
+data:
+{{ (.Files.Glob "files/create-hockey-schema.sh").AsConfig | indent 2 }}
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    app: {{ template "hockey.fullname" . }}
+    group: nuodb
+    chart: {{ template "hockey.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ template "hockey.fullname" . }}-workload
+data:
+{{ (.Files.Glob "files/hockey-workload.sql").AsConfig | indent 2 }}

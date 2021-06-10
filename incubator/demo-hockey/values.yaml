@@ -1,0 +1,68 @@
+## Global Docker image parameters
+## Please, note that this will override the image parameters, including dependencies, configured to use the global value
+## Current available global Docker image parameters: imageRegistry and imagePullSecrets
+##
+# global:
+#   imageRegistry: myRegistryName
+#   imagePullSecrets:
+#     - myRegistryKeySecretName
+
+cloud:
+  # supported: amazon, azure, google
+  provider:
+  # zones:
+  #   - us-east-2a
+  #   - us-east-2b
+  #   - us-east-2c
+
+admin:
+  domain: nuodb
+
+database:
+  # dbName
+  # NuoDB database name.  must consist of lowercase alphanumeric
+  #characters '[a-z0-9]+'
+  name: demo
+
+hockey:
+  # loadName
+  loadName: hockey-load
+
+  # nameOverride: east
+  # fullnameOverride: admin-east
+
+  # replicas
+  # Number of hockey pods
+  replicas: 1
+
+  # Use a direct TE connection
+  teDirect: false
+
+  # maxDelay
+  # hockey maximum workload delay in milliseconds (Default is 4 minutes)
+  maxDelay: 240000
+
+  # dbSchema
+  # hockey Database schema.  Default schema to use to resolve tables, views, etc
+  dbSchema: hockey
+
+  # hockey fully qualified image name (FQIN) for the Docker image to use
+  image:
+    registry: docker.io
+    repository: nuodb/hockey
+    tag: 1.7
+    pullPolicy: Always
+    ## Optionally specify an array of imagePullSecrets.
+    ## Secrets must be manually created in the namespace.
+    ## ref: https://kubernetes.io/docs/concepts/containers/images/#specifying-imagepullsecrets-on-a-pod
+    ##
+    pullSecrets:
+     - dockerlogin
+    ## Specify a imagePullPolicy
+    ## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+    ##
+
+  affinity: {}
+  # nodeSelector: {}
+  # tolerations: []
+  

@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ReplicationController
+metadata:
+  labels:
+    app: {{ template "hockey.fullname" . }}
+    group: nuodb
+    chart: {{ template "hockey.chart" . }}
+    release: {{ .Release.Name | quote }}
+  name: {{ .Values.hockey.loadName }}
+spec:
+  replicas: {{ .Values.hockey.replicas }}
+  selector:
+    app: hockey-load
+  template:
+    metadata:
+      name: hockey-load
+      labels:
+        app: hockey-load
+        database: {{ .Values.database.name }}
+    spec:
+      {{- with .Values.hockey.nodeSelector }}
+      nodeSelector:
+{{ toYaml . | trim | indent 8 }}
+      {{- end }}
+{{- if .Values.hockey.affinity }}
+      affinity:
+{{ tpl .Values.hockey.affinity . | trim | indent 8 }}
+{{- end }}
+      {{- if .Values.hockey.tolerations }}
+      tolerations:
+{{ toYaml .Values.hockey.tolerations | trim | indent 8 }}
+      {{- end }}
+      containers:
+      - name: hockey-load
+        image: {{ template "hockey.image" . }}
+        imagePullPolicy: {{ .Values.hockey.image.pullPolicy }}
+        env:
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.database.name }}.nuodb.com"
+              key: database-name
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.database.name }}.nuodb.com"
+              key: database-username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: "{{ .Values.database.name }}.nuodb.com"
+              key: database-password
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        {{- if .Values.hockey.teDirect }}
+        - { name: PEER_ADDRESS,          value: "{{ template "database.address" . }}" }
+        {{- else}}
+        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
+        {{- end}}
+        - { name: DB_SCHEMA,           value: {{ .Values.hockey.dbSchema | quote }} }
+        - { name: MAX_DELAY,           value: {{ .Values.hockey.maxDelay | quote }} }
+        - { name: TE_DIRECT,           value: {{ default false .Values.hockey.teDirect | quote }} }
+        volumeMounts:
+        - name: startup
+          mountPath: /driver/startup.sh
+          subPath: startup.sh
+        - name: create
+          mountPath: /driver/create-hockey-schema.sh
+          subPath: create-hockey-schema.sh
+        - name: workload
+          mountPath: /driver/hockey-workload.sql
+          subPath: hockey-workload.sql
+{{- include "hockey.imagePullSecrets" . | indent 6 }}
+      volumes:
+        - name: startup
+          configMap:
+            name: {{ template "hockey.fullname" . }}-startup
+            defaultMode: 0777
+        - name: create
+          configMap:
+            name: {{ template "hockey.fullname" . }}-create
+            defaultMode: 0777
+        - name: workload
+          configMap:
+            name: {{ template "hockey.fullname" . }}-workload
+            defaultMode: 0777
