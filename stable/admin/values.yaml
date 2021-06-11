@@ -16,7 +16,7 @@ cloud:
   #   - us-east-2c
 
   # if cloud provider does not support initContainers - then work around by rendering them as sidecars
-  supportsInitContainers: false
+  supportsInitContainers: true
 
   cluster:
     # cluster name is used to make resources unique in multi-cluster configurations.
