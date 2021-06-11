@@ -391,8 +391,6 @@ func TestKubernetesSeparateJournalLocation(t *testing.T) {
 			},
 		}
 
-		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
-		t.Logf(databaseReleaseName)
-
+		testlib.StartDatabase(t, namespaceName, admin0, &options)
 	})
 }

@@ -15,16 +15,14 @@ For more info on NuoDB database journaling, please consult the official [NuoDB d
 
 ## Separating the Journal from the Archive
 
-Since the `journal` has to write all commits durably to disk, the speed of the disk directly influences to the commit latency.
+Since the `journal` has to write all commits durably to disk, the speed of the disk directly influences the commit latency.
 To achieve the best performance, NuoDB recommends placing the `journal` on the fastest disk available.
-
-On the other hand, the `archive` can be located on slightly slower disks since writes to the archive are asynchronous.
 
 By default, the `journal` is located in a subdirectory of the `archive`.
 To achieve the best cost vs speed tradeoff, you can separate the journal from the archive.
 To achieve that set the database helm template values `database.sm.noHotCopy.journalPath.enabled` and `database.sm.hotCopy.journalPath.enabled` to `true` and configure it with the desired persistence settings.
 
-Kubernetes stateful sets volume mounts are immutable and as such, the setting can not not be changed easily on an existing database.
+Kubernetes stateful sets volume mounts are immutable and as such, the setting can not be changed easily on an existing database.
 More on upgrades below [Upgrading existing domains](#upgrading-existing-domains).
 
 ## Upgrading existing domains
