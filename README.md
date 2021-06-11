@@ -67,7 +67,15 @@ This project is still under active development. If you experience any [issues](h
 ## Testing
 
 To run the tests in this project, Go 1.12 is required.
-The easiest way to clone the repository and run a test suite (e.g. `test/integration`) is as follows:
+To clone the repository and run a test suite (e.g. `test/integration`), execute the following:
+
+```
+git clone git@github.com:nuodb/nuodb-helm-charts
+cd nuodb-helm-charts
+go test -v -timeout 60s ./test/integration
+```
+
+Alternatively, `go get` can be used to clone the repository into the `GOPATH`:
 
 ```
 GO111MODULE=off go get github.com/nuodb/nuodb-helm-charts
