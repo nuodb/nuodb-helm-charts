@@ -55,17 +55,26 @@ spec:
 {{ toYaml .Values.admin.tolerations | trim | indent 8 }}
       {{- end }}
       terminationGracePeriodSeconds: 15
+{{- if .Values.cloud.supportsInitContainers }}
       initContainers:
+{{- else }}
+      containers:
+{{- end }}
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
-        command: ['chmod', '-R', '770', '/var/opt/nuodb', '/var/log/nuodb']
+        command:
+        - 'sh'
+        - '-c'
+        - "mkfifo /var/opt/nuodb/admin-semaphore; chmod -R 770 /var/opt/nuodb /var/log/nuodb; echo 'Init tasks complate' > /var/opt/nuodb/admin-semaphore"
         volumeMounts:
         - name: raftlog
           mountPath: /var/opt/nuodb
         - name: log-volume
           mountPath: /var/log/nuodb
+{{- if .Values.cloud.supportsInitContainers }}
       containers:
+{{- end }}
       - name: admin
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}

@@ -13,6 +13,28 @@ fi
 : ${NUODB_SERVERID:=$(hostname)}
 : ${NUODB_ALT_ADDRESS:=$(hostname --fqdn)}
 : ${NUODB_ADMIN_PORT:="48005"}
+: ${NUODB_ADMIN_SEMAPHORE:=/var/opt/nuodb/admin-semaphore}
+
+#
+# DS k8s platform requires the main container to wait for the other containers to "open the gate"
+if [ -p $NUODB_ADMIN_SEMAPHORE ]; then
+  echo "Waiting on semaphore..."
+
+  # if semaphore is not reaable, then wait for it to become so...
+  [ ! -r $NUODB_ADMIN_SEMAPHORE ] && sleep 5
+  [ ! -r $NUODB_ADMIN_SEMAPHORE ] && sleep 10
+  [ ! -r $NUODB_ADMIN_SEMAPHORE ] && sleep 15
+
+  if [ -r $NUODB_ADMIN_SEMAPHORE ]; then
+    cat ${NUODB_ADMIN_SEMAPHORE}
+    echo "Semaphore released - proceeding..."
+  else
+    echo "Semaphore is still not readable after 30s - proceeding without semaphore..."
+  fi
+
+else
+  echo "No semaphore - proceeding immediately..."
+fi
 
 if [ "${NUODB_ALTERNATIVE_ENTRYPOINT}" != "" ] ; then
     if nuodocker --api-server "${NUODB_ALTERNATIVE_ENTRYPOINT}:8888" check servers ; then
