@@ -17,6 +17,7 @@ fi
 
 #
 # DS k8s platform requires the main container to wait for the other containers to "open the gate"
+[ ! -p $NUODB_ADMIN_SEMAPHORE ] && sleep 10
 if [ -p $NUODB_ADMIN_SEMAPHORE ]; then
   echo "Waiting on semaphore..."
 
@@ -26,7 +27,7 @@ if [ -p $NUODB_ADMIN_SEMAPHORE ]; then
   [ ! -r $NUODB_ADMIN_SEMAPHORE ] && sleep 15
 
   if [ -r $NUODB_ADMIN_SEMAPHORE ]; then
-    cat ${NUODB_ADMIN_SEMAPHORE}
+    cat $NUODB_ADMIN_SEMAPHORE
     echo "Semaphore released - proceeding..."
   else
     echo "Semaphore is still not readable after 30s - proceeding without semaphore..."

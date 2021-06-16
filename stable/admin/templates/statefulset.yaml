@@ -64,12 +64,14 @@ spec:
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
         command:
-        - 'sh'
-        - '-c'
+        - "sh"
+        - "-c"
         - |
           mkfifo /var/opt/nuodb/admin-semaphore
+          chmod a+rwx /var/opt/nuodb/admin-semaphore
           chmod -R 770 /var/opt/nuodb /var/log/nuodb
-          echo 'Init tasks complete' > /var/opt/nuodb/admin-semaphore
+          echo 'Init tasks complete' >> /var/opt/nuodb/admin-semaphore
+
         volumeMounts:
         - name: raftlog
           mountPath: /var/opt/nuodb
