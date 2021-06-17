@@ -69,7 +69,7 @@ spec:
         - |
 {{- if not .Values.cloud.supportsInitContainers }}
           mkfifo /var/opt/nuodb/admin-semaphore
-{{- else -}}
+{{- else }}
           touch /var/opt/nuodb/admin-semaphore
 {{- end }}
           chmod a+rwx /var/opt/nuodb/admin-semaphore
