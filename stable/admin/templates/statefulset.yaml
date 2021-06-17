@@ -208,16 +208,16 @@ spec:
       {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
-      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
-      {{- if .Values.admin.tde }}
-      {{- if .Values.admin.tde.secrets }}
-      {{- range $dbName, $secret := .Values.admin.tde.secrets }}
+      {{- include "nuodb.sidecar.volumes" . | nindent 6 -}}
+      {{- if .Values.admin.tde -}}
+      {{- if .Values.admin.tde.secrets -}}
+      {{- range $dbName, $secret := .Values.admin.tde.secrets -}}
       - name: tde-volume-{{ $dbName }}
         secret:
           secretName: {{ $secret }}
-      {{- end }}
-      {{- end }}
-      {{- end }}
+      {{- end -}}
+      {{- end -}}
+      {{- end -}}
       {{- if .Values.admin.tlsCACert }}
       - name: tls-ca-cert
         secret:
@@ -242,7 +242,7 @@ spec:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
           defaultMode: 0440
       {{- end }}
-      {{- if not .Values.admin.logPersistence.enabled }}
+      {{- if not .Values.admin.logPersistence.enabled -}}
       - name: log-volume
         emptyDir: {}
       {{- end }}
