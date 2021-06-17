@@ -67,10 +67,14 @@ spec:
         - "sh"
         - "-c"
         - |
+{{- if not .Values.cloud.supportsInitContainers }}
           mkfifo /var/opt/nuodb/admin-semaphore
+{{- else -}}
+          touch /var/opt/nuodb/admin-semaphore
+{{- end }}
           chmod a+rwx /var/opt/nuodb/admin-semaphore
           chmod -R 770 /var/opt/nuodb /var/log/nuodb
-          echo 'Init tasks complete' >> /var/opt/nuodb/admin-semaphore
+          echo "Init complete" > /var/opt/nuodb/admin-semaphore
 
         volumeMounts:
         - name: raftlog

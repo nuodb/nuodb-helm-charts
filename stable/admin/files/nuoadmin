@@ -17,25 +17,26 @@ fi
 
 #
 # DS k8s platform requires the main container to wait for the other containers to "open the gate"
-[ ! -p $NUODB_ADMIN_SEMAPHORE ] && sleep 10
-if [ -p $NUODB_ADMIN_SEMAPHORE ]; then
-  echo "Waiting on semaphore..."
+echo "Checking $NUODB_ADMIN_SEMAPHORE..."
 
-  # if semaphore is not reaable, then wait for it to become so...
-  [ ! -r $NUODB_ADMIN_SEMAPHORE ] && sleep 5
-  [ ! -r $NUODB_ADMIN_SEMAPHORE ] && sleep 10
-  [ ! -r $NUODB_ADMIN_SEMAPHORE ] && sleep 15
-
-  if [ -r $NUODB_ADMIN_SEMAPHORE ]; then
-    cat $NUODB_ADMIN_SEMAPHORE
-    echo "Semaphore released - proceeding..."
-  else
-    echo "Semaphore is still not readable after 30s - proceeding without semaphore..."
+# wait for the semaphore file to be created and readable
+sleeptime=5
+while [ ! -r $NUODB_ADMIN_SEMAPHORE ]; do
+  if [ $sleeptime -gt 60 ]; then
+    echo "Timed out waiting for init semaphore $NUODB_ADMIN_SEMAPHORE"
+    exit 97
   fi
 
-else
-  echo "No semaphore - proceeding immediately..."
-fi
+  sleep $sleeptime
+  sleeptime=$(( sleeptime * 2 ))
+done
+
+# read from the semaphore - which will block if the semaphore is a FIFO
+cat < $NUODB_ADIN_SEMAPHORE
+echo "Semaphore $NUODB_ADMIN_SEMAPHORE open - proceeding to start AP"
+
+# reset for next time
+rm -rf $NUODB_ADMIN_SEMAPHORE
 
 if [ "${NUODB_ALTERNATIVE_ENTRYPOINT}" != "" ] ; then
     if nuodocker --api-server "${NUODB_ALTERNATIVE_ENTRYPOINT}:8888" check servers ; then
