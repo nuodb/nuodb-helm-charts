@@ -210,7 +210,7 @@ it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
 {{- end -}}
 
 {{/*
-Takes a boolean as argument return it's value if it was defined or return true otherwise
+Takes a boolean as argument return it's value if it was defined or return false otherwise
 Note: Sprig's default function on an empty/not defined variable returns false, workaround
 it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
 */}}

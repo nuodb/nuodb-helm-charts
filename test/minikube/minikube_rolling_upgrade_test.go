@@ -31,8 +31,6 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 	}, 30*time.Second)
 }
 
-
-
 func TestAdminReadinessProbe(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
