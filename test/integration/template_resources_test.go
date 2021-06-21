@@ -227,20 +227,6 @@ func TestPingTimeout(t *testing.T) {
 			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
 		}
 	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "ping-timeout"))
-		}
-	})
 }
 
 func TestSpecificOptions(t *testing.T) {
@@ -273,61 +259,6 @@ func TestSpecificOptions(t *testing.T) {
 			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
 		}
 	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			assert.True(t, listContains(obj.Spec.Template.Spec.Containers[0].Args, "advanced-txn"))
-		}
-	})
-}
-
-func TestResourcesDaemonSetsDefaults(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{"database.enableDaemonSet": "true"},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-	foundBackupEnabled := false
-	foundBackupDisabled := false
-
-	for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-
-		containers := &obj.Spec.Template.Spec.Containers
-
-		require.NotEmpty(t, containers)
-		assert.NotNil(t, (*containers)[0].Resources.Limits)
-		assert.NotNil(t, (*containers)[0].Resources.Requests)
-
-		// the memory is confusing Gi with G. We are using power of two (1024). But scaled value is using 1000
-
-		assert.EqualValues(t, 4, (*containers)[0].Resources.Requests.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 8*1024*1024*1024, (*containers)[0].Resources.Requests.Memory().ScaledValue(0))
-
-		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
-		assert.EqualValues(t, 16*1024*1024*1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
-
-		if testlib.IsDaemonSetHotCopyEnabled(&obj) {
-			foundBackupEnabled = true
-		} else {
-			foundBackupDisabled = true
-		}
-	}
-
-	assert.True(t, foundBackupEnabled)
-	assert.True(t, foundBackupDisabled)
 }
 
 func TestDatabaseBackupDisabled(t *testing.T) {
@@ -363,44 +294,6 @@ func TestDatabaseNonBackupDisabled(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.True(t, testlib.IsStatefulSetHotCopyEnabled(&obj), "Found stateful set with backup disabled")
-	}
-}
-
-func TestDatabaseBackupDisabledDaemonSet(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{
-			"database.enableDaemonSet":      "true",
-			"database.sm.hotCopy.enablePod": "false",
-		},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-	for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
-		assert.False(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup enabled")
-	}
-}
-
-func TestDatabaseNoBackupDisabledDaemonSet(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{
-			"database.enableDaemonSet":        "true",
-			"database.sm.noHotCopy.enablePod": "false",
-		},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-	for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
-		assert.True(t, testlib.IsDaemonSetHotCopyEnabled(&obj), "Found daemon set with backup disabled")
 	}
 }
 
@@ -485,21 +378,6 @@ func TestStatefulSetServiceAccount(t *testing.T) {
 	// there should be two serviceAccountName declarations, for SM and hotcopy SM
 	expectedLines := map[string]int{
 		"kind: StatefulSet":               2,
-		"      serviceAccountName: nuodb": 2,
-	}
-	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)
-}
-
-func TestDaemonSetServiceAccount(t *testing.T) {
-	optionsMap := map[string]string{
-		"database.enableDaemonSet": "true",
-	}
-	templateNames := []string{
-		"templates/daemonset.yaml",
-	}
-	// there should be two serviceAccountName declarations, for SM and hotcopy SM
-	expectedLines := map[string]int{
-		"kind: DaemonSet":                 2,
 		"      serviceAccountName: nuodb": 2,
 	}
 	assertExpectedLines(t, &optionsMap, "database", templateNames, &expectedLines)

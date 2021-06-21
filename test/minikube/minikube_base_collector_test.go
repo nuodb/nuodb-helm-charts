@@ -143,25 +143,4 @@ func TestMetricsCollection(t *testing.T) {
 			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseReleaseName, "cluster0", "demo"), "demo")
 		})
 	})
-
-	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-		options.SetValues["database.enableDaemonSet"] = "true"
-		// Start only hotcopy SM daemonset
-		options.SetValues["database.sm.noHotCopy.enablePod"] = "false"
-		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
-
-		createOutputFilePlugin(t, namespaceName)
-		defer testlib.Teardown(testlib.TEARDOWN_COLLECTOR)
-		defer testlib.Teardown(testlib.TEARDOWN_YCSB)
-		testlib.StartYCSBWorkload(t, namespaceName, &helm.Options{
-			SetValues: map[string]string{
-				"ycsb.replicas": "1",
-			},
-		})
-		t.Run("verifyMetricsCollection", func(t *testing.T) {
-			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
-			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseReleaseName, "cluster0", "demo"), "demo")
-		})
-	})
 }
