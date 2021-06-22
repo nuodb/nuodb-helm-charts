@@ -1,4 +1,3 @@
-{{- if not .Values.database.enableDaemonSet }}
 {{- if .Values.database.sm.noHotCopy.enablePod }}
 ---
 apiVersion: apps/v1
@@ -783,5 +782,4 @@ spec:
         requests:
           storage: {{ .Values.database.sm.logPersistence.size }}
   {{- end }}
-{{- end }}
 {{- end }}

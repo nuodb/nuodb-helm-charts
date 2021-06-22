@@ -156,19 +156,6 @@ func executeSidecarTests(t *testing.T, options *helm.Options) {
 			checkSidecarContainers(t, obj.Spec.Template.Spec.Containers, options, helmChartPath)
 		}
 	})
-
-	t.Run("testDatabaseDaemonsetSidecars", func(t *testing.T) {
-		// Run RenderTemplate to render the template and inspect database daemonset
-		options.SetValues["database.enableDaemonSet"] = "true"
-		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
-		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 1) {
-			t.Logf("Inspecting database daemonset: %s", obj.Name)
-			checkSpecVolumes(t, obj.Spec.Template.Spec.Volumes, options, helmChartPath)
-			checkSidecarContainers(t, obj.Spec.Template.Spec.Containers, options, helmChartPath)
-		}
-	})
 }
 
 func TestNuoDBCollectorSidecarsEnabled(t *testing.T) {

@@ -330,13 +330,6 @@ database:
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
 
-    # Additional Options for DaemonSets
-    # affinityNoHotCopyDS: {}
-    # affinityHotCopyDS: {}
-    # nodeSelectorNoHotCopyDS: {}
-    # nodeSelectorHotCopyDS: {}
-    # tolerationsDS: []
-
     #Some clusters require longer readiness probe timeouts
     readinessTimeoutSeconds: 5
 
@@ -404,7 +397,6 @@ database:
   podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
 
-  enableDaemonSet: false
   # Set to true if you are using manually created volumes or restoring
   # from a previously existing backup.
   isManualVolumeProvisioning: false

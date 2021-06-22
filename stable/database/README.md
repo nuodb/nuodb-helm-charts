@@ -183,7 +183,7 @@ The following tables list the configurable parameters of the `database` chart an
 
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
-| `nameOverride` | Provide a name in place of `database-daemonset` |`""`|
+| `nameOverride` | Provide a name in place of `database-dbname` |`""`|
 | `fullNameOverride` | Provide a name to substitute for the full names of resources |`""`|
 | `name` | Database name | `demo` |
 | `rootUser` | Database root user | `dba` |
@@ -268,11 +268,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.nodeSelector` | Node selector rules for NuoDB TE | `{}` |
 | `te.tolerations` | Tolerations for NuoDB TE | `[]` |
 | `te.otherOptions` | Additional key/value Docker options | `{}` |
-| `sm.affinityNoHotCopyDS` | Affinity rules for non-hot-copy SMs (DaemonSet) | `{}` |
-| `sm.affinityHotCopyDS` | Affinity rules for hot-copy enabled SMs (DaemonSet) | `{}` |
-| `sm.nodeSelectorHotCopyDS` | Node selector rules for hot-copy enabled SMs (DaemonSet) | `{}` |
-| `sm.nodeSelectorNoHotCopyDS` | Node selector rules for non-hot-copy SMs (DaemonSet) | `{}` |
-| `sm.tolerationsDS` | Tolerations for SMs (DaemonSet) | `[]` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
 | `te.readinessTimeoutSeconds` | TE readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 
