@@ -11,6 +11,7 @@
 
 : ${NUODB_ARCHIVEDIR:=/var/opt/nuodb/archive}
 : ${NUODB_BACKUPDIR:=/var/opt/nuodb/backup}
+: ${NUODB_JOURNALDIR:=/var/opt/nuodb/journal}
 : ${NUODB_STORAGE_PASSWORDS_DIR:=/etc/nuodb/tde}
 : ${NUODB_DOMAIN:="nuodb"}
 : ${DB_NAME:="demo"}
@@ -24,6 +25,9 @@ strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
 
 DB_PARENTDIR=${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}
 DB_DIR=${DB_PARENTDIR}/${DB_NAME}
+
+JOURNAL_PARENT=${NUODB_JOURNALDIR}/${NUODB_DOMAIN}
+JOURNAL_DIR=${JOURNAL_PARENT}/${DB_NAME}
 
 LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuosm.log
 
@@ -61,7 +65,7 @@ function die() {
     nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
     nuocmd set value --key $startup_key/$DB_NAME --value '' --expected-value $HOSTNAME
 
-    # resurect my archive if it is removed
+    # resurrect my archive if it is removed
     resurrectRemovedArchive
   fi
 
@@ -418,6 +422,15 @@ else
   log "Directory $DB_DIR exists"
 fi
 
+if [ "$SEPARATE_JOURNAL" == "true" ]; then
+  if [ ! -e "${JOURNAL_DIR}" ] ; then
+    mkdir -p "${JOURNAL_DIR}"
+    log "Created new journal dir $JOURNAL_DIR"
+  else
+    log "Directory $JOURNAL_DIR exists"
+  fi
+fi
+
 # Retry the first request against the admin layer to make sure that Raft
 # commands can be committed and fail fast on error
 retry 3 get_legacy_restore_request
@@ -748,9 +761,16 @@ trace "executing nuodocker to start SM"
 nuodocker_flags=()
 [ -n "$NUODB_DEBUG" ] && nuodocker_flags+=("--debug")
 
+journal_flags=()
+if [ "$SEPARATE_JOURNAL" == "true" ]; then
+  journal_flags+=("--journal-dir")
+  journal_flags+=("${JOURNAL_DIR}")
+  log "journal-dir=${JOURNAL_DIR}"
+fi
+
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
-    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" "${journal_flags[@]}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
 else
-    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" "${journal_flags[@]}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "$@"
 fi
