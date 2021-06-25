@@ -110,7 +110,8 @@ func TestDatabaseJournalBackupCronJobDefault(t *testing.T) {
 
 	// Verify that journal CronJob is rendered
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
-	testlib.SplitAndRenderCronJob(t, output, 2)
+	jobs := testlib.SplitAndRenderCronJob(t, output, 2)
+	assert.Equal(t, 2, len(jobs))
 
 	// Verify that journal-hot-copy engine option is enabled
 	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
@@ -137,7 +138,8 @@ func TestDatabaseJournalBackupCronJobFalse(t *testing.T) {
 
 	// Verify that journal CronJob is rendered
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
-	testlib.SplitAndRenderCronJob(t, output, 2)
+	jobs := testlib.SplitAndRenderCronJob(t, output, 2)
+	assert.Equal(t, 2, len(jobs))
 
 	// Verify that journal-hot-copy engine option is enabled
 	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
@@ -162,7 +164,8 @@ func TestDatabaseJournalBackupCronJobFalseFile(t *testing.T) {
 
 	// Verify that journal CronJob is rendered
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
-	testlib.SplitAndRenderCronJob(t, output, 2)
+	jobs := testlib.SplitAndRenderCronJob(t, output, 2)
+	assert.Equal(t, 2, len(jobs))
 
 	// Verify that journal-hot-copy engine option is enabled
 	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
