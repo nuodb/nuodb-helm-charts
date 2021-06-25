@@ -57,6 +57,101 @@ func TestDatabaseBackupCronJobGarbage(t *testing.T) {
 	assert.Contains(t, err.Error(), "Invalid boolean value: garbage")
 }
 
+func TestDatabaseJournalBackupCronJobEnabled(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.journalBackup.enabled": "true",
+		},
+	}
+
+	// Verify that journal CronJob is rendered
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+	testlib.SplitAndRenderCronJob(t, output, 3)
+
+	// Verify that journal-hot-copy engine option is enabled
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	journalFlagFound := false
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		for _, arg := range obj.Spec.Template.Spec.Containers[0].Args {
+			if strings.Contains(arg, "journal-hot-copy enable") {
+				journalFlagFound = true
+			}
+		}
+	}
+	assert.True(t, journalFlagFound, "journal-hot-copy should be enabled")
+}
+
+func TestDatabaseJournalBackupCronJobGarbage(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.journalBackup.enabled": "garbage",
+		},
+	}
+
+	// Verify that helm rendering fails
+	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "Invalid boolean value: garbage")
+}
+
+func TestDatabaseJournalBackupCronJobDefault(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	// Verify that journal CronJob is rendered
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+	testlib.SplitAndRenderCronJob(t, output, 2)
+
+	// Verify that journal-hot-copy engine option is enabled
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	journalFlagFound := false
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		for _, arg := range obj.Spec.Template.Spec.Containers[0].Args {
+			if strings.Contains(arg, "journal-hot-copy enable") {
+				journalFlagFound = true
+			}
+		}
+	}
+	assert.False(t, journalFlagFound, "journal-hot-copy should be missing")
+}
+
+func TestDatabaseJournalBackupCronJobFalse(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.journalBackup.enabled": "false",
+		},
+	}
+
+	// Verify that journal CronJob is rendered
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+	testlib.SplitAndRenderCronJob(t, output, 2)
+
+	// Verify that journal-hot-copy engine option is enabled
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	journalFlagFound := false
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		for _, arg := range obj.Spec.Template.Spec.Containers[0].Args {
+			if strings.Contains(arg, "journal-hot-copy enable") {
+				journalFlagFound = true
+			}
+		}
+	}
+	assert.False(t, journalFlagFound, "journal-hot-copy should be missing")
+}
+
 func TestDatabaseBackupCronJobRestartPolicyDefault(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
