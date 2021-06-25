@@ -152,6 +152,31 @@ func TestDatabaseJournalBackupCronJobFalse(t *testing.T) {
 	assert.False(t, journalFlagFound, "journal-hot-copy should be missing")
 }
 
+func TestDatabaseJournalBackupCronJobFalseFile(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		ValuesFiles: []string{"../files/database-journal-disabled.yaml"},
+	}
+
+	// Verify that journal CronJob is rendered
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+	testlib.SplitAndRenderCronJob(t, output, 2)
+
+	// Verify that journal-hot-copy engine option is enabled
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	journalFlagFound := false
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		for _, arg := range obj.Spec.Template.Spec.Containers[0].Args {
+			if strings.Contains(arg, "journal-hot-copy enable") {
+				journalFlagFound = true
+			}
+		}
+	}
+	assert.False(t, journalFlagFound, "journal-hot-copy should be missing")
+}
+
 func TestDatabaseBackupCronJobRestartPolicyDefault(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
