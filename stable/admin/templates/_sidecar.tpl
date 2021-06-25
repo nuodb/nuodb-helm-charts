@@ -45,8 +45,8 @@ Also, we can't use a single if because lazy evaluation is not an option
 {{- end -}}
 
 {{- define "nuodb.sidecar" -}}
-{{- if $.Values.nuocollector }}
-{{- if $.Values.nuocollector.enabled }}
+{{- if .Values.nuocollector }}
+{{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
 - name: nuocollector
   image: {{ template "nuocollector.image" . }}
   imagePullPolicy: {{ $.Values.nuocollector.image.pullPolicy }}
@@ -78,7 +78,7 @@ shareProcessNamespace: true
 
 {{- define "nuodb.sidecar.volumes" -}}
 {{- if .Values.nuocollector }}
-{{- if .Values.nuocollector.enabled }}
+{{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
 - name: nuocollector-config
   emptyDir: {}
 {{- end }}

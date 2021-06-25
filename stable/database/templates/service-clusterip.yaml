@@ -1,4 +1,4 @@
-{{- if or (not (hasKey .Values.database.te.dbServices "enabled")) ( .Values.database.te.dbServices.enabled ) }}
+{{- if or (not (hasKey .Values.database.te.dbServices "enabled")) (eq (include "defaultfalse" .Values.database.te.dbServices.enabled) "true") }}
 apiVersion: v1
 kind: Service
 metadata:
