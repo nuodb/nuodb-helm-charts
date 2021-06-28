@@ -1,7 +1,7 @@
 
-{{- if $.Values.nuocollector }}
-{{- if and $.Values.nuocollector.enabled $.Values.nuocollector.plugins }}
-{{- if $.Values.nuocollector.plugins.database }}
+{{- if .Values.nuocollector }}
+{{- if and (eq (include "defaultfalse" .Values.nuocollector.enabled) "true") .Values.nuocollector.plugins }}
+{{- if .Values.nuocollector.plugins.database }}
 {{- range $pluginName, $content := .Values.nuocollector.plugins.database }}
 {{- if $content }}
 ---
