@@ -1,0 +1,29 @@
+{{- if eq (include "defaultfalse" .Values.database.te.logPersistence.enabled) "true" }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.database.name }}-log-te-volume
+  labels:
+    app: {{ template "database.fullname" . }}
+    group: nuodb
+    database: {{ .Values.database.name }}
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "database.chart" . }}
+    release: {{ .Release.Name | quote }}
+spec:
+  accessModes:
+  {{- range .Values.database.te.logPersistence.accessModes }}
+    - {{ . }}
+  {{- end }}
+  {{- if .Values.database.te.logPersistence.storageClass }}
+  {{- if (eq "-" .Values.database.te.logPersistence.storageClass) }}
+  storageClassName: ""
+  {{- else }}
+  storageClassName: {{ .Values.database.te.logPersistence.storageClass }}
+  {{- end }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.database.te.logPersistence.size }}
+{{- end }}
