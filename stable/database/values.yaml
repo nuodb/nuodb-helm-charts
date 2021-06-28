@@ -263,7 +263,15 @@ database:
         accessModes:
           - ReadWriteOnce
         # storageClass: "-"
-        
+
+      journalPath:
+        enabled: false
+        persistence:
+          size: 20Gi
+          accessModes:
+            - ReadWriteOnce
+          # storageClass: "-"
+
       coldStorage:
         credentials: ""
 
@@ -285,6 +293,14 @@ database:
     noHotCopy:
       enablePod: true
       replicas: 0
+
+      journalPath:
+        enabled: false
+        persistence:
+          size: 20Gi
+          accessModes:
+            - ReadWriteOnce
+          # storageClass: "-"
 
     ## resources
     # k8s resource min (request) and max (limit)

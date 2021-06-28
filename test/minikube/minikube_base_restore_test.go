@@ -309,6 +309,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 			"mv", "-f", "/var/opt/nuodb/archive/nuodb/demo", "/var/opt/nuodb/archive/nuodb/demo-moved")
 		testlib.RunSQL(t, namespaceName, admin0, "demo", "select * from system.nodes")
 		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 30*time.Second)
+		testlib.AwaitPodUp(t, namespaceName, podName, 90*time.Second)
 		testlib.AwaitPodLog(t, namespaceName, podName, "_post-restart")
 	}
 

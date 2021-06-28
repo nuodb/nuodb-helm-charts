@@ -1074,3 +1074,91 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 		require.NoError(t, err, "Labeling node %s with '%s' failed", node.Name, labelString)
 	}
 }
+
+
+func GetStatefulSets(t *testing.T, namespaceName string) *v1.StatefulSetList {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(context.TODO(), metav1.ListOptions{})
+	require.NoError(t, err)
+
+	return statefulSets
+}
+
+func DeleteStatefulSet(t *testing.T, namespaceName string, name string) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+	err = clientset.AppsV1().StatefulSets(namespaceName).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	require.NoError(t, err)
+}
+
+func DeletePVC(t *testing.T, namespaceName string, name string) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).Delete(context.TODO(), name, metav1.DeleteOptions{})
+ 	require.NoError(t, err)
+}
+
+func ScaleStatefulSet(t *testing.T, namespaceName string, name string, replicas int) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	k8s.RunKubectl(t, options, "scale", "statefulset", name, fmt.Sprintf("--replicas=%d", replicas))
+}
+
+func GetGlobalLoadBalancerConfigE(t *testing.T, loadBalancerConfigs []NuoDBLoadBalancerConfig) (*NuoDBLoadBalancerConfig, error) {
+	for _, config := range loadBalancerConfigs {
+		if config.IsGlobal {
+			return &config, nil
+		}
+	}
+	return nil, errors.New("Unable to find global load balancer configuration")
+}
+
+func GetDatabaseLoadBalancerConfigE(t *testing.T, dbName string, loadBalancerConfigs []NuoDBLoadBalancerConfig) (*NuoDBLoadBalancerConfig, error) {
+	for _, config := range loadBalancerConfigs {
+		if config.DbName == dbName {
+			return &config, nil
+		}
+	}
+	return nil, errors.New("Unable to find load balancer configuration for database=" + dbName)
+}
+
+type NuoDBStatefulSets struct {
+	AdminSet   v1.StatefulSet
+	SmNonHCSet v1.StatefulSet
+	SmHCSet    v1.StatefulSet
+}
+
+func FindAllStatefulSets(t *testing.T, namespaceName string) NuoDBStatefulSets {
+	statefulSets := GetStatefulSets(t, namespaceName).Items
+
+	var sets NuoDBStatefulSets
+
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.HasPrefix(name, "sm-") && !strings.Contains(name, "hotcopy") {
+			sets.SmNonHCSet = statefulSet
+		}
+	}
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.Contains(name, "hotcopy") {
+			sets.SmHCSet = statefulSet
+		}
+	}
+
+	for _, statefulSet := range statefulSets {
+		name := statefulSet.Name
+		if strings.Contains(name, "admin") {
+			sets.AdminSet = statefulSet
+		}
+	}
+
+	return sets
+}

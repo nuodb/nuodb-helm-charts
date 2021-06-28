@@ -335,3 +335,32 @@ func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
 		},
 	})
 }
+
+func TestKubernetesSeparateJournalLocation(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+		options := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.hotCopy.journalPath.enabled":       "true",
+			},
+		}
+
+		testlib.StartDatabase(t, namespaceName, admin0, &options)
+	})
+}
