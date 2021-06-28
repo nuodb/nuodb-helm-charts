@@ -24,7 +24,6 @@ To achieve the best cost vs speed tradeoff, you can separate the journal from th
 To achieve that set the database helm template values `database.sm.noHotCopy.journalPath.enabled` and `database.sm.hotCopy.journalPath.enabled` to `true` and configure it with the desired persistence settings.
 
 Kubernetes stateful sets volume mounts are immutable and as such, the setting can not be changed easily on an existing database.
-More on upgrades below [Upgrading existing domains](#upgrading-existing-domains).
 
 ## Upgrading existing domains
 
@@ -37,20 +36,21 @@ StatefulSet.apps "sm-database-nuodb-cluster0-demo-hotcopy" is invalid: spec: For
 updates to statefulset spec for fields other than 'replicas', 'template', and 'updateStrategy' are forbidden
 ```
 
-To change the domain from using `a separated journal` to an `in-archive journal` or vice versa, the StatefulSet needs to be deleted.
+To change the domain from using `an in-archive journal` to an `a separated journal` or vice versa, Kubernetes requires the StatefulSet to be deleted and recreated with the new settings.
 
 NuoDB Helm Charts offer two distinct Storage Manager StatefulSets.
-One StatefulSet controls SMs which have a `backup` directory and are referred to as `HotCopy SMs`.
-The second StatefulSet which does not have such a directory, and we call SMs in this SS `NoHotCopy SMs`.
+One StatefulSet controls Storage Managers which have a `backup` directory and are referred to as `HotCopy SMs`.
+The second StatefulSet which does not have such a directory, and we call Storage Managers in this SS `NoHotCopy SMs`.
+Since these StatefulSets can be upgraded independently, NuoDB will not suffer downtime or data loss when performing this upgrade operation.
 
 ### Pre-requisites
 
-1) Your domain must be an enterprise license and the ability to run two or more Storage Managers.
-2) You must have at least 1 SM in both `HotCopy SM` SS and the `NoHotCopy SM` SS.
+1) Your domain must contain an Enterprise License, and the ability to run two or more Storage Managers.
+2) You must have at least 1 Storage Manager in both `HotCopy SM` SS and the `NoHotCopy SM` SS.
 3) Your database option `max-lost-archives` is set to allow the loss of a whole StatefulSet.
 
 ### Upgrade Process
-In this example, we will assume that the domain is running 1 SM in each StatefulSet and the name of the database is `demo` as follows:
+In this example, we will assume that the domain is running 1 Storage Manager in each StatefulSet and the name of the database is `demo` as follows:
 ```shell
 kubectl get statefulsets.apps -n nuodb
 NAME                                      READY
@@ -62,8 +62,8 @@ sm-database-nuodb-cluster0-demo-hotcopy   1/1
 NOTE: NuoDB also requires the NuoDB admin layer, which is also a StatefulSet but won't be directly involved in this migration process.
 
 There will be a number of PersistentVolumeClaims.
-- 1 PVC for the NoHotCopy SM
-- 2 PVCs for the HotCopy SM
+- 1 PVC for the NoHotCopy Storage Manager
+- 2 PVCs for the HotCopy Storage Manager
 - 1 PVC for the admin layer
 
 ```shell
@@ -108,7 +108,7 @@ helm install database nuodb/database \
 --set database.sm.noHotCopy.replicas=1
 ```
 
-Wait for the SM to become READY before proceeding.
+Wait for the Storage Manager Pod to become READY before proceeding.
 
 #### Upgrade the HotCopy StatefulSet
 First, scale the StatefulSet to 0.
@@ -142,7 +142,7 @@ helm install database nuodb/database \
 --set database.sm.noHotCopy.replicas=1
 ```
 
-Wait for the SM to become READY.
+Wait for the Storage Manager Pod to become READY.
 
 Clean up the remaining `backup-` PersistentVolumeClaims.
 ```shell
