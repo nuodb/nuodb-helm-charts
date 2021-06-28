@@ -1,4 +1,4 @@
-{{- if .Values.admin.legacy.loadBalancerJob.enabled }}
+{{- if eq (include "defaultfalse" .Values.admin.legacy.loadBalancerJob.enabled) "true" }}
 apiVersion: batch/v1
 kind: Job
 metadata:

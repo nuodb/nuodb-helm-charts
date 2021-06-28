@@ -224,7 +224,7 @@ spec:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
           defaultMode: 0440
       {{- end }}
-      {{- if not .Values.admin.logPersistence.enabled }}
+      {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "false" }}
       - name: log-volume
         emptyDir: {}
       {{- end }}
@@ -265,7 +265,7 @@ spec:
       resources:
         requests:
           storage: {{ .Values.admin.persistence.size }}
-{{- if .Values.admin.logPersistence.enabled }}
+{{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
   - metadata:
       name: log-volume
       labels:

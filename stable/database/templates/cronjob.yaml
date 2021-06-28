@@ -1,4 +1,4 @@
-{{- if .Values.database.sm.hotCopy.enablePod }}
+{{- if eq (include "defaulttrue" .Values.database.sm.hotCopy.enablePod) "true" }}
 {{- if eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true" }}
 ---
 apiVersion: batch/v1beta1
@@ -173,7 +173,7 @@ spec:
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 
-{{- if .Values.database.sm.hotCopy.journalBackup.enabled }}
+{{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true" }}
 ---
 apiVersion: batch/v1beta1
 kind: CronJob
