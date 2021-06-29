@@ -48,6 +48,7 @@ Since these StatefulSets can be upgraded independently, NuoDB will not suffer do
 1) Enterprise Edition license which enables a database to run two or more Storage Managers.
 2) You must have at least one Storage Manager in both `HotCopy SM` StatefulSet and the `NoHotCopy SM` StatefulSet.
 3) Your database option `max-lost-archives` is set to allow the loss of a whole StatefulSet.
+4) [Kubernetes Aware Admin](https://nuodb.com/blog/introducing-kubernetes-aware-admin) needs to be enabled.
 
 ### Upgrade Process
 In this example, we will assume that the domain is running one Storage Manager in each StatefulSet and the name of the database is `demo` as follows:
@@ -78,25 +79,25 @@ raftlog-admin-nuodb-cluster0-0                             Bound    pvc-4930b80b
 
 
 #### Upgrade the NoHotCopy StatefulSet
-First, scale the StatefulSet to 0.
+1) scale the StatefulSet to 0.
 ```shell
 kubectl scale statefulset -n nuodb sm-database-nuodb-cluster0-demo --replicas=0
 statefulset.apps/sm-database-nuodb-cluster0-demo scaled
 ```
 
-Second, delete all PVCs
+2) delete all PVCs
 ```shell
 kubectl delete pvc -n nuodb <PVC_NAME>
 ```
 
 In this case, the `<PVC_NAME>` will be `archive-volume-sm-database-nuodb-cluster0-demo-0`.
 
-Third, delete the StatefulSet:
+3) delete the StatefulSet:
 ```shell
 kubectl delete statefulset -n nuodb sm-database-nuodb-cluster0-demo
 ```
 
-Fourth, reinstall the StatefulSet using Helm.
+4) reinstall the StatefulSet using Helm.
 To enable the journal on the deleted StatefulSet, use the following value:
 ```
 database.sm.noHotCopy.journalPath.enabled=true
@@ -108,28 +109,28 @@ helm upgrade -n nuodb database nuodb/database \
 --set database.sm.noHotCopy.replicas=1
 ```
 
-Wait for the Storage Manager Pod to become READY before proceeding.
+5) Wait for the Storage Manager Pod to become READY before proceeding.
 
 #### Upgrade the HotCopy StatefulSet
-First, scale the StatefulSet to 0.
+1) scale the StatefulSet to 0.
 ```shell
 kubectl scale statefulset -n nuodb sm-database-nuodb-cluster0-demo-hotcopy --replicas=0
 statefulset.apps/sm-database-nuodb-cluster0-demo-hotcopy scaled
 ```
 
-Second, delete all PVCs
+2) delete all PVCs
 ```shell
 kubectl delete pvc -n nuodb <PVC_NAME>
 ```
 
 In this case, the `<PVC_NAME>` will be `archive-volume-sm-database-nuodb-cluster0-demo-hotcopy-0`.
 
-Third, delete the StatefulSet:
+3) delete the StatefulSet:
 ```shell
 kubectl delete statefulset -n nuodb sm-database-nuodb-cluster0-demo-hotcopy
 ```
 
-Fourth, reinstall the StatefulSet using Helm.
+4) reinstall the StatefulSet using Helm.
 To enable the journal on the deleted StatefulSet, use the following value:
 ```
 database.sm.hotCopy.journalPath.enabled=true
@@ -142,9 +143,4 @@ helm upgrade -n nuodb database nuodb/database \
 --set database.sm.noHotCopy.replicas=1
 ```
 
-Wait for the Storage Manager Pod to become READY.
-
-Clean up the remaining `backup-` PersistentVolumeClaims.
-```shell
-kubectl delete pvc -n nuodb backup-volume-sm-database-nuodb-cluster0-demo-hotcopy-0
-```
+5) Wait for the Storage Manager Pod to become READY.
