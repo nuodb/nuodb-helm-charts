@@ -16,12 +16,12 @@ For more info on NuoDB database journaling, please consult the official [NuoDB d
 ## Separating the Journal from the Archive
 
 Since the `journal` has to write all commits durably to disk, the speed of the disk directly influences the commit latency.
-To achieve the best performance, NuoDB recommends placing the `journal` on the fastest disk available.
-In contract, the `archive` should be using the disk with the largest throughput.
+To achieve the best performance, NuoDB recommends placing the `journal` on the disk with the best latency available.
+In contrast, the `archive` should be using the disk with the largest throughput.
 
 By default, the `journal` is located in a subdirectory of the `archive`.
 To achieve the best cost vs speed tradeoff, you can separate the journal from the archive.
-To achieve that set the database helm template values `database.sm.noHotCopy.journalPath.enabled` and `database.sm.hotCopy.journalPath.enabled` to `true` and configure it with the desired persistence settings.
+This can be done by setting the database helm template values `database.sm.noHotCopy.journalPath.enabled` and `database.sm.hotCopy.journalPath.enabled` to `true` and configure it with the desired persistence settings.
 
 Kubernetes stateful sets volume mounts are immutable and as such, the setting can not be changed easily on an existing database.
 
@@ -38,7 +38,7 @@ updates to statefulset spec for fields other than 'replicas', 'template', and 'u
 
 To change the domain from using `an in-archive journal` to an `a separated journal` or vice versa, Kubernetes requires the StatefulSet to be deleted and recreated with the new settings.
 
-NuoDB Helm Charts offer two distinct Storage Manager StatefulSets.
+NuoDB Helm Charts offer two distinct Storage Manager StatefulSets (SS).
 One StatefulSet controls Storage Managers which have a `backup` directory and are referred to as `HotCopy SMs`.
 The second StatefulSet which does not have such a directory, and we call Storage Managers in this SS `NoHotCopy SMs`.
 Since these StatefulSets can be upgraded independently, NuoDB will not suffer downtime or data loss when performing this upgrade operation.
@@ -67,7 +67,7 @@ There will be a number of PersistentVolumeClaims.
 - 1 PVC for the admin layer
 
 ```shell
-k get persistentvolumeclaims -n nuodb
+kubectl get persistentvolumeclaims -n nuodb
 NAME                                                       STATUS   VOLUME                                     CAPACITY   ACCESS MODES
 archive-volume-sm-database-nuodb-cluster0-demo-0           Bound    pvc-e8227428-6b9f-47b1-acc0-41b70a21d043   20Gi       RWO
 archive-volume-sm-database-nuodb-cluster0-demo-hotcopy-0   Bound    pvc-19540f97-8407-4fe1-a940-3b3f83538f0f   20Gi       RWO
@@ -80,7 +80,7 @@ raftlog-admin-nuodb-cluster0-0                             Bound    pvc-4930b80b
 #### Upgrade the NoHotCopy StatefulSet
 First, scale the StatefulSet to 0.
 ```shell
-kubectl scale statefulset sm-database-nuodb-cluster0-demo --replicas=0
+kubectl scale statefulset -n nuodb sm-database-nuodb-cluster0-demo --replicas=0
 statefulset.apps/sm-database-nuodb-cluster0-demo scaled
 ```
 
@@ -93,7 +93,7 @@ In this case, the `<PVC_NAME>` will be `archive-volume-sm-database-nuodb-cluster
 
 Third, delete the StatefulSet:
 ```shell
-kubectl delete statefulset sm-database-nuodb-cluster0-demo
+kubectl delete statefulset -n nuodb sm-database-nuodb-cluster0-demo
 ```
 
 Fourth, reinstall the StatefulSet using Helm.
@@ -103,7 +103,7 @@ database.sm.noHotCopy.journalPath.enabled=true
 ```
 
 ```shell
-helm install database nuodb/database \
+helm upgrade -n nuodb database nuodb/database \
 --set database.sm.noHotCopy.journalPath.enabled=true \
 --set database.sm.noHotCopy.replicas=1
 ```
@@ -113,7 +113,7 @@ Wait for the Storage Manager Pod to become READY before proceeding.
 #### Upgrade the HotCopy StatefulSet
 First, scale the StatefulSet to 0.
 ```shell
-kubectl scale statefulset sm-database-nuodb-cluster0-demo-hotcopy --replicas=0
+kubectl scale statefulset -n nuodb sm-database-nuodb-cluster0-demo-hotcopy --replicas=0
 statefulset.apps/sm-database-nuodb-cluster0-demo-hotcopy scaled
 ```
 
@@ -126,19 +126,19 @@ In this case, the `<PVC_NAME>` will be `archive-volume-sm-database-nuodb-cluster
 
 Third, delete the StatefulSet:
 ```shell
-kubectl delete statefulset sm-database-nuodb-cluster0-demo-hotcopy
+kubectl delete statefulset -n nuodb sm-database-nuodb-cluster0-demo-hotcopy
 ```
 
 Fourth, reinstall the StatefulSet using Helm.
 To enable the journal on the deleted StatefulSet, use the following value:
 ```
-database.sm.HotCopy.journalPath.enabled=true
+database.sm.hotCopy.journalPath.enabled=true
 ```
 
 ```shell
-helm install database nuodb/database \
+helm upgrade -n nuodb database nuodb/database \
 --set database.sm.noHotCopy.journalPath.enabled=true \
---set database.sm.HotCopy.journalPath.enabled=true \
+--set database.sm.hotCopy.journalPath.enabled=true \
 --set database.sm.noHotCopy.replicas=1
 ```
 
