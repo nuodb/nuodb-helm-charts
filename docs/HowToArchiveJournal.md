@@ -2,20 +2,20 @@
 
 ## Introduction
 
-The storage manager, SM for short, is responsible for maintaining a complete copy of the database.
-The atoms, database elements, are stored to either local disk, or in a separate volume.
+The Storage Manager (SM), is responsible for maintaining a complete copy of the database.
+The atoms (i.e., database data elements) are stored to either local disk, or in a separate volume.
 These atoms are written by a specific module called the `archive`.
 However, the archive doesn’t have any special mechanisms to satisfy the durability requirements.
 In addition to the archive, NuoDB storage managers also maintain a write-ahead-log called the `journal`.
 The journal has the onerous task of ensuring durability in the face of an unexpected process termination.
 E.g., a power loss, machine meltdown, or an unexpected cloud outage.
-The journal will make sure that the archive is reconstructed in a consistent state when coming back online.
+The journal will make sure that the archive is reconstructed in a consistent state during the database startup procedure.
 
-For more info on NuoDB database journaling, please consult the official [NuoDB docs](https://doc.nuodb.com/nuodb/latest/database-administration/about-database-journaling/).
+For more info on NuoDB database journaling, please refer the official [NuoDB Documentation](https://doc.nuodb.com/nuodb/latest/database-administration/about-database-journaling/).
 
 ## Separating the Journal from the Archive
 
-Since the `journal` has to write all commits durably to disk, the speed of the disk directly influences the commit latency.
+Since the `journal` writes all commits durably to disk, the speed of the disk directly influences the commit latency.
 To achieve the best performance, NuoDB recommends placing the `journal` on the disk with the best latency available.
 In contrast, the `archive` should be using the disk with the largest throughput.
 
@@ -40,17 +40,17 @@ To change the domain from using `an in-archive journal` to an `a separated journ
 
 NuoDB Helm Charts offer two distinct Storage Manager StatefulSets (SS).
 One StatefulSet controls Storage Managers which have a `backup` directory and are referred to as `HotCopy SMs`.
-The second StatefulSet which does not have such a directory, and we call Storage Managers in this SS `NoHotCopy SMs`.
+The second StatefulSet which does not have such a directory, and we call Storage Managers in this StatefulSet `NoHotCopy SMs`.
 Since these StatefulSets can be upgraded independently, NuoDB will not suffer downtime or data loss when performing this upgrade operation.
 
 ### Pre-requisites
 
-1) Your domain must contain an Enterprise License, and the ability to run two or more Storage Managers.
-2) You must have at least 1 Storage Manager in both `HotCopy SM` SS and the `NoHotCopy SM` SS.
+1) Enterprise Edition license which enables a database to run two or more Storage Managers.
+2) You must have at least one Storage Manager in both `HotCopy SM` StatefulSet and the `NoHotCopy SM` StatefulSet.
 3) Your database option `max-lost-archives` is set to allow the loss of a whole StatefulSet.
 
 ### Upgrade Process
-In this example, we will assume that the domain is running 1 Storage Manager in each StatefulSet and the name of the database is `demo` as follows:
+In this example, we will assume that the domain is running one Storage Manager in each StatefulSet and the name of the database is `demo` as follows:
 ```shell
 kubectl get statefulsets.apps -n nuodb
 NAME                                      READY
