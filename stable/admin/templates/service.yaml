@@ -1,4 +1,4 @@
-{{- if .Values.admin.externalAccess.enabled }}
+{{- if eq (include "defaultfalse" .Values.admin.externalAccess.enabled) "true" }}
 apiVersion: v1
 kind: Service
 metadata:
