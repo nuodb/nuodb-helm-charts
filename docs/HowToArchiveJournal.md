@@ -43,6 +43,10 @@ One StatefulSet controls Storage Managers which have a `backup` directory and ar
 The second StatefulSet which does not have such a directory, and we call Storage Managers in this StatefulSet `NoHotCopy SMs`.
 Since these StatefulSets can be upgraded independently, NuoDB will not suffer downtime or data loss when performing this upgrade operation.
 
+This migration process will resync new Storage Managers from the remaining Storage Managers.
+The time it takes to resync a Storage Manager from scratch depends on the size of the archive and on the load of the system.
+When in doubt whether you can perform this operation safely, please contact [NuoDB Support](mailto:support@nuodb.com).
+
 ### Pre-requisites
 
 1) Enterprise Edition license which enables a database to run two or more Storage Managers.
