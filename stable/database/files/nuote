@@ -4,9 +4,7 @@
 # This file is licensed under the BSD 3-Clause License.
 # See https://github.com/nuodb/nuodb-helm-charts/blob/master/LICENSE
 
-export NUODB_LOGDIR=/var/log/nuodb/"${POD_NAME}"
-export NUODB_CRASHDIR="$NUODB_LOGDIR"/crash
-mkdir -p $NUODB_CRASHDIR
+. ${NUODB_HOME}/etc/nuodb_setup.sh
 
 # attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
 crashcount=$(find $NUODB_CRASHDIR/core* -maxdepth 0 ! -type d 2>/dev/null | wc -l)

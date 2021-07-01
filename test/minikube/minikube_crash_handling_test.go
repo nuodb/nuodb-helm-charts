@@ -5,6 +5,7 @@ package minikube
 import (
 	"errors"
 	"fmt"
+	"github.com/Masterminds/semver"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
@@ -19,8 +20,6 @@ import (
 )
 
 func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName string, podName string) {
-	options := k8s.NewKubectlOptions("", "", namespaceName)
-
 	previousCount := testlib.GetPodRestartCount(t, namespaceName, podName)
 
 	ch := make(chan string)
@@ -30,7 +29,7 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 	}()
 
 	// send SIGABRT
-	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", "-6", "1")
+	testlib.KillDatabaseProcess(t, namespaceName, podName, "SIGABRT")
 
 	// dumping core can take a long time, give it a long timeout
 	testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, previousCount, 300*time.Second)
@@ -49,6 +48,13 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--", "find", "/var/log/nuodb/", "-type", "d")
 	require.NoError(t, err, output)
 	require.Regexp(t, regexp.MustCompile("crash-[0-9]{8}T[0-9]{6}"), output)
+
+	testlib.RunOnNuoDBVersionCondition(t, ">4.2.2", func(version *semver.Version) {
+		// check that threads from the core are dumped and sent to the admin
+		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, adminPodName,
+			fmt.Sprintf("[%s:%s] STDOUT --- Uncompressing core file ...", adminPodName, podName), &corev1.PodLogOptions{}),
+			"Unable to find %s core dump threads in NuoAdmin log file", podName)
+	})
 }
 
 func TestKubernetesPrintCores(t *testing.T) {
@@ -90,6 +96,13 @@ func TestKubernetesPrintCores(t *testing.T) {
 
 		smLogPvc := fmt.Sprintf("log-volume-%s", smPodName)
 		testlib.RecoverCoresFromEngine(t, namespaceName, "sm", smLogPvc)
+
+		testlib.RunOnNuoDBVersionCondition(t, ">4.2.2", func(version *semver.Version) {
+			// check that logging from nuosm script is sent to the admin
+			require.GreaterOrEqual(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
+				fmt.Sprintf("[:%s] nuosm ==", smPodName), &corev1.PodLogOptions{}),
+				"Unable to find nuosm logging in NuoAdmin log")
+		})
 	})
 }
 

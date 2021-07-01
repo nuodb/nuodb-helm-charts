@@ -178,6 +178,7 @@ type UpgradeDatabaseOptions struct {
 	TePodShouldGetRecreated bool
 	SmPodShouldGetRecreated bool
 }
+
 func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName string, adminPod string, options *helm.Options, upgradeOptions *UpgradeDatabaseOptions) {
 	opt := GetExtractedOptions(options)
 
@@ -221,7 +222,6 @@ func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName st
 		AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
 	}
 }
-
 
 func SetDeploymentUpgradeStrategyToRecreate(t *testing.T, namespaceName string, deploymentName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
@@ -413,7 +413,11 @@ func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) 
 	InferVersionFromTemplate(t, options)
 	InjectTestValues(t, options)
 	defer func() {
-		// Delete the pod just in case "--rm" doesn't do it
+		if t.Failed() {
+			DescribePods(t, namespaceName, podName)
+			GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
+		}
+		// Delete the helper pod
 		k8s.RunKubectlE(t, kubectlOptions, "delete", "pod", podName)
 	}()
 	nuodbImage := fmt.Sprintf(
@@ -423,7 +427,8 @@ func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) 
 		options.SetValues["nuodb.image.tag"])
 	output, err := k8s.RunKubectlAndGetOutputE(
 		t, kubectlOptions, "run", podName,
-		"--image", nuodbImage, "--restart=Never", "--rm", "--attach", "--command", "--",
+		"--image", nuodbImage, "--restart=Never", "--attach", "--command",
+		"--image-pull-policy=IfNotPresent", "--",
 		"nuodb", "--version")
 	require.NoError(t, err, "Unable to check NuoDB version in helper pod")
 	match := regexp.MustCompile("NuoDB Server build (.*)").FindStringSubmatch(output)
@@ -431,7 +436,7 @@ func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) 
 	return match[1]
 }
 
-func SkipTestOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool) {
+func RunOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool, actionFunc func(*semver.Version)) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 	defer Teardown(TEARDOWN_ADMIN)
 	namespaceName := fmt.Sprintf("nuodbversioncheck-%s", randomSuffix)
@@ -443,8 +448,16 @@ func SkipTestOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version)
 	version, err := semver.NewVersion(versionString)
 	require.NoError(t, err, "Unable to parse NuoDB version", versionString)
 	if versionCheckFunc(version) {
-		t.Skip("Skipping test when using NuoDB version", version)
+		actionFunc(version)
+	} else {
+		t.Logf("Conditional logic not executed for NuoDB version %s", versionString)
 	}
+}
+
+func SkipTestOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool) {
+	RunOnNuoDBVersion(t, versionCheckFunc, func(version *semver.Version) {
+		t.Skip("Skipping test when using NuoDB version", version)
+	})
 }
 
 /**
@@ -460,6 +473,14 @@ func SkipTestOnNuoDBVersionCondition(t *testing.T, condition string) {
 		require.NoError(t, err)
 		return c.Check(version)
 	})
+}
+
+func RunOnNuoDBVersionCondition(t *testing.T, condition string, actionFunc func(*semver.Version)) {
+	RunOnNuoDBVersion(t, func(version *semver.Version) bool {
+		c, err := semver.NewConstraint(condition)
+		require.NoError(t, err)
+		return c.Check(version)
+	}, actionFunc)
 }
 
 func GetDatabaseProcessesE(t *testing.T, namespaceName string, adminPod string, dbName string) (processes []NuoDBProcess, err error) {

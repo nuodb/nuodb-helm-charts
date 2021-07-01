@@ -753,6 +753,18 @@ func KillProcess(t *testing.T, namespace string, podName string) {
 	AwaitPodRestartCountGreaterThan(t, namespace, podName, 0, 30*time.Second)
 }
 
+func KillDatabaseProcess(t *testing.T, namespace string, podName string, signalName string) {
+	options := k8s.NewKubectlOptions("", "", namespace)
+
+	pid, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "pgrep", "nuodb")
+	require.NoError(t, err, "error when searching for NuoDB process in pod %s", podName)
+	require.NotEmpty(t, pid, "unable to find nuodb process in pod %s", podName)
+	t.Logf("Killing pid %s in pod %s\n", pid, podName)
+	k8s.RunKubectl(t, options, "exec", podName, "--", "kill", "-s", signalName, pid)
+
+	AwaitPodRestartCountGreaterThan(t, namespace, podName, 0, 30*time.Second)
+}
+
 func GetService(t *testing.T, namespaceName string, serviceName string) *corev1.Service {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
@@ -1075,7 +1087,6 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 	}
 }
 
-
 func GetStatefulSets(t *testing.T, namespaceName string) *v1.StatefulSetList {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
@@ -1102,7 +1113,7 @@ func DeletePVC(t *testing.T, namespaceName string, name string) {
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).Delete(context.TODO(), name, metav1.DeleteOptions{})
- 	require.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func ScaleStatefulSet(t *testing.T, namespaceName string, name string, replicas int) {
