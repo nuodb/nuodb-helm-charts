@@ -54,6 +54,7 @@ func verifyKillAndInfoInLog(t *testing.T, namespaceName string, adminPodName str
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, adminPodName,
 			fmt.Sprintf("[%s:%s] STDOUT --- Uncompressing core file ...", adminPodName, podName), &corev1.PodLogOptions{}),
 			"Unable to find %s core dump threads in NuoAdmin log file", podName)
+		t.Log("Finished checking code dump threads")
 	})
 }
 

@@ -438,7 +438,7 @@ func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) 
 
 func RunOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool, actionFunc func(*semver.Version)) {
 	randomSuffix := strings.ToLower(random.UniqueId())
-	defer Teardown(TEARDOWN_ADMIN)
+	defer Teardown(TEARDOWN_NGINX)
 	namespaceName := fmt.Sprintf("nuodbversioncheck-%s", randomSuffix)
 	CreateNamespace(t, namespaceName)
 	versionString := GetNuoDBVersion(t, namespaceName, &helm.Options{})
