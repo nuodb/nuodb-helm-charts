@@ -103,6 +103,7 @@ func TestKubernetesPrintCores(t *testing.T) {
 			require.GreaterOrEqual(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
 				fmt.Sprintf("[:%s] nuosm ==", smPodName), &corev1.PodLogOptions{}),
 				"Unable to find nuosm logging in NuoAdmin log")
+			t.Log("Finished checking nuosm logging")
 		})
 	})
 }
