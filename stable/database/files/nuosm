@@ -30,6 +30,10 @@ JOURNAL_PARENT=${NUODB_JOURNALDIR}/${NUODB_DOMAIN}
 JOURNAL_DIR=${JOURNAL_PARENT}/${DB_NAME}
 
 LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuosm.log
+# since NuoDB 4.2.3, `nuodocker` has logging facilities to send logging to the
+# AP; write the log from single nuosm execution to tmp file which content will
+# be prepended to the rest of the database process statup logging
+NUODB_EXTERNAL_STARTUP_LOG="$(mktemp /tmp/nuosm_startup.log.XXXXXX)"
 
 first_in=
 myArchive=
@@ -48,7 +52,7 @@ if [ $crashcount -ge 1 ]; then
   fi
 fi
 
-export DB_NAME NUODB_STORAGE_PASSWORDS_DIR
+export DB_NAME NUODB_STORAGE_PASSWORDS_DIR NUODB_EXTERNAL_STARTUP_LOG
 
 #=======================================
 # function - report an error and exit
@@ -58,7 +62,7 @@ function die() {
   shift
   error="$@"
   [ -n "$wotIdid" ] && error="Error while ${wotIdid}: ${error}"
-  log "$error"
+  logWithLevel "ERROR" "$error"
 
   if [ -n "$first_in" ]; then
     # cleanup legacy restore locks if defined
@@ -73,13 +77,23 @@ function die() {
 }
 
 #=======================================
+# function - log messages log level specified
+#
+function logWithLevel() {
+  local level="$1"
+  shift
+  local message="$@"
+  if [ -n "$message" ]; then
+    printf '%s %-5s [:%s] nuosm %s\n' "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" )" "$level" "$HOSTNAME" "$message" | \
+      tee -a "$LOGFILE" "$NUODB_EXTERNAL_STARTUP_LOG"
+  fi
+}
+
+#=======================================
 # function - log messages
 #
 function log() {
-  local message="$@"
-  if [ -n "$message" ]; then
-    echo "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" ) $message" | tee -a $LOGFILE
-  fi
+  logWithLevel "INFO" "$@"
 }
 
 #=======================================
@@ -87,7 +101,7 @@ function log() {
 #
 function trace() {
   wotIdid="$@"
-  [ -n "$1" -a -n "$NUODB_DEBUG" ] && log "trace: $wotIdid"
+  [ -n "$1" -a -n "$NUODB_DEBUG" ] && logWithLevel "DEBUG" "$wotIdid"
 }
 
 #=======================================
