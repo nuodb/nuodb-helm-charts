@@ -62,7 +62,7 @@ function die() {
   shift
   error="$@"
   [ -n "$wotIdid" ] && error="Error while ${wotIdid}: ${error}"
-  log "$error"
+  logWithLevel "ERROR" "$error"
 
   if [ -n "$first_in" ]; then
     # cleanup legacy restore locks if defined
@@ -77,13 +77,23 @@ function die() {
 }
 
 #=======================================
+# function - log messages log level specified
+#
+function logWithLevel() {
+  local level="$1"
+  shift
+  local message="$@"
+  if [ -n "$message" ]; then
+    printf '%s %-5s [:%s] nuosm %s\n' "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" )" "$level" "$HOSTNAME" "$message" | \
+      tee -a "$LOGFILE" "$NUODB_EXTERNAL_STARTUP_LOG"
+  fi
+}
+
+#=======================================
 # function - log messages
 #
 function log() {
-  local message="$@"
-  if [ -n "$message" ]; then
-    echo "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" ) INFO  [:${HOSTNAME}] nuosm ${message}" | tee -a "$LOGFILE" "$NUODB_EXTERNAL_STARTUP_LOG"
-  fi
+  logWithLevel "INFO" "$@"
 }
 
 #=======================================
@@ -91,7 +101,7 @@ function log() {
 #
 function trace() {
   wotIdid="$@"
-  [ -n "$1" -a -n "$NUODB_DEBUG" ] && log "trace: $wotIdid"
+  [ -n "$1" -a -n "$NUODB_DEBUG" ] && logWithLevel "DEBUG" "$wotIdid"
 }
 
 #=======================================
