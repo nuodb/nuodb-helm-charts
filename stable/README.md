@@ -27,10 +27,17 @@ If you are planning to install Helm 2, please follow the [official Helm 2 docs][
 
 ### MacOS
 
-Use the Brew Package manager.
+Use the Brew package manager:
 ```
 brew install helm
 ```
+
+Alternatively, you can also use the MacPorts package manager:
+```
+sudo port install helm-3.6
+sudo port select --set helm helm3.6
+```
+
 ### Linux
 
 Every [release][2] of Helm provides binary releases for a variety of OSes. 
