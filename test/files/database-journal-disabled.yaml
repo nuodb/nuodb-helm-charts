@@ -1,0 +1,5 @@
+database:
+  sm:
+    hotCopy:
+      journalBackup:
+        enabled: "false"

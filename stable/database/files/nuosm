@@ -11,6 +11,7 @@
 
 : ${NUODB_ARCHIVEDIR:=/var/opt/nuodb/archive}
 : ${NUODB_BACKUPDIR:=/var/opt/nuodb/backup}
+: ${NUODB_JOURNALDIR:=/var/opt/nuodb/journal}
 : ${NUODB_STORAGE_PASSWORDS_DIR:=/etc/nuodb/tde}
 : ${NUODB_DOMAIN:="nuodb"}
 : ${DB_NAME:="demo"}
@@ -25,7 +26,14 @@ strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
 DB_PARENTDIR=${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}
 DB_DIR=${DB_PARENTDIR}/${DB_NAME}
 
+JOURNAL_PARENT=${NUODB_JOURNALDIR}/${NUODB_DOMAIN}
+JOURNAL_DIR=${JOURNAL_PARENT}/${DB_NAME}
+
 LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuosm.log
+# since NuoDB 4.2.3, `nuodocker` has logging facilities to send logging to the
+# AP; write the log from single nuosm execution to tmp file which content will
+# be prepended to the rest of the database process statup logging
+NUODB_EXTERNAL_STARTUP_LOG="$(mktemp /tmp/nuosm_startup.log.XXXXXX)"
 
 first_in=
 myArchive=
@@ -44,7 +52,7 @@ if [ $crashcount -ge 1 ]; then
   fi
 fi
 
-export DB_NAME NUODB_STORAGE_PASSWORDS_DIR
+export DB_NAME NUODB_STORAGE_PASSWORDS_DIR NUODB_EXTERNAL_STARTUP_LOG
 
 #=======================================
 # function - report an error and exit
@@ -54,14 +62,14 @@ function die() {
   shift
   error="$@"
   [ -n "$wotIdid" ] && error="Error while ${wotIdid}: ${error}"
-  log "$error"
+  logWithLevel "ERROR" "$error"
 
   if [ -n "$first_in" ]; then
     # cleanup legacy restore locks if defined
     nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
     nuocmd set value --key $startup_key/$DB_NAME --value '' --expected-value $HOSTNAME
 
-    # resurect my archive if it is removed
+    # resurrect my archive if it is removed
     resurrectRemovedArchive
   fi
 
@@ -69,13 +77,23 @@ function die() {
 }
 
 #=======================================
+# function - log messages log level specified
+#
+function logWithLevel() {
+  local level="$1"
+  shift
+  local message="$@"
+  if [ -n "$message" ]; then
+    printf '%s %-5s [:%s] nuosm %s\n' "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" )" "$level" "$HOSTNAME" "$message" | \
+      tee -a "$LOGFILE" "$NUODB_EXTERNAL_STARTUP_LOG"
+  fi
+}
+
+#=======================================
 # function - log messages
 #
 function log() {
-  local message="$@"
-  if [ -n "$message" ]; then
-    echo "$( date "+%Y-%m-%dT%H:%M:%S.%3N%z" ) $message" | tee -a $LOGFILE
-  fi
+  logWithLevel "INFO" "$@"
 }
 
 #=======================================
@@ -83,7 +101,7 @@ function log() {
 #
 function trace() {
   wotIdid="$@"
-  [ -n "$1" -a -n "$NUODB_DEBUG" ] && log "trace: $wotIdid"
+  [ -n "$1" -a -n "$NUODB_DEBUG" ] && logWithLevel "DEBUG" "$wotIdid"
 }
 
 #=======================================
@@ -418,6 +436,15 @@ else
   log "Directory $DB_DIR exists"
 fi
 
+if [ "$SEPARATE_JOURNAL" == "true" ]; then
+  if [ ! -e "${JOURNAL_DIR}" ] ; then
+    mkdir -p "${JOURNAL_DIR}"
+    log "Created new journal dir $JOURNAL_DIR"
+  else
+    log "Directory $JOURNAL_DIR exists"
+  fi
+fi
+
 # Retry the first request against the admin layer to make sure that Raft
 # commands can be committed and fail fast on error
 retry 3 get_legacy_restore_request
@@ -748,9 +775,16 @@ trace "executing nuodocker to start SM"
 nuodocker_flags=()
 [ -n "$NUODB_DEBUG" ] && nuodocker_flags+=("--debug")
 
+journal_flags=()
+if [ "$SEPARATE_JOURNAL" == "true" ]; then
+  journal_flags+=("--journal-dir")
+  journal_flags+=("${JOURNAL_DIR}")
+  log "journal-dir=${JOURNAL_DIR}"
+fi
+
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
-    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" "${journal_flags[@]}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
 else
-    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" "${journal_flags[@]}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "$@"
 fi

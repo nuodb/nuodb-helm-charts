@@ -60,35 +60,6 @@ func TestDatabaseConfigMaps(t *testing.T) {
 	assert.Equal(t, configs["NUODB_STORAGE_PASSWORDS_DIR"], "/etc/nuodb/encryption")
 }
 
-func TestDatabaseDaemonSetDisabled(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-	// helm3 wont render an empty template
-	assert.Error(t, err)
-}
-
-func TestDatabaseDaemonSetEnabled(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{"database.enableDaemonSet": "true"},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-	testlib.SplitAndRenderDaemonSet(t, output, 2)
-}
-
 func TestDatabaseClusterServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
@@ -149,21 +120,6 @@ func TestDatabaseServiceRenders(t *testing.T) {
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
 	}
 
-}
-
-func TestDatabaseStatefulSetDisabled(t *testing.T) {
-	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
-
-	options := &helm.Options{
-		SetValues: map[string]string{"database.enableDaemonSet": "true"},
-	}
-
-	// Run RenderTemplate to render the template and capture the output.
-	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
-
-	// helm3 wont render an empty template
-	assert.Error(t, err)
 }
 
 func TestDatabaseStatefulSet(t *testing.T) {
@@ -248,6 +204,10 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		assert.True(t, testlib.EnvContains(args, "NUODOCKER_KEYSTORE_PASSWORD", "changeIt"))
 	}
 
+	basicInitContainerCommandChecks := func(commands []string) {
+		assert.NotContains(t, commands, "/var/opt/nuodb/journal")
+	}
+
 	t.Run("testDeployment", func(t *testing.T) {
 		// Run RenderTemplate to render the template and capture the output.
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
@@ -267,21 +227,9 @@ func TestDatabaseOtherOptions(t *testing.T) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
-		}
-	})
 
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			basicArgChecks(obj.Spec.Template.Spec.Containers[0].Args)
-			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
+			require.NotEmpty(t, obj.Spec.Template.Spec.InitContainers)
+			basicInitContainerCommandChecks(obj.Spec.Template.Spec.InitContainers[0].Command)
 		}
 	})
 }
@@ -324,20 +272,6 @@ func TestDatabaseCustomEnv(t *testing.T) {
 			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
 		}
 	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			basicEnvChecks(obj.Spec.Template.Spec.Containers[0].Env)
-		}
-	})
 }
 
 func TestDatabaseVPNRenders(t *testing.T) {
@@ -375,21 +309,6 @@ func TestDatabaseVPNRenders(t *testing.T) {
 			basicChecks(obj.Spec.Template.Spec.Containers)
 		}
 	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			basicChecks(obj.Spec.Template.Spec.Containers)
-		}
-	})
-
 }
 
 func TestDatabaseLabeling(t *testing.T) {
@@ -436,24 +355,6 @@ func TestDatabaseLabeling(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			basicChecks(obj.Spec.Template.Spec.Containers[0].Args)
-
-			if testlib.IsDaemonSetHotCopyEnabled(&obj) {
-				assert.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
-			}
-		}
-	})
 }
 
 func TestReadinessProbe(t *testing.T) {
@@ -486,20 +387,6 @@ func TestReadinessProbe(t *testing.T) {
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
-			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
-			basicChecks(obj.Spec.Template.Spec)
-		}
-	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
 			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
 			basicChecks(obj.Spec.Template.Spec)
 		}
@@ -646,25 +533,6 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
 		}
 	})
-
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
-
-		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			assert.Equal(t, options.SetValues["database.podAnnotations.key1"], obj.Spec.Template.ObjectMeta.Annotations["key1"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key2"], obj.Spec.Template.ObjectMeta.Annotations["key2"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key3\\.key3"], obj.Spec.Template.ObjectMeta.Annotations["key3.key3"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key4\\.key4/key4"], obj.Spec.Template.ObjectMeta.Annotations["key4.key4/key4"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.key5\\.key5/key5"], obj.Spec.Template.ObjectMeta.Annotations["key5.key5/key5"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject"])
-			assert.Equal(t, options.SetValues["database.podAnnotations.vault\\.hashicorp\\.com/agent-inject-template-ca\\.cert"], obj.Spec.Template.ObjectMeta.Annotations["vault.hashicorp.com/agent-inject-template-ca.cert"])
-		}
-	})
 }
 
 func TestDatabaseStoragePasswordsRender(t *testing.T) {
@@ -694,25 +562,100 @@ func TestDatabaseStoragePasswordsRender(t *testing.T) {
 			assert.Equal(t, options.SetValues["admin.tde.secrets."+database], volume.VolumeSource.Secret.SecretName)
 		}
 	})
+}
 
-	t.Run("testDaemonSet", func(t *testing.T) {
-		// make a copy
-		localOptions := *options
-		localOptions.SetValues["database.enableDaemonSet"] = "true"
+func TestDatabaseSeparateJournal(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	t.Run("testStatefulSetDefaults", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.noHotCopy.journalPath.enabled": "true",
+			},
+		}
 
 		// Run RenderTemplate to render the template and capture the output.
-		output := helm.RenderTemplate(t, &localOptions, helmChartPath, "release-name", []string{"templates/daemonset.yaml"})
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
-		for _, obj := range testlib.SplitAndRenderDaemonSet(t, output, 2) {
-			database := "demo"
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			container := obj.Spec.Template.Spec.Containers[0]
-			mount, ok := testlib.GetMount(container.VolumeMounts, "tde-volume-"+database)
-			assert.True(t, ok, "mount tde-volume-%s not found", database)
-			assert.True(t, mount.ReadOnly)
-			assert.Equal(t, options.SetValues["admin.tde.storagePasswordsDir"]+"/"+database, mount.MountPath)
-			volume, ok := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "tde-volume-"+database)
-			assert.True(t, ok, "volume tde-volume-%s not found", database)
-			assert.Equal(t, options.SetValues["admin.tde.secrets."+database], volume.VolumeSource.Secret.SecretName)
+
+			assert.True(t, testlib.EnvContains(container.Env, "SEPARATE_JOURNAL", "true"))
+
+			mount, ok := testlib.GetMount(container.VolumeMounts, "journal-volume")
+			assert.True(t, ok, "mount journal-volume not found")
+			assert.EqualValues(t, "/var/opt/nuodb/journal", mount.MountPath)
+
+			initContainer := obj.Spec.Template.Spec.InitContainers[0]
+			assert.Contains(t, initContainer.Command, "/var/opt/nuodb/journal")
+
+			claim, ok := testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
+			assert.True(t, ok, "volume journal-volume not found")
+			assert.Equal(t, v1.ReadWriteOnce, claim.Spec.AccessModes[0])
+			assert.Nil(t, claim.Spec.StorageClassName)
 		}
 	})
+
+	t.Run("testStatefulSetOverrides", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.noHotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.persistence.accessModes[0]": "ReadWriteMany",
+				"database.sm.noHotCopy.journalPath.persistence.accessModes[0]": "ReadWriteMany",
+				"database.sm.hotCopy.journalPath.persistence.storageClass": "non-default",
+				"database.sm.noHotCopy.journalPath.persistence.storageClass": "non-default",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			container := obj.Spec.Template.Spec.Containers[0]
+
+			assert.True(t, testlib.EnvContains(container.Env, "SEPARATE_JOURNAL", "true"))
+
+			mount, ok := testlib.GetMount(container.VolumeMounts, "journal-volume")
+			assert.True(t, ok, "mount journal-volume not found")
+			assert.EqualValues(t, "/var/opt/nuodb/journal", mount.MountPath)
+
+			initContainer := obj.Spec.Template.Spec.InitContainers[0]
+			assert.Contains(t, initContainer.Command, "/var/opt/nuodb/journal")
+
+			claim, ok := testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
+			assert.True(t, ok, "volume journal-volume not found")
+			assert.Equal(t, v1.ReadWriteMany, claim.Spec.AccessModes[0])
+			assert.EqualValues(t, "non-default", *claim.Spec.StorageClassName)
+		}
+	})
+
+	t.Run("testStatefulDefaultFalse", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.hotCopy.journalPath.enabled": "",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			container := obj.Spec.Template.Spec.Containers[0]
+
+			assert.True(t, testlib.EnvContains(container.Env, "SEPARATE_JOURNAL", "false"))
+
+			_, ok := testlib.GetMount(container.VolumeMounts, "journal-volume")
+			assert.False(t, ok, "mount journal-volume not found")
+
+			initContainer := obj.Spec.Template.Spec.InitContainers[0]
+			assert.NotContains(t, initContainer.Command, "/var/opt/nuodb/journal")
+
+			_, ok = testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
+			assert.False(t, ok, "volume journal-volume not found")
+		}
+	})
+
 }

@@ -190,36 +190,6 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
 	})
 
-	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-
-		testlib.StartDatabase(t, namespaceName, admin0,
-			&helm.Options{
-				SetValues: map[string]string{
-					"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-					"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-					"database.te.labels.cloud":              LABEL_CLOUD,
-					"database.te.labels.region":             LABEL_REGION,
-					"database.te.labels.zone":               LABEL_ZONE,
-					"database.sm.labels.cloud":              LABEL_CLOUD,
-					"database.sm.labels.region":             LABEL_REGION,
-					"database.sm.labels.zone":               LABEL_ZONE,
-					"database.enableDaemonSet":              "true",
-					// prevent non-backup SM from scheduling
-					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
-				},
-			},
-		)
-
-		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
-		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, headlessServiceName, true) })
-		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
-		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
-		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
-	})
-
 	t.Run("startDatabaseStatefulSetMultiTenant", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
@@ -363,5 +333,34 @@ func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 		},
+	})
+}
+
+func TestKubernetesSeparateJournalLocation(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+		options := helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.hotCopy.journalPath.enabled":       "true",
+			},
+		}
+
+		testlib.StartDatabase(t, namespaceName, admin0, &options)
 	})
 }

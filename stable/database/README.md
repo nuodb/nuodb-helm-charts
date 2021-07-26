@@ -183,7 +183,7 @@ The following tables list the configurable parameters of the `database` chart an
 
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
-| `nameOverride` | Provide a name in place of `database-daemonset` |`""`|
+| `nameOverride` | Provide a name in place of `database-dbname` |`""`|
 | `fullNameOverride` | Provide a name to substitute for the full names of resources |`""`|
 | `name` | Database name | `demo` |
 | `rootUser` | Database root user | `dba` |
@@ -234,8 +234,16 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
 | `sm.hotCopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
 | `sm.hotCopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
+| `sm.hotCopy.journalPath.enabled` | Whether to enable separate SM journal directory. For more info, read the [Journal HowTo](../../docs/HowToArchiveJournal.md) | `false` |
+| `sm.hotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
+| `sm.hotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
+| `sm.hotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create DS/SS for non-hot-copy SMs | `true` |
+| `sm.noHotCopy.journalPath.enabled` | Whether to enable separate SM journal directory. For more info, read the [Journal HowTo](../../docs/HowToArchiveJournal.md) | `false` |
+| `sm.noHotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
+| `sm.noHotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
+| `sm.noHotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.labels` | Labels given to the SMs started | `{}` |
 | `sm.engineOptions` | Additional NuoDB engine options | `{}` |
 | `sm.resources` | Labels to apply to all resources | `{}` |
@@ -260,11 +268,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.nodeSelector` | Node selector rules for NuoDB TE | `{}` |
 | `te.tolerations` | Tolerations for NuoDB TE | `[]` |
 | `te.otherOptions` | Additional key/value Docker options | `{}` |
-| `sm.affinityNoHotCopyDS` | Affinity rules for non-hot-copy SMs (DaemonSet) | `{}` |
-| `sm.affinityHotCopyDS` | Affinity rules for hot-copy enabled SMs (DaemonSet) | `{}` |
-| `sm.nodeSelectorHotCopyDS` | Node selector rules for hot-copy enabled SMs (DaemonSet) | `{}` |
-| `sm.nodeSelectorNoHotCopyDS` | Node selector rules for non-hot-copy SMs (DaemonSet) | `{}` |
-| `sm.tolerationsDS` | Tolerations for SMs (DaemonSet) | `[]` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
 | `te.readinessTimeoutSeconds` | TE readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 

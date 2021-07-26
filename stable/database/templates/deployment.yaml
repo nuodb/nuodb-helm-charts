@@ -157,7 +157,7 @@ spec:
             name: {{ template "database.fullname" . }}-configuration
         {{- end }}
         - name: log-volume
-  {{- if not .Values.database.te.logPersistence.enabled }}
+        {{- if eq (include "defaultfalse" .Values.database.te.logPersistence.enabled) "false" }}
           emptyDir: {}
         {{- else }}
           persistentVolumeClaim:

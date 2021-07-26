@@ -88,6 +88,15 @@ func GetVolume(volumes []v1.Volume, expectedName string) (*v1.Volume, bool) {
 	return nil, false
 }
 
+func GetVolumeClaim(vcp []v1.PersistentVolumeClaim, expectedName string) (*v1.PersistentVolumeClaim, bool) {
+	for _, volume := range vcp {
+		if volume.Name == expectedName {
+			return &volume, true
+		}
+	}
+	return nil, false
+}
+
 func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int) []v1.ConfigMap {
 	objects := make([]v1.ConfigMap, 0)
 

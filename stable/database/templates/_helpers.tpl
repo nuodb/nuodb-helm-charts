@@ -128,7 +128,7 @@ imagePullSecrets:
 Resolve the os.user
 */}}
 {{- define "os.user" -}}
-{{- if .Values.database.securityContext.enabled -}}
+{{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" -}}
   {{ .Values.database.securityContext.runAsUser }}
 {{- else -}}
    "1000"
@@ -139,7 +139,7 @@ Resolve the os.user
 Resolve the os.group
 */}}
 {{- define "os.group" -}}
-{{- if .Values.database.securityContext.enabled -}}
+{{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" -}}
   {{ .Values.database.securityContext.fsGroup }}
 {{- else -}}
    "0"
@@ -193,6 +193,16 @@ Import user defined ENV vars
 {{- end -}}
 
 {{/*
+Validates parameter that supports bool value only
+*/}}
+{{- define "validate.boolString" -}}
+{{- $valid := list "true" "false" "" nil }}
+{{- if not (has . $valid) }}
+{{- fail (printf "Invalid boolean value: %s" .) }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Takes a boolean as argument return it's value if it was defined or return true otherwise
 Note: Sprig's default function on an empty/not defined variable returns false, workaround
 it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
@@ -201,11 +211,22 @@ it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
 {{- if typeIs "bool" . -}}
 {{- . -}}
 {{- else -}}
-{{- $valid := list "true" "false" "" }}
-{{- if not (has . $valid) }}
-{{- fail (printf "Invalid boolean value: %s" .) }}
-{{- end }}
+{{- template "validate.boolString" . -}}
 {{- default true . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Takes a boolean as argument return it's value if it was defined or return false otherwise
+Note: Sprig's default function on an empty/not defined variable returns false, workaround
+it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
+*/}}
+{{- define "defaultfalse" -}}
+{{- if typeIs "bool" . -}}
+{{- . -}}
+{{- else -}}
+{{- template "validate.boolString" . -}}
+{{- default false . -}}
 {{- end -}}
 {{- end -}}
 

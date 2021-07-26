@@ -263,7 +263,15 @@ database:
         accessModes:
           - ReadWriteOnce
         # storageClass: "-"
-        
+
+      journalPath:
+        enabled: false
+        persistence:
+          size: 20Gi
+          accessModes:
+            - ReadWriteOnce
+          # storageClass: "-"
+
       coldStorage:
         credentials: ""
 
@@ -285,6 +293,14 @@ database:
     noHotCopy:
       enablePod: true
       replicas: 0
+
+      journalPath:
+        enabled: false
+        persistence:
+          size: 20Gi
+          accessModes:
+            - ReadWriteOnce
+          # storageClass: "-"
 
     ## resources
     # k8s resource min (request) and max (limit)
@@ -313,13 +329,6 @@ database:
     # named key/value pairs that need to be passed to the image, such as
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
-
-    # Additional Options for DaemonSets
-    # affinityNoHotCopyDS: {}
-    # affinityHotCopyDS: {}
-    # nodeSelectorNoHotCopyDS: {}
-    # nodeSelectorHotCopyDS: {}
-    # tolerationsDS: []
 
     #Some clusters require longer readiness probe timeouts
     readinessTimeoutSeconds: 5
@@ -388,7 +397,6 @@ database:
   podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
 
-  enableDaemonSet: false
   # Set to true if you are using manually created volumes or restoring
   # from a previously existing backup.
   isManualVolumeProvisioning: false

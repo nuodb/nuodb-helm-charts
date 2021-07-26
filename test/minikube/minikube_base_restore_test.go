@@ -90,41 +90,6 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-demo-cronjob", 120*time.Second)
 		verifyBackup(t, namespaceName, admin0, "demo", &databaseOptions)
 	})
-
-	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-		databaseOptions := helm.Options{
-			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"backup.persistence.enabled":            "true",
-				"backup.persistence.size":               "1Gi",
-				"database.enableDaemonSet":              "true",
-				// prevent non-backup SM from scheduling
-				"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
-				// Configure more frequent incremental schedule so that
-				// a full backup is created as a prerequisite.
-				"database.sm.hotCopy.incrementalSchedule": "?/1 * * * *",
-			},
-		}
-
-		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
-
-		// Generate diagnose in case this test fails
-		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
-			podName := testlib.GetPodName(t, namespaceName, "incremental-hotcopy-demo-cronjob")
-			testlib.AwaitPodPhase(t, namespaceName, podName, corev1.PodFailed, 20*time.Second)
-			testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
-		})
-
-		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
-
-		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
-		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-demo-cronjob", 120*time.Second)
-		verifyBackup(t, namespaceName, admin0, "demo", &databaseOptions)
-	})
 }
 
 func TestKubernetesRestoreDatabase(t *testing.T) {
@@ -280,30 +245,6 @@ func TestKubernetesImportDatabase(t *testing.T) {
 		require.NoError(t, err, "error running SQL: show schema User")
 		require.True(t, strings.Contains(tables, "HOCKEY"))
 	})
-
-	t.Run("startDatabaseDaemonSet", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-
-		testlib.StartDatabase(t, namespaceName, admin0,
-			&helm.Options{
-				SetValues: map[string]string{
-					"database.autoImport.source":            testlib.IMPORT_ARCHIVE_URL,
-					"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-					"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-					"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-					"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-					"database.enableDaemonSet":              "true",
-					// prevent non-backup SM from scheduling
-					"database.sm.nodeSelectorNoHotCopyDS.inexistantTag": "required",
-				},
-			},
-		)
-
-		// verify that the database contains the restored data
-		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		require.NoError(t, err, "error running SQL: show schema User")
-		require.True(t, strings.Contains(tables, "HOCKEY"))
-	})
 }
 
 func TestKubernetesAutoRestore(t *testing.T) {
@@ -368,6 +309,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 			"mv", "-f", "/var/opt/nuodb/archive/nuodb/demo", "/var/opt/nuodb/archive/nuodb/demo-moved")
 		testlib.RunSQL(t, namespaceName, admin0, "demo", "select * from system.nodes")
 		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 30*time.Second)
+		testlib.AwaitPodUp(t, namespaceName, podName, 90*time.Second)
 		testlib.AwaitPodLog(t, namespaceName, podName, "_post-restart")
 	}
 
