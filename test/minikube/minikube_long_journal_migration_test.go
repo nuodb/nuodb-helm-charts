@@ -8,6 +8,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	"os"
 	"testing"
 )
@@ -84,6 +85,15 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 
 		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 3)
+
+		opt := testlib.GetExtractedOptions(&options)
+		smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s-", databaseReleaseName, opt.ClusterName, opt.DbName)
+		smPodNameTemplateHC := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy", databaseReleaseName, opt.ClusterName, opt.DbName)
+		smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+		smPodNameHC0 := testlib.GetPodName(t, namespaceName, smPodNameTemplateHC)
+
+		go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+		go testlib.GetAppLog(t, namespaceName, smPodNameHC0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 		statefulSets := testlib.FindAllStatefulSets(t, namespaceName)
 

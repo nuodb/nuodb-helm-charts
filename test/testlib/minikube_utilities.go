@@ -435,6 +435,23 @@ func findPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, 
 	return nil, errors.New("did not find any pod matching name")
 }
 
+func findPods(t *testing.T, namespace string, expectedName string) ([]corev1.Pod, error) {
+	var pods []corev1.Pod
+
+	for _, pod := range findAllPodsInSchema(t, namespace) {
+		if strings.Contains(pod.Name, expectedName) {
+			pods = append(pods, pod)
+		}
+	}
+
+	if len(pods) == 0 {
+		return nil, errors.New("did not find any pod matching name")
+	} else {
+		return pods, nil
+	}
+
+}
+
 func GetPod(t *testing.T, namespace string, podName string) *corev1.Pod {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
@@ -446,6 +463,17 @@ func GetPodName(t *testing.T, namespaceName string, expectedName string) string 
 	require.NoError(t, err, "No pod found with name ", expectedName)
 
 	return tePod.Name
+}
+
+func GetPodNames(t *testing.T, namespaceName string, expectedName string) []string {
+	var names []string
+	pods, err := findPods(t, namespaceName, expectedName)
+	require.NoError(t, err, "No pods found with name ", expectedName)
+	for _, pod := range pods {
+		names = append(names, pod.Name)
+	}
+
+	return names
 }
 
 func DescribePods(t *testing.T, namespace string, expectedName string) {

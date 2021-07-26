@@ -105,7 +105,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
-	smPodName := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
@@ -126,10 +126,10 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 	if awaitDatabase {
 		AddDiagnosticTeardown(TEARDOWN_DATABASE, t, func() {
 			DescribePods(t, namespaceName, tePodNameTemplate)
-			DescribePods(t, namespaceName, smPodName)
+			DescribePods(t, namespaceName, smPodNameTemplate)
 		})
 		AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, opt.NrTePods)
-		AwaitNrReplicasScheduled(t, namespaceName, smPodName, opt.NrSmPods)
+		AwaitNrReplicasScheduled(t, namespaceName, smPodNameTemplate, opt.NrSmPods)
 
 		// NOTE: the Teardown logic will pick a TE/SM that is running during teardown time. Not the TE/SM that was running originally
 		// this is relevant for any tests that restart TEs/SMs
@@ -137,13 +137,19 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 
 		AddTeardown(TEARDOWN_DATABASE, func() {
-			go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, tePodNameTemplate), "", &v12.PodLogOptions{Follow: true})
+			for _, tePod := range GetPodNames(t, namespaceName, tePodNameTemplate) {
+				t.Logf("Getting log from TE pod: %s", tePod)
+				go GetAppLog(t, namespaceName, tePod, "", &v12.PodLogOptions{Follow: true})
+			}
 		})
 		AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
 
-		smPodName0 := GetPodName(t, namespaceName, smPodName)
+		smPodName0 := GetPodName(t, namespaceName, smPodNameTemplate)
 		AddTeardown(TEARDOWN_DATABASE, func() {
-			go GetAppLog(t, namespaceName, GetPodName(t, namespaceName, smPodName), "", &v12.PodLogOptions{Follow: true})
+			for _, smPod := range GetPodNames(t, namespaceName, smPodNameTemplate) {
+				t.Logf("Getting log from SM pod: %s", smPod)
+				go GetAppLog(t, namespaceName, smPod, "", &v12.PodLogOptions{Follow: true})
+			}
 		})
 		AwaitPodUp(t, namespaceName, smPodName0, 300*time.Second)
 
