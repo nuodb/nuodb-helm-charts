@@ -41,7 +41,7 @@ func CreateNamespace(t *testing.T, namespaceName string) {
 	}
 
 	// this method is async
-	//go GetK8sEventLog(t, namespaceName)
+	go GetK8sEventLog(t, namespaceName)
 
 	AddTeardown(TEARDOWN_ADMIN, func() {
 		k8s.DeleteNamespace(t, kubectlOptions, namespaceName)
