@@ -8,8 +8,8 @@
 #   . scripts/helpers
 #   minikube_push <local image>
 #   set_nuodb_image <local image>
-#   helm_install stable/admin
-#   helm_install stable/database \
+#   helm_install stable/admin --generate-name
+#   helm_install stable/database --generate-name \
 #       --set database.sm.hotCopy.enablePod=false \
 #       --set database.sm.noHotCopy.replicas=1 \
 #       --set database.sm.resources=null \
@@ -58,7 +58,7 @@ helm_install() {
 helm_delete() {
     local PROJECT
     for PROJECT in $(helm list --short); do
-        helm delete --purge "$PROJECT"
+        helm uninstall "$PROJECT"
         kubectl get pvc -o "jsonpath={@.items[*].metadata.name}" | xargs kubectl delete pvc
     done
 }

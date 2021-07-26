@@ -83,9 +83,15 @@ cd $(go env GOPATH)/src/github.com/nuodb/nuodb-helm-charts
 go test -v -timeout 60s ./test/integration
 ```
 
-The tests in `test/minikube` require Minikube to be running on the local host and can be run as follows:
+The tests in `test/minikube` require `kubectl` to be configured with access to a Kubernetes cluster, typically Minikube running on localhost, and can be run as follows:
 
 ```
-test -v -timeout 60m -tags=short ./test/minikube
-test -v -timeout 60m -tags=long ./test/minikube
+go test -v -timeout 60m -tags=short ./test/minikube
+go test -v -timeout 60m -tags=long ./test/minikube
+```
+
+A specific test case can be run as follows:
+
+```
+go test -v -timeout 10m ./test/minikube/* -run TestKubernetesStartDatabaseShrinkedAdmin
 ```
