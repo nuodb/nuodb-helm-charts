@@ -1,0 +1,64 @@
+# -*-shell-script-*-
+#
+# Define a set of helper functions to enable testing in Minikube with local
+# NuoDB images.
+#
+# Usage example:
+#
+#   . scripts/helpers
+#   minikube_push <local image>
+#   set_nuodb_image <local image>
+#   helm_install stable/admin --generate-name
+#   helm_install stable/database --generate-name \
+#       --set database.sm.hotCopy.enablePod=false \
+#       --set database.sm.noHotCopy.replicas=1 \
+#       --set database.sm.resources=null \
+#       --set database.te.resources=null
+#
+
+# push an image from the local Docker repository to the Docker repository in
+# the Minikube VM
+minikube_push() {
+    # `docker save` emits image data from the local repository to standard
+    # output, and `docker load` consumes image data from standard input and
+    # loads it into the repository in the Minikube VM
+    docker save "$1" | ssh -i "$(minikube ssh-key)" "docker@$(minikube ip)" "docker load"
+}
+
+# set the NuoDB image to be used by the `helm_install` function
+set_nuodb_image() {
+    # strip ':<version>' to get repository
+    export NUODB_IMAGE_REPO=$(echo "$1" | sed "s/:.*//")
+    # strip '<repository>:' to get version and default to 'latest'
+    NUODB_IMAGE_TAG=$(echo "$1" | sed "s/^[^:]*:\{0,1\}//")
+    [ "$NUODB_IMAGE_TAG" = "" ] && NUODB_IMAGE_TAG=latest
+    export NUODB_IMAGE_TAG
+}
+
+# invoke `helm install`, overriding the image pull policy to avoid fetching
+# images unless they are missing from Minikube's repository (useful when a
+# firewall is preventing access to the remote repository), and if
+# `set_nuodb_image` was used to set a NuoDB image, use that one instead of the
+# one specified in the values files
+helm_install() {
+    if [ "$NUODB_IMAGE_REPO" != "" ] && [ "$NUODB_IMAGE_TAG" != "" ]; then
+        helm install "$@" \
+            --set nuodb.image.repository="$NUODB_IMAGE_REPO" \
+            --set nuodb.image.tag="$NUODB_IMAGE_TAG" \
+            --set nuodb.image.pullPolicy=IfNotPresent \
+            --set busybox.image.pullPolicy=IfNotPresent
+    else
+        helm install "$@" \
+            --set nuodb.image.pullPolicy=IfNotPresent \
+            --set busybox.image.pullPolicy=IfNotPresent
+    fi
+}
+
+# delete all Helm projects and any PVCs left behind
+helm_delete() {
+    local PROJECT
+    for PROJECT in $(helm list --short); do
+        helm uninstall "$PROJECT"
+        kubectl get pvc -o "jsonpath={@.items[*].metadata.name}" | xargs kubectl delete pvc
+    done
+}
