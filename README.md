@@ -63,3 +63,35 @@ The charts in the `Incubator` directory allows charts to be shared and improved 
 ## Status of the Project
 
 This project is still under active development. If you experience any [issues](https://github.com/nuodb/nuodb-helm-charts/issues) please let us know, or better yet, contribute a fix or feature.
+
+## Testing
+
+To run the tests in this project, Go 1.12 is required.
+To clone the repository and run a test suite (e.g. `test/integration`), execute the following:
+
+```
+git clone git@github.com:nuodb/nuodb-helm-charts
+cd nuodb-helm-charts
+go test -v -timeout 60s ./test/integration
+```
+
+Alternatively, `go get` can be used to clone the repository into the `GOPATH`:
+
+```
+GO111MODULE=off go get github.com/nuodb/nuodb-helm-charts
+cd $(go env GOPATH)/src/github.com/nuodb/nuodb-helm-charts
+go test -v -timeout 60s ./test/integration
+```
+
+The tests in `test/minikube` require `kubectl` to be configured with access to a Kubernetes cluster, typically Minikube running on localhost, and can be run as follows:
+
+```
+go test -v -timeout 60m -tags=short ./test/minikube
+go test -v -timeout 60m -tags=long ./test/minikube
+```
+
+A specific test case can be run as follows:
+
+```
+go test -v -timeout 10m ./test/minikube/* -run TestKubernetesStartDatabaseShrinkedAdmin
+```
