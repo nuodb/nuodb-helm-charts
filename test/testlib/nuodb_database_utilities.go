@@ -180,12 +180,13 @@ func StartDatabaseNoWait(t *testing.T, namespace string, adminPod string, option
 	return StartDatabaseTemplate(t, namespace, adminPod, options, InstallDatabase, false)
 }
 
-type UpgradeDatabaseOptions struct {
+type UpgradeOptions struct {
 	TePodShouldGetRecreated bool
 	SmPodShouldGetRecreated bool
+	AdminPodShouldGetRecreated bool
 }
 
-func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName string, adminPod string, options *helm.Options, upgradeOptions *UpgradeDatabaseOptions) {
+func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName string, adminPod string, options *helm.Options, upgradeOptions *UpgradeOptions) {
 	opt := GetExtractedOptions(options)
 
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)

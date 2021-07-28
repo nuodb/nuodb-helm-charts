@@ -15,11 +15,7 @@ import (
 	v12 "k8s.io/api/core/v1"
 )
 
-type UpdateOptions struct {
-	adminPodShouldGetRecreated            bool
-}
-
-func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *UpdateOptions) {
+func upgradeAdminTest(t *testing.T, fromHelmVersion string, upgradeOptions *testlib.UpgradeOptions) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -56,15 +52,14 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *Updat
 
 	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
-	if updateOptions.adminPodShouldGetRecreated {
+	if upgradeOptions.AdminPodShouldGetRecreated {
 		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
 	}
 
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 }
 
-func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *UpdateOptions) {
-	t.Skip("Test is flaky in minikube")
+func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *testlib.UpgradeOptions) {
 
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
@@ -111,47 +106,48 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 
 	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
-	if updateOptions.adminPodShouldGetRecreated {
+	if upgradeOptions.AdminPodShouldGetRecreated {
 		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
 	}
 
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
-	opt := testlib.GetExtractedOptions(options)
+	// TODO: check that 'helm upgrade' did not trigger a restart of database
+	// pods; currently it is possible that the restarted admin does not
+	// receive a reconnection from the database processes either due to DNS
+	// resolution or due to the database process not detecting the loss of
+	// the admin connection
 
-	// make sure the DB is properly reconnected before restarting
-	testlib.Await(t, func() bool {
-		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0, "Reconnected with process with connectKey", &v12.PodLogOptions{}) == 2
-	}, 120*time.Second)
+	opt := testlib.GetExtractedOptions(options)
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
-	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, &testlib.UpgradeDatabaseOptions{})
+	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, upgradeOptions)
 }
 
 func TestUpgradeHelm(t *testing.T) {
 	t.Run("NuoDB_From310_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.1.0", &UpdateOptions{
-			adminPodShouldGetRecreated: true,
+		upgradeAdminTest(t, "3.1.0", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
 		})
 	})
 
 	t.Run("NuoDB_From320_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.2.0", &UpdateOptions{
-			adminPodShouldGetRecreated: true,
+		upgradeAdminTest(t, "3.2.0", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
 		})
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
 	t.Run("NuoDB_From310_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.1.0", &UpdateOptions{
-			adminPodShouldGetRecreated: true,
+		upgradeDatabaseTest(t, "3.1.0", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
 		})
 	})
 
 	t.Run("NuoDB_From320_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.2.0", &UpdateOptions{
-			adminPodShouldGetRecreated: true,
+		upgradeDatabaseTest(t, "3.2.0", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
 		})
 	})
 }
