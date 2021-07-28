@@ -110,7 +110,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *t
 		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
 	}
 
-	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 600*time.Second)
 
 	// TODO: check that 'helm upgrade' did not trigger a restart of database
 	// pods; currently it is possible that the restarted admin does not
