@@ -214,6 +214,49 @@ kubectl exec -ti generate-nuodb-certs -- \
   mkdir -p /tmp/keys
 ```
 
+### Rotate CA Certificate
+
+Generate new CA certificate:
+
+```bash
+kubectl exec -ti generate-nuodb-certs -- \
+  nuocmd create keypair \
+    --keystore /tmp/keys.ca.p12 --store-password "$PASSWD" \
+    --dname "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" \
+    --validity 36500 --ca
+
+kubectl exec -ti generate-nuodb-certs -- \
+  nuocmd show certificate \
+    --keystore /tmp/keys.ca.p12 --store-password "$PASSWD" --cert-only > ca.cert
+```
+
+If the CA certificate is owned by a public CA, then follow the provided steps to obtain the new certificate.
+
+The newly created keystore files can be copied on the client machine and then on some AP pod.
+
+```bash
+kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
+
+kubectl cp /tmp/keys/ca.cert nuodb/admin-nuodb-cluster0-0:/tmp/ca.cert
+```
+
+Add the new CA certificate to the truststore of all admin and database processes:
+
+```bash
+kubectl exec -ti admin-nuodb-cluster0-0 \
+  nuocmd add trusted-certificate \
+    --alias ca_prime --cert /tmp/ca.cert --timeout 10
+```
+
+This adds the new client certificate under the alias `ca_prime`.
+It is not possible to replace the CA certificate because all processes in the domain and SQL clients are currently using it.
+This single command invocation causes the trusted certificate to be propagated to all APs and all database processes.
+The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
+
+Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificates](#rotate-server-certificates).
+
+Update domain keystore with the renewed certificates as described in [Update Key Pair Certificates](#update-key-pair-certificates).
+
 ### Rotate Server Certificates
 
 Generate a new server key pair:
@@ -301,68 +344,6 @@ This single command invocation causes the trusted certificate to be propagated t
 The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
 
 Update the client key as described in section [Update Key Pair Certificates](#update-key-pair-certificates).
-
-### Rotate CA Certificate
-
-Generate new CA certificate:
-
-```bash
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd create keypair \
-    --keystore /tmp/keys.ca.p12 --store-password "$PASSWD" \
-    --dname "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" \
-    --validity 36500 --ca
-
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd show certificate \
-    --keystore /tmp/keys.ca.p12 --store-password "$PASSWD" --cert-only > ca.cert
-```
-
-Generate a new server key pair:
-
-```bash
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd create keypair \
-    --keystore /tmp/keys/nuoadmin.p12 --store-password "$PASSWD" --ca \
-    --dname "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
-```
-
-Generate and sign the new server certificates using the new CA certificate chain:
-
-```bash
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd sign certificate \
-    --keystore /tmp/keys/nuoadmin.p12 --store-password "$PASSWD" \
-    --ca-keystore /tmp/keys/ca.p12 --ca-store-password "$PASSWD" \
-    --validity 36500 --update
-```
-
-The newly created keystore files can be copied on the client machine and then on some AP pod.
-
-```bash
-kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
-
-kubectl cp /tmp/keys/ca.cert nuodb/admin-nuodb-cluster0-0:/tmp/ca.cert
-```
-
-If the server certificates are signed by a public CA, then follow the provided steps to renew your certificates.
-
-> **NOTE**: For information on how to create the server keystore when using certificates signed by a Public CA, see [here](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/domain-operations/enabling-tls-encryption/using-certificates-signed-by-a-public-certificate-authority/).
-
-Add the new CA certificate to the truststore of all admin and database processes:
-
-```bash
-kubectl exec -ti admin-nuodb-cluster0-0 \
-  nuocmd add trusted-certificate \
-    --alias ca_prime --cert /tmp/ca.cert --timeout 10
-```
-
-This adds the new client certificate under the alias `ca_prime`.
-It is not possible to replace the CA certificate because all processes in the domain and SQL clients are currently using it.
-This single command invocation causes the trusted certificate to be propagated to all APs and all database processes.
-The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
-
-Update domain keystore with the renewed certificates as described in [Update Key Pair Certificates](#update-key-pair-certificates).
 
 ### Cleanup
 
