@@ -110,18 +110,18 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *t
 		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
 	}
 
-	testlib.AwaitPodUp(t, namespaceName, admin0, 600*time.Second)
+	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	// TODO: check that 'helm upgrade' did not trigger a restart of database
-	// pods; currently it is possible that the restarted admin does not
-	// receive a reconnection from the database processes either due to DNS
-	// resolution or due to the database process not detecting the loss of
-	// the admin connection
+	// pods and that the database is still running; currently it is possible
+	// that the restarted admin does not receive a reconnection from the
+	// database processes either due to DNS resolution or due to the
+	// database process not detecting the loss of the admin connection
+
+	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, upgradeOptions)
 
 	opt := testlib.GetExtractedOptions(options)
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
-
-	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, upgradeOptions)
 }
 
 func TestUpgradeHelm(t *testing.T) {
