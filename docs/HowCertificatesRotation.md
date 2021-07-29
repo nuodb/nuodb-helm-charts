@@ -55,13 +55,18 @@ Create new Kubernetes secrets using the keystore file generated with the renewed
 kubectl create secret generic nuodb-keystore-renewed \
   --namespace nuodb \
   --from-file=nuoadmin.p12=/tmp/keys/nuoadmin.p12 \
-  --from-literal=password=${PASSWD} -n nuodb
+  --from-literal=password=${PASSWD}
+
+kubectl create secret generic nuodb-ca-cert-renewed \
+  --namespace nuodb \
+  --from-file=ca.cert=/tmp/keys/ca.cert
 
 kubectl create secret generic nuodb-client-pem-renewed \
   --namespace nuodb \
-  --from-file=nuocmd.pem=/tmp/keys/nuocmd.pem \
-  --from-literal=password=${PASSWD} -n nuodb
+  --from-file=nuocmd.pem=/tmp/keys/nuocmd.pem
 ```
+
+> **NOTE**: Skip the secrets generation which key pair certificates haven't been rotated.
 
 Upgrade the Helm release installed with the [admin](../stable/admin/README.md) chart using the new TLS secrets.
 This will perform NuoDB Admin statefulset rolling upgrade so make sure that you are having enough APs to prevent downtime.
@@ -71,10 +76,11 @@ helm upgrade admin nuodb/admin \
   --namespace nuodb \
   --set admin.tlsKeyStore.secret=nuodb-keystore-renewed \
   --set admin.tlsClientPEM.secret=nuodb-client-pem-renewed \
+  --set admin.tlsCACert.secret=nuodb-ca-cert-renewed \
   -f values.yaml
 ```
 
-Make sure that the new key pair certificates are used by all APs as described in [Verify Domain Certificates](#verify-domain-certificates).
+Wait for AP statefulset rollout to finish and make sure that the new key pair certificates are used by all APs as described in [Verify Domain Certificates](#verify-domain-certificates).
 
 Upgrade the Helm release installed with the [database](../stable/database/README.md) chart using the new TLS secrets.
 This will perform database Storage Manager (SM) statefulsets and Transaction Engine (TE) deployment rolling upgrade so make sure that you are having enough APs to prevent downtime.
@@ -88,9 +94,9 @@ helm upgrade database nuodb/database \
   -f values.yaml
 ```
 
-Make sure that the new key pair certificates are used by all domain processes as described in [Verify Domain Certificates](#verify-domain-certificates).
+> **NOTE**: Adjust the values depending on the key pair certificates that have been rotated.
 
-The client PEM secret and the CA certificate generation can be skipped if they are not rotated.
+Wait for all database processes to be restarted and reported `Ready` and make sure that the new key pair certificates are used by all domain processes as described in [Verify Domain Certificates](#verify-domain-certificates).
 
 #### Using HashiCorp Vault
 
@@ -118,7 +124,7 @@ kubectl rollout restart \
 
 kubectl rollout restart \
   --namespace nuodb \
-  te-database-nuodb-cluster0-demo
+  deployment te-database-nuodb-cluster0-demo
 ```
 
 Alternatively, the database processes can be restarted manually by shutting down the process using `nuocmd shutdown process --start-id ...` command.
@@ -140,7 +146,7 @@ The command displays the key pair or certificate information from the domain in 
 
 - `serverCertificates` - information about certificates used by each AP identified by `serverId`.
 - `serverTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) by each AP identified by `serverId`.
-- `processCertificates` - information about certificates used by each database process indentified by `startId`.
+- `processCertificates` - information about certificates used by each database process identified by `startId`.
 - `processTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) by each database process identified by `startId`.
 - `trustedCertificates` - information about trusted certificates in the domain identified by `alias`.
 
@@ -148,61 +154,106 @@ Example output:
 
 ```json
 {
-  /* output omitted */
+  "processCertificates": {
+    "11": {
+      "caPathLength": -1,
+      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
+      "expires": 1659087997000,
+      "expiresTimestamp": "2022-07-29T09:46:37.000+0000",
+      "issuerName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "subjectName": "CN=172.17.0.8"
+    },
+    "12": {
+      "caPathLength": -1,
+      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
+      "expires": 1659087998000,
+      "expiresTimestamp": "2022-07-29T09:46:38.000+0000",
+      "issuerName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "subjectName": "CN=172.17.0.9"
+    },
+    "9": {
+      "caPathLength": -1,
+      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
+      "expires": 1659087974000,
+      "expiresTimestamp": "2022-07-29T09:46:14.000+0000",
+      "issuerName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "subjectName": "CN=172.17.0.5"
+    }
+  },
+  "processTrusted": {
+    "11": [
+      "ca_prime",
+      "nuocmd_prime"
+    ],
+    "12": [
+      "ca_prime",
+      "nuocmd_prime"
+    ],
+    "9": [
+      "ca_prime",
+      "nuocmd_prime"
+    ]
+  },
   "serverCertificates": {
     "admin-nuodb-cluster0-0": {
+      "caPathLength": 2147483647,
       "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1591301400000,
-      "issuerName": "CN=*.domain",
-      "subjectName": "CN=*.domain"
+      "expires": 4781150383000,
+      "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
+      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "subjectName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
     },
     "admin-nuodb-cluster0-1": {
+      "caPathLength": 2147483647,
       "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1591301400000,
-      "issuerName": "CN=*.domain",
-      "subjectName": "CN=*.domain"
+      "expires": 4781150383000,
+      "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
+      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "subjectName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
     }
   },
-  /* output omitted */
-  "processCertificates": {
-    "0": {
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1591301400000,
-      "issuerName": "CN=*.domain",
-      "subjectName": "CN=server0"
-    },
-    "1": {
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1591301400000,
-      "issuerName": "CN=*.domain",
-      "subjectName": "CN=server1"
-    },
-    "2": {
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1591301400000,
-      "issuerName": "CN=*.domain",
-      "subjectName": "CN=server0"
-    },
-    "3": {
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1591301400000,
-      "issuerName": "CN=*.domain",
-      "subjectName": "CN=server1"
-    }
+  "serverTrusted": {
+    "admin-nuodb-cluster0-0": [
+      "ca_prime",
+      "nuocmd_prime"
+    ],
+    "admin-nuodb-cluster0-1": [
+      "ca_prime",
+      "nuocmd_prime"
+    ]
   },
+  "trustedCertificates": {
+    "ca_prime": {
+      "caPathLength": 2147483647,
+      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
+      "expires": 4781150383000,
+      "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
+      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "subjectName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
+    },
+    "nuocmd_prime": {
+      "caPathLength": -1,
+      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
+      "expires": 4781151591000,
+      "expiresTimestamp": "2121-07-05T09:39:51.000+0000",
+      "issuerName": "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "subjectName": "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
+    }
+  }
 }
 ```
 
-## NuoDB TLS Keys Rotation
+## NuoDB TLS Key Rotation
 
 NuoDB supports various key models for TLS keys used by the `NuoDB Admin` and database processes.
 
 > **NOTE**: For information on how to configure different TLS key models, see [Security Model of NuoDB in Kubernetes](./HowtoTLS.md).
 
-To renew domain keystore and key pair certificates, you can either create new keystore files and certificates on your own or create them using the NuoDB Commands `nuocmd`.
+To renew domain keystore and key pair certificates, you can either create new keystore files and certificates on your own or create them using the NuoDB Commands.
 All examples bellow will be using a helper pod started with NuoDB image and `nuocmd` command line tools.
 
 ```bash
+PASSWD=changeMe
 mkdir /tmp/keys
 
 kubectl run generate-nuodb-certs \
@@ -221,13 +272,14 @@ Generate new CA certificate:
 ```bash
 kubectl exec -ti generate-nuodb-certs -- \
   nuocmd create keypair \
-    --keystore /tmp/keys.ca.p12 --store-password "$PASSWD" \
+    --keystore /tmp/keys/ca.p12 --store-password "$PASSWD" \
     --dname "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" \
     --validity 36500 --ca
 
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd show certificate \
-    --keystore /tmp/keys.ca.p12 --store-password "$PASSWD" --cert-only > ca.cert
+kubectl exec -ti generate-nuodb-certs -- bash -c \
+  'nuocmd show certificate \
+    --keystore /tmp/keys/ca.p12 --store-password "$PASSWD" \
+    --cert-only > /tmp/keys/ca.cert'
 ```
 
 If the CA certificate is owned by a public CA, then follow the provided steps to obtain the new certificate.
@@ -243,9 +295,9 @@ kubectl cp /tmp/keys/ca.cert nuodb/admin-nuodb-cluster0-0:/tmp/ca.cert
 Add the new CA certificate to the truststore of all admin and database processes:
 
 ```bash
-kubectl exec -ti admin-nuodb-cluster0-0 \
+kubectl exec -ti admin-nuodb-cluster0-0 -- \
   nuocmd add trusted-certificate \
-    --alias ca_prime --cert /tmp/ca.cert --timeout 10
+    --alias ca_prime --cert /tmp/ca.cert --timeout 30
 ```
 
 This adds the new client certificate under the alias `ca_prime`.
@@ -253,9 +305,9 @@ It is not possible to replace the CA certificate because all processes in the do
 This single command invocation causes the trusted certificate to be propagated to all APs and all database processes.
 The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
 
-Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificates](#rotate-server-certificates).
+Make sure that the new CA certificate with alias `ca_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
 
-Update domain keystore with the renewed certificates as described in [Update Key Pair Certificates](#update-key-pair-certificates).
+Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificates](#rotate-server-certificates).
 
 ### Rotate Server Certificates
 
@@ -272,6 +324,7 @@ In the example above, we specify the `SERIALNUMBER` field so that the new certif
 
 The new server certificates should be signed by the CA certificate.
 If the TLS keys have been generated using the `setup-keys.sh` script, the private/public key pair of the CA are available in the `ca.p12` file.
+In case the CA certificate has been renewed right now, use the new CA keystore generated using the [Rotate CA Certificate](#rotate-ca-certificate) steps.
 
 Generate and sign the new server certificates using the CA certificate chain:
 
@@ -289,7 +342,7 @@ The `--ca` argument specified weather the `isCA` extension is enabled in the gen
 This allows the admin to act as intermediate CA and is used in the [Shared Admin Key + Intermediate CA](#shared-admin-key-+-intermediate-ca) model.
 You can omit this argument in case the [Shared Admin Key + Pass-down](#share-admin-key-+-pass-down) model is used.
 
-The newly created keystore files can be copied on the client machine which will be used later to update the keystore.
+The newly created keystore files can be copied on the client machine which will be used later to update the keystore secret.
 
 ```bash
 kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
@@ -311,15 +364,17 @@ Generate new client key pair:
 kubectl exec -ti generate-nuodb-certs -- \
   nuocmd create keypair \
     --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" \
-    --dname "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" --validity 36500
+    --dname "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" \
+    --validity 36500
 
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd show certificate \
-    --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" > nuocmd.pem
+kubectl exec -ti generate-nuodb-certs -- bash -c \
+  'nuocmd show certificate \
+    --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" > /tmp/keys/nuocmd.pem'
 
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd show certificate \
-    --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" --cert-only > nuocmd.cert
+kubectl exec -ti generate-nuodb-certs -- bash -c \
+  'nuocmd show certificate \
+    --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" \
+    --cert-only > /tmp/keys/nuocmd.cert'
 ```
 
 The newly created keystore files can be copied on the client machine and then on some AP pod.
@@ -333,15 +388,17 @@ kubectl cp /tmp/keys/nuocmd.cert nuodb/admin-nuodb-cluster0-0:/tmp/nuocmd.cert
 Add the new certificate to the truststore of all admin and database processes:
 
 ```bash
-kubectl exec -ti admin-nuodb-cluster0-0 \
+kubectl exec -ti admin-nuodb-cluster0-0 -- \
   nuocmd add trusted-certificate \
-    --alias nuocmd_prime --cert /tmp/nuocmd.cert --timeout 10
+    --alias nuocmd_prime --cert /tmp/nuocmd.cert --timeout 30
 ```
 
 This adds the new client certificate under the alias `nuocmd_prime`.
 It is not possible to replace the client certificate because all processes in the domain are currently using it.
 This single command invocation causes the trusted certificate to be propagated to all APs and all database processes.
 The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
+
+Make sure that the new client certificate with alias `nuocmd_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
 
 Update the client key as described in section [Update Key Pair Certificates](#update-key-pair-certificates).
 
@@ -353,6 +410,8 @@ Remove the helper pod used to generate certificates and the local copy of the ke
 
 ```bash
 kubectl delete pod generate-nuodb-certs
+
+unset PASSWD
 
 rm -rf /tmp/keys
 ```
@@ -367,6 +426,6 @@ It's recommended to remove the old certificates from the domain for security rea
 To remove the old certificate from the truststore of every AP and every database process use the following command:
 
 ```bash
-kubectl exec -ti admin-nuodb-cluster0-0 \
-  nuocmd remove trusted-certificate --alias ca
+kubectl exec -ti admin-nuodb-cluster0-0 -- \
+  nuocmd remove trusted-certificate --alias ca 
 ```
