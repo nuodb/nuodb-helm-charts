@@ -1,5 +1,26 @@
 # Rotating NuoDB TLS Certificates
 
+<details>
+<summary>Table of Contents</summary>
+<!-- TOC -->
+
+- [Rotating NuoDB TLS Certificates](#rotating-nuodb-tls-certificates)
+    - [Introduction](#introduction)
+        - [Terminology](#terminology)
+    - [About Key Rotation](#about-key-rotation)
+        - [Update Key Pair Certificates](#update-key-pair-certificates)
+            - [Using Kubernetes Secrets](#using-kubernetes-secrets)
+            - [Using HashiCorp Vault](#using-hashicorp-vault)
+        - [Verify Domain Certificates](#verify-domain-certificates)
+    - [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation)
+        - [Rotate CA Certificate](#rotate-ca-certificate)
+        - [Rotate Server Certificates](#rotate-server-certificates)
+        - [Rotate NuoDB Commands Certificate](#rotate-nuodb-commands-certificate)
+        - [Cleanup](#cleanup)
+
+<!-- /TOC -->
+</details>
+
 ## Introduction
 
 When using TLS encryption, it is necessary to rotate key pair certificates before the certificates expire.
@@ -307,6 +328,8 @@ The `--timeout` argument specifies the amount of time to wait for the new certif
 
 Make sure that the new CA certificate with alias `ca_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
 
+Add the the new CA certificate to the truststore of every SQL client.
+
 Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificates](#rotate-server-certificates).
 
 ### Rotate Server Certificates
@@ -339,8 +362,8 @@ kubectl exec -ti generate-nuodb-certs -- \
 ```
 
 The `--ca` argument specified weather the `isCA` extension is enabled in the generated certificate.
-This allows the admin to act as intermediate CA and is used in the [Shared Admin Key + Intermediate CA](#shared-admin-key-+-intermediate-ca) model.
-You can omit this argument in case the [Shared Admin Key + Pass-down](#share-admin-key-+-pass-down) model is used.
+This allows the admin to act as intermediate CA and is used in the [Shared Admin Key + Intermediate CA](./HowtoTLS.md#intermediate-ca) model.
+You can omit this argument in case the [Shared Admin Key + Pass-down](./HowtoTLS.md#pass-down) model is used.
 
 The newly created keystore files can be copied on the client machine which will be used later to update the keystore secret.
 
