@@ -56,19 +56,20 @@ An overview of how key rotation is performed is as follows:
 6. (Optional) The old certificate is removed from the truststore of every AP and every database process.
 7. (Optional) The old certificate is removed from the truststore of every SQL client and NuoDB Command client.
 
-Usually only the server key pair certificate is renewed, which means that the keystore file has to be updated for all APs and database processes.
+Usually, only the server key pair certificate is renewed, which means that the keystore file has to be updated for all APs and database processes.
 This reduces the steps needed during key rotation as the new key pair certificate can be verified using the old truststore certificate.
 In particular steps 2 and 3 from the overview above are skipped.
 
 ### Update Key Pair Certificates
 
 Depending on the used TLS keys management, step 4 in the overview above may be different.
-By default NuoDB uses Kubernetes secrets to store TLS keys and expose them to NuoDB processes.
+By default, NuoDB uses Kubernetes secrets to store TLS keys and expose them to NuoDB processes.
 
 #### Using Kubernetes Secrets
 
-NuoDB APs can reload the keystore without having to be reconfigured and restarted, however, in Kubernetes deployments the TLS keys are mounted in AP containers as a `subPath` volume mount which doesn't allow automatic secret update.
-To replace the keystore for all APs, use the following steps:
+NuoDB APs can reload the keystore without having to be reconfigured and restarted.
+By default, the TLS keys are mounted in AP containers as a `subPath` volume mount which doesn't allow the automatic secret update.
+To replace the keystore for all APs, use the steps below.
 
 Create new Kubernetes secrets using the keystore file generated with the renewed server key pair certificates.
 
@@ -87,9 +88,9 @@ kubectl create secret generic nuodb-client-pem-renewed \
   --from-file=nuocmd.pem=/tmp/keys/nuocmd.pem
 ```
 
-> **NOTE**: Skip the secrets generation which key pair certificates haven't been rotated.
+> **NOTE**: Skip the generation of the secrets which key pair certificates haven't been rotated.
 
-Upgrade the Helm release installed with the [admin](../stable/admin/README.md) chart using the new TLS secrets.
+Upgrade the Helm release installed with the [admin](../stable/admin) chart using the new TLS secrets.
 This will perform NuoDB Admin statefulset rolling upgrade so make sure that you are having enough APs to prevent downtime.
 
 ```bash
@@ -103,8 +104,8 @@ helm upgrade admin nuodb/admin \
 
 Wait for AP statefulset rollout to finish and make sure that the new key pair certificates are used by all APs as described in [Verify Domain Certificates](#verify-domain-certificates).
 
-Upgrade the Helm release installed with the [database](../stable/database/README.md) chart using the new TLS secrets.
-This will perform database Storage Manager (SM) statefulsets and Transaction Engine (TE) deployment rolling upgrade so make sure that you are having enough APs to prevent downtime.
+Upgrade the Helm release installed with the [database](../stable/database) chart using the new TLS secrets.
+This will perform database Storage Manager (SM) statefulsets and Transaction Engine (TE) deployment rolling upgrade so make sure that you are having enough database processes to prevent downtime.
 
 ```bash
 helm upgrade database nuodb/database \
@@ -122,8 +123,8 @@ Wait for all database processes to be restarted and reported `Ready` and make su
 #### Using HashiCorp Vault
 
 HashiCorp uses sidecar containers to inject keys into another container.
-It automatically updates secret values stored in Vault KV store to match the files in the volume mounted inside the container.
-This means that it is enough to update the keystore, truststore and client PEM in HashiCorp Vault. 
+It automatically updates secret values stored in the Vault KV store to match the files in the volume mounted inside the container.
+This means that it is enough to update the keystore, client PEM and CA certificate in HashiCorp Vault.
 
 Ensure that the keystore has the same password (as specified by `admin.tlsKeyStore.password` Helm option) so that the APs can reload the keystore without having to be reconfigured and restarted.
 
@@ -165,10 +166,10 @@ kubectl exec -ti admin-nuodb-cluster0-0 \
 
 The command displays the key pair or certificate information from the domain in the bellow sections:
 
-- `serverCertificates` - information about certificates used by each AP identified by `serverId`.
-- `serverTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) by each AP identified by `serverId`.
 - `processCertificates` - information about certificates used by each database process identified by `startId`.
-- `processTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) by each database process identified by `startId`.
+- `processTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) for each database process identified by `startId`.
+- `serverCertificates` - information about certificates used by each AP identified by `serverId`.
+- `serverTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) for each AP identified by `serverId`.
 - `trustedCertificates` - information about trusted certificates in the domain identified by `alias`.
 
 Example output:
@@ -303,7 +304,7 @@ kubectl exec -ti generate-nuodb-certs -- bash -c \
     --cert-only > /tmp/keys/ca.cert'
 ```
 
-If the CA certificate is owned by a public CA, then follow the provided steps to obtain the new certificate.
+If the CA certificate is owned by a public CA, then follow the official steps to obtain the new certificate.
 
 The newly created keystore files can be copied on the client machine and then on some AP pod.
 
@@ -328,7 +329,7 @@ The `--timeout` argument specifies the amount of time to wait for the new certif
 
 Make sure that the new CA certificate with alias `ca_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
 
-Add the the new CA certificate to the truststore of every SQL client.
+Add the new CA certificate to the truststore of every SQL client.
 
 Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificates](#rotate-server-certificates).
 
@@ -361,9 +362,9 @@ kubectl exec -ti generate-nuodb-certs -- \
     --validity 36500 --ca --update
 ```
 
-The `--ca` argument specified weather the `isCA` extension is enabled in the generated certificate.
-This allows the admin to act as intermediate CA and is used in the [Shared Admin Key + Intermediate CA](./HowtoTLS.md#intermediate-ca) model.
-You can omit this argument in case the [Shared Admin Key + Pass-down](./HowtoTLS.md#pass-down) model is used.
+The `--ca` argument specified whether the `isCA` extension is enabled in the generated certificate.
+This allows the admin to act as intermediate CA and is used in the [Intermediate CA](./HowtoTLS.md#intermediate-ca) model.
+You can omit this argument in case the [Pass-down](./HowtoTLS.md#pass-down) model is used.
 
 The newly created keystore files can be copied on the client machine which will be used later to update the keystore secret.
 
@@ -371,7 +372,7 @@ The newly created keystore files can be copied on the client machine which will 
 kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
 ```
 
-If the server certificates are signed by a public CA, then follow the provided steps to renew your certificates.
+If the server certificates are signed by a public CA, then follow the official steps to renew your certificates.
 
 > **NOTE**: For information on how to create the server keystore when using certificates signed by a Public CA, see [here](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/domain-operations/enabling-tls-encryption/using-certificates-signed-by-a-public-certificate-authority/).
 
@@ -439,8 +440,8 @@ unset PASSWD
 rm -rf /tmp/keys
 ```
 
-Make sure that no AP, domain process or SQL client uses the old key pair certificates as described in [Verify Domain Certificates](#verify-domain-certificates).
-It's recommended to remove the old certificates from the domain for security reasons which involves:
+Make sure that no AP, domain process, or SQL client uses the old key pair certificates as described in [Verify Domain Certificates](#verify-domain-certificates).
+It's recommended to remove the old certificates from the domain for security reasons which involve:
 
 - removing the old Kubernetes secrets
 - removing already rotated old CA or client certificates from truststore
@@ -450,5 +451,5 @@ To remove the old certificate from the truststore of every AP and every database
 
 ```bash
 kubectl exec -ti admin-nuodb-cluster0-0 -- \
-  nuocmd remove trusted-certificate --alias ca 
+  nuocmd remove trusted-certificate --alias <alias>
 ```
