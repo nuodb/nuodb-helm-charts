@@ -353,14 +353,19 @@ func TestKubernetesSeparateJournalLocation(t *testing.T) {
 
 		options := helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.sm.hotCopy.journalPath.enabled":       "true",
+				"database.sm.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.hotCopy.journalPath.enabled": "true",
 			},
 		}
 
 		testlib.StartDatabase(t, namespaceName, admin0, &options)
+		// check that archives are created with external journal directory
+		archives, _ := testlib.CheckArchives(t, namespaceName, admin0, "demo", 1, 0)
+		for _, archive := range archives {
+			require.Equal(t, "/var/opt/nuodb/journal/nuodb/demo", archive.JournalPath)
+		}
 	})
 }
