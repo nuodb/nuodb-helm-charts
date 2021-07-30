@@ -124,6 +124,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 				options := k8s.NewKubectlOptions("", "", namespaceName)
 				// ignore any errors. This is already failed
 				_ = k8s.RunKubectlE(t, options, "describe", "pod", adminName)
+				_ = k8s.RunKubectlE(t, options, "exec", adminName, "--", "nuocmd", "show", "domain")
 				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
 			}
 		}()
