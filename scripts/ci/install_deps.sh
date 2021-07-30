@@ -15,7 +15,10 @@ wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
 if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
-    # Download minikube.
+  sudo apt-get update
+  sudo apt-get install -y conntrack
+
+  # Download minikube.
   curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
   mkdir -p "$HOME"/.kube "$HOME"/.minikube
   touch "$KUBECONFIG"
