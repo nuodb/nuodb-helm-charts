@@ -14,8 +14,8 @@
         - [Verify Domain Certificates](#verify-domain-certificates)
     - [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation)
         - [Rotate CA Certificate](#rotate-ca-certificate)
-        - [Rotate Server Certificates](#rotate-server-certificates)
-        - [Rotate NuoDB Commands Certificate](#rotate-nuodb-commands-certificate)
+        - [Rotate Server Certificate](#rotate-server-certificate)
+        - [Rotate Client Certificate](#rotate-client-certificate)
         - [Cleanup](#cleanup)
 
 <!-- /TOC -->
@@ -57,24 +57,24 @@ This adds a trusted certificate to NuoDB Admin server and causes the trusted cer
 
 An overview of how key rotation is performed is as follows:
 
-1. (Optional) A new CA certificate is generated.
+1. _(Optional)_ A new CA certificate is generated.
 2. A new shared admin new key pair certificate is generated.
-3. (Optional) A new client key pair certificate and PEM file are generated.
-4. (Only if step 3 is performed) The new client certificate is added to the truststore of every AP.
-5. (Only if step 1 is performed) The new CA certificate is added to the truststore of every AP and every database process.
-6. (Only if step 1 is performed) The new CA certificate is added to the truststore of every SQL client.
-7. (Only if step 1 is performed) The new CA certificate is added to the truststore of every NuoDB Command client.
+3. _(Optional)_ A new client key pair certificate and PEM file are generated.
+4. _(Only if step 3 is performed)_ The new client certificate is added to the truststore of every AP.
+5. _(Only if step 1 is performed)_ The new CA certificate is added to the truststore of every AP and every database process.
+6. _(Only if step 1 is performed)_ The new CA certificate is added to the truststore of every SQL client.
+7. _(Only if step 1 is performed)_ The new CA certificate is added to the truststore of every NuoDB Command client.
 8. For each AP, the keystore is replaced. Make sure that the new key pair certificate is in effect.
 9. For each database process, the process is restarted, so that its certificate chain is based on the new certificate.
-10. (Only if step 3 is performed) For each NuoDB Command client, the client PEM file is replaced. Make sure that the new key pair certificate is in effect.
-11. (Only if step 1 is performed) The old CA certificate is removed from the truststore of every AP and every database process.
-12. (Only if step 1 is performed) The old CA certificate is removed from the truststore of every SQL client and NuoDB Command client.
-13. (Only if step 3 is performed) The old client certificate is removed from the truststore of every AP.
+10. _(Only if step 3 is performed)_ For each NuoDB Command client, the client PEM file is replaced. Make sure that the new key pair certificate is in effect.
+11. _(Only if step 1 is performed)_ The old CA certificate is removed from the truststore of every AP and every database process.
+12. _(Only if step 1 is performed)_ The old CA certificate is removed from the truststore of every SQL client and NuoDB Command client.
+13. _(Only if step 3 is performed)_ The old client certificate is removed from the truststore of every AP.
 
 Usually, only the server key pair certificate is renewed, which means that the keystore file has to be updated for all APs and database processes.
 This reduces the steps needed during key rotation as the new key pair certificate can be verified using the old truststore certificate.
 
-Complete step by step examples can be found in [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation) section below.
+Complete step by step examples can be found in [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation) section.
 
 ### Update Key Pair Certificates
 
@@ -343,9 +343,9 @@ Make sure that the new CA certificate with alias `ca_prime` is trusted by all AP
 
 Add the new CA certificate to the truststore of every SQL client.
 
-Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificates](#rotate-server-certificates).
+Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificate](#rotate-server-certificate).
 
-### Rotate Server Certificates
+### Rotate Server Certificate
 
 Generate a new server key pair:
 
@@ -390,7 +390,7 @@ If the server certificates are signed by a public CA, then follow the official s
 
 Update domain keystore with the renewed certificates as described in section [Update Key Pair Certificates](#update-key-pair-certificates).
 
-### Rotate NuoDB Commands Certificate
+### Rotate Client Certificate
 
 The NuoDB Commands client key can be renewed together with the NuoDB Admin server key pair certificates or separately as needed.
 
