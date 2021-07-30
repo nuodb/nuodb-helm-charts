@@ -124,8 +124,13 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 				options := k8s.NewKubectlOptions("", "", namespaceName)
 				// ignore any errors. This is already failed
 				_ = k8s.RunKubectlE(t, options, "describe", "pod", adminName)
+				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
 			}
 		}()
+	}
+
+	for i := 0; i < replicaCount; i++ {
+		adminName := adminNames[i] // array will be out of scope for defer
 
 		// first await could be pulling the image from the repo
 		AwaitPodUp(t, namespaceName, adminName, 300*time.Second)

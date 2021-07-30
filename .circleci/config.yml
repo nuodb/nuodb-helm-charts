@@ -90,7 +90,7 @@ jobs:
             fi
             mkdir -p $TEST_RESULTS # create the test results directory
             go clean -testcache
-            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@" 
+            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} -run TestKubernetesStartDatabaseShrinkedAdmin "$@"
           no_output_timeout: 60m
 
       - save_cache: # store unique cache for each test suite and tag combination
