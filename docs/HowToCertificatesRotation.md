@@ -41,34 +41,52 @@ For information on how to start the NuoDB Admin tier, see [Admin Chart](../stabl
 
 ## About Key Rotation
 
-By default in Kubernetes deployments, the same key pair certificate is used by all NuoDB Admin processes (APs), a Certificate Authority (CA) is used to sign them and the CA certificate is trusted by all processes in the domain.
-This means that if a CA certificate needs to be renewed both the keystore and the truststore have to be updated for all APs, and by extension, all database processes.
+NuoDB supports various key models for TLS keys used by the `NuoDB Admin` and database processes.
 
-As stated, processes with the new certificates should be introduced in a rolling fashion to avoid downtime, which means that processes with the old key pair certificate can verify processes with the new key pair certificate. Since the new key pair certificates must be verified using a new trusted certificate, existing processes (admin and database) must have the new trusted certificate propagated to their truststores before the new key pair certificates can be introduced.
+> **NOTE**: For information on how to configure different TLS key models, see [Security Model of NuoDB in Kubernetes](./HowtoTLS.md).
+
+The [Shared Admin Key + Intermediate CA](./docs/HowtoTLS.md#intermediate-ca) model is used by default in NuoDB Kubernetes deployments.
+This means that the same key pair certificate is used by all NuoDB Admin processes (APs), a Certificate Authority (CA) is used to sign them and the CA certificate is trusted by all processes in the domain.
+
+If a CA certificate needs to be renewed both the keystore and the truststore have to be updated for all APs, and by extension, all database processes.
+As stated, processes with the new certificates should be introduced in a rolling fashion to avoid downtime, which means that processes with the old key pair certificate can verify processes with the new key pair certificate.
+Since the new key pair certificates must be verified using a new trusted certificate, existing processes (admin and database) must have the new trusted certificate propagated to their truststores before the new key pair certificates can be introduced.
+
+To simplify updating and propagating new trusted certificates `nuocmd add trusted-certificate` command can be used.
+This adds a trusted certificate to NuoDB Admin server and causes the trusted certificate to be added and propagated to all APs and all database processes.
 
 An overview of how key rotation is performed is as follows:
 
-1. A new shared admin new key pair certificate (and associated client PEM file) is generated.
-2. The new certificate is added to the truststore of every AP and every database process.
-3. The new certificate is added to the truststore of every SQL client and NuoDB Command client.
-4. For each AP, the keystore is replaced. (Make sure that the new key pair certificate is in effect.)
-5. For each database process, the process is restarted, so that its certificate chain is based on the new certificate.
-6. (Optional) The old certificate is removed from the truststore of every AP and every database process.
-7. (Optional) The old certificate is removed from the truststore of every SQL client and NuoDB Command client.
+1. (Optional) A new CA certificate is generated.
+2. A new shared admin new key pair certificate is generated.
+3. (Optional) A new client key pair certificate and PEM file are generated.
+4. (Only if step 3 is performed) The new client certificate is added to the truststore of every AP.
+5. (Only if step 1 is performed) The new CA certificate is added to the truststore of every AP and every database process.
+6. (Only if step 1 is performed) The new CA certificate is added to the truststore of every SQL client.
+7. (Only if step 1 is performed) The new CA certificate is added to the truststore of every NuoDB Command client.
+8. For each AP, the keystore is replaced. Make sure that the new key pair certificate is in effect.
+9. For each database process, the process is restarted, so that its certificate chain is based on the new certificate.
+10. (Only if step 3 is performed) For each NuoDB Command client, the client PEM file is replaced. Make sure that the new key pair certificate is in effect.
+11. (Only if step 1 is performed) The old CA certificate is removed from the truststore of every AP and every database process.
+12. (Only if step 1 is performed) The old CA certificate is removed from the truststore of every SQL client and NuoDB Command client.
+13. (Only if step 3 is performed) The old client certificate is removed from the truststore of every AP.
 
 Usually, only the server key pair certificate is renewed, which means that the keystore file has to be updated for all APs and database processes.
 This reduces the steps needed during key rotation as the new key pair certificate can be verified using the old truststore certificate.
-In particular steps 2 and 3 from the overview above are skipped.
+
+Complete step by step examples can be found in [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation) section below.
 
 ### Update Key Pair Certificates
 
-Depending on the used TLS keys management, step 4 in the overview above may be different.
-By default, NuoDB uses Kubernetes secrets to store TLS keys and expose them to NuoDB processes.
+Depending on the used TLS keys management solution, steps 7, 8, 9 and 10 in the overview above may be different.
+The sections bellow describe in detail how the key pair certificates are updated in Kubernetes deployments.
 
 #### Using Kubernetes Secrets
 
-NuoDB APs can reload the keystore without having to be reconfigured and restarted.
-By default, the TLS keys are mounted in AP containers as a `subPath` volume mount which doesn't allow the automatic secret update.
+By default, NuoDB uses Kubernetes secrets to store TLS keys and expose them to NuoDB processes.
+The TLS keys are mounted in AP containers as a `subPath` volume mount which doesn't allow automatic secret updates.
+This means that the secrets should be updated using Kubernetes controller rolling upgrade strategy triggered by `helm upgrade` command.
+
 To replace the keystore for all APs, use the steps below.
 
 Create new Kubernetes secrets using the keystore file generated with the renewed server key pair certificates.
@@ -88,7 +106,7 @@ kubectl create secret generic nuodb-client-pem-renewed \
   --from-file=nuocmd.pem=/tmp/keys/nuocmd.pem
 ```
 
-> **NOTE**: Skip the generation of the secrets which key pair certificates haven't been rotated.
+> **NOTE**: Skip the generation of the secrets for which the key pair certificates haven't been rotated.
 
 Upgrade the Helm release installed with the [admin](../stable/admin) chart using the new TLS secrets.
 This will perform NuoDB Admin statefulset rolling upgrade so make sure that you are having enough APs to prevent downtime.
@@ -124,6 +142,7 @@ Wait for all database processes to be restarted and reported `Ready` and make su
 
 HashiCorp uses sidecar containers to inject keys into another container.
 It automatically updates secret values stored in the Vault KV store to match the files in the volume mounted inside the container.
+NuoDB APs can reload the keystore without having to be reconfigured and restarted,
 This means that it is enough to update the keystore, client PEM and CA certificate in HashiCorp Vault.
 
 Ensure that the keystore has the same password (as specified by `admin.tlsKeyStore.password` Helm option) so that the APs can reload the keystore without having to be reconfigured and restarted.
@@ -132,7 +151,7 @@ For more information on how to configure TLS with HashiCorp Vault, see [Using Ha
 
 Make sure that the new key pair certificates are used by all APs as described in [Verify Domain Certificates](#verify-domain-certificates).
 
-Restart database processes so that the APs generate new engine certificates signed with the new server certificate chain in the `Intermediate CA` model or the new shared key pair certificates are used in the `Pass-down` model.
+Restart database processes so that the APs generate new engine certificates signed with the new server certificate chain in the [Intermediate CA](./HowtoTLS.md#intermediate-ca) model or the new shared key pair certificates are used in the [Pass-down](./HowtoTLS.md#pass-down) model.
 Kubernetes 1.15+ supports a rollout restart which can be used to restart database processes in a rolling fashion.
 
 ```bash
@@ -149,14 +168,14 @@ kubectl rollout restart \
   deployment te-database-nuodb-cluster0-demo
 ```
 
-Alternatively, the database processes can be restarted manually by shutting down the process using `nuocmd shutdown process --start-id ...` command.
-Kubernetes will automatically restart the engine container and which will effectively restart the database process.
+Alternatively, the database processes can be restarted manually by shutting down each process using `nuocmd shutdown process --start-id ...` command.
+Kubernetes will automatically restart the engine container which will effectively restart the database process.
 
 It is recommended to perform each rollout or database process restart sequentially after verifying the domain process certificates as described in [Verify Domain Certificates](#verify-domain-certificates).
 
 ### Verify Domain Certificates
 
-To get the current certificate data, use `nuocmd get certificate-info` command and make sure that the renewed key pair certificates are displayed in the corresponding section.
+To get the current certificate data in the NuoDB domain, use `nuocmd get certificate-info` command and make sure that the renewed key pair certificates are displayed in the corresponding sections.
 
 ```bash
 kubectl exec -ti admin-nuodb-cluster0-0 \
@@ -164,7 +183,7 @@ kubectl exec -ti admin-nuodb-cluster0-0 \
   nuocmd --show-json get certificate-info
 ```
 
-The command displays the key pair or certificate information from the domain in the bellow sections:
+The command displays the certificates information in the below sections:
 
 - `processCertificates` - information about certificates used by each database process identified by `startId`.
 - `processTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) for each database process identified by `startId`.
@@ -267,12 +286,8 @@ Example output:
 
 ## NuoDB TLS Key Rotation
 
-NuoDB supports various key models for TLS keys used by the `NuoDB Admin` and database processes.
-
-> **NOTE**: For information on how to configure different TLS key models, see [Security Model of NuoDB in Kubernetes](./HowtoTLS.md).
-
-To renew domain keystore and key pair certificates, you can either create new keystore files and certificates on your own or create them using the NuoDB Commands.
-All examples bellow will be using a helper pod started with NuoDB image and `nuocmd` command line tools.
+To renew the domain key pair certificates and the server keystore, you can either create new keystore files and certificates on your own or create them using the NuoDB Commands.
+All examples below will be using a helper pod started with NuoDB image and `nuocmd` command line tools.
 
 ```bash
 PASSWD=changeMe
@@ -322,9 +337,6 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- \
     --alias ca_prime --cert /tmp/ca.cert --timeout 30
 ```
 
-This adds the new client certificate under the alias `ca_prime`.
-It is not possible to replace the CA certificate because all processes in the domain and SQL clients are currently using it.
-This single command invocation causes the trusted certificate to be propagated to all APs and all database processes.
 The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
 
 Make sure that the new CA certificate with alias `ca_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
@@ -417,9 +429,6 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- \
     --alias nuocmd_prime --cert /tmp/nuocmd.cert --timeout 30
 ```
 
-This adds the new client certificate under the alias `nuocmd_prime`.
-It is not possible to replace the client certificate because all processes in the domain are currently using it.
-This single command invocation causes the trusted certificate to be propagated to all APs and all database processes.
 The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
 
 Make sure that the new client certificate with alias `nuocmd_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
