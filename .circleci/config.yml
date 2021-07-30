@@ -90,7 +90,7 @@ jobs:
             fi
             mkdir -p $TEST_RESULTS # create the test results directory
             go clean -testcache
-            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} -run TestKubernetesStartDatabaseShrinkedAdmin "$@"
+            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@"
           no_output_timeout: 60m
 
       - save_cache: # store unique cache for each test suite and tag combination
@@ -112,32 +112,32 @@ workflows:
   build:
     # jobs are run in parallel by default, so any dependencies must be explicitly requires
     jobs:
-      - go-test:
-          name: "Integration tests"
-          test-suite: "./test/integration"
+#      - go-test:
+#          name: "Integration tests"
+#          test-suite: "./test/integration"
       - go-test:
           name: "Short tests"
           test-suite: "./test/minikube"
           tag: "short"
           requires-minikube: true
-      - go-test:
-          name: "Long tests"
-          test-suite: "./test/minikube"
-          tag: "long"
-          requires-minikube: true
-          timeout: "90m"
-      - go-test:
-          name: "Diagnostics tests"
-          test-suite: "./test/minikube"
-          tag: "diagnostics"
-          requires-minikube: true
+#      - go-test:
+#          name: "Long tests"
+#          test-suite: "./test/minikube"
+#          tag: "long"
+#          requires-minikube: true
+#          timeout: "90m"
+#      - go-test:
+#          name: "Diagnostics tests"
+#          test-suite: "./test/minikube"
+#          tag: "diagnostics"
+#          requires-minikube: true
       - go-test:
           name: "Upgrade tests"
           test-suite: "./test/minikube"
           tag: "upgrade"
           requires-minikube: true
-      - go-test:
-          name: "Multi-cluster tests"
-          test-suite: "./test/multicluster"
-          requires-aks: true
+#      - go-test:
+#          name: "Multi-cluster tests"
+#          test-suite: "./test/multicluster"
+#          requires-aks: true
 
