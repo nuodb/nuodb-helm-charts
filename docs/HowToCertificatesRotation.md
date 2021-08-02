@@ -31,13 +31,18 @@ This document expands on [Security Model of NuoDB in Kubernetes](./HowtoTLS.md) 
 > **NOTE**: For non-Kubernetes deployments, see  [Enabling TLS encryption, Rotating TLS Key Pair Certificates](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/domain-operations/enabling-tls-encryption/rotating-key-pair-certificates/).
 This page expands on the product documentation and is specific to this Helm Chart repository.
 
+A high-level overview of the certificate rotation is provided in [About Key Rotation](#about-key-rotation) section.
+After getting familiar with the key concepts, step-by-step instructions are available in the [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation) section.
+It is recommended to read through the entire page to get a common understanding of the key rotation process before following the steps.
+
 ### Terminology
 
-- `Key` = a combination of a private key with its corresponding X509 certificate chain. 
+- `Key` = a combination of a private key with its corresponding X509 certificate chain.
 These keys are usually saved in a PKCS12 file such as `nuoadmin.p12`.
 - `NuoDB Admin` = The administrative interface for domain and database management.
 For information on how to start the NuoDB Admin tier, see [Admin Chart](../stable/admin/README.md).
 - `CA` = Certificate Authority
+- `Sever Key` = The key pair certificate used by NuoDB Admin.
 
 ## About Key Rotation
 
@@ -59,17 +64,14 @@ An overview of how CA certificate rotation is performed is as follows:
 
 1. A new CA certificate is generated.
 2. A new shared admin new key pair certificate is generated.
-3. _(Optional)_ A new client key pair certificate and PEM file are generated.
-4. _(Only if step 3 is performed)_ The new client certificate is added to the truststore of every AP.
-5. The new CA certificate is added to the truststore of every AP and every database process.
-6. The new CA certificate is added to the truststore of every SQL client.
-7. The new CA certificate is added to the truststore of every NuoDB Command client.
-8. For each AP, the keystore is replaced. Make sure that the new key pair certificate is in effect.
-9. For each database process, the process is restarted, so that its certificate chain is based on the new certificate.
-10. _(Only if step 3 is performed)_ For each NuoDB Command client, the client PEM file is replaced. Make sure that the new key pair certificate is in effect.
-11. _(Optional)_ The old CA certificate is removed from the truststore of every AP and every database process.
-12. _(Optional)_ The old CA certificate is removed from the truststore of every SQL client and NuoDB Command client.
-13. _(Optional)_ The old client certificate is removed from the truststore of every AP.
+3. The new CA certificate is added to the truststore of every AP and every database process.
+4. The new CA certificate is added to the truststore of every SQL client.
+5. The new CA certificate is added to the truststore of every NuoDB Command client.
+6. For each AP, the keystore is replaced. Make sure that the new key pair certificate is in effect.
+7. For each database process, the process is restarted, so that its certificate chain is based on the new certificate.
+8. _(Optional)_ The old CA certificate is removed from the truststore of every AP and every database process.
+9. _(Optional)_ The old CA certificate is removed from the truststore of every SQL client and NuoDB Command client.
+10. _(Optional)_ The old client certificate is removed from the truststore of every AP.
 
 Usually, only the server key pair certificate is renewed, which means that only the keystore file has to be updated for all APs and database processes.
 This reduces the steps needed during key rotation as the new key pair certificate can be verified using the old truststore certificate.
@@ -77,17 +79,22 @@ This reduces the steps needed during key rotation as the new key pair certificat
 An overview of how server key pair certificate rotation is performed is as follows:
 
 1. A new shared admin new key pair certificate is generated.
-2. _(Optional)_ A new client key pair certificate and PEM file are generated.
-3. For each AP, the keystore is replaced. Make sure that the new key pair certificate is in effect.
-4. For each database process, the process is restarted, so that its certificate chain is based on the new certificate.
-5. _(Only if step 3 is performed)_ For each NuoDB Command client, the client PEM file is replaced. Make sure that the new key pair certificate is in effect.
-6. _(Only if step 3 is performed)_ The old client certificate is removed from the truststore of every AP.
+2. For each AP, the keystore is replaced. Make sure that the new key pair certificate is in effect.
+3. For each database process, the process is restarted, so that it obtains a new certificate based on the new server certificate.
+
+An overview of how client key pair certificate rotation is performed is as follows:
+
+1. A new client key pair certificate and PEM file are generated.
+2. The new client certificate is added to the truststore of every AP.
+3. For each NuoDB Command client, the client PEM file is replaced. Make sure that the new key pair certificate is in effect.
+4. (Optional) The old client certificate is removed from the truststore of every AP.
 
 Complete step by step examples can be found in [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation) section.
+It contains detailed information on how to generate new key pair certificates using NuoDB Command tools.
 
 ### Update Key Pair Certificates
 
-Depending on the used TLS keys management solution, updating the key pair certificates may be different.
+Depending on the used TLS keys management solution in use, updating the key pair certificates may be different.
 The sections bellow describe in detail how this is performed in Kubernetes deployments installed with NuoDB Helm Charts.
 
 #### Using Kubernetes Secrets
@@ -320,7 +327,7 @@ kubectl exec -ti generate-nuodb-certs -- \
   nuocmd create keypair \
     --keystore /tmp/keys/ca.p12 --store-password "$PASSWD" \
     --dname "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" \
-    --validity 36500 --ca
+    --validity 365 --ca
 
 kubectl exec -ti generate-nuodb-certs -- bash -c \
   'nuocmd show certificate \
@@ -338,6 +345,7 @@ kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
 kubectl cp /tmp/keys/ca.cert nuodb/admin-nuodb-cluster0-0:/tmp/ca.cert
 ```
 
+Since the new key pair certificates must be verified using a new CA certificate, existing processes must have the new trusted certificate propagated to their truststores before the new key pair certificates can be introduced.
 Add the new CA certificate to the truststore of all admin and database processes:
 
 ```bash
@@ -351,6 +359,10 @@ The `--timeout` argument specifies the amount of time to wait for the new certif
 Ensure that the new CA certificate with alias `ca_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
 
 Add the new CA certificate to the truststore of every SQL client.
+
+```bash
+cat /tmp/keys/ca.cert >> <path to SQL client truststore>/ca.cert
+```
 
 Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificate](#rotate-server-certificate).
 
@@ -380,7 +392,7 @@ kubectl exec -ti generate-nuodb-certs -- \
   nuocmd sign certificate \
     --keystore /tmp/keys/nuoadmin.p12 --store-password "$PASSWD" \
     --ca-keystore /tmp/keys/ca.p12 --ca-store-password "$PASSWD" \
-    --validity 36500 --ca --update
+    --validity 365 --ca --update
 ```
 
 The `--ca` argument specifies whether the `isCA` extension is enabled in the generated certificate.
@@ -410,7 +422,7 @@ kubectl exec -ti generate-nuodb-certs -- \
   nuocmd create keypair \
     --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" \
     --dname "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" \
-    --validity 36500
+    --validity 365
 
 kubectl exec -ti generate-nuodb-certs -- bash -c \
   'nuocmd show certificate \
@@ -446,7 +458,8 @@ Update the client key as described in section [Update Key Pair Certificates](#up
 
 ### Cleanup
 
-Backup the `ca.p12` keystore file as it will be needed during the next keys rotation.
+Store the `ca.p12` keystore file securely which will be needed during the next keys rotation since it can be used to sign new certificates.
+It shouldn't be left around in the _generate-nuodb-certs_ helper pod, locally, or copied to all NuoDB pods.
 
 Remove the helper pod used to generate certificates and the local copy of the keystore files:
 
