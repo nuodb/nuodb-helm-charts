@@ -40,6 +40,7 @@ myArchive=
 legacy_restore_requested=
 restore_requested=
 restore_source=
+journal_flags=()
 
 # attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
 crashcount=$(find $NUODB_CRASHDIR/core* -maxdepth 0 ! -type d 2>/dev/null | wc -l)
@@ -267,6 +268,7 @@ function perform_restore() {
     log "restoring archive and/or clearing restored archive physical metadata"
     status="$(nuodocker restore archive \
       --origin-dir $download_dir \
+      "${journal_flags[@]}" \
       --restore-dir $DB_DIR \
       --db-name $DB_NAME \
       --clean-metadata 2>&1)"
@@ -283,6 +285,7 @@ function perform_restore() {
     log "Calling nuodocker to restore $restore_source into $DB_DIR"
     status="$(nuodocker restore archive \
       --origin-dir $NUODB_BACKUPDIR/$restore_source \
+      "${journal_flags[@]}" \
       --restore-dir $DB_DIR \
       --db-name $DB_NAME \
       --clean-metadata 2>&1)"
@@ -443,6 +446,9 @@ if [ "$SEPARATE_JOURNAL" == "true" ]; then
   else
     log "Directory $JOURNAL_DIR exists"
   fi
+  journal_flags+=("--journal-dir")
+  journal_flags+=("${JOURNAL_DIR}")
+  log "journal-dir=${JOURNAL_DIR}"
 fi
 
 # Retry the first request against the admin layer to make sure that Raft
@@ -774,13 +780,6 @@ trace "executing nuodocker to start SM"
 
 nuodocker_flags=()
 [ -n "$NUODB_DEBUG" ] && nuodocker_flags+=("--debug")
-
-journal_flags=()
-if [ "$SEPARATE_JOURNAL" == "true" ]; then
-  journal_flags+=("--journal-dir")
-  journal_flags+=("${JOURNAL_DIR}")
-  log "journal-dir=${JOURNAL_DIR}"
-fi
 
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
