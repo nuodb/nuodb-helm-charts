@@ -280,6 +280,16 @@ function perform_restore() {
       rm -rf $download_dir
     fi
 
+    if [ "$SEPARATE_JOURNAL" == "true" ] && [ "$restore_type" == "stream" ]; then
+      # `nuodocker restore archive` doesn't invoke `nuoarchive` on cold archive
+      # (stream) restore type. Move the content of the internal journal
+      # directory to the external journal path manually as the journal is not
+      # consumed during SM shutdown
+      log "Moving restored journal content to $JOURNAL_DIR"
+      mv "$download_dir/journal/"* "$JOURNAL_DIR"
+      chown -R "$(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"')" "$JOURNAL_DIR"
+    fi
+
   else
     # log "Calling nuoarchive to restore $restore_source into $DB_DIR"
     log "Calling nuodocker to restore $restore_source into $DB_DIR"
