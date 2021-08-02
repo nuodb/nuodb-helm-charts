@@ -21,7 +21,7 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   touch "$KUBECONFIG"
 
   # start minikube
-  sudo minikube start --vm-driver=none --kubernetes-version=v"${KUBERNETES_VERSION}" --memory=8000 --cpus=4
+  sudo minikube start --vm-driver=none --kubernetes-version=v"${KUBERNETES_VERSION}" --memory=6000 --cpus=2
   sudo chown -R $USER: $HOME/.minikube/
   kubectl cluster-info
 
