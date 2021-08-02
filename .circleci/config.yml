@@ -41,7 +41,7 @@ jobs:
       image: ubuntu-1604:202007-01
 
     environment:
-      HELM_VERSION: "v3.2.4"
+      HELM_VERSION: "v3.6.3"
       DEP_VERSION: "0.5.4"
       KUBERNETES_VERSION: "1.15.0"
       OPENSHIFT_VERSION: "3.11.0"
