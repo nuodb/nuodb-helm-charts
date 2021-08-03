@@ -42,7 +42,7 @@ These keys are usually saved in a PKCS12 file such as `nuoadmin.p12`.
 - `NuoDB Admin` = The administrative interface for domain and database management.
 For information on how to start the NuoDB Admin tier, see [Admin Chart](../stable/admin/README.md).
 - `CA` = Certificate Authority
-- `Sever Key` = The key pair certificate used by NuoDB Admin.
+- `Server Key` = The key pair certificate used by NuoDB Admin.
 
 ## About Key Rotation
 
@@ -57,7 +57,7 @@ If a CA certificate needs to be renewed, then both the keystore and the truststo
 As stated, processes with the new certificates should be introduced in a rolling fashion to avoid downtime, which means that processes with the old key pair certificate can verify processes with the new key pair certificate.
 Since the new key pair certificates must be verified using a new trusted certificate, existing processes (admin and database) must have the new trusted certificate propagated to their truststores before the new key pair certificates can be introduced.
 
-To simplify updating and propagating new trusted certificates, run `nuocmd add trusted-certificate`.
+To simplify updating and propagating new trusted certificates, run [nuocmd add trusted-certificate](https://doc.nuodb.com/nuodb/latest/reference-information/command-line-tools/nuodb-command/nuocmd-reference/#add-trusted-certificate).
 This command adds a trusted certificate to the NuoDB Admin server and causes the trusted certificate to be added and propagated to all APs and all database processes.
 
 An overview of how CA certificate rotation is performed is as follows:
@@ -71,7 +71,6 @@ An overview of how CA certificate rotation is performed is as follows:
 7. For each database process, the process is restarted, so that its certificate chain is based on the new certificate.
 8. _(Optional)_ The old CA certificate is removed from the truststore of every AP and every database process.
 9. _(Optional)_ The old CA certificate is removed from the truststore of every SQL client and NuoDB Command client.
-10. _(Optional)_ The old client certificate is removed from the truststore of every AP.
 
 Usually, only the server key pair certificate is renewed, which means that only the keystore file has to be updated for all APs and database processes.
 This reduces the steps needed during key rotation as the new key pair certificate can be verified using the old truststore certificate.
@@ -95,7 +94,7 @@ It contains detailed information on how to generate new key pair certificates us
 ### Update Key Pair Certificates
 
 Depending on the used TLS keys management solution in use, updating the key pair certificates may be different.
-The sections bellow describe in detail how this is performed in Kubernetes deployments installed with NuoDB Helm Charts.
+The sections below describe in detail how this is performed in Kubernetes deployments installed with NuoDB Helm Charts.
 
 #### Using Kubernetes Secrets
 
@@ -184,8 +183,8 @@ kubectl rollout restart \
   deployment te-database-nuodb-cluster0-demo
 ```
 
-Alternatively, the database processes can be restarted manually by shutting down each process using `nuocmd shutdown process --start-id ...` command.
-Kubernetes will automatically restart the engine container which will effectively restart the database process.
+Alternatively, the database processes can be restarted manually by deleting each database pod using `kubectl delete pod ...` command.
+Kubernetes will automatically restart the pod which will effectively restart the database process.
 
 It is recommended to perform each rollout or database process restart sequentially after verifying the domain process certificates as described in [Verify Domain Certificates](#verify-domain-certificates).
 
@@ -201,9 +200,9 @@ kubectl exec -ti admin-nuodb-cluster0-0 \
 
 The command displays the certificates information in the below sections:
 
-- `processCertificates` - information about certificates used by each database process identified by `startId`.
+- `processCertificates` - information about the certificate used by each database process identified by `startId`.
 - `processTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) for each database process identified by `startId`.
-- `serverCertificates` - information about certificates used by each AP identified by `serverId`.
+- `serverCertificates` - information about the certificate used by each AP identified by `serverId`.
 - `serverTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) for each AP identified by `serverId`.
 - `trustedCertificates` - information about trusted certificates in the domain identified by `alias`.
 
@@ -257,7 +256,7 @@ Example output:
       "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
       "expires": 4781150383000,
       "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
-      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345",
       "subjectName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
     },
     "admin-nuodb-cluster0-1": {
@@ -265,7 +264,7 @@ Example output:
       "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
       "expires": 4781150383000,
       "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
-      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
+      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345",
       "subjectName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
     }
   },
@@ -285,16 +284,16 @@ Example output:
       "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
       "expires": 4781150383000,
       "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
-      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
-      "subjectName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
+      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345",
+      "subjectName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345"
     },
     "nuocmd_prime": {
       "caPathLength": -1,
       "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
       "expires": 4781151591000,
       "expiresTimestamp": "2121-07-05T09:39:51.000+0000",
-      "issuerName": "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
-      "subjectName": "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
+      "issuerName": "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=34567",
+      "subjectName": "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=34567"
     }
   }
 }
@@ -303,7 +302,7 @@ Example output:
 ## NuoDB TLS Key Rotation
 
 To renew the domain key pair certificates and the server keystore, you can either create new keystore files and certificates on your own or create them using NuoDB commands.
-All examples below will be using a helper pod started with NuoDB image and `nuocmd` command line tools.
+All examples below will be using a helper pod started with NuoDB image and `nuocmd` command-line tools.
 
 ```bash
 PASSWD=changeMe
@@ -326,7 +325,7 @@ Generate new CA certificate:
 kubectl exec -ti generate-nuodb-certs -- \
   nuocmd create keypair \
     --keystore /tmp/keys/ca.p12 --store-password "$PASSWD" \
-    --dname "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" \
+    --dname "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345" \
     --validity 365 --ca
 
 kubectl exec -ti generate-nuodb-certs -- bash -c \
@@ -379,7 +378,7 @@ kubectl exec -ti generate-nuodb-certs -- \
 
 In the example above, we specify the `SERIALNUMBER` field so that the new certificate has a different distinguished name from the current certificate.
 
-The new server certificates should be signed by the CA certificate.
+The new server certificates have to be signed by the same CA certificate.
 If the TLS keys have been generated using the `setup-keys.sh` script, the private/public key pair of the CA are available in the `ca.p12` file.
 In case the CA certificate has been renewed right now, use the new CA keystore generated using the [Rotate CA Certificate](#rotate-ca-certificate) steps.
 
@@ -421,7 +420,7 @@ Generate new client key pair:
 kubectl exec -ti generate-nuodb-certs -- \
   nuocmd create keypair \
     --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" \
-    --dname "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890" \
+    --dname "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=34567" \
     --validity 365
 
 kubectl exec -ti generate-nuodb-certs -- bash -c \
@@ -452,7 +451,7 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- \
 
 The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
 
-Esure that the new client certificate with alias `nuocmd_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
+Ensure that the new client certificate with alias `nuocmd_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
 
 Update the client key as described in section [Update Key Pair Certificates](#update-key-pair-certificates).
 
@@ -472,7 +471,7 @@ rm -rf /tmp/keys
 ```
 
 Ensure that AP, domain process, and SQL client do not use the old key pair certificates as described in [Verify Domain Certificates](#verify-domain-certificates).
-It's recommended to remove the old certificates from the domain for security reasons which involves:
+It's recommended to remove the old certificates from the domain for security reasons which involve:
 
 - removing the old Kubernetes secrets
 - removing already rotated old CA or client certificates from truststore
