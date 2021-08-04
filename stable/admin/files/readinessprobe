@@ -20,6 +20,7 @@ nuocmd_fallback() {
         # the command succeeded or failed with a non-parse error; emit command
         # output and exit
         echo "$out"
+        >&2 echo "$out"
         exit $ret
     fi
 }
