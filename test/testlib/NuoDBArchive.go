@@ -7,10 +7,11 @@ import (
 )
 
 type NuoDBArchive struct {
-	Id     int    `json:"id"`
-	DbName string `json:"dbName"`
-	Path   string `json:"path"`
-	State  string `json:"state"`
+	Id          int    `json:"id"`
+	DbName      string `json:"dbName"`
+	Path        string `json:"path"`
+	State       string `json:"state"`
+	JournalPath string `json:"journalPath"`
 }
 
 func UnmarshalArchives(s string) (err error, archives []NuoDBArchive) {
