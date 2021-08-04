@@ -12,7 +12,7 @@
         - [Scheduled online database backups](#scheduled-online-database-backups)
             - [Backup retention management](#backup-retention-management)
     - [Restore](#restore)
-        - [Fine-grained archive restore selection](#fine-grained-restore-archive-selection)
+        - [Fine-grained archive restore selection](#fine-grained-archive-restore-selection)
         - [Distributed restore](#distributed-restore)
             - [Distributed database restore from source](#distributed-database-restore-from-source)
             - [Distributed database restore with storage groups](#distributed-database-restore-with-storage-groups)
@@ -184,6 +184,7 @@ Customer provided `ReadWriteMany` backup volumes, such as Elastic Block Store (E
 ## Restore
 
 The restore/import source location can be one of the following:
+
 - remote _URL_ in a form of `protocol://authority/path`.
 The restore logic uses [cURL](https://curl.se/) to download a stream of data into an SM pod and restore the archive from it.
 Standard protocols such as _HTTP/s_, _FTP_ and _SFTP_ can be used as a source.
@@ -197,14 +198,19 @@ Typically, the `tar.gz` only contains one parent level folder, being the databas
 HC SMs have a backup volume attached and are selected for hot copy operation during the scheduled backups. Only these SMs have access to local hot copies and their archives can be restored using a local backup set.
 
 The most recent successful backup set name can be referenced in one of the following ways:
+
 - `:latest` - The latest backup set name among all backup groups.
 - `:group-latest` - The latest backup set name for the backup group in current database deployment.
 
 Two restore/import source types are available:
+
 - _stream_ - Used as a synonym for an offline backup.
 A remote _stream_ source is downloaded and extracted directly into the archive directory which doesn't require extra space for holding the restore/import source file.
 - _backupset_ - Hot copy backup set which is either fetched from a remote source or available in the backup directory.
 A remote _backupset_ requires additional space as it is downloaded and extracted temporarily in the archive volume to be used during archive restore operation.
+
+> **NOTE**: It is expected that the _stream_ backup has the database journal files in `<archive_path>/journal` directory which is the default location of the journal.
+If a separate journal location is used, make sure that the _stream_ backup is prepared by manually moving the journal content into the archive.
 
 ### Fine-grained archive restore selection
 
