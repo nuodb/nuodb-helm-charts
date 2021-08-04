@@ -230,7 +230,7 @@ admin:
     balancer: balancer
 
   # Some clusters require longer readiness probe timeouts
-  readinessTimeoutSeconds: 15
+  readinessTimeoutSeconds: 5
 
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}
