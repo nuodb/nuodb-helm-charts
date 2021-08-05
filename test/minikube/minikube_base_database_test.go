@@ -21,47 +21,47 @@ const LABEL_CLOUD = "minikube"
 const LABEL_REGION = "local"
 const LABEL_ZONE = "local-b"
 
-func verifyKubernetesAccess(t *testing.T, namespaceName string, podName string) {
+func verifyKubernetesAccess(t *testing.T, namespaceName string, podName string, containerName string) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	serviceAccountDir := "/var/run/secrets/kubernetes.io/serviceaccount"
 
 	// check namespace matches service account directory
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "cat", serviceAccountDir+"/namespace")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "cat", serviceAccountDir+"/namespace")
 	require.NoError(t, err, output)
 	require.Equal(t, namespaceName, output)
 
 	// get authorization token
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "cat", serviceAccountDir+"/token")
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "cat", serviceAccountDir+"/token")
 	require.NoError(t, err, output)
 
 	curlCmdPrefix := fmt.Sprintf("curl -s --cacert %s -H 'Authorization: Bearer %s' https://kubernetes.default.svc", serviceAccountDir+"/ca.crt", output)
 
 	// check that we can access Pods
 	url := "/api/v1/namespaces/" + namespaceName + "/pods"
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "bash", "-c", curlCmdPrefix+url)
 	require.NoError(t, err, output)
 	require.True(t, strings.Contains(output, "\"kind\": \"PodList\""), output)
 
 	// check that we can access this Pod
 	url = "/api/v1/namespaces/" + namespaceName + "/pods/" + podName
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "bash", "-c", curlCmdPrefix+url)
 	require.NoError(t, err, output)
 	require.True(t, strings.Contains(output, "\"kind\": \"Pod\""), output)
 
 	// check that we can access PersistentVolumeClaims
 	url = "/api/v1/namespaces/" + namespaceName + "/persistentvolumeclaims"
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "bash", "-c", curlCmdPrefix+url)
 	require.True(t, strings.Contains(output, "\"kind\": \"PersistentVolumeClaimList\""), output)
 
 	// check that we can access Deployments
 	url = "/apis/apps/v1/namespaces/" + namespaceName + "/deployments"
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "bash", "-c", curlCmdPrefix+url)
 	require.True(t, strings.Contains(output, "\"kind\": \"DeploymentList\""), output)
 
 	// check that we can access StatefulSets
 	url = "/apis/apps/v1/namespaces/" + namespaceName + "/statefulsets"
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "bash", "-c", curlCmdPrefix+url)
 	require.True(t, strings.Contains(output, "\"kind\": \"StatefulSetList\""), output)
 
 	// check that we can create Leases
@@ -69,25 +69,25 @@ func verifyKubernetesAccess(t *testing.T, namespaceName string, podName string) 
 	// when request data is specified without an explicit request method, POST is assumed
 	leaseName := strings.ToLower(random.UniqueId())
 	extraArgs := fmt.Sprintf(" -H 'Content-Type: application/json' -d  '{\"metadata\": {\"name\": \"%s\"}}'", leaseName)
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url+extraArgs)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "bash", "-c", curlCmdPrefix+url+extraArgs)
 	require.True(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
 
 	// check that we can update Leases
 	url = "/apis/coordination.k8s.io/v1/namespaces/" + namespaceName + "/leases/" + leaseName
 	// use create response as request payload, which contains the correct resourceVersion (update fails if the resourceVersion does not match)
 	extraArgs = fmt.Sprintf(" -X PUT -H 'Content-Type: application/json' -d '%s'", output)
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url+extraArgs)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "bash", "-c", curlCmdPrefix+url+extraArgs)
 	require.True(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
 
 	// check that we can get Leases
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", curlCmdPrefix+url)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", containerName, "--", "bash", "-c", curlCmdPrefix+url)
 	require.True(t, strings.Contains(output, "\"kind\": \"Lease\""), output)
 }
 
 func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseName string) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--", "bash", "-c",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "-c", "admin", "--", "bash", "-c",
 		fmt.Sprintf("echo \"select * from system.nodes;\" | nuosql %s@localhost --user dba --password secret", databaseName))
 
 	require.NoError(t, err, output)
@@ -249,7 +249,7 @@ func TestKubernetesAccessWithinPods(t *testing.T) {
 
 		t.Run("verifyKubernetesAccess", func(t *testing.T) {
 			// verify that Admin Pod can invoke K8s REST APIs
-			verifyKubernetesAccess(t, namespaceName, admin0)
+			verifyKubernetesAccess(t, namespaceName, admin0, "admin")
 
 			// verify that SM and TE Pods can invoke K8s REST APIs
 			opt := testlib.GetExtractedOptions(&databaseOptions)
@@ -257,8 +257,8 @@ func TestKubernetesAccessWithinPods(t *testing.T) {
 			smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 			tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 			smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
-			verifyKubernetesAccess(t, namespaceName, tePodName)
-			verifyKubernetesAccess(t, namespaceName, smPodName)
+			verifyKubernetesAccess(t, namespaceName, tePodName, "engine")
+			verifyKubernetesAccess(t, namespaceName, smPodName, "engine")
 		})
 	})
 }

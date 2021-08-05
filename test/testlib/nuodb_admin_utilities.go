@@ -124,7 +124,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 				options := k8s.NewKubectlOptions("", "", namespaceName)
 				// ignore any errors. This is already failed
 				_ = k8s.RunKubectlE(t, options, "describe", "pod", adminName)
-				_ = k8s.RunKubectlE(t, options, "exec", adminName, "--", "nuocmd", "show", "domain")
+				_ = k8s.RunKubectlE(t, options, "exec", adminName, "-c", "admin", "--", "nuocmd", "show", "domain")
 				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
 			}
 		}()
@@ -181,7 +181,7 @@ func StartAdminCustomRelease(t *testing.T, options *helm.Options, replicaCount i
 
 func GetLoadBalancerPoliciesE(t *testing.T, namespaceName string, adminPod string) (map[string]NuoDBLoadBalancerPolicy, error) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "load-balancers")
 	if err == nil {
 		err, policiesMap := UnmarshalLoadBalancerPolicies(output)
@@ -192,7 +192,7 @@ func GetLoadBalancerPoliciesE(t *testing.T, namespaceName string, adminPod strin
 
 func GetLoadBalancerConfigE(t *testing.T, namespaceName string, adminPod string) ([]NuoDBLoadBalancerConfig, error) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "load-balancer-config")
 	if err == nil {
 		err, configs := UnmarshalLoadBalancerConfigs(output)

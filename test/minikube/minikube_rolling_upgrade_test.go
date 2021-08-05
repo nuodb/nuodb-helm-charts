@@ -55,15 +55,15 @@ func TestAdminReadinessProbe(t *testing.T) {
 	// make sure direct invocation of readinessprobe script succeeds on both
 	// Admin processes
 	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--", "readinessprobe")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--", "readinessprobe")
 	require.NoError(t, err, "readinessprobe failed: %s", output)
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--", "readinessprobe")
 	require.NoError(t, err, "readinessprobe failed: %s", output)
 
 	// delete Raft log on admin-0 and kill admin-0 so that it bootstraps a
 	// disjoint domain when it is restarted and refuses messages from
 	// admin-1
-	k8s.RunKubectl(t, options, "exec", admin0, "--", "rm", "-f", "/var/opt/nuodb/raftlog")
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--", "rm", "-f", "/var/opt/nuodb/raftlog")
 	k8s.RunKubectl(t, options, "delete", "pod", admin0)
 
 	// make sure readinessprobe on admin-1 eventually fails, either because
@@ -71,7 +71,7 @@ func TestAdminReadinessProbe(t *testing.T) {
 	// the leader but is not connected to a quorum
 	testlib.Await(t, func() bool {
 		// make sure readinessprobe fails
-		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--", "readinessprobe")
+		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--", "readinessprobe")
 		code, err := shell.GetExitCodeForRunCommandError(err)
 		require.NoError(t, err)
 		if code == 0 {
@@ -109,7 +109,7 @@ func TestAdminReadinessProbeFallback(t *testing.T) {
 
 	// make sure 'nuocmd check server' fails
 	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "nuocmd", "check", "server")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "-c", "admin", "--", "nuocmd", "check", "server")
 	require.Error(t, err, "Expected 'nuocmd check server' to fail on %s: %s", OLD_RELEASE, output)
 	// make sure exit code is 2 to indicate parse error
 	code, err := shell.GetExitCodeForRunCommandError(err)
@@ -117,7 +117,7 @@ func TestAdminReadinessProbeFallback(t *testing.T) {
 	require.Equal(t, 2, code)
 
 	// make sure readinessprobe is successful
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "--", "readinessprobe")
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "-c", "admin", "--", "readinessprobe")
 	require.NoError(t, err, "readinessprobe failed on %s: %s", OLD_RELEASE, output)
 }
 

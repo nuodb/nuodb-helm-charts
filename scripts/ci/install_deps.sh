@@ -28,8 +28,10 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   sudo chown -R $USER: $HOME/.minikube/
   kubectl cluster-info
 
+  sudo chmod 700 $HOME/.kube/config
+
   # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
-  # after pods have been re-created which causes problems with inter pod communicataion.
+  # after pods have been re-created which causes problems with inter pod communication.
   # Set CoreDNS TTL to 0 so that DNS entries are not cached. 
   kubectl get cm coredns -n kube-system -o yaml | sed -e 's/ttl [0-9]*$/ttl 0/' | kubectl apply -n kube-system -f -
   kubectl delete pods -l k8s-app=kube-dns -n kube-system

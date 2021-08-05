@@ -22,7 +22,7 @@ const ENGINE_CERTIFICATE_LOG_TEMPLATE = `Engine Certificate: Certificate #%d CN 
 func verifyKeystore(t *testing.T, namespace string, podName string, keystore string, password string, matches string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "certificate", "--keystore", keystore, "--store-password", password)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", "admin", "--", "nuocmd", "show", "certificate", "--keystore", keystore, "--store-password", password)
 	output = testlib.RemoveEmptyLines(output)
 	matches = testlib.RemoveEmptyLines(matches)
 

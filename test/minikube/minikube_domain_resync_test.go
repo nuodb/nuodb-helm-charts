@@ -30,7 +30,7 @@ import (
 func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (archiveVolumeClaims map[string]int) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
 	require.NoError(t, err, output)
 
@@ -57,7 +57,7 @@ func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (a
 			// check that PVC exists
 			k8s.RunKubectl(t, options, "get", "pvc", claimName)
 			// add mapping of PVC to archive ID
-			output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+			output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 				"nuocmd", "get", "value", "--key", "archiveVolumeClaims/"+claimName)
 			require.NoError(t, err)
 
@@ -157,26 +157,26 @@ func TestReprovisionAdmin0(t *testing.T) {
 
 	// check initial membership on admin-0
 	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "server-config", "--this-server")
 	require.NoError(t, err, output)
 	checkInitialMembership(t, output, 2)
 
 	// check initial membership on admin-1
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--",
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "server-config", "--this-server")
 	require.NoError(t, err, output)
 	checkInitialMembership(t, output, 2)
 
 	// store a value in the KV store via admin-0
-	k8s.RunKubectl(t, options, "exec", admin0, "--",
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "-c", "admin", "--",
 		"nuocmd", "set", "value", "--key", "testKey", "--value", "0", "--unconditional")
 
 	// save the original Pod object
 	originalPod := k8s.GetPod(t, options, admin0)
 
 	// delete Raft data and Pod for admin-0
-	k8s.RunKubectl(t, options, "exec", admin0, "--",
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
 		"bash", "-c", "rm $NUODB_VARDIR/raftlog")
 	k8s.RunKubectl(t, options, "delete", "pod", admin0)
 
@@ -185,19 +185,19 @@ func TestReprovisionAdmin0(t *testing.T) {
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	// make sure admin0 rejoins
-	k8s.RunKubectl(t, options, "exec", admin1, "--",
+	k8s.RunKubectl(t, options, "exec", admin1, "-c", "admin", "--",
 		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "2", "--check-leader", "--timeout", "300")
-	k8s.RunKubectl(t, options, "exec", admin0, "--",
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "2", "--check-leader", "--timeout", "300")
 
 	// conditionally update value in the KV store via admin-0; if admin-0
 	// rejoined with admin-1 rather than bootstrapping a new domain, then it
 	// should have the current value
-	k8s.RunKubectl(t, options, "exec", admin0, "--",
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "set", "value", "--key", "testKey", "--value", "1", "--expected-value", "0")
 
 	// conditionally update value in the KV store via admin-1
-	k8s.RunKubectl(t, options, "exec", admin1, "--",
+	k8s.RunKubectl(t, options, "exec", admin1, "-c", "admin", "--",
 		"nuocmd", "set", "value", "--key", "testKey", "--value", "2", "--expected-value", "1")
 }
 
@@ -225,7 +225,7 @@ func TestAdminScaleDown(t *testing.T) {
 
 	// wait for scaled-down Admin to show as "Disconnected"
 	testlib.Await(t, func() bool {
-		output, _ := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+		output, _ := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--",
 			"nuocmd", "show", "domain", "--server-format", "{id} {connected_state}")
 		return strings.Contains(output, admin1+" Disconnected") || strings.Contains(output, admin1+" Evicted")
 	}, 300*time.Second)
@@ -235,7 +235,7 @@ func TestAdminScaleDown(t *testing.T) {
 
 	// make sure 'nuocmd check servers --check-active --check-connected
 	// --check-leader' fails due to admin1 being disconnected
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "check", "servers", "--check-active", "--check-connected", "--check-leader")
 	require.Error(t, err, output)
 	require.Contains(t, output, fmt.Sprintf("Servers not CONNECTED to %s: %s", admin0, admin1))
@@ -249,28 +249,28 @@ func TestAdminScaleDown(t *testing.T) {
 		testlib.AwaitPodUp(t, namespaceName, admin0, 30*time.Second)
 
 		// invoke 'nuocmd check server' directly
-		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--",
 			"nuocmd", "check", "server", "--check-active", "--check-connected", "--check-converged")
 		require.NoError(t, err, output)
 		require.Empty(t, strings.TrimSpace(output))
 	}
 
 	// commit a Raft command to confirm that remaining Admin has consensus
-	k8s.RunKubectl(t, options, "exec", admin0, "--",
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "set", "value", "--key", "testKey", "--value", "testValue", "--unconditional")
 
 	// admin1 is still in membership, though it is excluded from consensus;
 	// delete PVC to cause it to be completely removed from the membership;
 	// this should allow the Admin health-check to succeed
 	k8s.RunKubectl(t, options, "delete", "pvc", "raftlog-"+admin1)
-	k8s.RunKubectl(t, options, "exec", admin0, "--",
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "1", "--check-leader", "--timeout", "300")
 
 	// scale up Admin StatefulSet and make sure admin1 rejoins
 	k8s.RunKubectl(t, options, "scale", "statefulset", adminStatefulSet, "--replicas=2")
-	k8s.RunKubectl(t, options, "exec", admin0, "--",
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "2", "--check-leader", "--timeout", "300")
-	k8s.RunKubectl(t, options, "exec", admin1, "--",
+	k8s.RunKubectl(t, options, "exec", admin1, "-c", "admin", "--",
 		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "2", "--check-leader", "--timeout", "300")
 }
 
@@ -388,7 +388,7 @@ func TestLoadBalancerConfigurationFullResync(t *testing.T) {
 
 	// Configure one manual policy
 	// It should be deleted after next resync
-	k8s.RunKubectl(t, k8s.NewKubectlOptions("", "", namespaceName), "exec", admin0, "--",
+	k8s.RunKubectl(t, k8s.NewKubectlOptions("", "", namespaceName), "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "set", "load-balancer", "--policy-name", "manual", "--lb-query", "random(any)")
 
 	// Wait for at least two triggered LB syncs and check expected configuration

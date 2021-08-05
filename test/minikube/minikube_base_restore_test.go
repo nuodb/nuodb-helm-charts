@@ -20,13 +20,13 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-func verifyPacketFetch(t *testing.T, namespaceName string, admin0 string) {
+func verifyPacketFetch(t *testing.T, namespaceName string, adminPod string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
 	// verify the container can actually download the file from the internet
 	start := time.Now()
 	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions,
-		"exec", admin0, "--",
+		"exec", adminPod, "-c", "admin", "--",
 		"bash", "-c",
 		fmt.Sprintf("curl -k %s | tar tzf - ", testlib.IMPORT_ARCHIVE_URL),
 	)
@@ -305,7 +305,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 
 	moveArchiveData := func(podName string) {
 		// Move the archive data which will cause the SM to ASSERT when an atom needs to be loaded
-		k8s.RunKubectl(t, kubectlOptions, "exec", podName, "--",
+		k8s.RunKubectl(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
 			"mv", "-f", "/var/opt/nuodb/archive/nuodb/demo", "/var/opt/nuodb/archive/nuodb/demo-moved")
 		testlib.RunSQL(t, namespaceName, admin0, "demo", "select * from system.nodes")
 		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 30*time.Second)
@@ -317,9 +317,11 @@ func TestKubernetesAutoRestore(t *testing.T) {
 		moveArchiveData(hcSmPodName0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 		// HC SM should restore the archive from the latest backup
-		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
-			fmt.Sprintf("Finished restoring /var/opt/nuodb/backup/%s to /var/opt/nuodb/archive/nuodb/demo", backupset),
-			&corev1.PodLogOptions{}), 1)
+
+		expectedLine := fmt.Sprintf("Finished restoring /var/opt/nuodb/backup/%s to /var/opt/nuodb/archive/nuodb/demo", backupset)
+
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0, expectedLine, &corev1.PodLogOptions{}),
+			1, fmt.Sprintf("Expected line [%s] not found in logs from pod %s", expectedLine, hcSmPodName0))
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	})
 
