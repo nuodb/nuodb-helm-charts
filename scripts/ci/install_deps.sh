@@ -15,7 +15,10 @@ wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
 if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
-    # Download minikube.
+  sudo apt-get update
+  sudo apt-get install -y conntrack
+
+  # Download minikube.
   curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
   mkdir -p "$HOME"/.kube "$HOME"/.minikube
   touch "$KUBECONFIG"
@@ -25,8 +28,10 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   sudo chown -R $USER: $HOME/.minikube/
   kubectl cluster-info
 
+  sudo chmod 700 $HOME/.kube/config
+
   # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
-  # after pods have been re-created which causes problems with inter pod communicataion.
+  # after pods have been re-created which causes problems with inter pod communication.
   # Set CoreDNS TTL to 0 so that DNS entries are not cached. 
   kubectl get cm coredns -n kube-system -o yaml | sed -e 's/ttl [0-9]*$/ttl 0/' | kubectl apply -n kube-system -f -
   kubectl delete pods -l k8s-app=kube-dns -n kube-system
