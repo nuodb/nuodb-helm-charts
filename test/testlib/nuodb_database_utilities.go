@@ -308,7 +308,7 @@ func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName s
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	// check archives
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName)
 	require.NoError(t, err, output)
 
@@ -317,7 +317,7 @@ func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName s
 	require.Equal(t, numExpected, len(archives), output)
 
 	// check removed archives
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName, "--removed")
 	require.NoError(t, err, output)
 
@@ -488,7 +488,7 @@ func RunOnNuoDBVersionCondition(t *testing.T, condition string, actionFunc func(
 
 func GetDatabaseProcessesE(t *testing.T, namespaceName string, adminPod string, dbName string) (processes []NuoDBProcess, err error) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "processes", "--db-name", dbName)
 	if err != nil {
 		return nil, err

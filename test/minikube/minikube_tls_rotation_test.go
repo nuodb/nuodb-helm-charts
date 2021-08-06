@@ -127,7 +127,8 @@ func TestKubernetesTLSRotation(t *testing.T) {
 
 	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
 
-	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "--show-json", "get", "certificate-info")
+	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", 
+		"nuocmd", "--show-json", "get", "certificate-info")
 	require.NoError(t, err)
 
 	t.Run("verifyAdminCertificates", func(t *testing.T) {

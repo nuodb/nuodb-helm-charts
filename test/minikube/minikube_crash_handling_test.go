@@ -161,7 +161,7 @@ func TestPermanentLossOfAdmin(t *testing.T) {
 func GetAdminOfEnginePodE(t *testing.T, namespaceName string, admin0 string, podName string) (string, error) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
 
 	require.NoError(t, err, output)

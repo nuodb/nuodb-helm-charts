@@ -175,7 +175,7 @@ func StartAdminCustomRelease(t *testing.T, options *helm.Options, replicaCount i
 
 func GetLoadBalancerPoliciesE(t *testing.T, namespaceName string, adminPod string) (map[string]NuoDBLoadBalancerPolicy, error) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "load-balancers")
 	if err == nil {
 		err, policiesMap := UnmarshalLoadBalancerPolicies(output)
@@ -186,7 +186,7 @@ func GetLoadBalancerPoliciesE(t *testing.T, namespaceName string, adminPod strin
 
 func GetLoadBalancerConfigE(t *testing.T, namespaceName string, adminPod string) ([]NuoDBLoadBalancerConfig, error) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "load-balancer-config")
 	if err == nil {
 		err, configs := UnmarshalLoadBalancerConfigs(output)
@@ -227,7 +227,7 @@ func ApplyNuoDBLicense(t *testing.T, namespace string, adminPod string) {
 
 func GetDomainServersE(t *testing.T, namespace string, adminPod string) (map[string]NuoDBServer, error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "servers")
 	if err == nil {
 		err, servers := UnmarshalDomainServers(output)
@@ -259,13 +259,15 @@ func AwaitDomainLeader(t *testing.T, namespace string, adminPod string, timeout 
 }
 
 func AwaitServerState(t *testing.T, namespace string, adminPod string,
-	serverId string, expectedState string, timeout time.Duration) {
+	serverId string, expectedState string, evicted bool, timeout time.Duration) {
 	Await(t, func() bool {
 		servers, err := GetDomainServersE(t, namespace, adminPod)
 		if err != nil {
 			return false
 		}
-		if server, ok := servers[serverId]; ok && server.ConnectedState.State == expectedState {
+		if server, ok := servers[serverId]; ok &&
+			server.ConnectedState.State == expectedState &&
+			server.IsEvicted == evicted {
 			return true
 		}
 		return false

@@ -26,11 +26,10 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 )
 
-
 func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (archiveVolumeClaims map[string]int) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "processes", "--db-name", "demo")
 	require.NoError(t, err, output)
 
@@ -157,13 +156,13 @@ func TestReprovisionAdmin0(t *testing.T) {
 
 	// check initial membership on admin-0
 	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "server-config", "--this-server")
 	require.NoError(t, err, output)
 	checkInitialMembership(t, output, 2)
 
 	// check initial membership on admin-1
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "--",
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "server-config", "--this-server")
 	require.NoError(t, err, output)
 	checkInitialMembership(t, output, 2)
@@ -290,7 +289,6 @@ func TestDomainResync(t *testing.T) {
 	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-
 
 	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 		SetValues: map[string]string{

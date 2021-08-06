@@ -312,13 +312,18 @@ func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
 	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
 	admin0 := fmt.Sprintf("%s-0", admin)
 
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_ADMIN, t, func() {
+		k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
+		testlib.DescribePods(t, namespaceName, admin)
+	})
+
 	// scale down the APs to 2; KAA will automatically evict the shut down AP
 	k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", admin, "--replicas=2")
 	testlib.AwaitServerState(
-		t, namespaceName, admin0, fmt.Sprintf("%s-2", admin), "Disconnected", 30*time.Second)
+		t, namespaceName, admin0, fmt.Sprintf("%s-2", admin), "Disconnected", true, 60*time.Second)
 	testlib.AwaitNrReplicasReady(t, namespaceName, admin, 2)
 	// restart the current leader to bounce it
-	leader := testlib.AwaitDomainLeader(t, namespaceName, admin0, 20*time.Second)
+	leader := testlib.AwaitDomainLeader(t, namespaceName, admin0, 60*time.Second)
 	testlib.DeletePod(t, namespaceName, "pod/"+leader)
 	testlib.AwaitNrReplicasScheduled(t, namespaceName, leader, 1)
 	testlib.AwaitPodUp(t, namespaceName, leader, 90*time.Second)

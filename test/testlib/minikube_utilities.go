@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -36,6 +37,9 @@ var diagnosticTeardownLists = make(map[string][]func())
 
 /** Exported var - initialised from the EnvVar, but can be reset in code if desired */
 var AlwaysRunDiagnosticTeardowns = strings.EqualFold(os.Getenv(ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS), "true")
+
+/** Used to wait for all async calls of GetAppLog() routine to finish before the test finishes */
+var appLogCollectorsWg sync.WaitGroup
 
 /**
  * add a teardown function to the named list - for deferred execution.
@@ -173,6 +177,8 @@ func VerifyTeardown(t *testing.T) {
 	}
 
 	require.Equal(t, 0, len(uncleared), "Error - %d teardownLists were left uncleared: %s", len(uncleared), uncleared)
+	t.Log("Waiting for all logging collectors to finish")
+	appLogCollectorsWg.Wait()
 }
 
 func standardizeSpaces(s string) string {
@@ -649,7 +655,8 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) *DBVersion {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "--show-json", "get", "databases")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", "admin", "--",
+		"nuocmd", "--show-json", "get", "databases")
 	require.NoError(t, err)
 
 	err, databases := UnmarshalDatabase(output)
@@ -830,11 +837,11 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 		_, err = fmt.Fprintln(writer, event)
 		require.NoError(t, err)
 	}
-
-	t.Log("Fully consumed k8s event log")
 }
 
 func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string, podLogOptions *corev1.PodLogOptions) string {
+	defer appLogCollectorsWg.Done()
+	appLogCollectorsWg.Add(1)
 	dirPath := filepath.Join(RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName+fileNameSuffix+".log")
 
@@ -1103,7 +1110,6 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 	}
 }
 
-
 func GetStatefulSets(t *testing.T, namespaceName string) *v1.StatefulSetList {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
@@ -1130,7 +1136,7 @@ func DeletePVC(t *testing.T, namespaceName string, name string) {
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).Delete(context.TODO(), name, metav1.DeleteOptions{})
- 	require.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func ScaleStatefulSet(t *testing.T, namespaceName string, name string, replicas int) {
