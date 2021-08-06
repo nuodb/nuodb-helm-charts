@@ -25,7 +25,7 @@ parameters:
   run_single_test_requires_aks:
     default: false
     type: boolean
-  run_single_test_suite_timeout:
+  run_single_test_timeout:
     default: '120m'
     type: string
 orbs:
