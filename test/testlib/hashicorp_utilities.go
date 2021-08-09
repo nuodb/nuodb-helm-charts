@@ -118,7 +118,7 @@ func EnableVaultKubernetesIntegration(t *testing.T, namespaceName string, vaultN
 		token_reviewer_jwt="$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)" \
 		kubernetes_host="https://${KUBERNETES_PORT_443_TCP_ADDR}:443" \
 		kubernetes_ca_cert=@/var/run/secrets/kubernetes.io/serviceaccount/ca.crt \
-		disable_iss_validation=true`)
+		disable_iss_validation=true`) //https://github.com/hashicorp/vault-helm/issues/562 and https://github.com/hashicorp/vault/issues/11953
 
 	// give permissions to test namespace
 	namespaces := fmt.Sprintf("bound_service_account_namespaces=%s", namespaceName)
