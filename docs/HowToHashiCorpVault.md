@@ -103,6 +103,10 @@ $ vault write auth/kubernetes/role/nuodb \
    ttl=1h
 ```
 
+> **NOTE**: At the time of writing, HashiCorp vault (v1.8.1) requires additional steps when running in Kubernetes 1.21 or newer.
+> For more info read [HC Vault Bug #11953](https://github.com/hashicorp/vault/issues/11953) and [HC Vault Helm Chart Bug #562](https://github.com/hashicorp/vault-helm/issues/562).
+> For test and dev environments, NuoDB recommends setting `disable_iss_validation=true`.
+
 ### Create a NuoDB Secrets Engine
 
 The final step is to create a [Secrets KV Engine](https://www.vaultproject.io/docs/secrets/kv/index.html) to store the NuoDB keys.
