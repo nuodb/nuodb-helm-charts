@@ -26,7 +26,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 )
 
-
 func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (archiveVolumeClaims map[string]int) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
@@ -290,7 +289,6 @@ func TestDomainResync(t *testing.T) {
 	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-
 
 	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 		SetValues: map[string]string{

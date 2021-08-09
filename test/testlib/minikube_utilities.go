@@ -16,6 +16,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -39,6 +40,9 @@ var diagnosticTeardownLists = make(map[string][]func())
 
 /** Exported var - initialised from the EnvVar, but can be reset in code if desired */
 var AlwaysRunDiagnosticTeardowns = strings.EqualFold(os.Getenv(ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS), "true")
+
+/** Used to wait for all async calls of GetAppLog() routine to finish before the test finishes */
+var appLogCollectorsWg sync.WaitGroup
 
 /**
  * add a teardown function to the named list - for deferred execution.
@@ -176,6 +180,8 @@ func VerifyTeardown(t *testing.T) {
 	}
 
 	require.Equal(t, 0, len(uncleared), "Error - %d teardownLists were left uncleared: %s", len(uncleared), uncleared)
+	t.Log("Waiting for all logging collectors to finish")
+	appLogCollectorsWg.Wait()
 }
 
 func standardizeSpaces(s string) string {
@@ -833,11 +839,11 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 		_, err = fmt.Fprintln(writer, event)
 		require.NoError(t, err)
 	}
-
-	t.Log("Fully consumed k8s event log")
 }
 
 func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix string, podLogOptions *corev1.PodLogOptions) string {
+	defer appLogCollectorsWg.Done()
+	appLogCollectorsWg.Add(1)
 	dirPath := filepath.Join(RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, podName+fileNameSuffix+".log")
 

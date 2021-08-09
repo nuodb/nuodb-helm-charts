@@ -2,6 +2,32 @@
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2.1
+parameters:
+  run_build:
+    default: true
+    type: boolean
+  # it's not possible to trigger a single job using API 2.1 so use pipeline
+  # parameters and conditional workflow -
+  # https://discuss.circleci.com/t/how-to-trigger-the-single-job-in-circleci-2-1/27238
+  # https://support.circleci.com/hc/en-us/articles/360050351292-How-to-trigger-a-workflow-via-CircleCI-API-v2
+  run_single_test:
+    default: ''
+    type: string
+  run_single_test_suite:
+    default: './test/minikube/*'
+    type: string
+  run_single_test_repeat:
+    default: 0
+    type: integer
+  run_single_test_requires_minikube:
+    default: true
+    type: boolean
+  run_single_test_requires_aks:
+    default: false
+    type: boolean
+  run_single_test_timeout:
+    default: '120m'
+    type: string
 orbs:
   azure-cli: circleci/azure-cli@1.1.0
 jobs:
@@ -10,6 +36,11 @@ jobs:
       test-suite:
         description: |
           Terratest suites to be included in the path.
+        type: string
+      test-case:
+        default: ''
+        description: |
+          Run only those tests matching the regular expression.
         type: string
       tag:
         default: ''
@@ -21,6 +52,11 @@ jobs:
         description: |
           Go test timeout.
         type: string
+      repeat:
+        default: 0
+        description: |
+          Run each test n times or until failure (default: does not repeat).
+        type: integer
       requires-minikube:
         default: false
         description: |
@@ -89,15 +125,24 @@ jobs:
           name: Run the tests
           command: |
             TEST_SUITE="<< parameters.test-suite >>"
+            TEST_CASE="<< parameters.test-case >>"
             TEST_TAG="<< parameters.tag >>"
             TEST_TIMEOUT="<< parameters.timeout >>"
+            TEST_REPEAT="<< parameters.repeat >>"
             set -- "$@" ${TEST_SUITE}
             if [ -n "${TEST_TAG}" ]; then
               set -- "$@" -tags=${TEST_TAG}
             fi
+            if [ -n "${TEST_CASE}" ]; then
+              set -- "$@" -run="${TEST_CASE}"
+            fi
+            if [ "${TEST_REPEAT}" -gt "0" ]; then
+              set -- "$@" -count=${TEST_REPEAT} -failfast
+            fi
             mkdir -p $TEST_RESULTS # create the test results directory
             go clean -testcache
-            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@"
+            echo "Running with Go arguments: $@"
+            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@" 
           no_output_timeout: 60m
 
       - save_cache: # store unique cache for each test suite and tag combination
@@ -117,6 +162,7 @@ jobs:
 workflows:
   version: 2
   build:
+    when: << pipeline.parameters.run_build >>
     # jobs are run in parallel by default, so any dependencies must be explicitly requires
     jobs:
       - go-test:
@@ -153,3 +199,15 @@ workflows:
           name: "Multi-cluster tests"
           test-suite: "./test/multicluster"
           requires-aks: true
+  # Executes single Go test (disabled by default)
+  single-test:
+    when: << pipeline.parameters.run_single_test >>
+    jobs:
+      - go-test:
+          name: "Test: << pipeline.parameters.run_single_test >>"
+          test-case: << pipeline.parameters.run_single_test >>
+          test-suite: << pipeline.parameters.run_single_test_suite >>
+          timeout: << pipeline.parameters.run_single_test_timeout >>
+          repeat: << pipeline.parameters.run_single_test_repeat >>
+          requires-minikube: << pipeline.parameters.run_single_test_requires_minikube >>
+          requires-aks: << pipeline.parameters.run_single_test_requires_aks >>
