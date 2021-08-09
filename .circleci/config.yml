@@ -45,7 +45,7 @@ jobs:
     machine:
       image: ubuntu-1604:202007-01
 
-    resource_class: resource-class
+    resource_class: <<parameters.resource-class>>
 
     environment:
       HELM_VERSION: "v3.6.3"
