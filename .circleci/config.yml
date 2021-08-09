@@ -76,6 +76,7 @@ jobs:
             export REQUIRES_MINIKUBE="<< parameters.requires-minikube >>"
             export REQUIRES_MINISHIFT="<< parameters.requires-minishift >>"
             export REQUIRES_AKS="<< parameters.requires-aks >>"
+            export MINIKUBE_SIZE="<<parameters.resource-class>>"
             export KUBECONFIG="$HOME/.kube/config"
             export MINIKUBE_HOME="$HOME"
             chmod a+x scripts/ci/*.sh
