@@ -233,7 +233,7 @@ func ApplyNuoDBLicense(t *testing.T, namespace string, adminPod string) {
 
 func GetDomainServersE(t *testing.T, namespace string, adminPod string) (map[string]NuoDBServer, error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "servers")
 	if err == nil {
 		err, servers := UnmarshalDomainServers(output)
@@ -265,13 +265,15 @@ func AwaitDomainLeader(t *testing.T, namespace string, adminPod string, timeout 
 }
 
 func AwaitServerState(t *testing.T, namespace string, adminPod string,
-	serverId string, expectedState string, timeout time.Duration) {
+	serverId string, expectedState string, evicted bool, timeout time.Duration) {
 	Await(t, func() bool {
 		servers, err := GetDomainServersE(t, namespace, adminPod)
 		if err != nil {
 			return false
 		}
-		if server, ok := servers[serverId]; ok && server.ConnectedState.State == expectedState {
+		if server, ok := servers[serverId]; ok &&
+			server.ConnectedState.State == expectedState &&
+			server.IsEvicted == evicted {
 			return true
 		}
 		return false
