@@ -281,7 +281,7 @@ func BackupDatabase(t *testing.T, namespaceName string, podName string,
 	databaseName string, backupType string, backupGroup string) string {
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, opts,
-		"exec", podName, "--",
+		"exec", podName, "-c", "engine", "--",
 		"nuobackup", "--type", backupType, "--db-name", databaseName,
 		"--group", backupGroup, "--backup-root", "/var/opt/nuodb/backup",
 		"--timeout", "300",
@@ -295,7 +295,7 @@ func GetLatestBackup(t *testing.T, namespaceName string, podName string,
 	databaseName string, backupGroup string) string {
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	backupset, err := k8s.RunKubectlAndGetOutputE(t, opts,
-		"exec", podName, "--", "bash", "-c",
+		"exec", podName, "-c", "engine", "--", "bash", "-c",
 		"nuobackup --type report-latest --db-name "+databaseName+
 			" --group "+backupGroup+" --backup-root /var/opt/nuodb/backup 2>/dev/null",
 	)
@@ -360,13 +360,13 @@ func CheckRestoreRequests(t *testing.T, namespaceName string, podName string, da
 	legacyRestoreRequest := ""
 	restoreRequest := ""
 	Await(t, func() bool {
-		legacyRestoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+		legacyRestoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "admin", "--",
 			"nuocmd", "get", "value", "--key", fmt.Sprintf("/nuodb/nuosm/database/%s/restore", databaseName))
 		// Legacy restore request is cleared async
 		return err == nil && legacyRestoreRequest == expectedLegacyValue
 	}, 30*time.Second)
 	if IsRestoreRequestSupported(t, namespaceName, podName) {
-		restoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "--",
+		restoreRequest, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "admin", "--",
 			"nuodocker", "get", "restore-requests", "--db-name", databaseName)
 		require.NoError(t, err)
 		require.Equal(t, expectedValue, restoreRequest)

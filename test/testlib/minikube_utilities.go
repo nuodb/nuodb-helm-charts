@@ -608,7 +608,7 @@ func VerifyAdminState(t *testing.T, namespace string, podName string) {
 func AwaitAdminFullyConnected(t *testing.T, namespace string, podName string, numServers int) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "check", "servers",
+	k8s.RunKubectl(t, options, "exec", podName, "-c", "admin", "--", "nuocmd", "check", "servers",
 		"--check-active", "--check-connected", "--check-leader",
 		"--num-servers", strconv.Itoa(numServers),
 		"--timeout", "300")
@@ -655,8 +655,7 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) *DBVersion {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", "admin", "--",
-		"nuocmd", "--show-json", "get", "databases")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", "admin", "--", "nuocmd", "--show-json", "get", "databases")
 	require.NoError(t, err)
 
 	err, databases := UnmarshalDatabase(output)
@@ -716,7 +715,7 @@ func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
 
 func VerifyLicenseFile(t *testing.T, namespace string, podName string, expectedLicense string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "cat", "/etc/nuodb/nuodb.lic")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", "admin", "--", "cat", "/etc/nuodb/nuodb.lic")
 	require.NoError(t, err, "verifyLicenseFile: exec cat nuodb.lic")
 	require.Equal(t, output, expectedLicense)
 }
@@ -724,7 +723,7 @@ func VerifyLicenseFile(t *testing.T, namespace string, podName string, expectedL
 func VerifyLicenseIsCommunity(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "nuocmd", "show", "domain")
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", "-c", "admin", podName, "--", "nuocmd", "show", "domain")
 	require.NoError(t, err)
 	require.True(t, strings.Contains(output, "server license: Community"), output)
 }
@@ -1068,7 +1067,7 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 	// verify the KV store can write and read in a reasonable time
 	start := time.Now()
 	output, err := k8s.RunKubectlAndGetOutputE(t, options,
-		"exec", podName, "--", "nuocmd", "set", "value", "--key", "test/minikube", "--value", "testVal", "--unconditional",
+		"exec", podName, "-c", "admin", "--", "nuocmd", "set", "value", "--key", "test/minikube", "--value", "testVal", "--unconditional",
 	)
 	require.NoError(t, err, "Could not set KV value")
 	elapsed := time.Since(start)
@@ -1078,7 +1077,7 @@ func VerifyAdminKvSetAndGet(t *testing.T, podName string, namespaceName string) 
 
 	start = time.Now()
 	output, err = k8s.RunKubectlAndGetOutputE(t, options,
-		"exec", podName, "--", "nuocmd", "get", "value", "--key", "test/minikube",
+		"exec", podName, "-c", "admin", "--", "nuocmd", "get", "value", "--key", "test/minikube",
 	)
 	require.NoError(t, err, "Could not get KV value")
 	elapsed = time.Since(start)

@@ -139,7 +139,7 @@ spec:
             command: [ "readinessprobe" ]
           failureThreshold: 30
           successThreshold: 2
-          timeoutSeconds: {{ default 1 .Values.admin.readinessTimeoutSeconds }}
+          timeoutSeconds: {{ default 5 .Values.admin.readinessTimeoutSeconds }}
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb

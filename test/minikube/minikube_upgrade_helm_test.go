@@ -24,7 +24,9 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, updateOptions *Updat
 	defer testlib.VerifyTeardown(t)
 
 	options := &helm.Options{
-		SetValues: map[string]string{},
+		SetValues: map[string]string{
+			"admin.readinessTimeoutSeconds": "5",
+		},
 		Version:   fromHelmVersion,
 	}
 	testlib.InferVersionFromTemplate(t, options)
@@ -71,6 +73,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, updateOptions *Up
 
 	options := &helm.Options{
 		SetValues: map[string]string{
+			"admin.readinessTimeoutSeconds": "5",
 			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": "250Mi",
 			"database.te.resources.requests.cpu":    "250m",

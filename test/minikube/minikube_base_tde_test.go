@@ -53,7 +53,7 @@ func performStoragePasswordsRotation(t *testing.T, namespaceName string, adminPo
 	applyStoragePasswordSecret(t, namespaceName, secretName, passwords)
 	testlib.Await(t, func() bool {
 		err := k8s.RunKubectlE(t, kubectlOptions,
-			"exec", adminPod, "--",
+			"exec", adminPod, "-c", "admin",  "--",
 			"nuocmd", "check", "data-encryption",
 			"--db-name", dbName,
 			"--password", passwords[0],
@@ -101,7 +101,7 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 			"Successfully updated storage passwords for dbName=demo", &corev1.PodLogOptions{}) >= 1
 	}, 30*time.Second)
 	k8s.RunKubectl(t, kubectlOptions,
-		"exec", admin0, "--",
+		"exec", admin0, "-c", "admin", "--",
 		"nuocmd", "check", "data-encryption",
 		"--db-name", opt.DbName,
 		"--password", password,
@@ -171,7 +171,7 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 			"Successfully updated storage passwords for dbName=demo", &corev1.PodLogOptions{}) >= 1
 	}, 30*time.Second)
 	k8s.RunKubectl(t, kubectlOptions,
-		"exec", admin0, "--",
+		"exec", admin0, "-c", "admin", "--",
 		"nuocmd", "check", "data-encryption",
 		"--db-name", opt.DbName,
 		"--password", password,
