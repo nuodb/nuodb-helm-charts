@@ -128,6 +128,7 @@ func TestKubernetesTLS(t *testing.T) {
 }
 
 func TestHashiCorpVault(t *testing.T) {
+	t.Skip("CircleCI K8s nodes do not have enough CPU to run Vault+admin")
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
