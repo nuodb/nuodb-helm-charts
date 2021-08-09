@@ -30,6 +30,9 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const NAMESPACE_NAME_PREFIX = "test"
+const NAMESPACE_RETENTION_PERIOD = 5 * time.Hour
+
 /** Lists of the teardown and diagnostic teardown funcs */
 var teardownLists = make(map[string][]func())
 var diagnosticTeardownLists = make(map[string][]func())
@@ -1103,6 +1106,14 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 	}
 }
 
+func GetNamespaces(t *testing.T) []corev1.Namespace {
+	clientset, err := k8s.GetKubernetesClientE(t)
+	require.NoError(t, err)
+	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
+	require.NoError(t, err)
+
+	return namespaces.Items
+}
 
 func GetStatefulSets(t *testing.T, namespaceName string) *v1.StatefulSetList {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
@@ -1130,7 +1141,7 @@ func DeletePVC(t *testing.T, namespaceName string, name string) {
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).Delete(context.TODO(), name, metav1.DeleteOptions{})
- 	require.NoError(t, err)
+	require.NoError(t, err)
 }
 
 func ScaleStatefulSet(t *testing.T, namespaceName string, name string, replicas int) {
@@ -1189,4 +1200,16 @@ func FindAllStatefulSets(t *testing.T, namespaceName string) NuoDBStatefulSets {
 	}
 
 	return sets
+}
+
+func RemoveOrphanNamespaces(t *testing.T) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", "")
+	for _, namespace := range GetNamespaces(t) {
+		if strings.HasPrefix(namespace.Name, NAMESPACE_NAME_PREFIX) &&
+			namespace.CreationTimestamp.DeepCopy().Add(NAMESPACE_RETENTION_PERIOD).Before(time.Now()) {
+			t.Logf("Deleting namespace name=%s, created=%s",
+				namespace.Name, namespace.CreationTimestamp.String())
+			k8s.DeleteNamespace(t, kubectlOptions, namespace.Name)
+		}
+	}
 }

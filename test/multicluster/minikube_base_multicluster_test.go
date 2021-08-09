@@ -22,6 +22,35 @@ func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseN
 	require.True(t, strings.Contains(output, "Transaction"))
 }
 
+func TestKubernetesRemoveOrphanNamespaces(t *testing.T) {
+	// Golang 1.4+ provides TestMain() function hook which can be used to
+	// execute setup/teardown tasks, however, it receives a *testing.M instance
+	// and all methods in our test framework rely on passing *testing.T
+	// instance. Execute this cleanup tasks as separate test case for simplicity
+	// as it's only needed in multi-cluster infrastructure.
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	context := context.Background()
+	// Create contexts for all available clusters
+	testlib.NewClusterDeploymentContext(context,
+		&helm.Options{}, testlib.MULTI_CLUSTER_1, testlib.MULTI_CLUSTER_1)
+	testlib.NewClusterDeploymentContext(context,
+		&helm.Options{}, testlib.MULTI_CLUSTER_2, testlib.MULTI_CLUSTER_1)
+
+	defer testlib.Teardown(testlib.TEARDOWN_MULTICLUSTER)
+
+	// Sometimes when previous test job is canceled in CircleCI the testing
+	// teardown logic is not executed which leaves orphan test pods in the
+	// shared Kubernetes cluster. Remove any long-running test namespaces from
+	// all clusters in multi-cluster setup.
+	testlib.ExecuteInAllClusters(t, func(context *testlib.ClusterDeploymentContext) {
+		t.Logf("Removing orphan namespaces in cluster name=%s, context=%s",
+			context.ThisCluster.Name, context.ThisCluster.Context)
+		testlib.RemoveOrphanNamespaces(t)
+	})
+}
+
 func TestKubernetesBasicMultiCluster(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
@@ -34,7 +63,7 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 	// - the same admin Helm release should be used in all cluster (probably something to fix)
 	randomSuffix := strings.ToLower(random.UniqueId())
 	adminReleaseName := fmt.Sprintf("admin-%s", randomSuffix)
-	namespaceName := fmt.Sprintf("kubernetesbasicmulticluster-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%skubernetesbasicmulticluster-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 
 	options := helm.Options{
 		SetValues: map[string]string{
