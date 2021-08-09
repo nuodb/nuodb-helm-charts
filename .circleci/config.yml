@@ -72,9 +72,16 @@ jobs:
         description: |
           The test suite requires that Azure AKS cluster to be available.
         type: boolean
+      resource-class:
+        default: 'medium'
+        description: |
+          CircleCI instance size
+        type: string
 
     machine:
       image: ubuntu-1604:202007-01
+
+    resource_class: <<parameters.resource-class>>
 
     environment:
       HELM_VERSION: "v3.6.3"
@@ -182,6 +189,12 @@ workflows:
           test-suite: "./test/minikube"
           tag: "upgrade"
           requires-minikube: true
+      - go-test:
+          name: "Large Instance Tests"
+          test-suite: "./test/minikube"
+          tag: "large"
+          requires-minikube: true
+          resource-class: large
       - go-test:
           name: "Multi-cluster tests"
           test-suite: "./test/multicluster"
