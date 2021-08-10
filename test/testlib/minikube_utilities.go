@@ -1212,7 +1212,7 @@ func RemoveOrphanNamespaces(t *testing.T) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", "")
 	for _, namespace := range GetNamespaces(t) {
 		if strings.HasPrefix(namespace.Name, NAMESPACE_NAME_PREFIX) &&
-			namespace.CreationTimestamp.DeepCopy().Add(NAMESPACE_RETENTION_PERIOD).Before(time.Now()) {
+			namespace.CreationTimestamp.Add(NAMESPACE_RETENTION_PERIOD).Before(time.Now()) {
 			t.Logf("Deleting namespace name=%s, created=%s",
 				namespace.Name, namespace.CreationTimestamp.String())
 			k8s.DeleteNamespace(t, kubectlOptions, namespace.Name)
