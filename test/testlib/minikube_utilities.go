@@ -357,6 +357,25 @@ func Await(t *testing.T, lmbd func() bool, timeout time.Duration) {
 	}
 }
 
+func AwaitWithError(t *testing.T, lmbd func() bool, timeout time.Duration) error {
+	now := time.Now()
+	for timeExpired := time.After(timeout); ; {
+		select {
+		case <-timeExpired:
+			return errors.New(fmt.Sprintf("Function %s timed out\nFull stack trace of caller:\n%s\nfunction call timed out after %f seconds. Start of await was '%s'",
+				runtime.FuncForPC(reflect.ValueOf(lmbd).Pointer()).Name(),
+				string(debug.Stack()),
+				timeout.Seconds(), now))
+		default:
+			if lmbd() {
+				return nil
+			}
+
+			time.Sleep(1 * time.Second)
+		}
+	}
+}
+
 func AwaitTillerUp(t *testing.T) {
 	version, err := helm.RunHelmCommandAndGetOutputE(t, &helm.Options{}, "version", "--short")
 	require.NoError(t, err)
