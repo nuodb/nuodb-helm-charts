@@ -180,12 +180,7 @@ func StartDatabaseNoWait(t *testing.T, namespace string, adminPod string, option
 	return StartDatabaseTemplate(t, namespace, adminPod, options, InstallDatabase, false)
 }
 
-type UpgradeDatabaseOptions struct {
-	TePodShouldGetRecreated bool
-	SmPodShouldGetRecreated bool
-}
-
-func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName string, adminPod string, options *helm.Options, upgradeOptions *UpgradeDatabaseOptions) {
+func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName string, adminPod string, options *helm.Options, upgradeOptions *UpgradeOptions) {
 	opt := GetExtractedOptions(options)
 
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
@@ -208,6 +203,8 @@ func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName st
 		_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "show", "archives")
 		_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "show", "database", "--db-name", "demo", "--all-incarnations")
 	})
+
+	SetDeploymentUpgradeStrategyToRecreate(t, namespaceName, fmt.Sprintf("te-%s-nuodb-cluster0-demo", helmChartReleaseName))
 
 	helm.Upgrade(t, options, DATABASE_HELM_CHART_PATH, helmChartReleaseName)
 
