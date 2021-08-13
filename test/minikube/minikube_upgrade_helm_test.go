@@ -117,7 +117,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *t
 	opt := testlib.GetExtractedOptions(options)
 
 	// make sure the DB is properly reconnected before restarting
-	err := testlib.AwaitWithError(t, func() bool {
+	err := testlib.AwaitE(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
 			"Reconnected with process with connectKey",
 			&v12.PodLogOptions{

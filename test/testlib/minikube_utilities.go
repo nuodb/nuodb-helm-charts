@@ -357,7 +357,7 @@ func Await(t *testing.T, lmbd func() bool, timeout time.Duration) {
 	}
 }
 
-func AwaitWithError(t *testing.T, lmbd func() bool, timeout time.Duration) error {
+func AwaitE(t *testing.T, lmbd func() bool, timeout time.Duration) error {
 	now := time.Now()
 	for timeExpired := time.After(timeout); ; {
 		select {
