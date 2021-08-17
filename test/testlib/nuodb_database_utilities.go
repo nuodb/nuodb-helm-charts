@@ -118,6 +118,9 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		if opt.ClusterName == opt.EntrypointClusterName {
 			EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
 			DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
+			// purge all database archives so that multiple database tests can
+			// be executed with a single admin deployment
+			PurgeDatabaseArchives(t, namespaceName, adminPod, opt.DbName)
 		}
 	})
 
@@ -492,4 +495,22 @@ func GetDatabaseProcessesE(t *testing.T, namespaceName string, adminPod string, 
 	}
 	err, processes = Unmarshal(output)
 	return
+}
+
+func PurgeDatabaseArchives(t *testing.T, namespaceName string, adminPod string, dbName string) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
+		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName)
+	require.NoError(t, err, output)
+	err, archives := UnmarshalArchives(output)
+	require.NoError(t, err, output)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
+		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName, "--removed")
+	require.NoError(t, err, output)
+	err, removed := UnmarshalArchives(output)
+	require.NoError(t, err, output)
+	for _, archive := range append(archives, removed...) {
+		k8s.RunKubectl(t, options, "exec", adminPod, "-c", "admin", "--",
+			"nuocmd", "delete", "archive", "--archive-id", strconv.Itoa(archive.Id), "--purge")
+	}
 }
