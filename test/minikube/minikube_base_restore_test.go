@@ -47,28 +47,6 @@ func verifyBackup(t *testing.T, namespaceName string, podName string, databaseNa
 	require.True(t, backupset != "")
 }
 
-func verifyExternalJournal(t *testing.T, namespaceName string, adminPod string,
-	databaseReleaseName string, databaseOptions *helm.Options) {
-	opt := testlib.GetExtractedOptions(databaseOptions)
-	if source, ok := databaseOptions.SetValues["database.autoImport.source"]; ok && source == testlib.IMPORT_ARCHIVE_URL {
-		// verify that the journal content is moved to the external journal dir
-		smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
-		smPodName0 := fmt.Sprintf("%s-hotcopy-0", smPodNameTemplate)
-		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName0,
-			fmt.Sprintf("Moving restored journal content to /var/opt/nuodb/journal/nuodb/%s", opt.DbName),
-			&corev1.PodLogOptions{}), 1)
-		// verify that the database contains the restored data
-		tables, err := testlib.RunSQL(t, namespaceName, adminPod, "demo", "show schema User")
-		require.NoError(t, err, "error running SQL: show schema User")
-		require.True(t, strings.Contains(tables, "HOCKEY"))
-	}
-	// check that archives are created with external journal directory
-	archives, _ := testlib.CheckArchives(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods, 0)
-	for _, archive := range archives {
-		require.Equal(t, fmt.Sprintf("/var/opt/nuodb/journal/nuodb/%s", opt.DbName), archive.JournalPath)
-	}
-}
-
 func TestKubernetesBackupDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
@@ -352,62 +330,5 @@ func TestKubernetesAutoRestore(t *testing.T) {
 		// nonHC SM should remove the archive metadata and SYNC the data from other SM
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
-	})
-}
-
-func TestKubernetesImportDatabaseSeparateJournal(t *testing.T) {
-	testlib.AwaitTillerUp(t)
-	defer testlib.VerifyTeardown(t)
-
-	adminOptions := helm.Options{}
-
-	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
-
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-
-	verifyPacketFetch(t, namespaceName, admin0)
-
-	t.Run("autoImportStream", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-
-		databaseOptions := &helm.Options{
-			SetValues: map[string]string{
-				"database.autoImport.source":              testlib.IMPORT_ARCHIVE_URL,
-				"database.sm.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.sm.hotCopy.journalPath.enabled": "true",
-			},
-		}
-
-		// Install database and check that the journal content of the cold
-		// backup is moved to the target journal location
-		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, databaseOptions)
-		verifyExternalJournal(t, namespaceName, admin0, databaseReleaseName, databaseOptions)
-	})
-
-	t.Run("autoImportBackupset", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-
-		databaseOptions := &helm.Options{
-			SetValues: map[string]string{
-				"database.autoImport.source":              testlib.IMPORT_ARCHIVE_URL,
-				"database.autoImport.type":                "backupset",
-				"database.sm.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.sm.hotCopy.journalPath.enabled": "true",
-			},
-		}
-
-		// Regardless of the specified backup type the journal content should be
-		// moved to the target journal location in case a cold backup is
-		// downloaded
-		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, databaseOptions)
-		verifyExternalJournal(t, namespaceName, admin0, databaseReleaseName, databaseOptions)
 	})
 }
