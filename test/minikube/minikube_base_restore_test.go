@@ -404,8 +404,9 @@ func TestKubernetesImportDatabaseSeparateJournal(t *testing.T) {
 			},
 		}
 
-		// Install database and check that the journal content of the cold
-		// backup is moved to the target journal location
+		// Regardless of the specified backup type the journal content should be
+		// moved to the target journal location in case a cold backup is
+		// downloaded
 		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, databaseOptions)
 		verifyExternalJournal(t, namespaceName, admin0, databaseReleaseName, databaseOptions)
 	})
