@@ -275,12 +275,7 @@ function perform_restore() {
     retval=$?
     log "$status"
 
-    if [ "$download_dir" != "$DB_DIR" ]; then
-      log "removing $download_dir"
-      rm -rf $download_dir
-    fi
-
-    if [ "$SEPARATE_JOURNAL" == "true" ] && [ "$restore_type" == "stream" ]; then
+    if [ "$SEPARATE_JOURNAL" == "true" ] && [ -f "$download_dir/1.atm" ]; then
       # `nuodocker restore archive` doesn't invoke `nuoarchive` on cold archive
       # (stream) restore type. Move the content of the internal journal
       # directory to the external journal path manually as the journal is not
@@ -288,6 +283,11 @@ function perform_restore() {
       log "Moving restored journal content to $JOURNAL_DIR"
       mv "$download_dir/journal/"* "$JOURNAL_DIR"
       chown -R "$(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"')" "$JOURNAL_DIR"
+    fi
+
+    if [ "$download_dir" != "$DB_DIR" ]; then
+      log "removing $download_dir"
+      rm -rf $download_dir
     fi
 
   else
