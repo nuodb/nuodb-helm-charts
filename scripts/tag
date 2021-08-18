@@ -28,7 +28,7 @@ version () {
   echo "Updating Helm chart versions..."
   find stable -type f -name Chart.yaml -exec sed -i "" "s/version: .*/version: ${VERSION}/g" {} \;
   find incubator -type f -name Chart.yaml -exec sed -i "" "s/version: .*/version: ${VERSION}/g" {} \;
-  sed -i "" "s/future-release=.*/future-release=${VERSION}/g" .github_changelog_generator
+  sed -i "" "s/future-release=.*/future-release=${GIT_TAG}/g" .github_changelog_generator
   git add -u
   git commit -m "Release ${VERSION}"
 }
