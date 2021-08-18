@@ -50,7 +50,7 @@ NuoDB supports various key models for TLS keys used by the `NuoDB Admin` and dat
 
 > **NOTE**: For information on how to configure different TLS key models, see [Security Model of NuoDB in Kubernetes](./HowtoTLS.md).
 
-The [Shared Admin Key + Intermediate CA](./docs/HowtoTLS.md#intermediate-ca) model is used by default in NuoDB Kubernetes deployments.
+The [Shared Admin Key + Intermediate CA](./HowtoTLS.md#intermediate-ca) model is used by default in NuoDB Kubernetes deployments.
 This means that the same key pair certificate is used by all APs, a Certificate Authority (CA) is used to sign them and the CA certificate is trusted by all processes in the domain.
 
 If a CA certificate needs to be renewed, then both the keystore and the truststore must be updated for all APs, and by extension, all database processes.
@@ -348,7 +348,8 @@ Since the new key pair certificates must be verified using a new CA certificate,
 Add the new CA certificate to the truststore of all admin and database processes:
 
 ```bash
-kubectl exec -ti admin-nuodb-cluster0-0 -- \
+kubectl exec -ti admin-nuodb-cluster0-0 \
+  --namespace nuodb -- \
   nuocmd add trusted-certificate \
     --alias ca_prime --cert /tmp/ca.cert --timeout 30
 ```
@@ -444,7 +445,8 @@ kubectl cp /tmp/keys/nuocmd.cert nuodb/admin-nuodb-cluster0-0:/tmp/nuocmd.cert
 Add the new certificate to the truststore of all admin and database processes:
 
 ```bash
-kubectl exec -ti admin-nuodb-cluster0-0 -- \
+kubectl exec -ti admin-nuodb-cluster0-0 \
+  --namespace nuodb -- \
   nuocmd add trusted-certificate \
     --alias nuocmd_prime --cert /tmp/nuocmd.cert --timeout 30
 ```
