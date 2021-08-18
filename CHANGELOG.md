@@ -1,5 +1,32 @@
 # Changelog
 
+## [v3.3.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.3.0) (2021-08-18)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.2.0...v3.3.0)
+
+**Implemented enhancements:**
+
+- Added warning when requested backup type does not match target backup set, e.g. stream vs hotcopy [\#240](https://github.com/nuodb/nuodb-helm-charts/pull/240) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Replaced deprecated failure-domain.beta.kubernetes.io/zone label with topology.kubernetes.io/zone in the Transparent Huge Page Chart [\#226](https://github.com/nuodb/nuodb-helm-charts/pull/226) ([mkysel](https://github.com/mkysel))
+- Added a facility to send additional storage manager logs to the admin pod to improve runtime debugging [\#225](https://github.com/nuodb/nuodb-helm-charts/pull/225) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Set default admin setting evictUnknownProcesses=true in admin/values.yaml to handle partial network disconnects between admin and engines gracefully [\#219](https://github.com/nuodb/nuodb-helm-charts/pull/219) ([adriansuarez](https://github.com/adriansuarez))
+- Added the option to mount the Storage Manager journal directory on a different persistent storage volume [\#218](https://github.com/nuodb/nuodb-helm-charts/pull/218) ([mkysel](https://github.com/mkysel))
+- Added functionality to recursively change permissions in admin init container to prevent runtime write permissions errors [\#214](https://github.com/nuodb/nuodb-helm-charts/pull/214) ([adriansuarez](https://github.com/adriansuarez))
+- Override default admin setting thrift.message.max in admin/values.yaml to enable reading of large messages [\#213](https://github.com/nuodb/nuodb-helm-charts/pull/213) ([adriansuarez](https://github.com/adriansuarez))
+
+**Fixed bugs:**
+
+- Added validation of boolean helm variables in the values.yaml files. The new functionality will emit a warning if an invalid value is passed [\#223](https://github.com/nuodb/nuodb-helm-charts/pull/223) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Removed an incorrect admin operability check from nuosm script which prevented storage manager container startup when some admin containers were down [\#217](https://github.com/nuodb/nuodb-helm-charts/pull/217) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+
+**Removed:**
+
+- Removed option to start Storage Managers as DaemonSets [\#222](https://github.com/nuodb/nuodb-helm-charts/pull/222) ([mkysel](https://github.com/mkysel))
+
+**Closed issues:**
+
+- Longer readiness timeout in admin chart [\#198](https://github.com/nuodb/nuodb-helm-charts/issues/198)
+
 ## [v3.2.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.2.0) (2021-05-14)
 
 [Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.1.0...v3.2.0)
