@@ -167,6 +167,11 @@ func TestUpgradeHelm(t *testing.T) {
 			AdminPodShouldGetRecreated: true,
 		})
 	})
+
+	t.Run("NuoDB_From330_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "3.3.0", &testlib.UpgradeOptions{
+		})
+	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
@@ -179,6 +184,11 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 	t.Run("NuoDB_From320_ToLocal", func(t *testing.T) {
 		upgradeDatabaseTest(t, "3.2.0", &testlib.UpgradeOptions{
 			AdminPodShouldGetRecreated: true,
+		})
+	})
+
+	t.Run("NuoDB_From330_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "3.3.0", &testlib.UpgradeOptions{
 		})
 	})
 }
