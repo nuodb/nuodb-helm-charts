@@ -20,7 +20,16 @@ spec:
       app: {{ template "database.fullname" . }}
       component: te
   strategy:
-    type: RollingUpdate
+    canary:
+      steps:
+      - setWeight: 20
+      - pause: {}
+      - setWeight: 40
+      - pause: {duration: 10}
+      - setWeight: 60
+      - pause: {duration: 10}
+      - setWeight: 80
+      - pause: {duration: 10}
   template:
     metadata:
       {{- if .Values.database.podAnnotations }}
