@@ -247,6 +247,23 @@ The configuration is imported only in the entrypoint cluster.
 {{- end -}}
 {{- end -}}
 
+{{/*
+Enables automatic database protocol upgrade via annotations.
+The configuration is imported only in the entrypoint cluster.
+*/}}
+{{- define "database.automaticProtocolUpgrade" -}}
+{{- if .Values.database.automaticProtocolUpgrade }}
+{{- if eq (include "defaultfalse" .Values.database.automaticProtocolUpgrade.enabled) "true" -}}
+{{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+"nuodb.com/automatic-database-protocol-upgrade": "true"
+{{- with .Values.database.automaticProtocolUpgrade.tePreferenceQuery }}
+"nuodb.com/automatic-database-protocol-upgrade.te-preference-policy": {{ . | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
 {{- define "autoRestore.type" -}}
 {{- $valid := list "stream" "backupset" "" }}
 {{- if not (has .Values.database.autoRestore.type $valid) }}

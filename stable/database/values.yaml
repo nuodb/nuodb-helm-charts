@@ -402,6 +402,22 @@ database:
   isManualVolumeProvisioning: false
   isRestore: false
 
+  # NuoDB supports explicit database protocol version upgrade which is performed
+  # after upgrading the NuoDB image for all database processes. To simplify
+  # NuoDB version rollout, Kubernetes Aware Admin (KAA) is used to automatically
+  # upgrade database protocol and restart a Transaction Engine (TE) as an
+  # upgrade finalization step. For more information on how to perform the steps
+  # manually, please check Upgrading the Database Protocol
+  # (https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/upgrading-to-a-new-release/upgrading-the-database-protocol/).
+  automaticProtocolUpgrade:
+    # controls if an automatic protocol upgrade should be done for this database
+    enabled: false
+    # LBQuery expression to select the TE that will be restarted after
+    # successful database protocol upgrade. Defaults to random TE. For more
+    # information, please check LBQuery Expression Syntax
+    # (https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#_lbquery_expression_syntax).
+    tePreferenceQuery: ""
+
 nuocollector:
   # Enable NuoDB Collector by setting nuocollector.enabled=true
   enabled: false
