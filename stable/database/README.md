@@ -270,6 +270,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.otherOptions` | Additional key/value Docker options | `{}` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
 | `te.readinessTimeoutSeconds` | TE readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
+| `automaticProtocolUpgrade.enabled` | Enable automatic database protocol upgrade and a Transaction Engine (TE) restart as an upgrade finalization step done by Kubernetes Aware Admin (KAA). Applicable for NuoDB major versions upgrade only | `false` |
+| `automaticProtocolUpgrade.tePreferenceQuery` | LBQuery expression to select the TE that will be restarted after a successful database protocol upgrade. Defaults to random Transaction Engine (TE) in MONITORED state | `""` |
 
 #### database.configFiles.*
 
