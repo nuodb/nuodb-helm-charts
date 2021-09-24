@@ -485,6 +485,56 @@ func TestDefaultLoadBalancerConfigurationNotRenders(t *testing.T) {
 	})
 }
 
+func TestAutomaticDatabaseProtocolUpgrade(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	t.Run("testAutomaticUpgradeOnEntrypointCluster", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.automaticProtocolUpgrade.enabled": "true",
+			},
+		}
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "true", obj.Annotations["nuodb.com/automatic-database-protocol-upgrade"])
+		}
+	})
+
+	t.Run("testAutomaticUpgradeOnOtherCluster", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"cloud.cluster.name":                        "aws0",
+				"database.automaticProtocolUpgrade.enabled": "true",
+			},
+		}
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.NotContains(t, obj.Annotations, "nuodb.com/automatic-database-protocol-upgrade")
+		}
+	})
+
+	t.Run("testAutomaticUpgradeWithPreference", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.automaticProtocolUpgrade.enabled":           "true",
+				"database.automaticProtocolUpgrade.tePreferenceQuery": "random(label(region tiebreaker))",
+			},
+		}
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "true", obj.Annotations["nuodb.com/automatic-database-protocol-upgrade"])
+			assert.Equal(t,
+				options.SetValues["database.automaticProtocolUpgrade.tePreferenceQuery"],
+				obj.Annotations["nuodb.com/automatic-database-protocol-upgrade.te-preference-policy"])
+		}
+	})
+}
+
 func TestDatabasePodAnnotationsRender(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
@@ -571,7 +621,7 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 	t.Run("testStatefulSetDefaults", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
 			},
 		}
@@ -601,12 +651,12 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 	t.Run("testStatefulSetOverrides", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
-				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.sm.hotCopy.journalPath.persistence.accessModes[0]": "ReadWriteMany",
+				"database.sm.hotCopy.journalPath.enabled":                      "true",
+				"database.sm.noHotCopy.journalPath.enabled":                    "true",
+				"database.sm.hotCopy.journalPath.persistence.accessModes[0]":   "ReadWriteMany",
 				"database.sm.noHotCopy.journalPath.persistence.accessModes[0]": "ReadWriteMany",
-				"database.sm.hotCopy.journalPath.persistence.storageClass": "non-default",
-				"database.sm.noHotCopy.journalPath.persistence.storageClass": "non-default",
+				"database.sm.hotCopy.journalPath.persistence.storageClass":     "non-default",
+				"database.sm.noHotCopy.journalPath.persistence.storageClass":   "non-default",
 			},
 		}
 
