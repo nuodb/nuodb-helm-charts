@@ -4,15 +4,20 @@ package minikube
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
 
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+
+	"github.com/Masterminds/semver"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/gruntwork-io/terratest/modules/shell"
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
 
 	v12 "k8s.io/api/core/v1"
@@ -153,26 +158,29 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 }
 
-func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
+func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"nuodb.image.registry":                  "docker.io",
-			"nuodb.image.repository":                "nuodb/nuodb-ce",
-			"nuodb.image.tag":                       OLD_RELEASE,
-			"admin.bootstrapServers":                "0",
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"nuodb.image.registry":                      "docker.io",
+			"nuodb.image.repository":                    "nuodb/nuodb-ce",
+			"nuodb.image.tag":                           OLD_RELEASE,
+			"admin.bootstrapServers":                    "0",
+			"database.sm.resources.requests.cpu":        testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":        testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.automaticProtocolUpgrade.enabled": "true",
 		},
 	}
 	testlib.OverrideUpgradeContainerImage(t, &options)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("upgradefulldatabaseminorversion-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("upgradefulldatabase-%s", randomSuffix)
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = kubectlOptions
 	testlib.CreateNamespace(t, namespaceName)
 
 	// Enable TLS during upgrade because NuoDB 4.2+ doesn't include
@@ -232,6 +240,62 @@ func TestKubernetesUpgradeFullDatabaseMinorVersion(t *testing.T) {
 
 		verifyAllProcessesRunning(t, namespaceName, admin0, 2)
 	})
+
+	testlib.RunOnNuoDBVersionCondition(t, ">4.2.2", func(version *semver.Version) {
+		// check that KAA will upgrade database protocol version and restart TE
+		// automatically
+		t.Run("verifyProtocolVersion", func(t *testing.T) {
+			// protocol upgrade is async task
+			testlib.Await(t, func() bool {
+				return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
+					fmt.Sprintf("Upgrading protocol version for database dbName=%s", opt.DbName),
+					&corev1.PodLogOptions{}) >= 1
+			}, 60*time.Second)
+
+			// fetch database effective version
+			output, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions, "exec", admin0, "--",
+				"nuocmd", "show", "database-versions", "--db-name", opt.DbName)
+			require.NoError(t, err, "running show database-versions failed")
+			pattern := regexp.MustCompile("effective version ID: [0-9]+, effective version: (.+),")
+			match := pattern.FindStringSubmatch(output)
+			require.NotNil(t, match, "Unable to get database effective version from output")
+
+			// effective version is string like this one 4.2|4.2.1|4.2.2; verify
+			// that the OLD_RELEASE major.minor is not in the effective version
+			// string
+			parts := strings.Split(OLD_RELEASE, ".")
+			require.GreaterOrEqual(t, len(parts), 2, "unable to get major.minor from OLD_RELEASE version")
+			require.NotContains(t, match[1], fmt.Sprintf("%s.%s", parts[0], parts[1]))
+			// verify that the new major.minor is in the effective version
+			// string
+			require.Contains(t, match[1], fmt.Sprintf("%d.%d", version.Major(), version.Minor()))
+
+			// verify that a TE has been restarted and SQL layer version is
+			// upgrade is performed
+			testlib.Await(t, func() bool {
+				return testlib.GetRegexOccurrenceInLog(t, namespaceName, admin0,
+					"Shutting down startId=[0-9]+ to finalize the database protocol upgrade",
+					&corev1.PodLogOptions{}) >= 1
+			}, 60*time.Second)
+			testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 2)
+			output, err = testlib.RunSQL(t, namespaceName, admin0, opt.DbName,
+				"select case when version = GETEFFECTIVEPLATFORMVERSION() then 'YES' else 'NO' end as TE_RESTARTED_AFTER_MAJOR_VERSION_UPGRADE"+
+					" from system.versions where property = 'SYSTEM_TABLES_VERSION'")
+			require.NoError(t, err, "error cheking if SQL layer version is upgraded")
+			require.Contains(t, output, "YES")
+
+			// verify that the container image ID is stored in KV store so that
+			// database version is not checked again for this container image ID
+			testlib.Await(t, func() bool {
+				adminPod := testlib.GetPod(t, namespaceName, admin0)
+				actualImageId, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions, "exec", admin0, "--",
+					"nuocmd", "get", "value", "--key", fmt.Sprintf("upgradeDatabaseLastObservedImage/%s", opt.DbName))
+				require.NoError(t, err, "error getting last observed image ID")
+				return adminPod.Status.ContainerStatuses[0].ImageID == actualImageId
+			}, 60*time.Second)
+		})
+	})
+
 }
 
 func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
