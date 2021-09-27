@@ -274,7 +274,7 @@ func TestAdminScaleDown(t *testing.T) {
 }
 
 func TestDomainResync(t *testing.T) {
-	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" || os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test resync without the Enterprise Edition")
 	}
 
