@@ -63,7 +63,7 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, upgradeOptions *test
 }
 
 func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *testlib.UpgradeOptions) {
-	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" || os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Can not test helm upgrade in this environment")
 	}
 
