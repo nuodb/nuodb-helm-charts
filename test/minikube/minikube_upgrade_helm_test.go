@@ -4,6 +4,7 @@ package minikube
 
 import (
 	"fmt"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -62,6 +63,10 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, upgradeOptions *test
 }
 
 func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *testlib.UpgradeOptions) {
+	if os.Getenv("NUODB_LICENSE") == "ENTERPRISE" {
+		t.Skip("Can not test helm upgrade in this environment. See DB-33858")
+	}
+
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
