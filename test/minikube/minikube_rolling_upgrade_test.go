@@ -164,15 +164,14 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 
 	options := helm.Options{
 		SetValues: map[string]string{
-			"nuodb.image.registry":                      "docker.io",
-			"nuodb.image.repository":                    "nuodb/nuodb-ce",
-			"nuodb.image.tag":                           OLD_RELEASE,
-			"admin.bootstrapServers":                    "0",
-			"database.sm.resources.requests.cpu":        testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":        testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.automaticProtocolUpgrade.enabled": "true",
+			"nuodb.image.registry":                  "docker.io",
+			"nuodb.image.repository":                "nuodb/nuodb-ce",
+			"nuodb.image.tag":                       OLD_RELEASE,
+			"admin.bootstrapServers":                "0",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 		},
 	}
 	testlib.OverrideUpgradeContainerImage(t, &options)
@@ -245,6 +244,10 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 		// check that KAA will upgrade database protocol version and restart TE
 		// automatically
 		t.Run("verifyProtocolVersion", func(t *testing.T) {
+			// enable automatic protocol upgrade
+			options.SetValues["database.automaticProtocolUpgrade.enabled"] = "true"
+			helm.Upgrade(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
+
 			// protocol upgrade is async task
 			testlib.Await(t, func() bool {
 				return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
@@ -256,7 +259,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 			output, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions, "exec", admin0, "--",
 				"nuocmd", "show", "database-versions", "--db-name", opt.DbName)
 			require.NoError(t, err, "running show database-versions failed")
-			pattern := regexp.MustCompile("effective version ID: [0-9]+, effective version: (.+),")
+			pattern := regexp.MustCompile("effective version ID: ([0-9]+), effective version: (.+),")
 			match := pattern.FindStringSubmatch(output)
 			require.NotNil(t, match, "Unable to get database effective version from output")
 
@@ -265,10 +268,10 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 			// string
 			parts := strings.Split(OLD_RELEASE, ".")
 			require.GreaterOrEqual(t, len(parts), 2, "unable to get major.minor from OLD_RELEASE version")
-			require.NotContains(t, match[1], fmt.Sprintf("%s.%s", parts[0], parts[1]))
+			require.NotContains(t, match[2], fmt.Sprintf("%s.%s", parts[0], parts[1]))
 			// verify that the new major.minor is in the effective version
 			// string
-			require.Contains(t, match[1], fmt.Sprintf("%d.%d", version.Major(), version.Minor()))
+			require.Contains(t, match[2], fmt.Sprintf("%d.%d", version.Major(), version.Minor()))
 
 			// verify that a TE has been restarted and SQL layer version is
 			// upgrade is performed
@@ -277,15 +280,21 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 					"Shutting down startId=[0-9]+ to finalize the database protocol upgrade",
 					&corev1.PodLogOptions{}) >= 1
 			}, 60*time.Second)
+			podName := testlib.GetPodName(t, namespaceName,
+				fmt.Sprintf("te-%s-nuodb-cluster0-%s", databaseHelmChartReleaseName, opt.DbName))
+			testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 30*time.Second)
 			testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 2)
 			output, err = testlib.RunSQL(t, namespaceName, admin0, opt.DbName,
-				"select case when version = GETEFFECTIVEPLATFORMVERSION() then 'YES' else 'NO' end as TE_RESTARTED_AFTER_MAJOR_VERSION_UPGRADE"+
-					" from system.versions where property = 'SYSTEM_TABLES_VERSION'")
+				"select version from system.versions"+
+					" where property = 'SYSTEM_TABLES_VERSION'"+
+					" and version = GETEFFECTIVEPLATFORMVERSION()")
 			require.NoError(t, err, "error cheking if SQL layer version is upgraded")
-			require.Contains(t, output, "YES")
+			require.Contains(t, output, match[1])
 
 			// verify that the container image ID is stored in KV store so that
-			// database version is not checked again for this container image ID
+			// database version is not checked again for this container image
+			// ID; this happens on the next resync once database versions
+			// response is inspected
 			testlib.Await(t, func() bool {
 				adminPod := testlib.GetPod(t, namespaceName, admin0)
 				actualImageId, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions, "exec", admin0, "--",

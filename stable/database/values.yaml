@@ -402,22 +402,14 @@ database:
   isManualVolumeProvisioning: false
   isRestore: false
 
-  # NuoDB supports explicit database protocol version upgrade which is performed
-  # after upgrading the NuoDB image for all database processes. To simplify
-  # NuoDB version rollout, Kubernetes Aware Admin (KAA) is used to automatically
-  # upgrade database protocol and restart a Transaction Engine (TE) as an
-  # upgrade finalization step. For more information on how to perform the steps
-  # manually, please check Upgrading the Database Protocol
+  # A new version of NuoDB database software may also introduce a new version of
+  # the database protocol. NuoDB supports explicit database protocol version
+  # upgrade which is performed after upgrading the NuoDB image for all database
+  # processes. To simplify NuoDB version rollout, Kubernetes Aware Admin (KAA)
+  # is used to automatically upgrade database protocol and restart a Transaction
+  # Engine (TE) as an upgrade finalization step. For more information on how to
+  # perform the steps manually, please check Upgrading the Database Protocol
   # (https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/upgrading-to-a-new-release/upgrading-the-database-protocol/).
-  #
-  # The database protocol version is eligible for an upgrade to the max possible
-  # version if all of the bellows are true:
-  # - the database is in RUNNING state. This ensures that all SMs/archives are
-  #   RUNNING.
-  # - all database processes are MONITORED
-  # - the automatic upgrade is enabled for this database (disabled by default)
-  # - all database processes are running with the same release binary version
-  # - there are available protocol versions for upgrading to
   #
   # IMPORTANT: After the database protocol version has been upgraded, the NuoDB
   # Archive cannot be used with NuoDB software versions that only support the
