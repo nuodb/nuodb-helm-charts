@@ -1,7 +1,7 @@
 {{- if eq (include "defaulttrue" .Values.database.sm.hotCopy.enablePod) "true" }}
 {{- if eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true" }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: full-hotcopy-{{ .Values.database.name }}-cronjob
@@ -89,7 +89,7 @@ spec:
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: incremental-hotcopy-{{ .Values.database.name }}-cronjob
@@ -175,7 +175,7 @@ spec:
 
 {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true" }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: journal-hotcopy-{{ .Values.database.name }}-cronjob
