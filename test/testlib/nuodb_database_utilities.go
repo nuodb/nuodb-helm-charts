@@ -154,7 +154,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 				go GetAppLog(t, namespaceName, smPod, "", &v12.PodLogOptions{Follow: true})
 			}
 		})
-		AwaitPodUp(t, namespaceName, smPodName0, 300*time.Second)
+		AwaitPodUp(t, namespaceName, smPodName0, 600*time.Second)
 
 		// Await num of database processes only for single cluster deployment;
 		// in multi-clusters the await logic should be called once all clusters
