@@ -4,6 +4,8 @@ metadata:
   annotations:
     description: |-
       Database deployment resource for NuoDB Transaction Engines (TE).
+    kubectl.kubernetes.io/default-container: engine
+    kubectl.kubernetes.io/default-logs-container: engine
 {{- include "database.loadBalancerConfig" . | indent 4 }}
 {{- include "database.automaticProtocolUpgrade" . | indent 4 }}
   labels:
