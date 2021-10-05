@@ -4,6 +4,8 @@ metadata:
   annotations:
     description: |-
       NuoAdmin statefulset resource for NuoDB Admin layer.
+    kubectl.kubernetes.io/default-container: admin
+    kubectl.kubernetes.io/default-logs-container: admin
 {{- include "admin.loadBalancerConfig" . | indent 4 }}
     {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
     nuodb.com/bootstrap-servers: {{ default 0 .Values.admin.bootstrapServers | quote }}

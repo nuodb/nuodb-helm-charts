@@ -6,6 +6,8 @@ metadata:
   annotations:
     description: |-
       Database deployment resource for NuoDB Storage Engines (SM).
+    kubectl.kubernetes.io/default-container: engine
+    kubectl.kubernetes.io/default-logs-container: engine
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
