@@ -98,9 +98,8 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	defer func() {
 		// collect some useful diagnostics
 		if t.Failed() {
-			options := k8s.NewKubectlOptions("", "", namespaceName)
 			// ignore any errors. This is already failed
-			_ = k8s.RunKubectlE(t, options, "describe", "statefulset", adminStatefulSet)
+			_ = k8s.RunKubectlE(t, kubectlOptions, "describe", "statefulset", adminStatefulSet)
 		}
 	}()
 
@@ -121,10 +120,9 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 		defer func() {
 			if t.Failed() {
-				options := k8s.NewKubectlOptions("", "", namespaceName)
 				// ignore any errors. This is already failed
-				_ = k8s.RunKubectlE(t, options, "describe", "pod", adminName)
-				_ = k8s.RunKubectlE(t, options, "exec", adminName, "-c", "admin", "--", "nuocmd", "show", "domain")
+				_ = k8s.RunKubectlE(t, kubectlOptions, "describe", "pod", adminName)
+				_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "nuocmd", "show", "domain")
 				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
 			}
 		}()
@@ -141,6 +139,11 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 			if err != nil {
 				t.Logf("Admin pod '%s' is not available and logs can not be retrieved", adminName)
 			} else {
+				// dump stacktrace to stdout if test failed
+				if t.Failed() {
+					_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "bash", "-c", "pgrep -x java | xargs -r kill -3")
+				}
+				// collect logs
 				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
 				GetAdminEventLog(t, namespaceName, adminName)
 			}
