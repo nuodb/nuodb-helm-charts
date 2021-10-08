@@ -123,6 +123,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 				// ignore any errors. This is already failed
 				_ = k8s.RunKubectlE(t, kubectlOptions, "describe", "pod", adminName)
 				_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "nuocmd", "show", "domain")
+				_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "bash", "-c", "pgrep -x java | xargs -r kill -3")
 				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
 			}
 		}()
