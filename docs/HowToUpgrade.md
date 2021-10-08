@@ -1,3 +1,6 @@
+Rendered version - https://github.com/nuodb/nuodb-helm-charts/blob/sivnaov/DOC-3408/docs/HowToUpgrade.md
+
+
 # NuoDB Rolling Upgrade in Kubernetes
 
 ## Introduction
@@ -6,7 +9,7 @@ A rolling upgrade moves a NuoDB domain, which might include multiple databases, 
 Rolling upgrades ensure continuous database availability throughout the upgrade process.
 
 NuoDB domain deployed in Kubernetes using the NuoDB Helm Charts contains multiple Helm releases.
-Several different Kubernetes controllers might be deployed depending on the database requirements, high availability configuration, and the number of target Kubernetes clusters.
+Several different Kubernetes workloads are deployed depending on the database requirements, high availability configuration, and the number of target Kubernetes clusters.
 The minimal NuoDB installation consists of two Helm releases - one using the [admin](../stable/admin) chart and one using the [database](../stable/database) chart in a single cluster.
 This document focuses on upgrading NuoDB software for all NuoDB Helm releases and providing details on the upgrade mechanics specific to Kubernetes deployments.
 
@@ -15,10 +18,10 @@ The documentation in this repository expands on the product documentation and is
 
 ## Requirements
 
-NuoDB Admin processes (AP), Storage Managers (SM), and Transaction Engines (TE) are created as Kubernetes workloads supporting rolling upgrade strategy.
+NuoDB Admin processes (AP), Storage Managers (SM), and Transaction Engines (TE) are created as Kubernetes workloads that support rolling upgrade strategy.
 Any changes on the Deployment or StatefulSet `.spec.template` will trigger a rolling upgrade causing the controller to delete and recreate its pods.
-StatefulSet controller will proceed in the same order as Pod termination (from the largest ordinal to the smallest), updating each Pod one at a time.
-The deployment controller will first start a new Pod and wait for it to become `Ready` before shutting down an old one.
+StatefulSet controller will proceed in the same order as pod termination (from the largest ordinal to the smallest), updating each pod one at a time.
+The deployment controller will first start a new pod and wait for it to become `Ready` before shutting down an old one.
 
 The main workloads installed in a single Kubernetes cluster for a single NuoDB domain and database are:
 
@@ -52,7 +55,9 @@ For more information check the [NuoDB Helm Chart Release Notes](https://github.c
 
 ### Overview
 
-NuoDB software release upgrade in Kubernetes environments is done by changing the NuoDB image used by every Helm release installed with the `admin` or the `database` Helm chart.
+NuoDB software upgrade in Kubernetes environments is done by changing the NuoDB image used by every Helm release installed with the `admin` or the `database` Helm chart.
+To list all installed Helm releases in _nuodb_ namespace use `helm list -n nuodb` command.
+
 The `helm upgrade <release> <chart>` command is used for upgrading to a new chart version and a new NuoDB image.
 It is recommended to always upgrade to the latest version of NuoDB Helm Charts when upgrading the NuoDB image.
 
@@ -133,7 +138,7 @@ For more information, check [Automatic Database Protocol Upgrade](https://doc.nu
 ### Monitoring Upgrade
 
 The Kubernetes workflow rolling upgrade progress can be monitored using `kubectl rollout status`.
-For example, the below output shows a successful rollout for the SM workflow having two replicas.
+For example, the below output shows a successful rollout for the SM workflow throughout two replicas.
 
 ```shell
 $ kubectl rollout status statefulset sm-database-nuodb-cluster0-demo
@@ -144,7 +149,7 @@ partitioned roll out complete: 2 new pods have been updated...
 ```
 
 If the rollout doesn't progress for a long time, check the NuoDB pods using `kubectl get pods -n nuodb`.
-Watch for `Running` pods in which containers are _not_ `Ready`, usually it means that there is a problem starting the application inside the container.
+Watch for `Running` pods in which containers are _not_ `Ready`, which usually means that there is a problem with the application startup.
 Another indication for upgrade failure is having pods _not_ transiting to `Running` or reported `Error`, `ErrImagePull` or `CrashLoopBackOff`.
 
 The database processes and their versions can be seen using [nuocmd show database-versions](https://doc.nuodb.com/nuodb/latest/reference-information/command-line-tools/nuodb-command/nuocmd-reference/#_database_versions_subcommands) command.
@@ -178,10 +183,10 @@ As a result, downgrading after the database protocol version has been changed wi
 Make sure that a recent and valid database backup is available before processing with the NuoDB upgrade.
 
 It is possible to downgrade the NuoDB Admin Tier during the rolling upgrade and before all APs are upgraded to the new release.
-The NuoDB Admin will upgrade automatically its local server version until all APs in the domain start using the newest possible version.
+The AP will upgrade automatically its local server version until all APs in the domain start using the newest possible version.
 
-> **IMPORTANT**: Once the domain effective version is changed, new Raft commands and features will start to be exercised.
-To roll back the NuoDB Admin Tier after this happens, a `raftlog` backup from each AP should be used.
+> **IMPORTANT**: After the domain effective version has been upgraded, new Raft commands and features will start to be exercised resulting in committing new commands in the durable domain state.
+To roll back the NuoDB Admin Tier after this happens, the corresponding `raftlog` backup for each AP should be restored.
 
 Kubernetes will not automatically perform a rollback if a rollout is stuck and the pods using the new image don't become _ready_.
 To manually roll back a Helm release use `helm rollback <release>` command.
