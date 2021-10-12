@@ -118,30 +118,17 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	for i := 0; i < replicaCount; i++ {
 		adminName := adminNames[i] // array will be out of scope for defer
 
-		defer func() {
-			if t.Failed() {
-				// ignore any errors. This is already failed
-				_ = k8s.RunKubectlE(t, kubectlOptions, "describe", "pod", adminName)
-				_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "nuocmd", "show", "domain")
-				_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "bash", "-c", "pgrep -x java | xargs -r kill -3")
-				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
-			}
-		}()
-	}
-
-	for i := 0; i < replicaCount; i++ {
-		adminName := adminNames[i] // array will be out of scope for defer
-
-		// first await could be pulling the image from the repo
-		AwaitPodUp(t, namespaceName, adminName, 300*time.Second)
-
 		AddTeardown(TEARDOWN_ADMIN, func() {
 			_, err := k8s.GetPodE(t, kubectlOptions, adminName)
 			if err != nil {
 				t.Logf("Admin pod '%s' is not available and logs can not be retrieved", adminName)
 			} else {
-				// dump stacktrace to stdout if test failed
 				if t.Failed() {
+					// dump diagnostic info to test logs
+					_ = k8s.RunKubectlE(t, kubectlOptions, "describe", "pod", adminName)
+					_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "nuocmd", "show", "domain")
+
+					// dump stacktrace to stdout of container
 					_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "bash", "-c", "pgrep -x java | xargs -r kill -3")
 				}
 				// collect logs
@@ -149,6 +136,11 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 				GetAdminEventLog(t, namespaceName, adminName)
 			}
 		})
+	}
+
+	// wait for all admin pods to become ready
+	for i := 0; i < replicaCount; i++ {
+		AwaitPodUp(t, namespaceName, adminNames[i], 300*time.Second)
 	}
 
 	// Await num of admin servers only for single cluster deployment; in
