@@ -50,7 +50,21 @@ If `--max-lost-archives` option is not configured, the default value of `0` is u
 - There must be more than one AP in the domain.
 To retain Raft majority during the upgrade it's recommended to configure three or more APs.
 
-The `spec.replicas` count can be configured separately for each workload to meet the desired redundancy requirements.
+> **Note**: The `pendingReconnectTimeout` setting defines how much time the NuoDB Admin will wait for the database processes to reconnect.
+In certain situations, the default timeout (60 sec.) may need to be increased to get a reliable upgrade.
+
+The `spec.replicas` count can be configured separately for each Kubernetes workload to meet the desired redundancy requirements.
+Several replica number examples for single cluster NuoDB deployment depending on the `max-lost-archives` setting are shown in the below table.
+
+| max-lost-archives | AP | TE | HCSM | SM | Notes |
+|-------------------|----|----|------|----|-------|
+| 0                 | 3  | 2  | 2    | 0  |       |
+| 0                 | 3  | 2  | 0    | 2  | No backups |
+| 0                 | 3  | 2  | 1    | 2  |       |
+| 1                 | 3  | 2  | 3    | 0  |       |
+| 1                 | 3  | 2  | 0    | 3  | No backups |
+| 1                 | 3  | 2  | 1    | 3  |       |
+| 1                 | 3  | 2  | 2    | 2  |       |
 
 ## Preparation
 
