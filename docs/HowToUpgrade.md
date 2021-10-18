@@ -16,7 +16,7 @@ Depending on the database requirements, high availability configuration, and the
 The main resources installed in a single Kubernetes cluster for a single NuoDB domain and database are shown in the table below.
 
 | NuoDB Process Type               | NuoDB Helm Chart | Kubernetes Resource Type | Scope | Purpose |
-|----------------------------------|------------------|--------------------------|----------|
+|----------------------------------|------------------|--------------------------|--------|--------|
 | NuoDB Admin Process (AP)         | admin            | StatefulSet              | domain | APs in a single NuoDB domain |
 | Transaction Engine (TE)          | database         | Deployment               | database | TEs in a single NuoDB database |
 | Hot-copy Storage Manager (HCSM)  | database         | StatefulSet              | database | SMs with hot-copy operations enabled |
