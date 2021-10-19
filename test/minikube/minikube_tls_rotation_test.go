@@ -68,26 +68,27 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	// we need to use persistence for admin Raft logs during the rolling upgrade.
 	options := helm.Options{
 		SetValues: map[string]string{
-			"admin.replicas":               "2",
-			"admin.tlsCACert.secret":       testlib.CA_CERT_SECRET,
-			"admin.tlsCACert.key":          testlib.CA_CERT_FILE,
-			"admin.tlsKeyStore.secret":     testlib.KEYSTORE_SECRET,
-			"admin.tlsKeyStore.key":        testlib.KEYSTORE_FILE,
-			"admin.tlsKeyStore.password":   testlib.SECRET_PASSWORD,
-			"admin.tlsTrustStore.secret":   testlib.TRUSTSTORE_SECRET,
-			"admin.tlsTrustStore.key":      testlib.TRUSTSTORE_FILE,
-			"admin.tlsTrustStore.password": testlib.SECRET_PASSWORD,
-			"admin.tlsClientPEM.secret":    testlib.NUOCMD_SECRET,
-			"admin.tlsClientPEM.key":       testlib.NUOCMD_FILE,
-			// sometimes the test fails because APs doesn't go ready due to
-			// probe timeout
-			"admin.readinessTimeoutSeconds":         "10",
+			"admin.replicas":                        "2",
+			"admin.tlsCACert.secret":                testlib.CA_CERT_SECRET,
+			"admin.tlsCACert.key":                   testlib.CA_CERT_FILE,
+			"admin.tlsKeyStore.secret":              testlib.KEYSTORE_SECRET,
+			"admin.tlsKeyStore.key":                 testlib.KEYSTORE_FILE,
+			"admin.tlsKeyStore.password":            testlib.SECRET_PASSWORD,
+			"admin.tlsTrustStore.secret":            testlib.TRUSTSTORE_SECRET,
+			"admin.tlsTrustStore.key":               testlib.TRUSTSTORE_FILE,
+			"admin.tlsTrustStore.password":          testlib.SECRET_PASSWORD,
+			"admin.tlsClientPEM.secret":             testlib.NUOCMD_SECRET,
+			"admin.tlsClientPEM.key":                testlib.NUOCMD_FILE,
 			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 		},
 	}
+
+	// sometimes the test fails because APs doesn't go ready due to probe
+	// timeout
+	testlib.OverrideReadinessProbesTimeout(t, &options, "10")
 
 	expectedCaDN := "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=123456"
 	expectedAdminDN := "CN=nuoadmin.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
