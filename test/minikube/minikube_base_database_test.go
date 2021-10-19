@@ -194,6 +194,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
 		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+			kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 			k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
 			testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
 		})
