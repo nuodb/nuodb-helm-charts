@@ -14,7 +14,7 @@ parameters:
     default: ''
     type: string
   run_single_test_suite:
-    default: "./test/minikube/*"
+    default: './test/minikube/*'
     type: string
   run_single_test_repeat:
     default: 0
