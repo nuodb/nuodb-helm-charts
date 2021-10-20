@@ -137,8 +137,8 @@ for pod in $(kubectl get pods \
   -l group=nuodb,domain=${NUODB_DOMAIN},component=admin \
   --no-headers -o custom-columns=":metadata.name"); do
   echo "Backup domain state from Pod ${pod} ..."
-  kubectl exec -n "$NAMESPACE" "$pod" -- bash -c 'cp -p $NUODB_VARDIR/raftlog /tmp/.raftlog_backup' \
-    && kubectl cp -n "${NAMESPACE}" "${pod}:/tmp/.raftlog_backup" "${pod}.${NUODB_DOMAIN}.raftlog"
+  kubectl exec -n "$NAMESPACE" "$pod" -- bash -c 'cp -p $NUODB_VARDIR/raftlog /tmp/raftlog' \
+    && kubectl cp -n "${NAMESPACE}" "${pod}:/tmp/raftlog" "${pod}.${NUODB_DOMAIN}.raftlog"
 done
 ```
 
