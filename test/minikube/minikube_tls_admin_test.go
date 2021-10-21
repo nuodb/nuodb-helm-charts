@@ -67,6 +67,10 @@ func TestKubernetesTLS(t *testing.T) {
 		},
 	}
 
+	// sometimes the test fails because SMs doesn't go ready due to probe
+	// timeout
+	testlib.OverrideReadinessProbesTimeout(t, &options, "10")
+
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 	helmChartReleaseName, _ := testlib.StartAdmin(t, &options, 3, namespaceName)
