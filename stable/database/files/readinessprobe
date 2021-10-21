@@ -1,17 +1,18 @@
-#!/bin/sh
+#!/bin/bash
 
 # (C) Copyright NuoDB, Inc. 2019-2021  All Rights Reserved
 # This file is licensed under the BSD 3-Clause License.
 # See https://github.com/nuodb/nuodb-helm-charts/blob/master/LICENSE
 
 die() {
-  retval="$1"
-  shift
-  echo "$@"
-  exit "$retval"
+    retval="$1"
+    shift
+    echo "$@"
+    exit "$retval"
 }
 
 parse_fields() {
+    # get start ID and node state from argument list
     unset start_id
     unset state
     for i in "$@"; do
@@ -31,17 +32,26 @@ parse_fields() {
     done
 }
 
+# iterate over all local nuodb processes; in a Docker container we would only
+# expect one process, but make sure this also works if multiple processes are
+# on the same pidspace
 n=0
-pgrep -xa nuodb | while read pid argv; do
-    n="$((n + 1))"
+while read pid argv; do
+    # parse start ID and state from argument list; starting with 4.1, argv is
+    # re-written to contain information about the engine process
     parse_fields $argv
     if [ "$start_id" != "" ]; then
-        [ "$state" = Running ] || die -1 "Process with start ID $start_id not in Running state: $state""
-        exit 0
+        [ "$state" = Running ] || die -1 "Process with start ID $start_id not in Running state: $state"
+    else
+        # argv does not contain process information; use 'nuocmd show domain'
+        # to obtain start ID and 'nuocmd check process' to check process
+        # health; this does not scale well as the number of processes becomes
+        # very large, but we have no choice
+        start_id="$(nuocmd show domain --process-format "==={pid} {start_id}" | sed -n "s/ *===$pid //p")"
+        nuocmd check process --check-running --start-id "$start_id" || die -1 "Process reported not ready"
     fi
 
-    start_id="$(nuocmd show domain --process-format "==={pid} {start_id}" | sed -n "s/ *===$pid //p")"
-    nuocmd check process --check-running --start-id "$start_id" || die -1 "Process reported not ready"
-done
+    n="$((n + 1))"
+done < <(pgrep -xa nuodb)
 
 [ "$n" != 0 ] || die -1 "No process found"
