@@ -5,21 +5,43 @@
 # See https://github.com/nuodb/nuodb-helm-charts/blob/master/LICENSE
 
 die() {
-  retval=$1
+  retval="$1"
   shift
   echo "$@"
   exit "$retval"
 }
 
+parse_fields() {
+    unset start_id
+    unset state
+    for i in "$@"; do
+        case $i in
+            sid:*)
+                start_id="${i#*:}"
+                shift
+                ;;
+            state:*)
+                state="${i#*:}"
+                shift
+                ;;
+            *)
+                shift
+                ;;
+        esac
+    done
+}
 
-processes=$(nuocmd show domain --process-format "{address} {start_id}" | grep "$(hostname)" | awk '{print $2}')
+n=0
+pgrep -xa nuodb | while read pid argv; do
+    n="$((n + 1))"
+    parse_fields $argv
+    if [ "$start_id" != "" ]; then
+        [ "$state" = Running ] || die -1 "Process with start ID $start_id not in Running state: $state""
+        exit 0
+    fi
 
-if [ -z "$processes" ]
-then
-  die -1 "No process found"
-fi
-
-for start_id in $processes
-do
-  nuocmd check process --check-running --start-id "$start_id" || die -1 "Process reported not ready"
+    start_id="$(nuocmd show domain --process-format "==={pid} {start_id}" | sed -n "s/ *===$pid //p")"
+    nuocmd check process --check-running --start-id "$start_id" || die -1 "Process reported not ready"
 done
+
+[ "$n" != 0 ] || die -1 "No process found"
