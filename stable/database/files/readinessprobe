@@ -33,8 +33,8 @@ parse_fields() {
 }
 
 # iterate over all local nuodb processes; in a Docker container we would only
-# expect one process, but make sure this also works if multiple processes are
-# on the same pidspace
+# expect one process, but make sure this also works if multiple nuodb processes
+# are in the same pidspace
 pgrep -xa nuodb | (
     n=0
     while read pid argv; do
@@ -53,8 +53,10 @@ pgrep -xa nuodb | (
                 || die 1 "Process reported not ready"
         fi
 
+        # increment process count
         n="$((n + 1))"
     done
-)
 
-[ "$n" != 0 ] || die 1 "No process found"
+    # make sure we found at least one local process
+    [ "$n" != 0 ] || die 1 "No process found"
+)
