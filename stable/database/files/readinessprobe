@@ -5,21 +5,58 @@
 # See https://github.com/nuodb/nuodb-helm-charts/blob/master/LICENSE
 
 die() {
-  retval=$1
-  shift
-  echo "$@"
-  exit "$retval"
+    retval="$1"
+    shift
+    echo "$@"
+    exit "$retval"
 }
 
+parse_fields() {
+    # get start ID and node state from argument list
+    unset start_id
+    unset state
+    for i in "$@"; do
+        case $i in
+            (sid:*)
+                start_id="${i#*:}"
+                shift
+                ;;
+            (state:*)
+                state="${i#*:}"
+                shift
+                ;;
+            (*)
+                shift
+                ;;
+        esac
+    done
+}
 
-processes=$(nuocmd show domain --process-format "{address} {start_id}" | grep "$(hostname)" | awk '{print $2}')
+# iterate over all local nuodb processes; in a Docker container we would only
+# expect one process, but make sure this also works if multiple nuodb processes
+# are in the same pidspace
+pgrep -xa nuodb | (
+    n=0
+    while read pid argv; do
+        # parse start ID and state from argument list; starting with 4.1, argv
+        # is re-written to contain information about the engine process
+        parse_fields $argv
+        if [ "$start_id" != "" ]; then
+            [ "$state" = Running ] || die 1 "Process with start ID $start_id not in Running state: $state"
+        else
+            # argv does not contain process info; use 'nuocmd show domain' to
+            # obtain start ID and 'nuocmd check process' to check process
+            # health; this does not scale well as the number of processes
+            # becomes very large, but we have no choice
+            start_id="$(nuocmd show domain --process-format "==={hostname}:{pid} {start_id}" | sed -n "s/ *===$(hostname):$pid //p")"
+            [ "$start_id" != "" ] && nuocmd check process --check-running --start-id "$start_id" \
+                || die 1 "Process reported not ready"
+        fi
 
-if [ -z "$processes" ]
-then
-  die -1 "No process found"
-fi
+        # increment process count
+        n="$((n + 1))"
+    done
 
-for start_id in $processes
-do
-  nuocmd check process --check-running --start-id "$start_id" || die -1 "Process reported not ready"
-done
+    # make sure we found at least one local process
+    [ "$n" != 0 ] || die 1 "No process found"
+)
