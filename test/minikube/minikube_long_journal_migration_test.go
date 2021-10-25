@@ -6,6 +6,7 @@ package minikube
 import (
 	"fmt"
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -30,10 +31,10 @@ func TestChangingJournalLocationFails(t *testing.T) {
 
 		options := helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.sm.hotCopy.journalPath.enabled": "false",
 			},
 		}
@@ -46,7 +47,6 @@ func TestChangingJournalLocationFails(t *testing.T) {
 		require.Error(t, err)
 	})
 }
-
 
 func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
@@ -71,13 +71,13 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 
 		options := helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    "250m",
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    "250m",
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.sm.noHotCopy.replicas":        "1",
+				"database.sm.resources.requests.cpu":        "250m",
+				"database.sm.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":        "250m",
+				"database.te.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.sm.noHotCopy.replicas":            "1",
 				"database.sm.noHotCopy.journalPath.enabled": "false",
-				"database.sm.hotCopy.journalPath.enabled": "false",
+				"database.sm.hotCopy.journalPath.enabled":   "false",
 			},
 		}
 
@@ -103,6 +103,13 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
 		nonHCPVC := fmt.Sprintf("archive-volume-sm-%s-nuodb-cluster0-demo-0", databaseReleaseName)
+
+		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+			kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+			k8s.RunKubectl(t, kubectlOptions, "get", "pvc")
+			k8s.RunKubectl(t, kubectlOptions, "get", "pv")
+			k8s.RunKubectl(t, kubectlOptions, "describe", "pvc", nonHCPVC)
+		})
 
 		// trigger Kubernetes-Aware-Admin to purge this archive from the database
 		testlib.DeletePVC(t, namespaceName, nonHCPVC)
