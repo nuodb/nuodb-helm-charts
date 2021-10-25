@@ -48,7 +48,7 @@ pgrep -xa nuodb | (
             # obtain start ID and 'nuocmd check process' to check process
             # health; this does not scale well as the number of processes
             # becomes very large, but we have no choice
-            start_id="$(nuocmd show domain --process-format "==={pid} {start_id}" | sed -n "s/ *===$pid //p")"
+            start_id="$(nuocmd show domain --process-format "==={hostname}:{pid} {start_id}" | sed -n "s/ *===$(hostname):$pid //p")"
             [ "$start_id" != "" ] && nuocmd check process --check-running --start-id "$start_id" \
                 || die 1 "Process reported not ready"
         fi
