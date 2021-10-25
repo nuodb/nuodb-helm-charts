@@ -295,6 +295,12 @@ func InjectTestValues(t *testing.T, options *helm.Options) {
 	InjectTestVersion(t, options)
 }
 
+func OverrideReadinessProbesTimeout(t *testing.T, options *helm.Options, timeoutSec string) {
+	options.SetValues["admin.readinessTimeoutSeconds"] = timeoutSec
+	options.SetValues["database.sm.readinessTimeoutSeconds"] = timeoutSec
+	options.SetValues["database.te.readinessTimeoutSeconds"] = timeoutSec
+}
+
 func GetUpgradedReleaseVersion(t *testing.T, options *helm.Options) string {
 	// reset all image tags
 	delete(options.SetValues, "nuodb.image.registry")

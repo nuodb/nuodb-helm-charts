@@ -86,6 +86,10 @@ func TestKubernetesTLSRotation(t *testing.T) {
 		},
 	}
 
+	// sometimes the test fails because APs doesn't go ready due to probe
+	// timeout
+	testlib.OverrideReadinessProbesTimeout(t, &options, "10")
+
 	expectedCaDN := "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=123456"
 	expectedAdminDN := "CN=nuoadmin.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
 
