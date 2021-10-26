@@ -1182,7 +1182,9 @@ func DeletePVC(t *testing.T, namespaceName string, name string) {
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
-	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	gracefulDeleteSeconds := int64(120)
+	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).
+		Delete(context.TODO(), name, metav1.DeleteOptions{GracePeriodSeconds: &gracefulDeleteSeconds})
 	require.NoError(t, err)
 }
 
