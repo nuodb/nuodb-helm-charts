@@ -5,13 +5,15 @@ package minikube
 
 import (
 	"fmt"
+	"os"
+	"testing"
+	"time"
+
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"os"
-	"testing"
 )
 
 func TestChangingJournalLocationFails(t *testing.T) {
@@ -102,19 +104,28 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.SmNonHCSet.Name, 0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
-		nonHCPVC := fmt.Sprintf("archive-volume-sm-%s-nuodb-cluster0-demo-0", databaseReleaseName)
+		nonHCPvcName := fmt.Sprintf("archive-volume-sm-%s-nuodb-cluster0-demo-0", databaseReleaseName)
+		nonHCPvc := testlib.GetPvc(t, namespaceName, nonHCPvcName)
+		smHCPvcName := fmt.Sprintf("archive-volume-sm-%s-nuodb-cluster0-demo-hotcopy-0", databaseReleaseName)
+		smHCPvc := testlib.GetPvc(t, namespaceName, smHCPvcName)
 
 		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
 			kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 			k8s.RunKubectl(t, kubectlOptions, "get", "pvc")
 			k8s.RunKubectl(t, kubectlOptions, "get", "pv")
-			k8s.RunKubectl(t, kubectlOptions, "describe", "pvc", nonHCPVC)
+			k8s.RunKubectlE(t, kubectlOptions, "describe", "pvc", nonHCPvc.Name)
+			k8s.RunKubectlE(t, kubectlOptions, "describe", "pvc", smHCPvc.Name)
 		})
 
-		// trigger Kubernetes-Aware-Admin to purge this archive from the database
-		testlib.DeletePVC(t, namespaceName, nonHCPVC)
-
 		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.SmNonHCSet.Name)
+
+		// trigger Kubernetes-Aware-Admin to purge this archive from the
+		// database; this is needed because currently nuodocker doesn't change
+		// the archive object stored in the admin layer
+		testlib.DeletePVC(t, namespaceName, nonHCPvc.Name)
+		// await for the old archive storage to be recycled so that the newly
+		// started SM will sync it from the running one
+		testlib.AwaitPvDeleted(t, nonHCPvc.Spec.VolumeName, 120*time.Second)
 
 		options.SetValues["database.sm.noHotCopy.journalPath.enabled"] = "true"
 
@@ -127,12 +138,15 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 		testlib.ScaleStatefulSet(t, namespaceName, statefulSets.SmHCSet.Name, 0)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 
-		smHCPVC := fmt.Sprintf("archive-volume-sm-%s-nuodb-cluster0-demo-hotcopy-0", databaseReleaseName)
-
-		// trigger Kubernetes-Aware-Admin to purge this archive from the database
-		testlib.DeletePVC(t, namespaceName, smHCPVC)
-
 		testlib.DeleteStatefulSet(t, namespaceName, statefulSets.SmHCSet.Name)
+
+		// trigger Kubernetes-Aware-Admin to purge this archive from the
+		// database; this is needed because currently nuodocker doesn't change
+		// the archive object stored in the admin layer
+		testlib.DeletePVC(t, namespaceName, smHCPvc.Name)
+		// await for the old archive storage to be recycled so that the newly
+		// started SM will sync it from the running one
+		testlib.AwaitPvDeleted(t, smHCPvc.Spec.VolumeName, 120*time.Second)
 
 		options.SetValues["database.sm.hotCopy.journalPath.enabled"] = "true"
 
