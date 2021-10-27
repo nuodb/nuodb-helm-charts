@@ -206,6 +206,11 @@ database:
     clusterip: ""
     balancer: ""
 
+  # One primary and multiple secondary database Helm releases for the same
+  # database name may be deployed into the same Kubernetes namespace. Set to
+  # `false` to deploy secondary database Helm releases.
+  primaryRelease: true
+
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
     logPersistence:

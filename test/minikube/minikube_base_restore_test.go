@@ -128,16 +128,18 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
-	// Generate diagnose in case this test fails
-	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
-		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
-	})
-
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = opts
 
 	opt := testlib.GetExtractedOptions(&options)
+
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te",
+			fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseChartName, opt.ClusterName, opt.DbName))
+	})
+
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)

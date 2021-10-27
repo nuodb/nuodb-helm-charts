@@ -164,7 +164,7 @@ spec:
           emptyDir: {}
         {{- else }}
           persistentVolumeClaim:
-            claimName: {{ .Values.database.name }}-log-te-volume
+            claimName: {{ template "database.fullname" . }}-log-te-volume
         {{- end }}
         - name: nuote
           configMap:
