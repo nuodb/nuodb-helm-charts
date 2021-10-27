@@ -120,6 +120,7 @@ admin:
   externalAccess: {}
   #   enabled: false
   #   internalIP: true
+  #   type: LoadBalancer
 
   persistence:
     size: 1Gi

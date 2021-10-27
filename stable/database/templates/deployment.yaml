@@ -71,7 +71,9 @@ spec:
         {{- end }}
 {{- range $opt, $val := .Values.database.te.otherOptions }}
           - "--{{$opt}}"
+          {{ if $val }}
           - "{{$val}}"
+          {{- end }}
 {{- end}}
     {{- include "database.envFrom" . | indent 8 }}
         env:
