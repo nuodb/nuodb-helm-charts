@@ -121,7 +121,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *t
 
 	opt := testlib.GetExtractedOptions(options)
 
-	// make sure the DB is properly reconnected before restarting
+	// make sure all database processes reconnected before restarting
 	err := testlib.AwaitE(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
 			"Reconnected with process with connectKey",
@@ -130,30 +130,6 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *t
 			}) == 2
 	}, 120*time.Second)
 
-	if err != nil {
-		// in some environments, the engine does not manage to reconnect to an admin after the admin pod was restarted
-		// the only way to proceed is to restart the engine
-		// see https://github.com/nuodb/nuodb-helm-charts/issues/238
-		t.Log(err)
-		t.Logf("WARNING: engine did not reconnect with admin. Killing all engines to make upgrade proceed!")
-
-		opt := testlib.GetExtractedOptions(options)
-		tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
-		smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
-
-		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-		smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
-
-		go testlib.GetAppLog(t, namespaceName, tePodName, "-pre-kill", &v12.PodLogOptions{Follow: true})
-		go testlib.GetAppLog(t, namespaceName, smPodName, "-pre-kill", &v12.PodLogOptions{Follow: true})
-
-		testlib.KillProcess(t, namespaceName, tePodName)
-		testlib.KillProcess(t, namespaceName, smPodName)
-
-		testlib.AwaitPodUp(t, namespaceName, tePodName, 300*time.Second)
-		testlib.AwaitPodUp(t, namespaceName, smPodName, 300*time.Second)
-
-	}
 	// make sure the environment is stable before proceeding
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
