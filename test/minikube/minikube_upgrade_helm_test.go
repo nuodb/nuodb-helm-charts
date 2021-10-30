@@ -4,7 +4,6 @@ package minikube
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"testing"
 	"time"
