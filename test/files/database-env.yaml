@@ -4,4 +4,8 @@ database:
       valueFrom:
         fieldRef:
             fieldPath: status.podIP
+    - name: NODE_IP
+      valueFrom:
+        fieldRef:
+          fieldPath: status.hostIP
     - { name: CUSTOM_ENV_VAR, value: "CUSTOM_ENV_VAR_VALUE" }
