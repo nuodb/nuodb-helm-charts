@@ -183,7 +183,9 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	// Generate diagnose in case this test fails
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
 		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+		opt := testlib.GetExtractedOptions(&options)
+		pvcName := fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseChartName, opt.ClusterName, opt.DbName)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", pvcName)
 	})
 
 	// Enable TDE on database level

@@ -70,7 +70,7 @@ func TestKubernetesPrintCores(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+	options := helm.Options{
 		SetValues: map[string]string{
 			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
@@ -80,14 +80,17 @@ func TestKubernetesPrintCores(t *testing.T) {
 			"database.sm.logPersistence.enabled":    "true",
 			"database.options.ping-timeout":         "0", // disable network fault handling
 		},
-	})
+	}
+
+	databaseHelmChartReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
 	t.Run("killTEWithCore", func(t *testing.T) {
 		tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseHelmChartReleaseName, "cluster0", "demo")
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 		verifyKillAndInfoInLog(t, namespaceName, admin0, tePodName)
-
-		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+		opt := testlib.GetExtractedOptions(&options)
+		pvcName := fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseHelmChartReleaseName, opt.ClusterName, opt.DbName)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", pvcName)
 	})
 
 	t.Run("killSMWithCore", func(t *testing.T) {

@@ -284,7 +284,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	// Generate diagnose in case this test fails
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
 		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", pvcName)
 	})
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
