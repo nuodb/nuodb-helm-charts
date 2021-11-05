@@ -71,11 +71,20 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-clusterip.yaml"})
 
-	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
-		assert.Equal(t, "demo-clusterip", obj.Name)
+	for _, obj := range testlib.SplitAndRenderService(t, output, 2) {
 		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
-		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Empty(t, obj.Spec.ClusterIP)
+
+		if obj.Name == "demo-clusterip" {
+			// This is the cluster IP targeting all database TEs
+			assert.Equal(t, "te", obj.Spec.Selector["component"])
+			assert.Equal(t, "nuodb", obj.Spec.Selector["domain"])
+			assert.Equal(t, "demo", obj.Spec.Selector["database"])
+		} else {
+			// This is the cluster IP targeting only TEs in this TE group
+			assert.Equal(t, "te", obj.Spec.Selector["component"])
+			assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
+		}
 	}
 }
 
@@ -114,12 +123,38 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
-		assert.Equal(t, "demo-balancer", obj.Name)
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
 		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
 	}
 
+}
+
+func TestDatabaseNodePortServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.provider":                        "amazon",
+			"database.te.externalAccess.enabled":    "true",
+			"database.te.externalAccess.type":       "NodePort",
+			"database.te.externalAccess.internalIP": "true",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
+		assert.Equal(t, v1.ServiceTypeNodePort, obj.Spec.Type)
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
+		assert.Equal(t, "te", obj.Spec.Selector["component"])
+		assert.NotContains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
+	}
 }
 
 func TestDatabaseStatefulSet(t *testing.T) {
@@ -187,17 +222,29 @@ func TestDatabaseOtherOptions(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.te.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
-			"database.sm.otherOptions.keystore": "/etc/nuodb/keys/nuoadmin.p12",
-			"admin.tlsKeyStore.secret":          "nuodb-keystore",
-			"admin.tlsKeyStore.key":             "nuoadmin.p12",
-			"admin.tlsKeyStore.password":        "changeIt",
+			"database.te.otherOptions.keystore":               "/etc/nuodb/keys/nuoadmin.p12",
+			"database.sm.otherOptions.keystore":               "/etc/nuodb/keys/nuoadmin.p12",
+			"database.te.otherOptions.enable-external-access": "false",
+			"database.sm.otherOptions.enable-external-access": "false",
+			"database.te.otherOptions.resolve-hostname":       "true",
+			"database.sm.otherOptions.resolve-hostname":       "true",
+			"database.te.otherOptions.some-other-flag":        "",
+			"database.sm.otherOptions.some-other-flag":        "",
+			"admin.tlsKeyStore.secret":                        "nuodb-keystore",
+			"admin.tlsKeyStore.key":                           "nuoadmin.p12",
+			"admin.tlsKeyStore.password":                      "changeIt",
 		},
 	}
 
 	basicArgChecks := func(args []string) {
+		t.Log(args)
 		assert.True(t, testlib.ArgContains(args, "--keystore"))
 		assert.True(t, testlib.ArgContains(args, "/etc/nuodb/keys/nuoadmin.p12"))
+		assert.True(t, testlib.ArgContains(args, "--resolve-hostname"))
+		assert.False(t, testlib.ArgContains(args, "--enable-external-access"))
+		assert.False(t, testlib.ArgContains(args, "--some-other-flag"))
+		assert.False(t, testlib.ArgContains(args, "true"))
+		assert.NotContains(t, args, "")
 	}
 
 	basicEnvChecks := func(args []v1.EnvVar) {

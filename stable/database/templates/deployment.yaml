@@ -8,6 +8,9 @@ metadata:
     kubectl.kubernetes.io/default-logs-container: engine
 {{- include "database.loadBalancerConfig" . | indent 4 }}
 {{- include "database.automaticProtocolUpgrade" . | indent 4 }}
+    {{- if eq (include "defaulttrue" .Values.database.primaryRelease) "false" }}
+    nuodb.com/database-secondary-release: "true"
+    {{- end }}
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb
@@ -69,12 +72,7 @@ spec:
           - "--labels"
           - "{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}"
         {{- end }}
-{{- range $opt, $val := .Values.database.te.otherOptions }}
-          - "--{{$opt}}"
-          {{ if $val }}
-          - "{{$val}}"
-          {{- end }}
-{{- end}}
+    {{- include "database.otherOptions" .Values.database.te.otherOptions | indent 10 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
           - name: NODE_NAME

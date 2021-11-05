@@ -1,3 +1,7 @@
+{{/* 
+  Remove this conditional rendering when support for storage groups is added
+*/}}
+{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 {{- if eq (include "defaulttrue" .Values.database.sm.noHotCopy.enablePod) "true" }}
 ---
 apiVersion: apps/v1
@@ -104,10 +108,7 @@ spec:
           - "--database-options"
           - "{{- include "opt.key-values" . }}"
     {{- end }}
-{{- range $opt, $val := .Values.database.sm.otherOptions }}
-          - "--{{$opt}}"
-          - "{{$val}}"
-{{- end}}
+    {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -480,10 +481,7 @@ spec:
           - "--database-options"
           - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{ end}}"
 {{- end}}
-{{- range $opt, $val := .Values.database.sm.otherOptions }}
-          - "--{{$opt}}"
-          - "{{$val}}"
-{{- end}}
+    {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -784,4 +782,5 @@ spec:
         requests:
           storage: {{ .Values.database.sm.logPersistence.size }}
   {{- end }}
+{{- end }}
 {{- end }}
