@@ -141,6 +141,7 @@ jobs:
               set -- "$@" -count=${TEST_REPEAT} -failfast
             fi
             mkdir -p $TEST_RESULTS # create the test results directory
+            echo "PATH=$PATH"
             go clean -testcache
             echo "Running with Go arguments: $@"
             gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@" 

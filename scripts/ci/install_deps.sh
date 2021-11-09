@@ -14,6 +14,8 @@ curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${K
 wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
+mkdir -p $TEST_RESULTS # create the test results directory
+
 if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   sudo apt-get update
   sudo apt-get install -y conntrack
