@@ -125,6 +125,7 @@ jobs:
       - run:
           name: Run the tests
           command: |
+            source $HOME/.nuodbrc
             TEST_SUITE="<< parameters.test-suite >>"
             TEST_CASE="<< parameters.test-case >>"
             TEST_TAG="<< parameters.tag >>"
@@ -141,7 +142,9 @@ jobs:
               set -- "$@" -count=${TEST_REPEAT} -failfast
             fi
             mkdir -p $TEST_RESULTS # create the test results directory
+            echo "Checking dependencies ..."
             echo "PATH=$PATH"
+            echo "MINIKUBE_PROCS=<$(ps aux | grep minikube)>"
             go clean -testcache
             echo "Running with Go arguments: $@"
             gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@" 
