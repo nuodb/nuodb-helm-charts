@@ -36,6 +36,7 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   # provisioned and routes to the minikube IP are created; 
   # see https://minikube.sigs.k8s.io/docs/handbook/accessing/#using-minikube-tunnel
   sudo sh -c "nohup minikube tunnel > "${TEST_RESULTS}/minikube_tunnel.log" 2>&1 &"
+  echo "echo \"MINIKUBE_PROCS: <\$(ps aux | grep minikube)>\"" >> $HOME/.nuodbrc
 
   # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
   # after pods have been re-created which causes problems with inter pod communication.
@@ -118,3 +119,4 @@ curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v"${GOT
 # Install NuoDB client on the build host
 curl -sSL "https://github.com/nuodb/nuodb-client/releases/download/v${NUODBCLIENT_VERSION}/nuodb-client-${NUODBCLIENT_VERSION}.lin64.tar.gz" | sudo tar -xz -C $HOME
 echo "export PATH=${HOME}/nuodb-client-${NUODBCLIENT_VERSION}.lin64/bin:\$PATH" >> $HOME/.nuodbrc
+echo "echo PATH: \"\$PATH\"" >> $HOME/.nuodbrc
