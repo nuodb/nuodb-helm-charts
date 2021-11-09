@@ -114,5 +114,5 @@ fi
 curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v"${GOTESTSUM_VERSION}"/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" | sudo tar -xz -C /usr/local/bin gotestsum
 
 # Install NuoDB client on the build host
-curl -Lo "https://github.com/nuodb/nuodb-client/releases/download/v${NUODBCLIENT_VERSION}/nuodb-client-${NUODBCLIENT_VERSION}.lin64.tar.gz" | sudo tar -xz -C $HOME
+curl -sSL "https://github.com/nuodb/nuodb-client/releases/download/v${NUODBCLIENT_VERSION}/nuodb-client-${NUODBCLIENT_VERSION}.lin64.tar.gz" | sudo tar -xz -C $HOME
 echo "export PATH=${HOME}/nuodb-client-${NUODBCLIENT_VERSION}.lin64/bin:\$PATH" >> $HOME/.circlerc
