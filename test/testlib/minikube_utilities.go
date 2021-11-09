@@ -1137,6 +1137,21 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 	}
 }
 
+func GetNodesInternalAddresses(t *testing.T) map[string]string {
+	addresses := make(map[string]string)
+	options := k8s.NewKubectlOptions("", "", "")
+	nodes := k8s.GetNodes(t, options)
+	require.True(t, len(nodes) > 0)
+	for _, node := range nodes {
+		for _, address := range node.Status.Addresses {
+			if address.Type == corev1.NodeInternalIP {
+				addresses[node.Name] = address.Address
+			}
+		}
+	}
+	return addresses
+}
+
 func GetNamespaces(t *testing.T) []corev1.Namespace {
 	clientset, err := k8s.GetKubernetesClientE(t)
 	require.NoError(t, err)

@@ -15,6 +15,7 @@ type NuoDBProcess struct {
 	Labels    map[string]string `json:"labels"`
 	IpAddress string            `json:"ipAddress"`
 	Options   map[string]string `json:"options"`
+	NodeId    int32             `json:"nodeId"`
 }
 
 func Unmarshal(s string) (err error, processes []NuoDBProcess) {

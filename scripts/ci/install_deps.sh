@@ -30,6 +30,11 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
 
   sudo chmod 700 $HOME/.kube/config
 
+  # Start 'minikube tunnel' so that services with type LoadBalancer are correctly
+  # provisioned and routes to the minikube IP are created; 
+  # see https://minikube.sigs.k8s.io/docs/handbook/accessing/#using-minikube-tunnel
+  sudo sh -c "nohup minikube tunnel > "${TEST_RESULTS}/minikube_tunnel.log" 2>&1 &"
+
   # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
   # after pods have been re-created which causes problems with inter pod communication.
   # Set CoreDNS TTL to 0 so that DNS entries are not cached. 
@@ -107,3 +112,7 @@ else
 fi
 
 curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v"${GOTESTSUM_VERSION}"/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" | sudo tar -xz -C /usr/local/bin gotestsum
+
+# Install NuoDB client on the build host
+curl -Lo "https://github.com/nuodb/nuodb-client/releases/download/v${NUODBCLIENT_VERSION}/nuodb-client-${NUODBCLIENT_VERSION}.lin64.tar.gz" | sudo tar -xz -C $HOME
+echo "export PATH=${HOME}/nuodb-client-${NUODBCLIENT_VERSION}.lin64/bin:\$PATH" >> $HOME/.circlerc

@@ -122,7 +122,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		helm.Delete(t, options, helmChartReleaseName, true)
 		AwaitNoPods(t, namespaceName, helmChartReleaseName)
 		// Delete database only when tearing down the entrypoint cluster
-		if opt.ClusterName == opt.EntrypointClusterName {
+		if opt.ClusterName == opt.EntrypointClusterName && opt.DbPrimaryRelease {
 			EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
 			DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
 			// purge all database archives so that multiple database tests can
