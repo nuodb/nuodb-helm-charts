@@ -35,7 +35,7 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   # Start 'minikube tunnel' so that services with type LoadBalancer are correctly
   # provisioned and routes to the minikube IP are created; 
   # see https://minikube.sigs.k8s.io/docs/handbook/accessing/#using-minikube-tunnel
-  sudo sh -c "nohup minikube tunnel > "${TEST_RESULTS}/minikube_tunnel.log" 2>&1 &"
+  sudo sh -c "nohup minikube tunnel > ${TEST_RESULTS}/minikube_tunnel.log 2>&1 &"
   echo "echo \"MINIKUBE_PROCS: <\$(ps aux | grep minikube)>\"" >> $HOME/.nuodbrc
 
   # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
