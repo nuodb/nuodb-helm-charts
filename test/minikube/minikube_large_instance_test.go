@@ -21,7 +21,7 @@ func TestHashiCorpVault(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
-	namespaceName := fmt.Sprintf("testvault-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%svault-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 
 	defer testlib.Teardown(testlib.TEARDOWN_VAULT)
@@ -39,12 +39,12 @@ func TestHashiCorpVault(t *testing.T) {
 
 	adminOptions := helm.Options{
 		ValuesFiles: []string{"../files/vault-annotations-admin.yaml"},
-		SetValues: map[string]string {
-			"vault.hashicorp.com/log-level": "trace", // increase debug level for testing
-			"admin.replicas": "3",
+		SetValues: map[string]string{
+			"vault.hashicorp.com/log-level":     "trace", // increase debug level for testing
+			"admin.replicas":                    "3",
 			"admin.options.truststore-password": "$(</etc/nuodb/keys/nuoadmin-truststore.password)",
-			"admin.options.keystore-password": "$(</etc/nuodb/keys/nuoadmin.password)",
-			"admin.options.ssl": "true",
+			"admin.options.keystore-password":   "$(</etc/nuodb/keys/nuoadmin.password)",
+			"admin.options.ssl":                 "true",
 		},
 	}
 

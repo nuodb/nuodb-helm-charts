@@ -152,7 +152,7 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
 		randomSuffix := strings.ToLower(random.UniqueId())
-		namespaceName := fmt.Sprintf("kubernetesmultipletegroups-%s", randomSuffix)
+		namespaceName := fmt.Sprintf("%skubernetesmultipletegroups-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 		testlib.CreateNamespace(t, namespaceName)
 
 		helmChartReleaseName, _ := testlib.StartAdmin(t, &adminOptions, 1, namespaceName)

@@ -24,12 +24,12 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, upgradeOptions *test
 		SetValues: map[string]string{
 			"admin.readinessTimeoutSeconds": "5",
 		},
-		Version:   fromHelmVersion,
+		Version: fromHelmVersion,
 	}
 	testlib.InferVersionFromTemplate(t, options)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("upgradeadmintest-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%supgradeadmintest-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 
 	// Enable TLS during upgrade because the older versions of helm charts have
@@ -72,7 +72,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *t
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.readinessTimeoutSeconds": "5",
+			"admin.readinessTimeoutSeconds":         "5",
 			"database.sm.resources.requests.cpu":    "250m",
 			"database.sm.resources.requests.memory": "250Mi",
 			"database.te.resources.requests.cpu":    "250m",
@@ -84,7 +84,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *t
 	testlib.InferVersionFromTemplate(t, options)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("upgradedatabasetest-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%supgradedatabasetest-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 
 	// Enable TLS during upgrade because the older versions of helm charts have

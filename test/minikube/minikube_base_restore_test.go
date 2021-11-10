@@ -110,7 +110,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	}
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("kubernetesrestoredatabase-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%skubernetesrestoredatabase-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 	// NuoDB 4.2 doesn't ship SSL certificates which will disable TLS in case
 	// certificates are not generated; this is needed because NuoDB 4.0.8 image
