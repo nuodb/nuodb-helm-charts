@@ -202,6 +202,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
+| `primaryRelease` | One primary and multiple secondary database Helm releases for the same database name may be deployed into the same Kubernetes namespace. Set to `false` when deploying secondary database Helm releases. | `true` |
 | `autoImport.*` | Enable and configure the automatic initializing of the initial database state | `disabled` |
 | `autoImport.source` | The source - typically a URL - of the database copy to import | `""` |
 | `autoImport.credentials` | Authentication for the download of `source` in the form `user`:`password` | '""'|
@@ -220,7 +221,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
 | `sm.hotCopy.timeout` | Timeout for a started `full` or `incremental` hotcopy job to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
 | `sm.hotCopy.successHistory` | Number of successful Jobs to keep | `5` |
-| `sm.hotCopy.failureHostory` | Number of failed jobs to keep | `5` |
+| `sm.hotCopy.failureHistory` | Number of failed jobs to keep | `5` |
 | `sm.hotCopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
 | `sm.hotCopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
 | `sm.hotCopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
