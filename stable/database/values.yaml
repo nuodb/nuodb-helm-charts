@@ -90,6 +90,7 @@ admin:
   serviceSuffix:
     clusterip: "clusterip"
     balancer: "balancer"
+    nodeport: "nodeport"
 
   ## Transparent Data Encryption (TDE) secrets
   # Storage passwords can be managed and stored as Kubernetes
@@ -205,6 +206,7 @@ database:
   serviceSuffix:
     clusterip: ""
     balancer: ""
+    nodeport: ""
 
   # One primary and multiple secondary database Helm releases for the same
   # database name may be deployed into the same Kubernetes namespace. Set to

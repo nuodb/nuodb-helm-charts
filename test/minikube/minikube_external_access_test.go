@@ -32,10 +32,10 @@ func findServiceNodePortE(service *corev1.Service, portName string) (int32, erro
 		fmt.Sprintf("Unable to find NodePort for service %s", service.Name))
 }
 
-func findDomainExternalInfo(t *testing.T, namespaceName string) (string, int32) {
+func findDomainExternalInfo(t *testing.T, namespaceName string, serviceName string) (string, int32) {
 	var domainAddress string
 	var domainPort int32
-	domainService := testlib.GetService(t, namespaceName, "nuodb-balancer")
+	domainService := testlib.GetService(t, namespaceName, serviceName)
 	if domainService.Spec.Type == corev1.ServiceTypeNodePort {
 		// get the internal address of the first Kubernetes node
 		for _, address := range testlib.GetNodesInternalAddresses(t) {
@@ -53,10 +53,9 @@ func findDomainExternalInfo(t *testing.T, namespaceName string) (string, int32) 
 	return domainAddress, domainPort
 }
 
-func verifyNuoSQLEngine(t *testing.T, namespaceName string, databaseName string,
+func verifyNuoSQLEngine(t *testing.T, address string, port int32, databaseName string,
 	properties map[string]string, expectedNodeIds []int32) {
 
-	address, port := findDomainExternalInfo(t, namespaceName)
 	pathToNuoSQL, ok := os.LookupEnv("NUOSQL_PATH")
 	if !ok {
 		pathToNuoSQL = "nuosql"
@@ -68,11 +67,11 @@ func verifyNuoSQLEngine(t *testing.T, namespaceName string, databaseName string,
 	}
 	t.Logf("Running command: <%s>", cmd)
 	out, err := exec.Command("sh", "-c", cmd).Output()
-	if err != nil {
-		if exiterr, ok := err.(*exec.ExitError); ok {
-			// nuosql has exited with an non zero exit code; log command stderr
-			require.NoError(t, err, string(exiterr.Stderr))
-		}
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		// nuosql has exited with an non zero exit code; generate better error
+		// message by including the command stderr
+		require.NoError(t, err, string(exiterr.Stderr))
+	} else {
 		require.NoError(t, err)
 	}
 
@@ -158,10 +157,16 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 		helmChartReleaseName, _ := testlib.StartAdmin(t, &adminOptions, 1, namespaceName)
 
 		admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+		var serviceSuffix string
+		if serviceType == corev1.ServiceTypeNodePort {
+			serviceSuffix = "nodeport"
+		} else {
+			serviceSuffix = "balancer"
+		}
 
 		verifyService(t, namespaceName, admin0, "nuodb", "ClusterIP", true)
 		verifyService(t, namespaceName, admin0, "nuodb-clusterip", "ClusterIP", false)
-		verifyService(t, namespaceName, admin0, "nuodb-balancer", serviceType, false)
+		verifyService(t, namespaceName, admin0, fmt.Sprintf("nuodb-%s", serviceSuffix), serviceType, false)
 
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
@@ -205,13 +210,16 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 		balancerServices := make(map[string]*corev1.Service)
 		for _, group := range []string{group1ReleaseName, group2ReleaseName} {
 			// each group installs unique balancer that matches TEs in the group only
-			balancerServiceName := fmt.Sprintf("%s-nuodb-%s-%s-balancer", group, opt.ClusterName, opt.DbName)
+			balancerServiceName := fmt.Sprintf("%s-nuodb-%s-%s-%s", group, opt.ClusterName,
+				opt.DbName, serviceSuffix)
 			s := verifyService(t, namespaceName, admin0, balancerServiceName, serviceType, false)
 			balancerServices[group] = s
 		}
 
 		// verify external-address and external-port labels for TE processes
 		verifyProcessExternalAccessLabels(t, namespaceName, admin0, opt.DbName, balancerServices)
+
+		address, port := findDomainExternalInfo(t, namespaceName, fmt.Sprintf("nuodb-%s", serviceSuffix))
 
 		for txType, group := range map[string]string{"OLTP": group1ReleaseName, "TAP": group2ReleaseName} {
 			var expectedNodeIds []int32
@@ -223,7 +231,7 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 				}
 			}
 			// verify that expected TE engine is returned by the admin
-			verifyNuoSQLEngine(t, namespaceName, opt.DbName,
+			verifyNuoSQLEngine(t, address, port, opt.DbName,
 				map[string]string{"LBQuery": fmt.Sprintf("random(label(tx-type %s))", txType)},
 				expectedNodeIds)
 		}

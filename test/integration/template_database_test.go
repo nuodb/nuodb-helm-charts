@@ -149,7 +149,7 @@ func TestDatabaseNodePortServiceRenders(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
-		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-nodeport", obj.Name)
 		assert.Equal(t, v1.ServiceTypeNodePort, obj.Spec.Type)
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
 		assert.Equal(t, "te", obj.Spec.Selector["component"])

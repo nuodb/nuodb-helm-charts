@@ -183,6 +183,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
 | `serviceSuffix.balancer` | The suffix to use for the LoadBalancer service name | `balancer` |
 | `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
+| `serviceSuffix.nodeport` | The suffix to use for the NodePort service name | `nodeport` |
 | `readinessTimeoutSeconds` | Admin readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `1` |
 | `podAnnotations` | Annotations to pass through to the Admin pod | `nil` |
 | `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
@@ -219,6 +220,7 @@ The purpose of this section is to allow customisation of the names of the cluste
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
 | `balancer` | suffix for the balancer service | "balancer" |
+| `nodeport` | suffix for the NodePort service | "nodeport" |
 
 #### admin.legacy
 

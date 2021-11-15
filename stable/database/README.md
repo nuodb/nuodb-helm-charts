@@ -176,6 +176,7 @@ The purpose of this section is to allow customisation of the names of the cluste
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
 | `balancer` | suffix for the balancer service | "balancer" |
+| `nodeport` | suffix for the NodePort service | "nodeport" |
 
 #### database.*
 
@@ -290,8 +291,7 @@ Any file located in `database.configFilesPath` can be replaced; the YAML key cor
 | ----- | ----------- | ------ |
 | `nuodb.config` | [NuoDB database options][6] | `nil` |
 
-
-### Running
+### database.serviceSuffix.*
 
 The purpose of this section is to allow customisation of the names of the clusterIP and balancer database services (load-balancers).
 
@@ -299,6 +299,7 @@ The purpose of this section is to allow customisation of the names of the cluste
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
 | `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
+| `nodeport` | suffix for the nodePort service | .Values.admin.serviceSuffix.nodeport |
 
 #### nuocollector.*
 

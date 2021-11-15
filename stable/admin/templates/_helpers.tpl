@@ -252,3 +252,17 @@ it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
 {{- default false . -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Renders the admin service name for external access based on the service type
+*/}}
+{{- define "admin.externalServiceName" -}}
+  {{- $serviceType := (default "LoadBalancer" .Values.admin.externalAccess.type) -}}
+  {{- if eq $serviceType "LoadBalancer" -}}
+{{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.balancer }}
+  {{- else if eq $serviceType "NodePort" -}}
+{{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.nodeport }}
+  {{- else -}}
+{{ .Values.admin.domain }}
+  {{- end }}
+{{- end }}

@@ -306,3 +306,17 @@ not empty. Flags can be defined by setting their value to boolean true or "true"
     {{- end }}
   {{- end }}
 {{- end}}
+
+{{/*
+Renders the database service name for external access based on the service type
+*/}}
+{{- define "database.externalServiceName" -}}
+  {{- $serviceType := (default "LoadBalancer" .Values.database.te.externalAccess.type) -}}
+  {{- if eq $serviceType "LoadBalancer" -}}
+{{ template "database.fullname" . }}-{{ default .Values.admin.serviceSuffix.balancer .Values.database.serviceSuffix.balancer }}
+  {{- else if eq $serviceType "NodePort" -}}
+{{ template "database.fullname" . }}-{{ default .Values.admin.serviceSuffix.nodeport .Values.database.serviceSuffix.nodeport }}
+  {{- else -}}
+{{ template "database.fullname" . }}
+  {{- end }}
+{{- end }}

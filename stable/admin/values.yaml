@@ -232,6 +232,7 @@ admin:
   serviceSuffix:
     clusterip: clusterip
     balancer: balancer
+    nodeport: nodeport
 
   # Some clusters require longer readiness probe timeouts
   readinessTimeoutSeconds: 5
