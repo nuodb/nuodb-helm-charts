@@ -28,6 +28,7 @@ import (
 	v1 "k8s.io/api/apps/v1"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -990,6 +991,16 @@ func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *v1.Daem
 	return daemonSet
 }
 
+func GetPvc(t *testing.T, namespace string, pvcName string) *corev1.PersistentVolumeClaim {
+	options := k8s.NewKubectlOptions("", "", namespace)
+
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.TODO(), pvcName, metav1.GetOptions{})
+	require.NoError(t, err)
+	return pvc
+}
+
 func GetReplicationController(t *testing.T, namespace string, replicationControllerName string) *corev1.ReplicationController {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
@@ -1186,8 +1197,19 @@ func DeletePVC(t *testing.T, namespaceName string, name string) {
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
-	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).Delete(context.TODO(), name, metav1.DeleteOptions{})
+	gracefulDeleteSeconds := int64(120)
+	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).
+		Delete(context.TODO(), name, metav1.DeleteOptions{GracePeriodSeconds: &gracefulDeleteSeconds})
 	require.NoError(t, err)
+}
+
+func AwaitPvDeleted(t *testing.T, name string, timeout time.Duration) {
+	clientset, err := k8s.GetKubernetesClientE(t)
+	require.NoError(t, err)
+	Await(t, func() bool {
+		_, err := clientset.CoreV1().PersistentVolumes().Get(context.TODO(), name, metav1.GetOptions{})
+		return apierrors.IsNotFound(err)
+	}, timeout)
 }
 
 func ScaleStatefulSet(t *testing.T, namespaceName string, name string, replicas int) {
