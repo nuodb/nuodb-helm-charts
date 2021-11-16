@@ -5,6 +5,7 @@ metadata:
   annotations:
     description: "Service (and load-balancer) for Admin pods."
     {{- if and .Values.admin.externalAccess.internalIP .Values.cloud.provider}}
+    {{- if eq (default "LoadBalancer" .Values.admin.externalAccess.type) "LoadBalancer" }}
     {{- if eq .Values.cloud.provider "amazon" }}
     service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
     {{- else if eq .Values.cloud.provider "azure" }}
@@ -13,13 +14,14 @@ metadata:
     cloud.google.com/load-balancer-type: "Internal"
     {{- end}}
     {{- end}}
+    {{- end}}
   labels:
     app: {{ template "admin.fullname" . }}
     group: nuodb
     domain: {{ .Values.admin.domain }}
     chart: {{ template "admin.chart" . }}
     release: {{ .Release.Name | quote }}
-  name: {{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.balancer }}
+  name: {{ template "admin.externalServiceName" . }}
 spec:
   ports:
   - { name: 8888-tcp,   port: 8888,   protocol: TCP,  targetPort: 8888  }
@@ -28,7 +30,7 @@ spec:
   selector:
     app: {{ template "admin.fullname" . }}
   sessionAffinity: None
-  type: LoadBalancer
+  type: {{ default "LoadBalancer" .Values.admin.externalAccess.type }}
 status:
   loadBalancer: {}
 {{- end}}

@@ -53,7 +53,7 @@ func performStoragePasswordsRotation(t *testing.T, namespaceName string, adminPo
 	applyStoragePasswordSecret(t, namespaceName, secretName, passwords)
 	testlib.Await(t, func() bool {
 		err := k8s.RunKubectlE(t, kubectlOptions,
-			"exec", adminPod, "-c", "admin",  "--",
+			"exec", adminPod, "-c", "admin", "--",
 			"nuocmd", "check", "data-encryption",
 			"--db-name", dbName,
 			"--password", passwords[0],
@@ -85,7 +85,7 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 	}
 	opt := testlib.GetExtractedOptions(&options)
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("admin-cold-start-with-tde-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%s-admin-cold-start-with-tde-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
@@ -155,7 +155,7 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	}
 	opt := testlib.GetExtractedOptions(&options)
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("restore-in-place-with-tde-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%s-restore-in-place-with-tde-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
@@ -183,7 +183,9 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	// Generate diagnose in case this test fails
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
 		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+		opt := testlib.GetExtractedOptions(&options)
+		pvcName := fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseChartName, opt.ClusterName, opt.DbName)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", pvcName)
 	})
 
 	// Enable TDE on database level

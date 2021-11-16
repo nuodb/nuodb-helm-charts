@@ -110,7 +110,7 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	}
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("kubernetesrestoredatabase-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%skubernetesrestoredatabase-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 	// NuoDB 4.2 doesn't ship SSL certificates which will disable TLS in case
 	// certificates are not generated; this is needed because NuoDB 4.0.8 image
@@ -128,16 +128,18 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
-	// Generate diagnose in case this test fails
-	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
-		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
-	})
-
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = opts
 
 	opt := testlib.GetExtractedOptions(&options)
+
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te",
+			fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseChartName, opt.ClusterName, opt.DbName))
+	})
+
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
@@ -281,8 +283,10 @@ func TestKubernetesAutoRestore(t *testing.T) {
 
 	// Generate diagnose in case this test fails
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		opt := testlib.GetExtractedOptions(&databaseOptions)
+		pvcName := fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseChartName, opt.ClusterName, opt.DbName)
 		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", pvcName)
 	})
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)

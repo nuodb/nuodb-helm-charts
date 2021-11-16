@@ -38,6 +38,7 @@ type ExtractedOptions struct {
 	DbName                string
 	ClusterName           string
 	EntrypointClusterName string
+	DbPrimaryRelease      bool
 }
 
 func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
@@ -73,6 +74,12 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 	opt.EntrypointClusterName = options.SetValues["cloud.cluster.entrypointName"]
 	if len(opt.EntrypointClusterName) == 0 {
 		opt.EntrypointClusterName = "cluster0"
+	}
+
+	if options.SetValues["database.primaryRelease"] == "false" {
+		opt.DbPrimaryRelease = false
+	} else {
+		opt.DbPrimaryRelease = true
 	}
 
 	return
@@ -115,7 +122,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		helm.Delete(t, options, helmChartReleaseName, true)
 		AwaitNoPods(t, namespaceName, helmChartReleaseName)
 		// Delete database only when tearing down the entrypoint cluster
-		if opt.ClusterName == opt.EntrypointClusterName {
+		if opt.ClusterName == opt.EntrypointClusterName && opt.DbPrimaryRelease {
 			EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
 			DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
 			// purge all database archives so that multiple database tests can
@@ -147,19 +154,23 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		})
 		AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
 
-		smPodName0 := GetPodName(t, namespaceName, smPodNameTemplate)
-		AddTeardown(TEARDOWN_DATABASE, func() {
-			for _, smPod := range GetPodNames(t, namespaceName, smPodNameTemplate) {
-				t.Logf("Getting log from SM pod: %s", smPod)
-				go GetAppLog(t, namespaceName, smPod, "", &v12.PodLogOptions{Follow: true})
-			}
-		})
-		AwaitPodUp(t, namespaceName, smPodName0, 300*time.Second)
+		// currently we don't render SM pods in the secondary releases
+		if opt.DbPrimaryRelease {
+			smPodName0 := GetPodName(t, namespaceName, smPodNameTemplate)
+			AddTeardown(TEARDOWN_DATABASE, func() {
+				for _, smPod := range GetPodNames(t, namespaceName, smPodNameTemplate) {
+					t.Logf("Getting log from SM pod: %s", smPod)
+					go GetAppLog(t, namespaceName, smPod, "", &v12.PodLogOptions{Follow: true})
+				}
+			})
+			AwaitPodUp(t, namespaceName, smPodName0, 300*time.Second)
+		}
 
-		// Await num of database processes only for single cluster deployment;
-		// in multi-clusters the await logic should be called once all clusters
-		// are installed with the database chart
-		if opt.ClusterName == opt.EntrypointClusterName {
+		// Await num of database processes only for single cluster deployments
+		// and if the database release is primary; in multi-clusters the await
+		// logic should be called once all clusters are installed with the
+		// database chart
+		if opt.ClusterName == opt.EntrypointClusterName && opt.DbPrimaryRelease {
 			AwaitDatabaseUp(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods+opt.NrTePods)
 		}
 	}

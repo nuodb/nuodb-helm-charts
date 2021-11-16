@@ -16,7 +16,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-
 func scheduleDefault(t *testing.T, helmChartPath string, namespaceName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 	helmChartReleaseName := fmt.Sprintf("thp-%s", randomSuffix)
@@ -36,7 +35,7 @@ func scheduleDefault(t *testing.T, helmChartPath string, namespaceName string) {
 	testlib.Await(t, func() bool {
 		daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
 		return daemonSet.Status.DesiredNumberScheduled == 1
-	}, 30* time.Second)
+	}, 30*time.Second)
 }
 
 func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
@@ -61,7 +60,7 @@ func scheduleLabel(t *testing.T, helmChartPath string, namespaceName string) {
 	testlib.Await(t, func() bool {
 		daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
 		return daemonSet.Status.DesiredNumberScheduled == 1
-	}, 30* time.Second)
+	}, 30*time.Second)
 }
 
 func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName string) {
@@ -86,7 +85,7 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 	testlib.Await(t, func() bool {
 		daemonSet := testlib.GetDaemonSet(t, namespaceName, daemonName)
 		return daemonSet.Status.DesiredNumberScheduled == 0
-	}, 30* time.Second)
+	}, 30*time.Second)
 }
 
 func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
@@ -97,7 +96,7 @@ func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN) // some namespace cleanup
 
-	namespaceName := fmt.Sprintf("testthp-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%sthp-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 
 	/*

@@ -152,6 +152,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `lbQuery` | Load balancer query | `random(first(label(pod ${pod:-}) label(node ${node:-}) label(zone ${zone:-}) any))` |
 | `externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
 | `externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
+| `externalAccess.type` | The service type used to enable external access for NuoDB Admin. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |
 | `resources` | Labels to apply to all resources | `{}` |
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |
@@ -182,6 +183,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
 | `serviceSuffix.balancer` | The suffix to use for the LoadBalancer service name | `balancer` |
 | `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
+| `serviceSuffix.nodeport` | The suffix to use for the NodePort service name | `nodeport` |
 | `readinessTimeoutSeconds` | Admin readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `1` |
 | `podAnnotations` | Annotations to pass through to the Admin pod | `nil` |
 | `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
@@ -218,6 +220,7 @@ The purpose of this section is to allow customisation of the names of the cluste
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
 | `balancer` | suffix for the balancer service | "balancer" |
+| `nodeport` | suffix for the NodePort service | "nodeport" |
 
 #### admin.legacy
 

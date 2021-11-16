@@ -237,11 +237,13 @@ The configuration is imported only in the entrypoint cluster.
 {{- define "database.loadBalancerConfig" -}}
 {{- if .Values.database.lbConfig }}
 {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 {{- with .Values.database.lbConfig.prefilter }}
 "nuodb.com/load-balancer-prefilter": {{ . | quote }}
 {{- end -}}
 {{- with .Values.database.lbConfig.default }}
 "nuodb.com/load-balancer-default": {{ . | quote }}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -254,10 +256,12 @@ The configuration is imported only in the entrypoint cluster.
 {{- define "database.automaticProtocolUpgrade" -}}
   {{- if .Values.database.automaticProtocolUpgrade }}
     {{- if eq (include "defaultfalse" .Values.database.automaticProtocolUpgrade.enabled) "true" -}}
-      {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
+      {{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
+        {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
 "nuodb.com/automatic-database-protocol-upgrade": "true"
-        {{- with .Values.database.automaticProtocolUpgrade.tePreferenceQuery }}
+          {{- with .Values.database.automaticProtocolUpgrade.tePreferenceQuery }}
 "nuodb.com/automatic-database-protocol-upgrade.te-preference-policy": {{ . | quote }}
+          {{- end -}}
         {{- end -}}
       {{- end -}}
     {{- end -}}
@@ -285,3 +289,34 @@ The configuration is imported only in the entrypoint cluster.
 {{- . }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Renders nuodocker options and flags. An option is rendered only if its value is
+not empty. Flags can be defined by setting their value to boolean true or "true"
+*/}}
+{{- define "database.otherOptions" -}}
+  {{- range $opt, $val := . }}
+    {{- if $val }}
+      {{- if (ne (toString $val) "false") }}
+- "--{{$opt}}"
+        {{ if ne (toString $val) "true" }}
+- "{{$val}}"
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end}}
+
+{{/*
+Renders the database service name for external access based on the service type
+*/}}
+{{- define "database.externalServiceName" -}}
+  {{- $serviceType := (default "LoadBalancer" .Values.database.te.externalAccess.type) -}}
+  {{- if eq $serviceType "LoadBalancer" -}}
+{{ template "database.fullname" . }}-{{ default .Values.admin.serviceSuffix.balancer .Values.database.serviceSuffix.balancer }}
+  {{- else if eq $serviceType "NodePort" -}}
+{{ template "database.fullname" . }}-{{ default .Values.admin.serviceSuffix.nodeport .Values.database.serviceSuffix.nodeport }}
+  {{- else -}}
+{{ template "database.fullname" . }}
+  {{- end }}
+{{- end }}

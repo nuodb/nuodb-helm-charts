@@ -11,6 +11,10 @@ metadata:
   name: {{ template "database.fullname" . }}-nuote
 data:
 {{ (.Files.Glob "files/nuote").AsConfig | indent 2 }}
+{{/* 
+  Remove this conditional rendering when support for storage groups is added
+*/}}
+{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -37,6 +41,7 @@ metadata:
   name: {{ template "database.fullname" . }}-nuobackup
 data:
 {{ (.Files.Glob "files/nuobackup").AsConfig | indent 2 }}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -50,6 +55,11 @@ metadata:
   name: {{ template "database.fullname" . }}-readinessprobe
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}
+{{/* 
+  Restore ConfigMap is installed by primary Helm database release as it's used by
+  the restore chart which has access only to the target database name.
+*/}}
+{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -76,6 +86,7 @@ data:
   {{- end }}
   NUODB_OS_USER: {{ include "os.user" . | quote }}
   NUODB_OS_GROUP: {{ include "os.group" . | quote }}
+{{- end }}
 {{- if .Values.database.configFiles }}
 ---
 apiVersion: v1

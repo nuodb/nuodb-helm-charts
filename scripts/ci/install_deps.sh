@@ -14,6 +14,8 @@ curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${K
 wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
+mkdir -p $TEST_RESULTS # create the test results directory
+
 if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   sudo apt-get update
   sudo apt-get install -y conntrack
@@ -29,6 +31,12 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   kubectl cluster-info
 
   sudo chmod 700 $HOME/.kube/config
+
+  # Start 'minikube tunnel' so that services with type LoadBalancer are correctly
+  # provisioned and routes to the minikube IP are created; 
+  # see https://minikube.sigs.k8s.io/docs/handbook/accessing/#using-minikube-tunnel
+  sudo sh -c "nohup minikube tunnel > ${TEST_RESULTS}/minikube_tunnel.log 2>&1 &"
+  echo "echo \"MINIKUBE_PROCS: <\$(ps aux | grep minikube)>\"" >> $HOME/.nuodbrc
 
   # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
   # after pods have been re-created which causes problems with inter pod communication.
@@ -107,3 +115,8 @@ else
 fi
 
 curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v"${GOTESTSUM_VERSION}"/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" | sudo tar -xz -C /usr/local/bin gotestsum
+
+# Install NuoDB client on the build host
+curl -sSL "https://github.com/nuodb/nuodb-client/releases/download/v${NUODBCLIENT_VERSION}/nuodb-client-${NUODBCLIENT_VERSION}.lin64.tar.gz" | sudo tar -xz -C $HOME
+echo "export PATH=${HOME}/nuodb-client-${NUODBCLIENT_VERSION}.lin64/bin:\$PATH" >> $HOME/.nuodbrc
+echo "echo PATH: \"\$PATH\"" >> $HOME/.nuodbrc

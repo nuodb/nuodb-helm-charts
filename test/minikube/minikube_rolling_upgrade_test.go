@@ -177,7 +177,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 	testlib.OverrideUpgradeContainerImage(t, &options)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("upgradefulldatabase-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%supgradefulldatabase-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
 	testlib.CreateNamespace(t, namespaceName)
@@ -325,7 +325,7 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	testlib.OverrideUpgradeContainerImage(t, &options)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("rollingupgradeadminminorversion-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%srollingupgradeadminminorversion-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 
 	// Enable TLS during upgrade because the older versions of helm charts have

@@ -207,6 +207,30 @@ func TestAdminServiceRenders(t *testing.T) {
 	}
 }
 
+func TestAdminNodePortServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.provider":                  "amazon",
+			"admin.externalAccess.enabled":    "true",
+			"admin.externalAccess.type":       "NodePort",
+			"admin.externalAccess.internalIP": "true",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
+		assert.Equal(t, "nuodb-nodeport", obj.Name)
+		assert.Equal(t, v1.ServiceTypeNodePort, obj.Spec.Type)
+		assert.Empty(t, obj.Spec.ClusterIP)
+		assert.NotContains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
+	}
+}
+
 func TestAdminStatefulSetVolumes(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/admin"
@@ -453,7 +477,7 @@ func TestAdminEvictedServers(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.evicted.servers":   "{nuoadmin-1,nuoadmin-2}",
+			"admin.evicted.servers": "{nuoadmin-1,nuoadmin-2}",
 		},
 	}
 

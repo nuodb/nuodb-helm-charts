@@ -56,7 +56,7 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
-	namespaceName := fmt.Sprintf("testtlsrotation-%s", randomSuffix)
+	namespaceName := fmt.Sprintf("%stlsrotation-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 
 	initialTLSCommands := []string{

@@ -176,6 +176,7 @@ The purpose of this section is to allow customisation of the names of the cluste
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
 | `balancer` | suffix for the balancer service | "balancer" |
+| `nodeport` | suffix for the NodePort service | "nodeport" |
 
 #### database.*
 
@@ -202,6 +203,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
+| `primaryRelease` | One primary and multiple secondary database Helm releases for the same database name may be deployed into the same Kubernetes namespace. Set to `false` when deploying secondary database Helm releases. | `true` |
 | `autoImport.*` | Enable and configure the automatic initializing of the initial database state | `disabled` |
 | `autoImport.source` | The source - typically a URL - of the database copy to import | `""` |
 | `autoImport.credentials` | Authentication for the download of `source` in the form `user`:`password` | '""'|
@@ -220,7 +222,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.deadline` | Deadline for a hotcopy job to start (seconds) | `1800` |
 | `sm.hotCopy.timeout` | Timeout for a started `full` or `incremental` hotcopy job to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
 | `sm.hotCopy.successHistory` | Number of successful Jobs to keep | `5` |
-| `sm.hotCopy.failureHostory` | Number of failed jobs to keep | `5` |
+| `sm.hotCopy.failureHistory` | Number of failed jobs to keep | `5` |
 | `sm.hotCopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
 | `sm.hotCopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
 | `sm.hotCopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
@@ -251,8 +253,9 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
 | `sm.readinessTimeoutSeconds` | SM readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
-| `te.externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
-| `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
+| `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
+| `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
+| `te.externalAccess.type` | The service type used to enable external database access. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |
 | `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
 | `te.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `te.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
@@ -288,8 +291,7 @@ Any file located in `database.configFilesPath` can be replaced; the YAML key cor
 | ----- | ----------- | ------ |
 | `nuodb.config` | [NuoDB database options][6] | `nil` |
 
-
-### Running
+### database.serviceSuffix.*
 
 The purpose of this section is to allow customisation of the names of the clusterIP and balancer database services (load-balancers).
 
@@ -297,6 +299,7 @@ The purpose of this section is to allow customisation of the names of the cluste
 | ----- | ----------- | ------ |
 | `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
 | `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
+| `nodeport` | suffix for the nodePort service | .Values.admin.serviceSuffix.nodeport |
 
 #### nuocollector.*
 

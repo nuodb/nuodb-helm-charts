@@ -90,6 +90,7 @@ admin:
   serviceSuffix:
     clusterip: "clusterip"
     balancer: "balancer"
+    nodeport: "nodeport"
 
   ## Transparent Data Encryption (TDE) secrets
   # Storage passwords can be managed and stored as Kubernetes
@@ -205,6 +206,12 @@ database:
   serviceSuffix:
     clusterip: ""
     balancer: ""
+    nodeport: ""
+
+  # One primary and multiple secondary database Helm releases for the same
+  # database name may be deployed into the same Kubernetes namespace. Set to
+  # `false` to deploy secondary database Helm releases.
+  primaryRelease: true
 
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
@@ -353,6 +360,7 @@ database:
     externalAccess: {}
       # enabled: false
       # internalIP: true
+      # type: LoadBalancer
     
     ## By default, database clusterip and headless services for direct TE connections are enabled,
     ## but can be optionally disabled here

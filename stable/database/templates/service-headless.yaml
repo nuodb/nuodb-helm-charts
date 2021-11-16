@@ -1,4 +1,5 @@
 {{- if or (not (hasKey .Values.database.te.dbServices "enabled")) (eq (include "defaultfalse" .Values.database.te.dbServices.enabled) "true") }}
+{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -18,10 +19,12 @@ spec:
   ports:
   - { name: 48006-tcp,  port: 48006,  protocol: TCP,  targetPort: 48006 }
   selector:
-    app: {{ template "database.fullname" . }}
+    domain: {{ .Values.admin.domain }}
+    database: {{ .Values.database.name }}
     component: te
   sessionAffinity: None
   type: ClusterIP
 status:
   loadBalancer: {}
-{{- end}}
+{{- end }}
+{{- end }}

@@ -72,17 +72,18 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+	opt := testlib.GetExtractedOptions(&databaseOptions)
 
 	// Generate diagnose in case this test fails
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		pvcName := fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseChartName, opt.ClusterName, opt.DbName)
 		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-		testlib.RecoverCoresFromEngine(t, namespaceName, "te", "demo-log-te-volume")
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", pvcName)
 	})
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	databaseOptions.KubectlOptions = kubectlOptions
 
-	opt := testlib.GetExtractedOptions(&databaseOptions)
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
 	hcSmPodNameTemplate := fmt.Sprintf("%s-hotcopy", smPodNameTemplate)
