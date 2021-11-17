@@ -16,20 +16,16 @@
 # There is support for a database to have multiple backup-groups - for example multiple data-centres.
 # A backup can be specific to a backup-group, and the backup-groups can have different schedules.
 #
-# An optional semaphore can be specified - if the semaphore is specified, and not set in the KV store, then
-# NO backup is performed.
-# This allows a cronjob to run `nuobackup` on a schedule, and conditionally perform a backup if the semaphore has been set.
 #
 # The information of recent backups in the KV store is organised as a ringbuffer.
 # This is to support keeping and providing information for point-in-time restores.
 #
 
 # args are:
-#   --type     - backup type: ( full | incremental | journal | report-latest )
+#   --type     - backup type: ( full | incremental | journal | report-latest | report-groups | report-backups )
 #   --db-name  - name of the database to backup
-#   --group    - arbitrary group to select the SMs to backup. Often the datacentre or cloud name
-#   --semaphore - an optional key in the KV store that will be referenced - with appended database and backup-group - to see if a backup has been requested.
-#   --labels   - additional arbitrary labels to select the SMs to backup
+#   --group    - backup group name for the selected the SMs to backup. Often the datacentre or cloud name
+#   --labels   - process labels to select the SMs to backup
 #   --timeout  - timeout (in seconds) to synchronously wait for the backup to complete. 0 => wait forever.
 #   --backup-root - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
 
@@ -43,7 +39,6 @@ backup_type="full"
 db_name=$DB_NAME
 backup_group=""
 labels=""
-semaphore=""
 timeout=""
 backup_root=$BACKUP_DIR
 retry_failed="True"
@@ -105,25 +100,45 @@ function execute_backup() {
    fi
 
    if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
+      current_backup=$(nuodocker get current-backup \
+         --db-name "${db_name}" \
+         --labels "${labels}" 2>/dev/null)
+      processes=$(nuocmd get processes --db-name "${db_name}")
+      exited_processes=$(nuocmd get processes --db-name "${db_name}" --exited)
+
       # clear all previous failed backupsets
       failed=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed")
       nuocmd set value \
          --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed" \
          --value "" --expected-value "${failed}"
 
-      # store the new backupset as latest, and store the new latest index
       latest=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" )
       current=${latest:-0}
       # bump latest, and wrap around (simple ring-buffer)
       next=$(( (current + 1) % $NUODB_MAX_BACKUP_HISTORY ))
-      backupset=$(get_current_backup)
+      # the backupset for all archives in the backup group will be the same
+      # after a successful hotcopy
+      backupset=$(echo "$current_backup" | head -1 | awk '{print $2}')
+      # get all pods that participated in the hotcopy from the "pod-name"
+      # process label
+      pods=()
+      for archive_id in $(echo "$current_backup" | awk '{print $1}'); do
+         pod_name=$(echo "$processes" | grep "archive_id=${archive_id}" | grep -oP '(?<="pod-name":")[^"]+')
+         if [ -z "$pod_name" ]; then
+            pod_name=$(echo "$exited_processes" | grep "archive_id=${archive_id}" | grep -oP '(?<="pod-name":")[^"]+')
+         fi
+         pods+=("$pod_name")
+      done
 
       if [ -n "$backupset" ]; then
+         # store the new backupset as latest, and store the new latest index
          echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest = $next"
          echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next = $backupset"
+         echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next/pods = [${pods[*]}]"
          echo "$NUODB_BACKUP_KEY/$db_name/latest = $backup_group"
 
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next" --value "$backupset" --expected-value "" && \
+         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next/pods" --value "${pods[@]}" --expected-value "" && \
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" --value "$next" --expected-value "$latest" && \
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/latest" --value "$backup_group" --unconditional
       else
@@ -163,10 +178,6 @@ do
            labels="$1"; shift;;
         "--labels="* )
            labels="${opt#*=}";;
-        "--semaphore" )
-           semaphore="$1"; shift;;
-        "--semaphore="* )
-           semaphore="${opt#*=}";;
         "--timeout" )
            timeout="$1"; shift;;
         "--timeout="* )
@@ -180,9 +191,8 @@ do
 done
 
 backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
-if [ -n "$backup_group" ]; then
-   labels="backup ${backup_group} ${labels}"
-fi
+# include all HCSMs if no labels are provided
+[ -z "$labels" ] && labels="role hotcopy"
 # Wait forever for a backup to complete if timeout is set to 0
 [ "$timeout" == "0" ] && timeout="525600"
 
@@ -190,37 +200,36 @@ fi
 if [ "$backup_type" = "report-latest" ]; then
    if [ -z "$backup_group" ]; then
       # retrieve the latest group name
-      echo "$( nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/latest )"
+      nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/latest"
    else
       # retrieve the latest backupset name
       latest=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" )
-      echo "$( nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest} )"
+      nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/${latest}"
    fi
    exit 0
-fi
-
-# if $semaphore is not null, then check the value in Raft
-if [ -n "$semaphore" ]; then
-   if [ "$backup_group" != "" ]; then
-      gate=$(nuocmd get value --key $semaphore/$db_name/$backup_group)
-
-      # and reset the semaphore
-      nuocmd set value --key $semaphore/$db_name/$backup_group --value '' --expected-value "$gate"
-   else
-      gate=$(nuocmd get value --key $semaphore/$db_name)
-
-      # and reset the semaphore
-      nuocmd set value --key $semaphore/$db_name --value '' --expected-value "$gate"
+elif [ "$backup_type" = "report-groups" ]; then
+   for group in $(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/backup-groups"); do
+      latest=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/latest" )
+      last_pods=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${latest}/pods")
+      echo "${group} ${last_pods}"
+   done
+   exit 0
+elif [ "$backup_type" = "report-backups" ]; then
+   groups="$backup_group"
+   if [ -z "$groups" ]; then
+      groups=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/backup-groups")
    fi
-
-
-   if [ -z "$gate" ]; then
-      echo "Semaphore $semaphore/$db_name empty - nothing to do"
-      exit 0
-   fi
-
-   # wait for the database to be RUNNING
-   nuocmd check database --db-name $db_name --check-running --wait-forever
+   for group in $groups; do
+      i=1
+      while true; do
+         backupset=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${i}")
+         [ -z "$backupset" ] && break
+         backup_pods=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${i}/pods")
+         echo "${group}:${i} ${backupset} ${backup_pods}"
+         (( i=i+1 ))
+      done
+   done
+   exit 0
 fi
 
 if [ "$backup_type" != "full" ]; then

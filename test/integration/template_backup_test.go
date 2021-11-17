@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -263,5 +264,98 @@ func TestDatabaseBackupTimeout(t *testing.T) {
 				"1800",
 			})
 		}
+	}
+}
+
+func TestDatabaseBackupGroupsDefault(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.replicas":                      "2",
+			"database.sm.hotCopy.journalBackup.enabled":         "true",
+			"database.sm.hotCopy.fullSchedule":                  "35 22 * * 6",
+			"database.sm.hotCopy.incrementalSchedule":           "35 22 * * 0-5",
+			"database.sm.hotCopy.journalBackup.journalSchedule": "?/15 * * * *",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "database", []string{"templates/cronjob.yaml"})
+
+	// one set of CronJobs per backup group is rendered
+	for _, obj := range testlib.SplitAndRenderCronJob(t, output, 6) {
+		require.NotEmpty(t, obj.Spec.JobTemplate.Spec.Template.Spec.Containers)
+		backupContainer := obj.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+		backupGroup := obj.ObjectMeta.Labels["backup-group"]
+		assert.Contains(t, backupGroup, "cluster0")
+		assert.NotEmpty(t, backupGroup, "Backup group label is empty")
+		assert.Subset(t, backupContainer.Args, []string{
+			"--labels",
+			fmt.Sprintf("pod-name sm-database-nuodb-cluster0-demo-hotcopy-%s",
+				string(backupGroup[len(backupGroup)-1])),
+		})
+		expectedSchedule := options.SetValues["database.sm.hotCopy.fullSchedule"]
+		if strings.Contains(obj.Name, "incremental") {
+			expectedSchedule = options.SetValues["database.sm.hotCopy.incrementalSchedule"]
+		} else if strings.Contains(obj.Name, "journal") {
+			expectedSchedule = options.SetValues["database.sm.hotCopy.journalBackup.journalSchedule"]
+		}
+		assert.Equal(t, expectedSchedule, obj.Spec.Schedule)
+	}
+}
+
+func TestDatabaseBackupGroupsCustom(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.replicas":                                        "2",
+			"database.sm.hotCopy.journalBackup.enabled":                           "true",
+			"database.sm.hotCopy.fullSchedule":                                    "35 22 * * 6",
+			"database.sm.hotCopy.incrementalSchedule":                             "35 22 * * 0-5",
+			"database.sm.hotCopy.journalBackup.journalSchedule":                   "?/15 * * * *",
+			"database.sm.hotCopy.backupGroups.aws.labels":                         "cloud aws",
+			"database.sm.hotCopy.backupGroups.aws.overwrites.fullSchedule":        "35 22 * * 1",
+			"database.sm.hotCopy.backupGroups.aws.overwrites.incrementalSchedule": "35 22 * * 2-7",
+			"database.sm.hotCopy.backupGroups.gcp.labels":                         "cloud gcp",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "database", []string{"templates/cronjob.yaml"})
+
+	// one set of CronJobs per backup group is rendered
+	for _, obj := range testlib.SplitAndRenderCronJob(t, output, 6) {
+		require.NotEmpty(t, obj.Spec.JobTemplate.Spec.Template.Spec.Containers)
+		backupContainer := obj.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+		backupGroup := obj.ObjectMeta.Labels["backup-group"]
+		assert.NotEmpty(t, backupGroup, "Backup group label is empty")
+		if backupGroup == "aws" {
+			assert.Subset(t, backupContainer.Args, []string{
+				"--labels",
+				"cloud aws",
+			})
+		} else {
+			assert.Subset(t, backupContainer.Args, []string{
+				"--labels",
+				"cloud gcp",
+			})
+		}
+		expectedSchedule := options.SetValues["database.sm.hotCopy.fullSchedule"]
+		if backupGroup == "aws" {
+			expectedSchedule = options.SetValues["database.sm.hotCopy.backupGroups.aws.overwrites.fullSchedule"]
+		}
+		if strings.Contains(obj.Name, "incremental") {
+			expectedSchedule = options.SetValues["database.sm.hotCopy.incrementalSchedule"]
+			if backupGroup == "aws" {
+				expectedSchedule = options.SetValues["database.sm.hotCopy.backupGroups.aws.overwrites.incrementalSchedule"]
+			}
+		} else if strings.Contains(obj.Name, "journal") {
+			expectedSchedule = options.SetValues["database.sm.hotCopy.journalBackup.journalSchedule"]
+		}
+		assert.Equal(t, expectedSchedule, obj.Spec.Schedule)
 	}
 }

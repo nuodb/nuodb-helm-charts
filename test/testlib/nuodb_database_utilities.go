@@ -293,15 +293,19 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 
 func BackupDatabase(t *testing.T, namespaceName string, podName string,
 	databaseName string, backupType string, backupGroup string) string {
+
+	cronJobName := fmt.Sprintf("%s-hotcopy-%s-%s", backupType, databaseName, backupGroup)
+	jobName := fmt.Sprintf("backup-database-%s", strings.ToLower(random.UniqueId()))
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, opts,
-		"exec", podName, "-c", "engine", "--",
-		"nuobackup", "--type", backupType, "--db-name", databaseName,
-		"--group", backupGroup, "--backup-root", "/var/opt/nuodb/backup",
-		"--timeout", "300",
-	)
-	require.NoError(t, err, "Error creating backup")
-	require.True(t, strings.Contains(output, "completed"), "Error nuobackup: %s", output)
+	k8s.RunKubectl(t, opts, "create", "job", "--from=cronjob/"+cronJobName, jobName)
+	defer func() {
+		if t.Failed() {
+			DescribePods(t, namespaceName, jobName)
+			GetAppLog(t, namespaceName, jobName, "", &corev1.PodLogOptions{})
+		}
+		k8s.RunKubectl(t, opts, "delete", "job", jobName)
+	}()
+	AwaitJobSucceeded(t, namespaceName, jobName, 120*time.Second)
 	return GetLatestBackup(t, namespaceName, podName, databaseName, backupGroup)
 }
 

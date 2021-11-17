@@ -133,12 +133,7 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 }
 
 func TestRestoreInPlaceWithTDE(t *testing.T) {
-	// TODO: remove this whenever the image tested in nuodb-helm-charts CI
-	// supports 'tde_monitor' service, i.e. whenever the version
-	// is bumped to >4.1.1
-	if os.Getenv("NUODB_DEV") != "true" {
-		t.Skip("'tde_monitor' service is not supported in released versions")
-	}
+	testlib.SkipTestOnNuoDBVersionCondition(t, "< 4.1.2")
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -205,8 +200,10 @@ func TestRestoreInPlaceWithTDE(t *testing.T) {
 	go testlib.GetAppLog(t, namespaceName, smPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	// Take encrypted backup
-	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
 	options.SetValues["restore.source"] = backupset
+	options.SetValues["restore.labels"] = "role hotcopy"
 
 	// Drop USER.HOCKEY table before restore
 	testlib.RunSQL(t, namespaceName, admin0, "demo", "drop table USER.HOCKEY")

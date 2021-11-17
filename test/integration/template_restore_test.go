@@ -36,8 +36,6 @@ func TestRestoreDefaults(t *testing.T) {
 			"true",
 			"--manual",
 			"false",
-			"--labels",
-			"backup cluster0",
 		})
 	}
 }
@@ -70,8 +68,6 @@ func TestRestoreNoDatabaseRestart(t *testing.T) {
 			"false",
 			"--manual",
 			"false",
-			"--labels",
-			"backup cluster0",
 		})
 	}
 }
@@ -175,8 +171,6 @@ func TestManualRestore(t *testing.T) {
 			"true",
 			"--manual",
 			"true",
-			"--labels",
-			"backup cluster0",
 		})
 	}
 }

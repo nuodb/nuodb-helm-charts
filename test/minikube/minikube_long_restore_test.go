@@ -91,7 +91,8 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
 
 	// Execute initial backup
-	backupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", opt.ClusterName)
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	backupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
 
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
@@ -104,6 +105,7 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 		// restore database
 		databaseOptions.SetValues["restore.source"] = backupset
+		databaseOptions.SetValues["restore.labels"] = "pod-name " + hcSmPodName0
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 		testlib.AwaitPodLog(t, namespaceName, smPodName0, "_auto_post-restart")
 		testlib.AwaitPodLog(t, namespaceName, hcSmPodName0, "_auto_post-restart")
@@ -191,6 +193,8 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 			"database.te.logPersistence.enabled":    "true",
 			"database.env[0].name":                  "NUODB_DEBUG",
 			"database.env[0].value":                 "debug",
+			// include both HCSMs as each of them is serving separate storage group
+			"database.sm.hotCopy.backupGroups.group0.labels": "role hotcopy",
 		},
 	}
 
@@ -234,7 +238,7 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 		"INSERT INTO codes VALUES ('sg1', '2001')")
 
 	// Execute backup
-	backupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", opt.ClusterName)
+	backupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", "group0")
 
 	// Insert more rows
 	testlib.RunSQL(t, namespaceName, admin0, opt.DbName,
@@ -257,6 +261,7 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 
 	// restore database
 	databaseOptions.SetValues["restore.source"] = backupset
+	databaseOptions.SetValues["restore.labels"] = "role hotcopy"
 	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 	testlib.AwaitPodLog(t, namespaceName, hcSmPodName0, "_post-restart")
 	testlib.AwaitPodLog(t, namespaceName, hcSmPodName1, "_post-restart")
@@ -309,7 +314,8 @@ func TestKubernetesRestoreDatabaseWithURL(t *testing.T) {
 	smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
 
 	// Execute initial backup
-	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
 
 	testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 
@@ -450,12 +456,14 @@ func TestKubernetesRestoreDatabaseSeparateJournal(t *testing.T) {
 		smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
 
 		// Execute initial backup
-		backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
+		backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+		backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
 
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 
 		// set restore source to the initial backupset
 		databaseOptions.SetValues["restore.source"] = backupset
+		databaseOptions.SetValues["restore.labels"] = "role hotcopy"
 
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		testlib.RestoreDatabase(t, namespaceName, admin0, databaseOptions)
