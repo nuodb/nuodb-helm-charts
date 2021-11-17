@@ -1,17 +1,31 @@
 {{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 {{- if eq (include "defaulttrue" .Values.database.sm.hotCopy.enablePod) "true" }}
 {{- if eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true" }}
+{{- $globalScope := . -}}
+{{- $backupGroups := list -}}
+{{- range $i, $e := until (.Values.database.sm.hotCopy.replicas | int) -}}
+  {{- $backupGroups = append $backupGroups (printf "%s-%d" (include "hotcopy.groupPrefix" $globalScope) $i) -}}
+{{- end -}}
+{{- if .Values.database.sm.hotCopy.backupGroups -}}
+  {{- $backupGroups = (keys .Values.database.sm.hotCopy.backupGroups) | sortAlpha -}}
+{{- end -}}
+{{- if ne (len $backupGroups) .Values.database.sm.hotCopy.replicas -}}
+  {{- fail (printf "Unexpected number of backup groups configured expected=%d, actual=%d" .Values.database.sm.hotCopy.replicas (len $backupGroups)) }}
+{{- end -}}
+{{- range $i, $backupGroupName := $backupGroups -}}
+  {{- with $globalScope -}}
 ---
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: full-hotcopy-{{ .Values.database.name }}-cronjob
+  name: full-hotcopy-{{ .Values.database.name }}-{{ $backupGroupName }}
   labels:
     group: nuodb
     subgroup: backup
     database: {{ .Values.database.name }}
+    backup-group: {{ $backupGroupName }}
 spec:
-  schedule: {{ .Values.database.sm.hotCopy.fullSchedule}}
+  schedule: {{ include "hotcopy.schedule" (merge (dict "backupGroup" $backupGroupName "hotcopyType" "full") . ) }}
   startingDeadlineSeconds: {{ .Values.database.sm.hotCopy.deadline}}
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory}}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
@@ -30,11 +44,13 @@ spec:
             - "--db-name"
             - "{{ .Values.database.name }}"
             - "--group"
-            - "{{ include "hotcopy.group" . }}"
+            - "{{ $backupGroupName }}"
             - "--timeout"
             - "{{ .Values.database.sm.hotCopy.timeout }}"      
             - "--backup-root"
             - "{{ .Values.database.sm.hotCopy.backupDir }}"
+            - "--labels"
+            - "{{ template "hotcopy.group.labels" (merge (dict "backupGroup" $backupGroupName "index" $i) .) }}"
             env:
             - name: NODE_NAME
               valueFrom:
@@ -93,13 +109,14 @@ spec:
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: incremental-hotcopy-{{ .Values.database.name }}-cronjob
+  name: incremental-hotcopy-{{ .Values.database.name }}-{{ $backupGroupName }}
   labels:
     group: nuodb
     subgroup: backup
     database: {{ .Values.database.name }}
+    backup-group: {{ $backupGroupName }}
 spec:
-  schedule: {{ .Values.database.sm.hotCopy.incrementalSchedule}}
+  schedule: {{ include "hotcopy.schedule" (merge (dict "backupGroup" $backupGroupName "hotcopyType" "incremental") . ) }}
   startingDeadlineSeconds: {{ .Values.database.sm.hotCopy.deadline}}
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory}}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
@@ -118,11 +135,13 @@ spec:
             - "--db-name"
             - "{{ .Values.database.name }}"
             - "--group"
-            - "{{ include "hotcopy.group" . }}"
+            - "{{ $backupGroupName }}"
             - "--timeout"
             - "{{ .Values.database.sm.hotCopy.timeout }}"      
             - "--backup-root"
             - "{{ .Values.database.sm.hotCopy.backupDir }}"
+            - "--labels"
+            - "{{ template "hotcopy.group.labels" (merge (dict "backupGroup" $backupGroupName "index" $i) .) }}"
             env:
             - name: NODE_NAME
               valueFrom:
@@ -179,13 +198,14 @@ spec:
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: journal-hotcopy-{{ .Values.database.name }}-cronjob
+  name: journal-hotcopy-{{ .Values.database.name }}-{{ $backupGroupName }}
   labels:
     group: nuodb
     subgroup: backup
     database: {{ .Values.database.name }}
+    backup-group: {{ $backupGroupName }} 
 spec:
-  schedule: "?/{{ .Values.database.sm.hotCopy.journalBackup.intervalMinutes }} * * * *"
+  schedule: {{ include "hotcopy.schedule" (merge (dict "backupGroup" $backupGroupName "hotcopyType" "journal") . ) }}
   startingDeadlineSeconds: {{ .Values.database.sm.hotCopy.journalBackup.deadline }}
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory }}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory }}
@@ -204,11 +224,13 @@ spec:
             - "--db-name"
             - "{{ .Values.database.name }}"
             - "--group"
-            - "{{ include "hotcopy.group" . }}"
+            - "{{ $backupGroupName }}"
             - "--timeout"
             - "{{ .Values.database.sm.hotCopy.journalBackup.timeout }}"      
             - "--backup-root"
             - "{{ .Values.database.sm.hotCopy.backupDir }}"
+            - "--labels"
+            - "{{ template "hotcopy.group.labels" (merge (dict "backupGroup" $backupGroupName "index" $i) .) }}"
             env:
             - name: NODE_NAME
               valueFrom:
@@ -259,6 +281,8 @@ spec:
           {{- end }}
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
+{{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end }}

@@ -111,9 +111,9 @@ restore:
 
   # Process labels used to filter the complete set of archiveIds that should be
   # restored which then defines the new state of the database upon restore. By
-  # default all HC SMs in the specified cluster will be filtered. Either
-  # `labels` or `archiveIds` should be specified. The setting works with NuoDB
-  # 4.2+.
+  # default the HC SM with ordinal zero (0) in the specified cluster will be
+  # filtered. Either `labels` or `archiveIds` should be specified. The setting
+  # works with NuoDB 4.2+.
   labels: {}
 
   # If set to "true", archives restore should be done manually once the SM pod

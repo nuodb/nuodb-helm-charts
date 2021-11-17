@@ -178,10 +178,48 @@ Return options as $key $value
 {{/*
 Return the hotcopy group
 */}}
-{{- define "hotcopy.group" -}}
-{{ default .Values.cloud.cluster.name .Values.database.sm.hotCopy.backupGroup }}
+{{- define "hotcopy.groupPrefix" -}}
+{{ default .Values.cloud.cluster.name .Values.database.sm.hotCopy.backupGroupPrefix }}
 {{- end -}}
 
+{{/*
+Return the hotcopy cronjob schedule by hotcopy type. It will take into account
+any schedule overwrites configured per backup group.
+*/}}
+{{- define "hotcopy.schedule" -}}
+  {{- $scheduleProp := printf "%sSchedule" .hotcopyType -}}
+  {{- $val := index .Values.database.sm.hotCopy ( print $scheduleProp ) -}}
+  {{- $overwrite := "" -}}
+  {{- if eq .hotcopyType "journal" -}}
+    {{- $val = .Values.database.sm.hotCopy.journalBackup.journalSchedule -}}
+  {{- end -}}
+  {{- if .Values.database.sm.hotCopy.backupGroups -}}
+    {{- $group := (index .Values.database.sm.hotCopy.backupGroups ( print .backupGroup )) -}}
+    {{- if $group -}}
+      {{- $overwrites := index $group "overwrites" -}}
+      {{- if $overwrites -}}
+        {{- $overwrite = index $overwrites ( print $scheduleProp ) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+{{ default $val $overwrite }}
+{{- end -}}
+
+
+{{/*
+Return backup group selector
+*/}}
+{{- define "hotcopy.group.labels" -}}
+  {{- $defaultGroupSelector := dict "pod-name" (printf "sm-%s-hotcopy-%d" (include "database.fullname" .) .index) -}}
+  {{- $groupSelector := dict -}}
+  {{- if .Values.database.sm.hotCopy.backupGroups -}}
+    {{- $group := index .Values.database.sm.hotCopy.backupGroups (print .backupGroup) -}}
+    {{- if $group -}}
+      {{- $groupSelector = index $group "labelSelector" -}}
+    {{- end -}}
+  {{- end -}}
+{{- include "opt.key-values" (default $defaultGroupSelector $groupSelector) }}
+{{- end -}}
 
 {{/*
 Import user defined ENV vars

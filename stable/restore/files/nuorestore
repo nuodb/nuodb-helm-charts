@@ -133,6 +133,10 @@ if isRestoreRequestSupported; then
    user_data="restore_source_encoded='${restore_source_encoded}'"
    [ -n "$labels" ] && additional_args="${additional_args} --labels ${labels}"
    [ -n "$archive_ids" ] && additional_args="${additional_args} --archive-ids ${archive_ids}"
+   if [ -z "$labels" ] && [ -z "$archive_ids" ] && [ -n "$NUODB_RESTORE_DEFAULT_LABELS" ]; then
+      # restore all SMs in the first backup group
+      additional_args="${additional_args} --labels ${NUODB_RESTORE_DEFAULT_LABELS}"
+   fi
    [ "$manual" == "true" ] && additional_args="${additional_args} --manual"
    if [ -n "$restore_credentials" ]; then
       restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64 -w 0)"

@@ -53,6 +53,8 @@ if [ $crashcount -ge 1 ]; then
   fi
 fi
 
+# TODO: we no longer have access to NUODB_BACKUP_GROUP
+
 export DB_NAME NUODB_STORAGE_PASSWORDS_DIR NUODB_EXTERNAL_STARTUP_LOG
 
 #=======================================

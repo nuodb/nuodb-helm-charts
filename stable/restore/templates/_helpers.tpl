@@ -172,9 +172,6 @@ selector. If archiveIds are specified, they take precedence over labels.
 {{- else if .Values.restore.labels }}
 - "--labels"
 - {{ range $opt, $val := .Values.restore.labels }} {{$opt}} {{$val}} {{- end}}
-{{- else -}}
-- "--labels"
-- "backup {{ .Values.cloud.cluster.name }}"
 {{- end -}}
 {{- end -}}
 

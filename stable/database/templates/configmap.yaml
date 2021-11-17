@@ -86,6 +86,12 @@ data:
   {{- end }}
   NUODB_OS_USER: {{ include "os.user" . | quote }}
   NUODB_OS_GROUP: {{ include "os.group" . | quote }}
+  {{- $backupGroupName := printf "%s-0" (include "hotcopy.groupPrefix" .) -}}
+  {{- if .Values.database.sm.hotCopy.backupGroups -}}
+  {{- $backupGroupName = (keys .Values.database.sm.hotCopy.backupGroups) | sortAlpha | first -}}
+  {{- end }}
+  NUODB_RESTORE_DEFAULT_LABELS: "{{ template "hotcopy.group.labels" (merge (dict "backupGroup" $backupGroupName "index" 0) .) }}"
+
 {{- end }}
 {{- if .Values.database.configFiles }}
 ---

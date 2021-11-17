@@ -476,7 +476,7 @@ spec:
           - "--options"
           - "mem {{ .Values.database.sm.resources.requests.memory}} {{- if and (eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true") (eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true") }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
           - "--labels"
-          - "backup {{ include "hotcopy.group" . }} {{- include "opt.key-values" .Values.database.sm.labels }}"
+          - "{{- include "opt.key-values" .Values.database.sm.labels }}"
 {{- with .Values.database.options}}
           - "--database-options"
           - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{ end}}"
@@ -530,14 +530,13 @@ spec:
             secretKeyRef:
               name: {{ .Values.database.name }}.nuodb.com
               key: database-backup-credentials
-        - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
-        - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
-        - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
-        - { name: NUODB_BACKUP_GROUP,  value: "{{ include "hotcopy.group" . }}" }
-        - { name: COMPONENT_NAME,      value: "sm" }
-        - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
-        - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
-        - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled}}" }
+        - { name: NUODB_DOMAIN,      value: "{{ .Values.admin.domain }}" }
+        - { name: NUOCMD_API_SERVER, value: "{{ template "admin.address" . }}:8888" }
+        - { name: PEER_ADDRESS,      value: "{{ template "admin.address" . }}" }
+        - { name: COMPONENT_NAME,    value: "sm" }
+        - { name: OVERWRITE_COPIES,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
+        - { name: OVERWRITE_WINDOW,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
+        - { name: SEPARATE_JOURNAL,  value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled}}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
