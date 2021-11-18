@@ -476,7 +476,7 @@ spec:
           - "--options"
           - "mem {{ .Values.database.sm.resources.requests.memory}} {{- if and (eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true") (eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true") }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
           - "--labels"
-          - "{{- include "opt.key-values" .Values.database.sm.labels }}"
+          - "role hotcopy {{- include "opt.key-values" .Values.database.sm.labels }}"
 {{- with .Values.database.options}}
           - "--database-options"
           - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{ end}}"

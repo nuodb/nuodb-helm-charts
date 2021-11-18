@@ -253,16 +253,18 @@ database:
 
       backupDir: /var/opt/nuodb/backup
 
-      # the default is the cloud.cluster.name
+      # automatically generated backup groups will have this prefix - defaults
+      # to cloud.cluster.name
       backupGroupPrefix: ""
 
-      # hot-copy operation is requested separately per backup group; a backup
-      # group per HCSM is created automatically to ensure that the configured
-      # backup redundancy is met; "<prefix>-<ordinal>" is used for backup group
-      # name where the ordinal matches the HCSM ordinal; if the database is
-      # split across archives (storage groups are in use), each backup group
-      # should have a minimum set of archives that together contain the entire
-      # contents of the database
+      # hot-copy operation is requested separately per backup group; if not
+      # configured, a backup group per HCSM is created automatically to ensure
+      # that the configured backup redundancy is met; the automatically
+      # generated backup group name of "<backupGroupPrefix>-<ordinal>" is used
+      # where the ordinal matches the HCSM ordinal; if the database is split
+      # across archives (storage groups are in use), each backup group should
+      # have a minimum set of archives that together contain the entire contents
+      # of the database
       backupGroups: {}
       #  cluster0-0:
       #    labelSelector:

@@ -9,11 +9,11 @@
 {{- if .Values.database.sm.hotCopy.backupGroups -}}
   {{- $backupGroups = (keys .Values.database.sm.hotCopy.backupGroups) | sortAlpha -}}
 {{- end -}}
-{{- if ne (len $backupGroups) .Values.database.sm.hotCopy.replicas -}}
+{{- if ne (len $backupGroups) (int .Values.database.sm.hotCopy.replicas) -}}
   {{- fail (printf "Unexpected number of backup groups configured expected=%d, actual=%d" .Values.database.sm.hotCopy.replicas (len $backupGroups)) }}
 {{- end -}}
 {{- range $i, $backupGroupName := $backupGroups -}}
-  {{- with $globalScope -}}
+  {{- with $globalScope }}
 ---
 apiVersion: batch/v1beta1
 kind: CronJob
