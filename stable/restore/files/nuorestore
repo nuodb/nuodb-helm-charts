@@ -75,6 +75,9 @@ db_name=$DB_NAME
 semaphore="/nuobackup/semaphore"
 restore_source=":latest"
 auto="false"
+labels=""
+archive_ids=""
+backup_index=""
 
 restore_credentials=$NUODB_RESTORE_CREDENTIALS
 [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:=:}
@@ -125,18 +128,40 @@ done
 restore_type=$(echo $restore_type | tr '[:upper:]' '[:lower:]')
 auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 
+# Resolve special restore sources - ":latest" and "<backup_group>:latest"; fail
+# the database restore early if we are not able to do that
+if echo "$restore_source" | grep -Eq ":latest$"; then
+   backup_group="${restore_source%%:latest}"
+   if [ -z "$backup_group" ]; then
+      backup_group=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/latest")
+   fi
+   backup_index=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/latest")
+   if [ -z "$backup_index" ]; then
+      log "Unable to find backup for restore source '${restore_source}'"
+      exit 1
+   fi
+   restore_source=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/$backup_index")
+fi
+
 
 if isRestoreRequestSupported; then
    # Use nuodocker to place restore request
    additional_args=""
    restore_source_encoded="$(printf "%s" "${restore_source}" | base64 -w 0)"
    user_data="restore_source_encoded='${restore_source_encoded}'"
+   if [ -z "$labels" ] && [ -z "$archive_ids" ] && [ -n "$backup_index" ]; then
+      # no archive selection was provided by the user but a special restore
+      # source has been used; fetch the pods participated in the backup and
+      # select them for restore
+      pods=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/$backup_index/pods")
+      if [ -n "$pods" ]; then
+         for pod in $pods; do
+            labels="${labels} pod-name ${pod}"
+         done
+      fi
+   fi
    [ -n "$labels" ] && additional_args="${additional_args} --labels ${labels}"
    [ -n "$archive_ids" ] && additional_args="${additional_args} --archive-ids ${archive_ids}"
-   if [ -z "$labels" ] && [ -z "$archive_ids" ] && [ -n "$NUODB_RESTORE_DEFAULT_LABELS" ]; then
-      # restore all SMs in the first backup group
-      additional_args="${additional_args} --labels ${NUODB_RESTORE_DEFAULT_LABELS}"
-   fi
    [ "$manual" == "true" ] && additional_args="${additional_args} --manual"
    if [ -n "$restore_credentials" ]; then
       restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64 -w 0)"
@@ -153,7 +178,7 @@ if isRestoreRequestSupported; then
       --user-data "${user_data}" $additional_args
    rc=$?
    if [ $rc -ne 0 ]; then
-      echo "Restore request failed" >&2
+      log "Restore request failed"
       exit $rc
    fi
 

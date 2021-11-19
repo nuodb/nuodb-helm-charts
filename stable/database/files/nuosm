@@ -53,8 +53,6 @@ if [ $crashcount -ge 1 ]; then
   fi
 fi
 
-# TODO: we no longer have access to NUODB_BACKUP_GROUP
-
 export DB_NAME NUODB_STORAGE_PASSWORDS_DIR NUODB_EXTERNAL_STARTUP_LOG
 
 #=======================================
@@ -398,30 +396,45 @@ function completeRestoreRequest(){
 # function - resolves :latest or :group-latest backup source and stores it
 # directly into restore_source variable
 #
+function getMyBackupGroup() {
+  local group
+  group=$(nuobackup --type report-groups --db-name "$DB_NAME" | grep "$POD_NAME" | awk '{print $1}')
+  echo "${group:-UNKNOWN_BACKUP_GROUP}"
+}
+
+#=======================================
+# function - resolves :latest or :group-latest backup source and stores it
+# directly into restore_source variable. It is needed only when performing auto
+# restore as nuorestore script already resolved these
+#
 function resolveLatestSource() {
   local latest_group
   local latest
+  local my_group
   if [ "$restore_source" != ":latest" ] && [ "$restore_source" != ":group-latest" ]; then
     return 0
   fi
 
-  if [ "$restore_source" != ":latest" ]; then
-    # find which backup group performed the latest backup
+  my_group="$(getMyBackupGroup)"
+
+  if [ "$restore_source" == ":latest" ]; then
+    # we can't restore this archive from a backup made by a different backup
+    # group as it won't be available locally
     trace "retrieve :latest using nuobackup"
     latest_group=$( nuobackup --type report-latest --db-name "$DB_NAME" )
 
-    if [ -z "$latest_group" ] || [ "$latest_group" != "$NUODB_BACKUP_GROUP" ]; then
+    if [ -z "$latest_group" ] || [ "$latest_group" != "$my_group" ]; then
       log "Latest backup is performed from different backup group ${latest_group}"
       return 1
     fi
   fi
 
-  trace "retrieving latest backup for group ${NUODB_BACKUP_GROUP} using nuobackup"
-  latest=$( nuobackup --type report-latest --db-name "$DB_NAME" --group "$NUODB_BACKUP_GROUP" )
+  trace "retrieving latest backup for group ${my_group} using nuobackup"
+  latest=$( nuobackup --type report-latest --db-name "$DB_NAME" --group "$my_group" )
   if [ -z "$latest" ]; then
     return 1
   fi
-  log "Latest restore for $NUODB_BACKUP_GROUP resolved to $latest"
+  log "Latest restore for $my_group resolved to $latest"
   restore_source="$latest"
   return 0
 }
@@ -629,14 +642,15 @@ else
 
   # resolve ":latest"
   if [ "$restore_source" = ":latest" ]; then
+    my_group="$(getMyBackupGroup)"
 
     # find which backup group performed the latest backup
     trace "retrieve :latest from nuobackup"
     latest_group=$( nuobackup --type report-latest --db-name $DB_NAME )
 
     # if the latest backup was not by my group, then wait to allow an SM from the latest group to start first
-    if [ "$latest_group" != "$NUODB_BACKUP_GROUP" ]; then
-      log ":latest backup was not made by my group $NUODB_BACKUP_GROUP - waiting to allow an SM from $latest_group to start..."
+    if [ "$latest_group" != "$my_group" ]; then
+      log ":latest backup was not made by my group $my_group - waiting to allow an SM from $latest_group to start..."
 
       # try for 30 seconds, sleeping every 2 seconds
       for retry in {1..30..2}; do
@@ -645,18 +659,19 @@ else
         sleep 2
       done
 
-      [ -n "$sm" ] && log "Primary restore SM='${sm}'..." || log "No Primary restore SM found - attempting restore from $NUODB_BACKUP_GROUP..."
+      [ -n "$sm" ] && log "Primary restore SM='${sm}'..." || log "No Primary restore SM found - attempting restore from $my_group..."
     fi
   fi
 
   # resolve the latest backup for the specified backup group
   if [ "$restore_source" = ":latest" -o "$restore_source" = ":group-latest" ]; then
+    my_group="$(getMyBackupGroup)"
 
     trace "retrieving :group-latest from nuorestore"
 
     log "Resolving restore '$restore_source'..."
-    restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $NUODB_BACKUP_GROUP )
-    log "Latest restore for $NUODB_BACKUP_GROUP resolved to $restore_source"
+    restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $my_group )
+    log "Latest restore for $my_group resolved to $restore_source"
   fi
 
   restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64 -w 0)"
