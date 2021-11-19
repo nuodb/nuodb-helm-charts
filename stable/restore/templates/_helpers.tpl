@@ -153,7 +153,7 @@ Return the restore source.
 */}}
 {{- define "restore.source" -}}
 {{- if hasPrefix ":" .Values.restore.source }}
-{{- $valid := list ":latest" ":group-latest" "" }}
+{{- $valid := list ":latest" "" }}
 {{- if not (has .Values.restore.source $valid) }}
 {{- fail (printf "Invalid autorestore source: %s" .Values.restore.source) }}
 {{- end -}}

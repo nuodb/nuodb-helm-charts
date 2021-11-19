@@ -215,8 +215,9 @@ elif [ "$backup_type" = "report-backups" ]; then
    fi
    for group in $groups; do
       i=1
-      backupset=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${i}")
-      while [ -n "$backupset" ]; do
+      while true; do
+         backupset=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${i}")
+         [ -z "$backupset" ] && break
          backup_pods=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${i}/pods")
          echo "${group} ${backupset} ${backup_pods}"
          (( i=i+1 ))
