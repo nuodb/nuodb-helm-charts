@@ -1,5 +1,24 @@
 # Changelog
 
+## [v3.4.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.4.0) (2021-12-03)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.3.0...v3.4.0)
+
+**Implemented enhancements:**
+
+- Added functionality to enable the database protocol to be upgraded automatically, which is supported in version 4.2.3 and above of the NuoDB image [\#243](https://github.com/nuodb/nuodb-helm-charts/pull/243) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Updated the process readiness probe to be more scalable as the number of database processes grows [\#252](https://github.com/nuodb/nuodb-helm-charts/pull/252) ([adriansuarez](https://github.com/adriansuarez))
+- Updated init containers to perform recursive chmod only if files are encountered without expected permissions [\#260](https://github.com/nuodb/nuodb-helm-charts/pull/260) ([adriansuarez](https://github.com/adriansuarez))
+
+**Fixed bugs:**
+
+- Updated nuosm to resurrect archive object only if it will be used [\#256](https://github.com/nuodb/nuodb-helm-charts/pull/256) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+
+**Merged pull requests:**
+
+- Increased leaderAssignmentTimeout to account for SMs going into CrashLoopBackOff state [\#242](https://github.com/nuodb/nuodb-helm-charts/pull/242) ([adriansuarez](https://github.com/adriansuarez))
+- Added support for external SQL clients, which requires version 4.2.4 and above of the NuoDB image [\#254](https://github.com/nuodb/nuodb-helm-charts/pull/254) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+
 ## [v3.3.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.3.0) (2021-08-18)
 
 [Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.2.0...v3.3.0)
