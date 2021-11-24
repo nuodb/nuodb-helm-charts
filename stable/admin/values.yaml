@@ -175,9 +175,10 @@ admin:
     # force reconnecting processes that are not in the domain state to shut
     # themselves down
     evictUnknownProcesses: true
-    # increase leader assignment timeout to account for maximum scheduling
-    # delay of 5 minutes in K8s
-    leaderAssignmentTimeout: "300000"
+    # increase leader assignment timeout to account for maximum scheduling delay
+    # of 5 minutes in K8s; set the default value to 15 minutes (3x back-off
+    # delay) which should be enough for most databases
+    leaderAssignmentTimeout: "900000"
 
   ## nuodb-admin resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
