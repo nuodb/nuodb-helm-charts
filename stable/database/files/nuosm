@@ -761,9 +761,10 @@ else
 
   wotIdid=""
 
-  # resurrect my archive if it is removed
-  # this will likely never execute but is kept to be sure
-  resurrectRemovedArchive
+  # resurrect my archive only if info.json file is available, otherwise
+  # nuodocker will create a new one; this is needed because KAA will remove
+  # archives for scaled down SM statefulsets
+  [ -f "$DB_DIR/info.json" ] && resurrectRemovedArchive
 
   # if a RESTORE_SOURCE is defined, and the archive dir is empty, then import/restore from the URL
   if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $catalogCount -lt 2 ]; then
