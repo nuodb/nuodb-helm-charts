@@ -4,17 +4,7 @@ kind: Service
 metadata:
   annotations:
     description: "Service (and load-balancer) for Admin pods."
-    {{- if and .Values.admin.externalAccess.internalIP .Values.cloud.provider}}
-    {{- if eq (default "LoadBalancer" .Values.admin.externalAccess.type) "LoadBalancer" }}
-    {{- if eq .Values.cloud.provider "amazon" }}
-    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
-    {{- else if eq .Values.cloud.provider "azure" }}
-    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
-    {{- else if eq .Values.cloud.provider "google" }}
-    cloud.google.com/load-balancer-type: "Internal"
-    {{- end}}
-    {{- end}}
-    {{- end}}
+{{- include "admin.externalAccessAnnotations" . | indent 4 }}
   labels:
     app: {{ template "admin.fullname" . }}
     group: nuodb

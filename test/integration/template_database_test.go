@@ -130,6 +130,29 @@ func TestDatabaseServiceRenders(t *testing.T) {
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
 	}
 
+	// render external AWS NLB annotations
+	options.SetValues["database.te.externalAccess.internalIP"] = "false"
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
+		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Empty(t, obj.Spec.ClusterIP)
+		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-type"], "external")
+		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-nlb-target-type"], "ip")
+		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-scheme"], "internet-facing")
+	}
+
+	// render custom annotations for the external service
+	options.SetValues["database.te.externalAccess.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-name"] = "nuodb-demo-nlb"
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
+		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-name"], "nuodb-demo-nlb")
+		assert.NotContains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-scheme")
+	}
+
 }
 
 func TestDatabaseNodePortServiceRenders(t *testing.T) {
