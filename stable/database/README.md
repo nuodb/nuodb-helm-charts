@@ -256,6 +256,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
 | `te.externalAccess.type` | The service type used to enable external database access. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |
+| `te.externalAccess.annotations` | Annotations to pass through to the Service of type `LoadBalancer` | `{}` |
 | `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
 | `te.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `te.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
