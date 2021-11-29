@@ -145,8 +145,8 @@ function isRestoreSourceAvailable() {
 #
 function resurrectRemovedArchive() {
   trace "resurrecting removed archive metadata"
-  # Resurrect the archiveId associated which this pod if the previously fetched
-  # archiveId is removed
+  # Resurrect the previously fetched archiveId associated which this Pod it is
+  # removed
   if [ -n "$myArchive" ] && \
     nuocmd show archives \
       --db-name $DB_NAME \
