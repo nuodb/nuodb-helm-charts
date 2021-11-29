@@ -152,7 +152,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 				go GetAppLog(t, namespaceName, tePod, "", &v12.PodLogOptions{Follow: true})
 			}
 		})
-		// the TEs will become RUNNING after the SMs as then need an entry node
+		// the TEs will become RUNNING after the SMs as they need an entry node
 		// so use the same ready timeout for both
 		readyTimeout := AdjustPodTimeout(tePodName, 300*time.Second)
 		AwaitPodUp(t, namespaceName, tePodName, readyTimeout)
