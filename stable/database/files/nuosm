@@ -145,12 +145,15 @@ function isRestoreSourceAvailable() {
 #
 function resurrectRemovedArchive() {
   trace "resurrecting removed archive metadata"
-  # Find archiveId associated with process which address is the same as this pod hostname
-  # It assumes that there is only one archive object associated with the current host
-  removed_archive=$( nuocmd show archives --db-name $DB_NAME --removed --removed-archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /$HOSTNAME/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-  if [ -n "$removed_archive" ]; then
-    log "Resurrecting removed archiveId=${removed_archive}"
-    nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id $removed_archive
+  # Resurrect the archiveId associated which this pod if the previously fetched
+  # archiveId is removed
+  if [ -n "$myArchive" ] && \
+    nuocmd show archives \
+      --db-name $DB_NAME \
+      --removed \
+      --removed-archive-format "archive-id: {id}" | grep -q "archive-id: ${myArchive}$"; then
+    log "Resurrecting removed archiveId=${myArchive}"
+    nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id "$myArchive"
   fi
 }
 
