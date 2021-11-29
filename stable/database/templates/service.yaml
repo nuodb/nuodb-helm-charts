@@ -4,18 +4,7 @@ kind: Service
 metadata:
   annotations:
     description: "Service (and load-balancer) for TE pods."
-    {{- if and .Values.database.te.externalAccess.internalIP .Values.cloud.provider }}
-    {{- if eq (default "LoadBalancer" .Values.database.te.externalAccess.type) "LoadBalancer" }}
-    {{- if eq .Values.cloud.provider "amazon" }}
-    service.beta.kubernetes.io/aws-load-balancer-internal: 0.0.0.0/0
-    {{- else if eq .Values.cloud.provider "azure" }}
-    service.beta.kubernetes.io/azure-load-balancer-internal: "true"
-    {{- else if eq .Values.cloud.provider "google" }}
-    cloud.google.com/load-balancer-type: "Internal"
-    networking.gke.io/load-balancer-type: "Internal"
-    {{- end}}
-    {{- end}}
-    {{- end}}
+{{- include "database.externalAccessAnnotations" . | indent 4 }}
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb

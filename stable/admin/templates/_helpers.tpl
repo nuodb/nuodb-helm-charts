@@ -266,3 +266,36 @@ Renders the admin service name for external access based on the service type
 {{ .Values.admin.domain }}
   {{- end }}
 {{- end }}
+
+{{/*
+Renders the annotations for the LoadBalancer admin service
+*/}}
+{{- define "admin.externalAccessAnnotations" -}}
+  {{- if eq (default "LoadBalancer" .Values.admin.externalAccess.type) "LoadBalancer" }}
+    {{- if .Values.admin.externalAccess.annotations }}
+{{ toYaml .Values.admin.externalAccess.annotations | trim }}
+    {{- else -}}
+      {{- if .Values.cloud.provider }}
+        {{- if eq .Values.cloud.provider "amazon" }}
+          {{- if .Values.admin.externalAccess.internalIP }}
+service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+          {{- else }}
+service.beta.kubernetes.io/aws-load-balancer-type: "external"
+service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
+service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+          {{- end }}
+        {{- else if eq .Values.cloud.provider "azure" }}
+          {{- if .Values.admin.externalAccess.internalIP }}
+service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+          {{- end }}
+        {{- else if eq .Values.cloud.provider "google" }}
+          {{- if .Values.admin.externalAccess.internalIP }}
+cloud.google.com/load-balancer-type: "Internal"
+networking.gke.io/load-balancer-type: "Internal"
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end }}
+  {{- end }}
+{{- end -}}

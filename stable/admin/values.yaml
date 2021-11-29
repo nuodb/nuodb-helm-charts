@@ -121,6 +121,7 @@ admin:
   #   enabled: false
   #   internalIP: true
   #   type: LoadBalancer
+  #   annotations: {}
 
   persistence:
     size: 1Gi
