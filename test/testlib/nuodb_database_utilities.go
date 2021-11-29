@@ -153,9 +153,9 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 			}
 		})
 		// the TEs will become RUNNING after the SMs as then need an entry node
-		// so use the same timeout as the SMs; in Azure sometimes it takes 3 to
-		// 5 min for the disks to be provisioned and attached to the nodes
-		AwaitPodUp(t, namespaceName, tePodName, 300*time.Second)
+		// so use the same ready timeout for both
+		readyTimeout := AdjustPodTimeout(tePodName, 300*time.Second)
+		AwaitPodUp(t, namespaceName, tePodName, readyTimeout)
 
 		// currently we don't render SM pods in the secondary releases
 		if opt.DbPrimaryRelease {
@@ -166,7 +166,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 					go GetAppLog(t, namespaceName, smPod, "", &v12.PodLogOptions{Follow: true})
 				}
 			})
-			AwaitPodUp(t, namespaceName, smPodName0, 300*time.Second)
+			AwaitPodUp(t, namespaceName, smPodName0, readyTimeout)
 		}
 
 		// Await num of database processes only for single cluster deployments

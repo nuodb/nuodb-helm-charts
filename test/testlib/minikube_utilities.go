@@ -406,7 +406,10 @@ func AwaitTillerUp(t *testing.T) {
 }
 
 func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName string, nrReplicas int) {
-	timeout := 60 * time.Second
+	// in multi-cluster tests the Pods won't be scheduled until disks are
+	// provisioned which takes longer than in minikube; adjust the timeout if
+	// needed
+	timeout := AdjustPodTimeout(expectedName, 60*time.Second)
 	if nrReplicas > 1 {
 		timeout *= time.Duration(nrReplicas)
 	}
