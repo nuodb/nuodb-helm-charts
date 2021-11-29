@@ -153,6 +153,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `externalAccess.enabled` | Whether to deploy a Layer 4 cloud load balancer service for the admin layer | `false` |
 | `externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `externalAccess.type` | The service type used to enable external access for NuoDB Admin. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |
+| `externalAccess.annotations` | Annotations to pass through to the Service of type `LoadBalancer` | `{}` |
 | `resources` | Labels to apply to all resources | `{}` |
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |
