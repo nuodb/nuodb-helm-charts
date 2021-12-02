@@ -2,6 +2,7 @@ package integration
 
 import (
 	"encoding/json"
+
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/assert"
 
@@ -9,8 +10,7 @@ import (
 )
 
 func TestUnmarshall(t *testing.T) {
-	s := (
-		`{
+	s := (`{
   "address": "172.17.0.6", 
   "dbName": "demo", 
   "durableState": "MONITORED", 
@@ -64,6 +64,7 @@ func TestUnmarshall(t *testing.T) {
 	assert.True(t, obj.Hostname == "te-database-rggfj1-nuodb-demo-57f984dcd5-s7nhr")
 	assert.True(t, obj.Host == "admin-kljkzo-nuodb-0")
 	assert.True(t, obj.DbName == "demo")
+	assert.True(t, obj.StartId == "1")
 
 	_, ok := obj.Labels["cloud"]
 	assert.True(t, ok)
@@ -79,8 +80,7 @@ func TestUnmarshall(t *testing.T) {
 }
 
 func TestUnmarshallMany(t *testing.T) {
-	s := (
-		`{
+	s := (`{
   "address": "172.17.0.7", 
   "archiveDir": "/var/opt/nuodb/archive/nuodb/demo", 
   "archiveId": 0, 
@@ -136,18 +136,19 @@ func TestUnmarshallMany(t *testing.T) {
 
 func TestMarshall(t *testing.T) {
 
-	labels := map[string]string {
-		"cloud": "minikube",
+	labels := map[string]string{
+		"cloud":  "minikube",
 		"region": "local",
-		"zone": "local-b",
+		"zone":   "local-b",
 	}
 
-	obj := testlib.NuoDBProcess {
-		Address: "172.17.0.6",
-		DbName: "demo",
-		Host: "admin-kljkzo-nuodb-0",
+	obj := testlib.NuoDBProcess{
+		Address:  "172.17.0.6",
+		DbName:   "demo",
+		Host:     "admin-kljkzo-nuodb-0",
 		Hostname: "te-database-rggfj1-nuodb-demo-57f984dcd5-s7nhr",
-		Labels: labels,
+		Labels:   labels,
+		StartId:  "0",
 	}
 	b, err := json.Marshal(&obj)
 
