@@ -246,6 +246,25 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 		t.Run("verifyProtocolVersion", func(t *testing.T) {
 			// enable automatic protocol upgrade
 			options.SetValues["database.automaticProtocolUpgrade.enabled"] = "true"
+			// start two TEs so that we can supply TE preference query
+			teDeployment := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseHelmChartReleaseName, opt.ClusterName, opt.DbName)
+			k8s.RunKubectl(t, options.KubectlOptions, "scale", "deployment", teDeployment, "--replicas=2")
+			testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 3)
+			// find the startId of the second TE
+			var toShutdown int32 = -1
+			processes, err := testlib.GetDatabaseProcessesE(t, namespaceName, admin0, opt.DbName)
+			require.NoError(t, err)
+			for _, process := range processes {
+				if process.Type == "TE" && process.StartId > toShutdown {
+					toShutdown = process.StartId
+				}
+			}
+			require.NotEqual(t, -1, toShutdown, "Unable to find TE to shutdown")
+			// supply LB query which will select the second TE to be shutdown
+			// after protocol upgrade
+			options.SetValues["database.automaticProtocolUpgrade.tePreferenceQuery"] =
+				fmt.Sprintf("random(start_id(%d))", toShutdown)
+
 			helm.Upgrade(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
 
 			// protocol upgrade is async task
@@ -276,8 +295,8 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 			// verify that a TE has been restarted and SQL layer version is
 			// upgrade is performed
 			testlib.Await(t, func() bool {
-				return testlib.GetRegexOccurrenceInLog(t, namespaceName, admin0,
-					"Shutting down startId=[0-9]+ to finalize the database protocol upgrade",
+				return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
+					fmt.Sprintf("Shutting down startId=%d to finalize the database protocol upgrade", toShutdown),
 					&corev1.PodLogOptions{}) >= 1
 			}, 60*time.Second)
 			podName := testlib.GetPodName(t, namespaceName,

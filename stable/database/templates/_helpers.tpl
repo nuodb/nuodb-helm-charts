@@ -260,7 +260,7 @@ The configuration is imported only in the entrypoint cluster.
         {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
 "nuodb.com/automatic-database-protocol-upgrade": "true"
           {{- with .Values.database.automaticProtocolUpgrade.tePreferenceQuery }}
-"nuodb.com/automatic-database-protocol-upgrade.te-preference-policy": {{ . | quote }}
+"nuodb.com/automatic-database-protocol-upgrade.te-preference-query": {{ . | quote }}
           {{- end -}}
         {{- end -}}
       {{- end -}}
