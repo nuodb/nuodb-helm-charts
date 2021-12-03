@@ -600,7 +600,7 @@ func TestAutomaticDatabaseProtocolUpgrade(t *testing.T) {
 			assert.Equal(t, "true", obj.Annotations["nuodb.com/automatic-database-protocol-upgrade"])
 			assert.Equal(t,
 				options.SetValues["database.automaticProtocolUpgrade.tePreferenceQuery"],
-				obj.Annotations["nuodb.com/automatic-database-protocol-upgrade.te-preference-policy"])
+				obj.Annotations["nuodb.com/automatic-database-protocol-upgrade.te-preference-query"])
 		}
 	})
 }

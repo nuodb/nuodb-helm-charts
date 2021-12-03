@@ -5,6 +5,7 @@ package minikube
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -244,8 +245,33 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 		// check that KAA will upgrade database protocol version and restart TE
 		// automatically
 		t.Run("verifyProtocolVersion", func(t *testing.T) {
+			// start two TEs so that we can supply TE preference query
+			options.SetValues["database.te.replicas"] = "2"
+			helm.Upgrade(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
+			testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 3)
+			// find the startId of the second TE
+			var toShutdownStartId int64 = -1
+			toShutdownPod := ""
+			processes, err := testlib.GetDatabaseProcessesE(t, namespaceName, admin0, opt.DbName)
+			require.NoError(t, err)
+			for _, process := range processes {
+				if process.Type == "TE" {
+					startId, err := strconv.ParseInt(process.StartId, 10, 64)
+					require.NoError(t, err)
+					if startId > toShutdownStartId {
+						toShutdownStartId = startId
+						toShutdownPod = process.Hostname
+					}
+				}
+			}
+			require.NotEqual(t, -1, toShutdownStartId, "Unable to find TE to shutdown")
 			// enable automatic protocol upgrade
 			options.SetValues["database.automaticProtocolUpgrade.enabled"] = "true"
+			// supply LB query which will select the second TE to be shutdown
+			// after protocol upgrade
+			options.SetValues["database.automaticProtocolUpgrade.tePreferenceQuery"] =
+				fmt.Sprintf("random(start_id(%d))", toShutdownStartId)
+
 			helm.Upgrade(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
 
 			// protocol upgrade is async task
@@ -276,14 +302,12 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 			// verify that a TE has been restarted and SQL layer version is
 			// upgrade is performed
 			testlib.Await(t, func() bool {
-				return testlib.GetRegexOccurrenceInLog(t, namespaceName, admin0,
-					"Shutting down startId=[0-9]+ to finalize the database protocol upgrade",
+				return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
+					fmt.Sprintf("Shutting down startId=%d to finalize the database protocol upgrade", toShutdownStartId),
 					&corev1.PodLogOptions{}) >= 1
 			}, 60*time.Second)
-			podName := testlib.GetPodName(t, namespaceName,
-				fmt.Sprintf("te-%s-nuodb-cluster0-%s", databaseHelmChartReleaseName, opt.DbName))
-			testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 30*time.Second)
-			testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 2)
+			testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, toShutdownPod, 0, 30*time.Second)
+			testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 3)
 			output, err = testlib.RunSQL(t, namespaceName, admin0, opt.DbName,
 				"select version from system.versions"+
 					" where property = 'SYSTEM_TABLES_VERSION'"+
@@ -297,7 +321,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 			// response is inspected
 			testlib.Await(t, func() bool {
 				adminPod := testlib.GetPod(t, namespaceName, admin0)
-				actualImageId, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions, "exec", admin0, "--",
+				actualImageId, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions, "exec", admin0, "-c", "admin", "--",
 					"nuocmd", "get", "value", "--key", fmt.Sprintf("upgradeDatabaseLastObservedImage/%s", opt.DbName))
 				require.NoError(t, err, "error getting last observed image ID")
 				return adminPod.Status.ContainerStatuses[0].ImageID == actualImageId
