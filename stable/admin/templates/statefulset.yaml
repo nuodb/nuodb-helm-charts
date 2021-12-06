@@ -61,7 +61,9 @@ spec:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
-        command: ['chmod', '-R', '770', '/var/opt/nuodb', '/var/log/nuodb']
+        command: ['sh', '-c', '
+          find /var/opt/nuodb -not -perm 770 -maxdepth 1 -exec chmod -R 770 {} \; &&
+          find /var/log/nuodb -not -perm 770 -maxdepth 1 -exec chmod -R 770 {} \;']
         volumeMounts:
         - name: raftlog
           mountPath: /var/opt/nuodb

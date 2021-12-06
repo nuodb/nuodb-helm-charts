@@ -68,15 +68,9 @@ spec:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
-        command:
-          - 'chmod'
-          - '-R'
-          - '770'
-          - '/var/opt/nuodb/archive'
-          - '/var/log/nuodb'
-  {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
-          - '/var/opt/nuodb/journal'
-  {{- end }}
+        command: ['sh', '-c', '
+          find /var/opt/nuodb -not -perm 770 -maxdepth 2 -exec chmod -R 770 {} \; &&
+          find /var/log/nuodb -not -perm 770 -maxdepth 1 -exec chmod -R 770 {} \;']
         volumeMounts:
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive
@@ -443,16 +437,9 @@ spec:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
-        command:
-          - 'chmod'
-          - '-R'
-          - '770'
-          - '/var/opt/nuodb/archive'
-          - '/var/opt/nuodb/backup'
-          - '/var/log/nuodb'
-{{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
-          - '/var/opt/nuodb/journal'
-{{- end }}
+        command: ['sh', '-c', '
+          find /var/opt/nuodb -not -perm 770 -maxdepth 2 -exec chmod -R 770 {} \; &&
+          find /var/log/nuodb -not -perm 770 -maxdepth 1 -exec chmod -R 770 {} \;']
         volumeMounts:
         - name: archive-volume
           mountPath: /var/opt/nuodb/archive

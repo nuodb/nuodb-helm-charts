@@ -708,9 +708,6 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 			assert.True(t, ok, "mount journal-volume not found")
 			assert.EqualValues(t, "/var/opt/nuodb/journal", mount.MountPath)
 
-			initContainer := obj.Spec.Template.Spec.InitContainers[0]
-			assert.Contains(t, initContainer.Command, "/var/opt/nuodb/journal")
-
 			claim, ok := testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
 			assert.True(t, ok, "volume journal-volume not found")
 			assert.Equal(t, v1.ReadWriteOnce, claim.Spec.AccessModes[0])
@@ -742,9 +739,6 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 			assert.True(t, ok, "mount journal-volume not found")
 			assert.EqualValues(t, "/var/opt/nuodb/journal", mount.MountPath)
 
-			initContainer := obj.Spec.Template.Spec.InitContainers[0]
-			assert.Contains(t, initContainer.Command, "/var/opt/nuodb/journal")
-
 			claim, ok := testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
 			assert.True(t, ok, "volume journal-volume not found")
 			assert.Equal(t, v1.ReadWriteMany, claim.Spec.AccessModes[0])
@@ -769,9 +763,6 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 
 			_, ok := testlib.GetMount(container.VolumeMounts, "journal-volume")
 			assert.False(t, ok, "mount journal-volume not found")
-
-			initContainer := obj.Spec.Template.Spec.InitContainers[0]
-			assert.NotContains(t, initContainer.Command, "/var/opt/nuodb/journal")
 
 			_, ok = testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
 			assert.False(t, ok, "volume journal-volume not found")
