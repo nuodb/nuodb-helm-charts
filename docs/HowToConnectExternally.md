@@ -64,7 +64,7 @@ To demonstrate the external access using TE groups, let's consider a working exa
 - Another set of the applications are installed in different Kubernetes cluster, on bare metal or in different cloud.
 
 The resource requirements for the different TE groups may be different as there is a direct dependency to the type of SQL workload that TEs will serve.
-There will be 2 _smaller_ TEs dedicated for the _OLTP_ and 1 _bigger_ TEs dedicated for the _COB_ workload.
+There will be 2 _smaller_ TEs dedicated for the _OLTP_ and 1 _bigger_ TE dedicated for the _COB_ workload deployed in _nuodb_ namespace.
 
 To satisfy the requirement having several workloads targeting different set of TEs, the `LBQuery` connection property with the correct syntax will be used.
 Alternatively a load balancer policies can be configured and SQL clients can reference them using `LBPolicy` connection property.
@@ -155,38 +155,86 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- nuocmd show database \
     --process-format '{type} {hostname} {node_id}'
 ```
 
-Use `nuosql`, found in [NuoDB Client-only Package](https://github.com/nuodb/nuodb-client), to connect to the NuoDB database from you local machine.
+Use `nuosql`, found in [NuoDB Client-only Package](https://github.com/nuodb/nuodb-client), to connect to the NuoDB database from the local machine.
 Repeat the command several times to ensure that the each time the expected node ID is printed.
 
 ```shell
-echo 'select GETNODEID() from dual;' |  nuosql demo@${DOMAIN_ADDRESS} --user dba --password secret --connection-property 'LBQuery=round_robin(first(label(tx-type oltp) any))'
+echo 'select GETNODEID() from dual;' |  nuosql demo@${DOMAIN_ADDRESS} \
+    --user dba --password secret \
+    --connection-property 'LBQuery=round_robin(first(label(tx-type oltp) any))'
 ```
 
 Repeat the steps for the _COB_ workload.
 
 ```shell
-echo 'select GETNODEID() from dual;' |  nuosql demo@${DOMAIN_ADDRESS} --user dba --password secret --connection-property 'LBQuery=round_robin(first(label(tx-type cob) any))'
+echo 'select GETNODEID() from dual;' |  nuosql demo@${DOMAIN_ADDRESS} \
+    --user dba --password secret \
+    --connection-property 'LBQuery=round_robin(first(label(tx-type cob) any))'
 ```
 
-## Cloud Providers
+Verify that internal SQL clients can still connect to the database by setting `PreferInternalAddress=true` connection property.
+
+```shell
+kubectl exec -ti admin-nuodb-cluster0-0 -- bash -c \
+    "echo 'select GETNODEID() from dual;' |  nuosql demo@nuodb-clusterip \
+        --user dba --password secret \
+        --connection-property 'LBQuery=round_robin(first(label(tx-type oltp) any))' \
+        --connection-property 'PreferInternalAddress=true'"
+```
+
+## Cloud Provider Specifics
+
+### Native CNI
+
+Most of the cloud providers have support for native Kubernetes CNI plugins which allows the Pod IPs to be assigned with IPs from the VPC...
+
+TBD
 
 ### GCP
 
-TBD
+No additional configuration is needed to enable NuoDB database external access in Google Kubernetes Engine (GKE).
+For more information, check [Configuring TCP/UDP load balancing](https://cloud.google.com/kubernetes-engine/docs/how-to/service-parameters).
 
 ### AWS
 
-TBD
+To automatically provision AWS Network Load Balancer (NLB) for Kubernetes services of type `LoadBalancer`, please follow the steps in [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html) guide.
+The [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) should be deployed in the Amazon Elastic Kubernetes Service (EKS).
+For more information on how to customize the provisioned NLB, check [Network Load Balancer](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/service/nlb/).
 
 ### Azure
 
-TBD
+No additional configuration is needed to enable NuoDB database external access in Azure Kubernetes Service (AKS).
+For more information, check [Use a public Standard Load Balancer](https://docs.microsoft.com/en-us/azure/aks/load-balancer-standard).
 
 ## Troubleshooting
 
-### TE does not start
+### Unable to connect
+
+There may be different reasons for client connectivity problems such as:
+
+- not _Ready_ NuoDB Admin Pods
+- not _Ready_ TE pods
+- incorrect external access configuration
+- incorrect NuoDB Load Balancer configuration
+- incorrect NLB configuration
+- network connectivity problems including lack of routing, firewall configuration and many more
+
+You can rule out any of the points above one by one.
+Start by checking the database availability inside the cluster using the same connection properties as the application uses.
 
 TBD
+
+### TE does not start
+
+TE started with `--enable-external-access` process option will wait for the `LoadBalancer` service IP address or hostname to be available before they start.
+In case of a problem during NLB provisioning, the IP address will never be populated and the _engine_ container will fail.
+The following errors can be seen the TE container logs:
+
+```text
+TBD
+```
+
+> **ACTION**: Check the evetns for the Kubernetes service of type `LoadBalancer` for this TE group using `kubectl describe service <service-name>`. Check the cloud provider documentation on how to troubleshoot the load balancer controller.
 
 ### Wrong TE is provided
 
