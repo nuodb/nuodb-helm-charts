@@ -46,7 +46,7 @@ Upgrade without downtime is only possible if all databases in the domain have su
 
 - Every database must have more than `max-lost-archives + 1` SMs, and these SMs must be part of the same StatefulSet or on different clusters.
 If `--max-lost-archives` option is not configured, the default value of `0` is used.
-- Every database must have more than one TE.
+- Every database must have more than one TE where TEs can be deployed in one or separate TE groups.
 - There must be more than one AP in the domain.
 To retain Raft majority during the upgrade it's recommended to configure three or more APs.
 
