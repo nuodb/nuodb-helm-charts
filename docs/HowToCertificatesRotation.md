@@ -1,487 +1,258 @@
-# Rotating NuoDB TLS Certificates
-
-<details>
-<summary>Table of Contents</summary>
-<!-- TOC -->
-
-- [Rotating NuoDB TLS Certificates](#rotating-nuodb-tls-certificates)
-    - [Introduction](#introduction)
-        - [Terminology](#terminology)
-    - [About Key Rotation](#about-key-rotation)
-        - [Update Key Pair Certificates](#update-key-pair-certificates)
-            - [Using Kubernetes Secrets](#using-kubernetes-secrets)
-            - [Using HashiCorp Vault](#using-hashicorp-vault)
-        - [Verify Domain Certificates](#verify-domain-certificates)
-    - [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation)
-        - [Rotate CA Certificate](#rotate-ca-certificate)
-        - [Rotate Server Certificate](#rotate-server-certificate)
-        - [Rotate Client Certificate](#rotate-client-certificate)
-        - [Cleanup](#cleanup)
-
-<!-- /TOC -->
-</details>
+# Connect to NuoDB Database Externally
 
 ## Introduction
 
-When using TLS encryption, it is necessary to rotate key pair certificates before the certificates expire.
-To avoid downtime, NuoDB Admin Processes (APs) with the new certificates should be introduced in a rolling fashion.
+NuoDB supports SQL interface used by the client applications to connect to the database.
+The connection protocol used by the NuoDB drivers is a two-stage process.
+First, the driver establishes a connection with the NuoDB Admin which provides the driver with Transaction Engine (TE) connection information.
+A new connection is established to the provided TE. After completing the client protocol, the connection can be used by the application to execute SQL statements.
+The two-stage connection protocol allows the configuration of flexible and rich connection load balancing rules.
+The `LBQuery` expression syntax can be used to specify the set of suitable TEs to service SQL clients and the strategy used to distribute connections to these TEs among SQL clients.
+A _direct_ connection towards TEs is also supported, however, the connection load balancing must be done by the client application.
 
-This document expands on [Security Model of NuoDB in Kubernetes](./HowtoTLS.md) and explains how to configure proper certificate rotation in NuoDB Kubernetes deployments.
+For more information on NuoDB client connections, check [Client Development](https://doc.nuodb.com/nuodb/latest/client-development/).
 
-> **NOTE**: For non-Kubernetes deployments, see  [Enabling TLS encryption, Rotating TLS Key Pair Certificates](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/domain-operations/enabling-tls-encryption/rotating-key-pair-certificates/).
-This page expands on the product documentation and is specific to this Helm Chart repository.
+SQL clients and applications running in the same Kubernetes cluster as the NuoDB domain can connect to the database with the default NuoDB Helm Charts configuration using the NuoDB Admin `ClusterIP` service or directly using the TE `ClusterIP` service. This document focuses on external client applications running outside of the Kubernetes cluster where the NuoDB database is hosted. Allowing external access to the NuoDB database is not enabled by default and requires additional configuration.
 
-A high-level overview of the certificate rotation is provided in [About Key Rotation](#about-key-rotation) section.
-After getting familiar with the key concepts, step-by-step instructions are available in the [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation) section.
-It is recommended to read through the entire page to get a common understanding of the key rotation process before following the steps.
+## Transaction Engine Groups
 
-### Terminology
+A TE group consists of TEs with the same configuration which is part of the same database most often used to serve specific SQL workload.
+NuoDB Helm Charts 3.4.0+ supports the deployment of one or more TE groups per database.
 
-- `Key` = a combination of a private key with its corresponding X509 certificate chain.
-These keys are usually saved in a PKCS12 file such as `nuoadmin.p12`.
-- `NuoDB Admin` = The administrative interface for domain and database management.
-For information on how to start the NuoDB Admin tier, see [Admin Chart](../stable/admin/README.md).
-- `CA` = Certificate Authority
-- `Server Key` = The key pair certificate used by NuoDB Admin.
+Multiple deployments of the `database` chart for the same NuoDB database can be done in the same Kubernetes namespace where only one of them is _primary_.
+One or more _secondary_ Helm releases are used to deploy additional TE groups for the same database with different configuration options.
+This allows flexible configuration of each TE group including but not limited to the number of TEs in a group, their resource requirements, process labels, and scheduling rules.
+SQL clients can be configured to target each TE group separately using NuoDB Admin load balancer rules.
+Specifying the type of the Helm `database` release is controlled by `database.primaryRelease` option (`true` by default).
 
-## About Key Rotation
+## External Access for TE Groups
 
-NuoDB supports various key models for TLS keys used by the `NuoDB Admin` and database processes.
+External access for the NuoDB database is _not_ enabled by default and is supported when using NuoDB Helm Charts 3.4.0+ and NuoDB 4.2.4+.
+To enable external access to NuoDB domain and database set the `admin.externalAccess.enabled=true` and `database.te.externalAccess.enabled=true` options.
 
-> **NOTE**: For information on how to configure different TLS key models, see [Security Model of NuoDB in Kubernetes](./HowtoTLS.md).
+A Kubernetes service of type `LoadBalancer` or `NodePort` is created per TE group.
+The Kubernetes cluster should be properly configured so that the external network (Layer4) cloud load balancer is provisioned automatically.
+This should allow the external SQL clients to connect to the TEs backing the service by uniquely targeting each TE group.
+Most of the cloud vendors provide Kubernetes Load Balancer controllers that support different service annotations used to control the properties and configuration of the provisioned cloud load balancer.
 
-The [Shared Admin Key + Intermediate CA](./HowtoTLS.md#intermediate-ca) model is used by default in NuoDB Kubernetes deployments.
-This means that the same key pair certificate is used by all APs, a Certificate Authority (CA) is used to sign them and the CA certificate is trusted by all processes in the domain.
+> **NOTE**: When external access is enabled, the NuoDB Helm Charts will create Internet-facing load balancers by default.
+This can be changed by setting the `admin.externalAccess.internalIP=true` and `database.te.externalAccess.internalIP=true` or further customized by explicitly configuring custom annotations for the Kubernetes services using `admin.externalAccess.annotations` and `database.te.externalAccess.annotations` options.
+The user-provided custom annotations will overwrite the default annotations for the services.
 
-If a CA certificate needs to be renewed, then both the keystore and the truststore must be updated for all APs, and by extension, all database processes.
-As stated, processes with the new certificates should be introduced in a rolling fashion to avoid downtime, which means that processes with the old key pair certificate can verify processes with the new key pair certificate.
-Since the new key pair certificates must be verified using a new trusted certificate, existing processes (admin and database) must have the new trusted certificate propagated to their truststores before the new key pair certificates can be introduced.
+> **IMPORTANT**: It is a customer's responsibility to correctly configure security rules and restrict access to the cloud load balancers.
 
-To simplify updating and propagating new trusted certificates, run [nuocmd add trusted-certificate](https://doc.nuodb.com/nuodb/latest/reference-information/command-line-tools/nuodb-command/nuocmd-reference/#add-trusted-certificate).
-This command adds a trusted certificate to the NuoDB Admin server and causes the trusted certificate to be added and propagated to all APs and all database processes.
+Services of type `NodePort` can be created as well by setting the `admin.externalAccess.type=NodePort` and `database.te.externalAccess.type=NodePort` options.
+For this type of deployment, it is required that a Layer4 load balancer is manually provisioned. It should be configured to load balance traffic across all worker nodes in the Kubernetes cluster.
+The different TE groups will be reachable on different node ports.
 
-An overview of how CA certificate rotation is performed is as follows:
+The external address and port for TEs are configured using the `external-address` and `external-port` process labels.
+If supplied, they will be advertised by NuoDB Admin to the SQL clients during the second stage of the client connection protocol.
+For more information, check [Use External Address](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#_use_external_address).
 
-1. A new CA certificate is generated.
-2. A new shared admin new key pair certificate is generated.
-3. The new CA certificate is added to the truststore of every AP and every database process.
-4. The new CA certificate is added to the truststore of every SQL client.
-5. The new CA certificate is added to the truststore of every NuoDB Command client.
-6. For each AP, the keystore is replaced. Make sure that the new key pair certificate is in effect.
-7. For each database process, the process is restarted, so that its certificate chain is based on the new certificate.
-8. _(Optional)_ The old CA certificate is removed from the truststore of every AP and every database process.
-9. _(Optional)_ The old CA certificate is removed from the truststore of every SQL client and NuoDB Command client.
+Obtaining and configuring the hostname or IP address of the L4 load balancers can be tedious and error-prone as they are provisioned asynchronously by the Kubernetes controllers.
+NuoDB can inspect the Kubernetes services and configure the TE database processes with the `external-address` and `external-port` process labels automatically if the `--enable-external-access` process option is provided.
+This simplifies the deployment and ensures the correct configuration of the TE database processes.
 
-Usually, only the server key pair certificate is renewed, which means that only the keystore file has to be updated for all APs and database processes.
-This reduces the steps needed during key rotation as the new key pair certificate can be verified using the old truststore certificate.
+> **NOTE**: If the hostname or the IP address of the provisioned cloud load balancer change over time, the TE database process needs to be restarted so that the new value comes into play.
 
-An overview of how server key pair certificate rotation is performed is as follows:
+## Examples
 
-1. A new shared admin new key pair certificate is generated.
-2. For each AP, the keystore is replaced. Make sure that the new key pair certificate is in effect.
-3. For each database process, the process is restarted, so that it obtains a new certificate based on the new server certificate.
+To demonstrate the external access using TE groups, let's consider a working example with the following requirements:
 
-An overview of how client key pair certificate rotation is performed is as follows:
+- NuoDB database is deployed in a single Kubernetes cluster.
+- Online Transaction Processing (OLTP) SQL workload should be processed by TEs in _group 1_.
+- Close of Business (COB) SQL workload should be processed by TEs in _group 2_.
+- A set of the applications are installed in the same Kubernetes cluster as NuoDB.
+- Another set of the applications are installed in a different Kubernetes cluster, on bare metal, or in a different cloud.
 
-1. A new client key pair certificate and PEM file are generated.
-2. The new client certificate is added to the truststore of every AP.
-3. For each NuoDB Command client, the client PEM file is replaced. Make sure that the new key pair certificate is in effect.
-4. (Optional) The old client certificate is removed from the truststore of every AP.
+The resource requirements for the different TE groups may be different as there is a direct dependency on the type of SQL workload that TEs will serve.
+There will be 2 _smaller_ TEs dedicated for the _OLTP_ and 1 _bigger_ TE dedicated for the _COB_ workload deployed in _nuodb_ namespace.
 
-Complete step by step examples can be found in [NuoDB TLS Key Rotation](#nuodb-tls-key-rotation) section.
-It contains detailed information on how to generate new key pair certificates using NuoDB Command tools.
+To satisfy the requirement of having several workloads targeting a different set of TEs, the `LBQuery` connection property with the correct syntax will be used.
+Alternatively, load balancer policies can be configured and SQL clients can reference them using `LBPolicy` connection property.
+For simplicity, `tx-type` database process label will be used to identify which workload is served by a set of TEs.
+The label value is either `oltp` or `cob`.
 
-### Update Key Pair Certificates
+For more advanced load balancer configuration, check [Load Balancer Policies](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/).
 
-Depending on the used TLS keys management solution in use, updating the key pair certificates may be different.
-The sections below describe in detail how this is performed in Kubernetes deployments installed with NuoDB Helm Charts.
+NuoDB supports multi-tenant, multi-cluster, and multi-cloud database deployments using TE groups, however, for simplicity a single-cluster single-tenant deployment will be demonstrated here.
+The below diagram illustrates the deployed resources and SQL clients along with the `LBQuery` syntax.
 
-#### Using Kubernetes Secrets
+![External Access with TE Groups](../images/database-groups.png)
 
-By default, NuoDB uses Kubernetes secrets to store TLS keys and expose them to NuoDB processes.
-The TLS keys are mounted in AP containers as a `subPath` volume mount which doesn't allow automatic secret updates.
-This means that the secrets should be updated using the Kubernetes controller rolling upgrade strategy triggered by the `helm upgrade` command.
+### Deployment
 
-To replace the keystore for all APs, use the steps below.
+The steps below will deploy NuoDB database with 2 TE groups in Google Kubernetes Engine (GKE).
+If you are deploying in a different environment, make sure that the correct cloud provider is set in the `cloud.provider` option.
 
-Create new Kubernetes secrets using the keystore file generated with the renewed server key pair certificates.
+> **NOTE**: Use the `nuodb.image.tag` option to specify the NuoDB product version.
+NuoDB 4.2.4+ docker image should be used.
 
-```bash
-kubectl create secret generic nuodb-keystore-renewed \
-  --namespace nuodb \
-  --from-file=nuoadmin.p12=/tmp/keys/nuoadmin.p12 \
-  --from-literal=password=${PASSWD}
+Install the [admin](../stable/admin/README.md) chart and enable external access.
+Service of type `LoadBalancer` will be provisioned by default.
 
-kubectl create secret generic nuodb-ca-cert-renewed \
-  --namespace nuodb \
-  --from-file=ca.cert=/tmp/keys/ca.cert
-
-kubectl create secret generic nuodb-client-pem-renewed \
-  --namespace nuodb \
-  --from-file=nuocmd.pem=/tmp/keys/nuocmd.pem
+```shell
+helm install admin nuodb/admin \
+    --namespace nuodb \
+    --cloud.provider=google \
+    --set admin.externalAccess.enabled=true
 ```
 
-> **NOTE**: Skip the generation of the secrets for which the key pair certificates haven't been rotated.
+Install the [database](../stable/database/README.md) chart for the primary Helm release which deploys TE _group 1_.
+Configure the `tx-type=oltp` label for the TEs in this group.
 
-Upgrade the Helm release installed with the [admin](../stable/admin) chart using the new TLS secrets.
-This will perform NuoDB Admin statefulset rolling upgrade so make sure that you are having enough APs to prevent downtime.
-
-```bash
-helm upgrade admin nuodb/admin \
-  --namespace nuodb \
-  --set admin.tlsKeyStore.secret=nuodb-keystore-renewed \
-  --set admin.tlsClientPEM.secret=nuodb-client-pem-renewed \
-  --set admin.tlsCACert.secret=nuodb-ca-cert-renewed \
-  -f values.yaml
+```shell
+helm install database-group1 nuodb/database \
+    --namespace nuodb \
+    --set cloud.provider=google \
+    --set database.name=demo \
+    --set database.te.externalAccess.enabled=true \
+    --set database.te.otherOptions.enable-external-access=true \
+    --set database.te.replicas=2 \
+    --set database.te.resources.limits.cpu=4 \
+    --set database.te.resources.limits.memory=8Gi \
+    --set database.te.resources.requests.cpu=4 \
+    --set database.te.resources.requests.memory=8Gi \
+    --set database.te.labels.tx-type=oltp
 ```
 
-Wait for the AP statefulset rollout to finish and ensure that the new key pair certificates are used by all APs as described in [Verify Domain Certificates](#verify-domain-certificates).
+Install the [database](../stable/database/README.md) chart for the secondary Helm release which deploys TE _group 2_:
+Configure the `tx-type=cob` label for the TEs in this group.
 
-Upgrade the Helm release installed with the [database](../stable/database) chart using the new TLS secrets.
-This task will perform a rolling upgrade on all database Storage Manager (SM) statefulsets and Transaction Engine (TE) deployments, therefore ensure that enough additional database processes are running to prevent downtime.
-
-```bash
-helm upgrade database nuodb/database \
-  --namespace nuodb \
-  --set admin.tlsKeyStore.secret=nuodb-keystore-renewed \
-  --set admin.tlsClientPEM.secret=nuodb-client-pem-renewed \
-  --set admin.tlsCACert.secret=nuodb-ca-cert-renewed \
-  -f values.yaml
+```shell
+helm install database-group2 nuodb/database \
+    --namespace nuodb \
+    --set cloud.provider=google \
+    --set database.name=demo \
+    --set database.primaryRelease=false \
+    --set database.te.externalAccess.enabled=true \
+    --set database.te.otherOptions.enable-external-access=true \
+    --set database.te.replicas=1 \
+    --set database.te.resources.limits.cpu=4 \
+    --set database.te.resources.limits.memory=16Gi \
+    --set database.te.resources.requests.cpu=4 \
+    --set database.te.resources.requests.memory=16Gi \
+    --set database.te.labels.tx-type=cob
 ```
 
-> **NOTE**: Adjust the values depending on the key pair certificates that have been rotated.
+Wait for the NuoDB database to become ready:
 
-Wait for all database processes to restart, report `Ready` and ensure that the new key pair certificates are used by all domain processes as described in [Verify Domain Certificates](#verify-domain-certificates).
-
-#### Using HashiCorp Vault
-
-HashiCorp uses sidecar containers to inject keys into another container.
-It automatically updates secret values stored in the Vault KV store to match the files in the volume mounted inside the container.
-NuoDB APs will reload the keystore without the need for reconfiguration and restart.
-Therefore, it is enough to update the keystore, client PEM and CA certificate in HashiCorp Vault.
-
-Ensure that the keystore has the same password (as specified by `admin.tlsKeyStore.password` Helm option) so that the APs can reload the keystore without having to be reconfigured and restarted.
-
-For more information on how to configure TLS with HashiCorp Vault, see [Using HashiCorp Vault for Management of TLS Certificates](./HowToHashiCorpVault.md).
-
-Make sure that the new key pair certificates are used by all APs as described in [Verify Domain Certificates](#verify-domain-certificates).
-
-Restart database processes so that the APs generate new engine certificates signed with the new server certificate chain in the [Intermediate CA](./HowtoTLS.md#intermediate-ca) model or the new shared key pair certificates are used in the [Pass-down](./HowtoTLS.md#pass-down) model.
-Kubernetes 1.15+ supports a rollout restart which can be used to restart database processes in a rolling fashion.
-
-```bash
-kubectl rollout restart \
-  --namespace nuodb \
-  statefulset sm-database-nuodb-cluster0-demo-hotcopy
-
-kubectl rollout restart \
-  --namespace nuodb \
-  statefulset sm-database-nuodb-cluster0-demo
-
-kubectl rollout restart \
-  --namespace nuodb \
-  deployment te-database-nuodb-cluster0-demo
+```shell
+kubectl exec -ti admin-nuodb-cluster0-0 -- nuocmd check database \
+    --db-name demo \
+    --check-running \
+    --num-processes 4 \
+    --wait-forever
 ```
 
-Alternatively, the database processes can be restarted manually by deleting each database pod using `kubectl delete pod ...` command.
-Kubernetes will automatically restart the pod which will effectively restart the database process.
+### Verification
 
-It is recommended to perform each rollout or database process restart sequentially after verifying the domain process certificates as described in [Verify Domain Certificates](#verify-domain-certificates).
+Obtain the external address for the NuoDB Admin service:
 
-### Verify Domain Certificates
-
-To get the current certificate data in the NuoDB domain, use `nuocmd get certificate-info` command and make sure that the renewed key pair certificates are displayed in the corresponding sections.
-
-```bash
-kubectl exec -ti admin-nuodb-cluster0-0 \
-  --namespace nuodb -- \
-  nuocmd --show-json get certificate-info
+```shell
+DOMAIN_ADDRESS=$(kubectl get services nuodb-balancer -o jsonpath='{.status.loadBalancer.ingress[].ip}')
 ```
 
-The command displays the certificates information in the below sections:
+Check database processes node IDs:
 
-- `processCertificates` - information about the certificate used by each database process identified by `startId`.
-- `processTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) for each database process identified by `startId`.
-- `serverCertificates` - information about the certificate used by each AP identified by `serverId`.
-- `serverTrusted` - trusted certificate aliases (referenced in `trustedCertificates` section) for each AP identified by `serverId`.
-- `trustedCertificates` - information about trusted certificates in the domain identified by `alias`.
-
-Example output:
-
-```json
-{
-  "processCertificates": {
-    "11": {
-      "caPathLength": -1,
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1659087997000,
-      "expiresTimestamp": "2022-07-29T09:46:37.000+0000",
-      "issuerName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
-      "subjectName": "CN=172.17.0.8"
-    },
-    "12": {
-      "caPathLength": -1,
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1659087998000,
-      "expiresTimestamp": "2022-07-29T09:46:38.000+0000",
-      "issuerName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
-      "subjectName": "CN=172.17.0.9"
-    },
-    "9": {
-      "caPathLength": -1,
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 1659087974000,
-      "expiresTimestamp": "2022-07-29T09:46:14.000+0000",
-      "issuerName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890",
-      "subjectName": "CN=172.17.0.5"
-    }
-  },
-  "processTrusted": {
-    "11": [
-      "ca_prime",
-      "nuocmd_prime"
-    ],
-    "12": [
-      "ca_prime",
-      "nuocmd_prime"
-    ],
-    "9": [
-      "ca_prime",
-      "nuocmd_prime"
-    ]
-  },
-  "serverCertificates": {
-    "admin-nuodb-cluster0-0": {
-      "caPathLength": 2147483647,
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 4781150383000,
-      "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
-      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345",
-      "subjectName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
-    },
-    "admin-nuodb-cluster0-1": {
-      "caPathLength": 2147483647,
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 4781150383000,
-      "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
-      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345",
-      "subjectName": "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
-    }
-  },
-  "serverTrusted": {
-    "admin-nuodb-cluster0-0": [
-      "ca_prime",
-      "nuocmd_prime"
-    ],
-    "admin-nuodb-cluster0-1": [
-      "ca_prime",
-      "nuocmd_prime"
-    ]
-  },
-  "trustedCertificates": {
-    "ca_prime": {
-      "caPathLength": 2147483647,
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 4781150383000,
-      "expiresTimestamp": "2121-07-05T09:19:43.000+0000",
-      "issuerName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345",
-      "subjectName": "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345"
-    },
-    "nuocmd_prime": {
-      "caPathLength": -1,
-      "certificatePem": "-----BEGIN CERTIFICATE-----...-----END CERTIFICATE-----",
-      "expires": 4781151591000,
-      "expiresTimestamp": "2121-07-05T09:39:51.000+0000",
-      "issuerName": "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=34567",
-      "subjectName": "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=34567"
-    }
-  }
-}
+```shell
+kubectl exec -ti admin-nuodb-cluster0-0 -- nuocmd show database \
+    --db-name demo \
+    --process-format '{type} {hostname} {node_id}'
 ```
 
-## NuoDB TLS Key Rotation
+Use `nuosql`, which can be found in [NuoDB Client-only Package](https://github.com/nuodb/nuodb-client), to connect to the NuoDB database from the local machine.
+Repeat the command several times to ensure that each time the expected node ID is printed.
 
-To renew the domain key pair certificates and the server keystore, you can either create new keystore files and certificates on your own or create them using NuoDB commands.
-All examples below will be using a helper pod started with NuoDB image and `nuocmd` command-line tools.
-
-```bash
-PASSWD=changeMe
-mkdir /tmp/keys
-
-kubectl run generate-nuodb-certs \
-  --image nuodb/nuodb-ce \
-  --env="PASSWD=changeMe" \
-  --command -- 'tail' '-f' '/dev/null'
-
-kubectl exec -ti generate-nuodb-certs -- \
-  mkdir -p /tmp/keys
+```shell
+echo 'select GETNODEID() from dual;' |  nuosql demo@${DOMAIN_ADDRESS} \
+    --user dba --password secret \
+    --connection-property 'LBQuery=round_robin(first(label(tx-type oltp) any))'
 ```
 
-### Rotate CA Certificate
+Repeat the steps for the _COB_ workload.
 
-Generate new CA certificate:
-
-```bash
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd create keypair \
-    --keystore /tmp/keys/ca.p12 --store-password "$PASSWD" \
-    --dname "CN=ca.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=12345" \
-    --validity 365 --ca
-
-kubectl exec -ti generate-nuodb-certs -- bash -c \
-  'nuocmd show certificate \
-    --keystore /tmp/keys/ca.p12 --store-password "$PASSWD" \
-    --cert-only > /tmp/keys/ca.cert'
+```shell
+echo 'select GETNODEID() from dual;' |  nuosql demo@${DOMAIN_ADDRESS} \
+    --user dba --password secret \
+    --connection-property 'LBQuery=round_robin(first(label(tx-type cob) any))'
 ```
 
-If the CA certificate is owned by a public CA, then follow the official steps to obtain the new certificate.
+Verify that internal SQL clients can still connect to the database by setting `PreferInternalAddress=true` connection property.
 
-The newly created keystore files can be copied on the client machine and then on some AP pod.
-
-```bash
-kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
-
-kubectl cp /tmp/keys/ca.cert nuodb/admin-nuodb-cluster0-0:/tmp/ca.cert
+```shell
+kubectl exec -ti admin-nuodb-cluster0-0 -- bash -c \
+    "echo 'select GETNODEID() from dual;' |  nuosql demo@nuodb-clusterip \
+        --user dba --password secret \
+        --connection-property 'LBQuery=round_robin(first(label(tx-type oltp) any))' \
+        --connection-property 'PreferInternalAddress=true'"
 ```
 
-Since the new key pair certificates must be verified using a new CA certificate, existing processes must have the new trusted certificate propagated to their truststores before the new key pair certificates can be introduced.
-Add the new CA certificate to the truststore of all admin and database processes:
+## Cloud Provider Specifics
 
-```bash
-kubectl exec -ti admin-nuodb-cluster0-0 \
-  --namespace nuodb -- \
-  nuocmd add trusted-certificate \
-    --alias ca_prime --cert /tmp/ca.cert --timeout 30
+### Native CNI
+
+Most of the cloud providers have support for native Kubernetes CNI plugins which allow the Pod IPs to be assigned with IPs from the virtual network...
+
+TBD
+
+### GCP
+
+No additional configuration is needed to enable NuoDB database external access in GKE.
+For more information, check [Configuring TCP/UDP load balancing](https://cloud.google.com/kubernetes-engine/docs/how-to/service-parameters).
+
+### AWS
+
+To automatically provision AWS Network Load Balancer (NLB) for Kubernetes services of type `LoadBalancer`, please follow the steps in [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html) guide.
+The [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) should be deployed in the Amazon Elastic Kubernetes Service (EKS).
+For more information on how to customize the provisioned NLB, check [Network Load Balancer](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/service/nlb/).
+
+### Azure
+
+No additional configuration is needed to enable NuoDB database external access in Azure Kubernetes Service (AKS).
+For more information, check [Use a public Standard Load Balancer](https://docs.microsoft.com/en-us/azure/aks/load-balancer-standard).
+
+## Troubleshooting
+
+### Unable to connect
+
+There may be different reasons for client connectivity problems such as:
+
+- not _Ready_ NuoDB Admin Pods
+- not _Ready_ TE pods
+- incorrect external access configuration
+- incorrect NuoDB Load Balancer configuration
+- incorrect NLB configuration
+- network connectivity problems including lack of routing, firewall configuration, and many more
+
+> **ACTION**: You can rule out any of the points above one by one.
+Start by checking the overall Pod status for the NuoDB domain and database.
+Some of the common troubleshooting steps are listed below, however, there might be additional verifications specific to your deployment.
+
+1. Verify that all AP, TE, and SM pods are reported _Ready_ using `kubectl get pods` command.
+2. Check the NuoDB domain and database using `nuocmd show domain` command.
+3. Verify the database availability inside the cluster using the same connection properties as the application uses.
+The easiest way to do that is using `nuosql` tool inside some of the AP Pods.
+4. Make sure that `external-address` and/or `external-port` process labels are configured correctly on the TE database processes using `nuocmd --show-json-fields hostname,labels get processes` command.
+If you are using the `--enable-external-access` process option, verify that the configured values are the same as the `EXTERNAL-IP` shown for the Kubernetes service in `kubectl get services` output.
+If the value is not the same restart the TE database process and verify again.
+5. Verify that the `LBQuery` or `LBPolicy` syntax is correct and the expected policies are configured in the NuoDB Admin using `nuocmd get load-balancers` and `nuocmd get load-balancer-config` commands.
+6. Verify that the cloud load balancer is provisioned correctly and forwards traffic to the correct Kubernetes cluster.
+Check that its configuration is correct and modify the Kubernetes service annotations if needed.
+7. Verify that the configured security rules allow external access.
+
+### TE does not start
+
+TE started with `--enable-external-access` process option will wait for the `LoadBalancer` service IP address or hostname to be available before they start.
+In a case of a problem during NLB provisioning, the IP address will never be populated and the _engine_ container will fail.
+The following errors can be seen in the TE container logs:
+
+```text
+2021-12-15T07:43:05.015+0000 INFO  [admin-nuodb-cluster0-0:te-database-nuodb-cluster0-demo-55d664c8d7-bn57p] CustomAdminCommands Found service name=database-nuodb-cluster0-demo-balancer, type=LoadBalancer, selector={u'app': u'database-nuodb-cluster0-demo', u'component': u'te'}
+2021-12-15T07:43:05.015+0000 INFO  [admin-nuodb-cluster0-0:te-database-nuodb-cluster0-demo-55d664c8d7-bn57p] CustomAdminCommands Waiting for load balancer service database-nuodb-cluster0-demo-balancer ingress address...
+'start te' failed: Timeout after 120.0 sec waiting for ingress hostname in service database-nuodb-cluster0-demo-balancer
 ```
 
-The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
-
-Ensure that the new CA certificate with alias `ca_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
-
-Add the new CA certificate to the truststore of every SQL client.
-
-```bash
-cat /tmp/keys/ca.cert >> <path to SQL client truststore>/ca.cert
-```
-
-Generate and sign the new server certificates using the new CA certificate chain as described in [Rotate Server Certificate](#rotate-server-certificate).
-
-### Rotate Server Certificate
-
-Generate a new server key pair:
-
-```bash
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd create keypair \
-    --keystore /tmp/keys/nuoadmin.p12 --store-password "$PASSWD" --ca \
-    --dname "CN=*.nuodb.svc.cluster.local, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=67890"
-```
-
-In the example above, we specify the `SERIALNUMBER` field so that the new certificate has a different distinguished name from the current certificate.
-
-The new server certificates have to be signed by the same CA certificate.
-If the TLS keys have been generated using the `setup-keys.sh` script, the private/public key pair of the CA are available in the `ca.p12` file.
-In case the CA certificate has been renewed right now, use the new CA keystore generated using the [Rotate CA Certificate](#rotate-ca-certificate) steps.
-
-Generate and sign the new server certificates using the CA certificate chain:
-
-```bash
-kubectl cp ca.p12 generate-nuodb-certs:/tmp/keys/
-
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd sign certificate \
-    --keystore /tmp/keys/nuoadmin.p12 --store-password "$PASSWD" \
-    --ca-keystore /tmp/keys/ca.p12 --ca-store-password "$PASSWD" \
-    --validity 365 --ca --update
-```
-
-The `--ca` argument specifies whether the `isCA` extension is enabled in the generated certificate.
-This allows the admin to act as an intermediate CA and is used in the [Intermediate CA](./HowtoTLS.md#intermediate-ca) model.
-You can omit this argument in case the [Pass-down](./HowtoTLS.md#pass-down) model is used.
-
-The newly created keystore files can be copied on the client machine which will be used later to update the keystore secret.
-
-```bash
-kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
-```
-
-If the server certificates are signed by a public CA, then follow the official steps to renew your certificates.
-
-> **NOTE**: For information on how to create the server keystore when using certificates signed by a Public CA, see [here](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/domain-operations/enabling-tls-encryption/using-certificates-signed-by-a-public-certificate-authority/).
-
-Update domain keystore with the renewed certificates as described in section [Update Key Pair Certificates](#update-key-pair-certificates).
-
-### Rotate Client Certificate
-
-The NuoDB Command tool client key can be renewed together with the NuoDB Admin server key pair certificates or separately as needed.
-
-Generate new client key pair:
-
-```bash
-kubectl exec -ti generate-nuodb-certs -- \
-  nuocmd create keypair \
-    --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" \
-    --dname "CN=nuocmd.nuodb.com, OU=Eng, O=NuoDB, L=Boston, ST=MA, C=US, SERIALNUMBER=34567" \
-    --validity 365
-
-kubectl exec -ti generate-nuodb-certs -- bash -c \
-  'nuocmd show certificate \
-    --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" > /tmp/keys/nuocmd.pem'
-
-kubectl exec -ti generate-nuodb-certs -- bash -c \
-  'nuocmd show certificate \
-    --keystore /tmp/keys/nuocmd.p12 --store-password "$PASSWD" \
-    --cert-only > /tmp/keys/nuocmd.cert'
-```
-
-The newly created keystore files can be copied on the client machine and then to an AP pod.
-
-```bash
-kubectl cp generate-nuodb-certs:/tmp/keys/. /tmp/keys
-
-kubectl cp /tmp/keys/nuocmd.cert nuodb/admin-nuodb-cluster0-0:/tmp/nuocmd.cert
-```
-
-Add the new certificate to the truststore of all admin and database processes:
-
-```bash
-kubectl exec -ti admin-nuodb-cluster0-0 \
-  --namespace nuodb -- \
-  nuocmd add trusted-certificate \
-    --alias nuocmd_prime --cert /tmp/nuocmd.cert --timeout 30
-```
-
-The `--timeout` argument specifies the amount of time to wait for the new certificate to be propagated to the truststore of every process in the domain.
-
-Ensure that the new client certificate with alias `nuocmd_prime` is trusted by all APs and database processes as described in [Verify Domain Certificates](#verify-domain-certificates).
-
-Update the client key as described in section [Update Key Pair Certificates](#update-key-pair-certificates).
-
-### Cleanup
-
-Store the `ca.p12` keystore file securely which will be needed during the next keys rotation since it can be used to sign new certificates.
-It shouldn't be left around in the _generate-nuodb-certs_ helper pod, locally, or copied to all NuoDB pods.
-
-Remove the helper pod used to generate certificates and the local copy of the keystore files:
-
-```bash
-kubectl delete pod generate-nuodb-certs
-
-unset PASSWD
-
-rm -rf /tmp/keys
-```
-
-Ensure that AP, domain process, and SQL client do not use the old key pair certificates as described in [Verify Domain Certificates](#verify-domain-certificates).
-It's recommended to remove the old certificates from the domain for security reasons which involve:
-
-- removing the old Kubernetes secrets
-- removing already rotated old CA or client certificates from truststore
-- removing already rotated old CA or client certificates from SQL clients and NuoDB Commands clients
-
-To remove the old certificate from the truststore of every AP and every database process use the following command:
-
-```bash
-kubectl exec -ti admin-nuodb-cluster0-0 -- \
-  nuocmd remove trusted-certificate --alias <alias>
-```
+> **ACTION**: Verify that the `EXTERNAL-IP` for the service is available using `kubectl get services` command.
+Check the events for the service for this TE group using `kubectl describe service database-nuodb-cluster0-demo-balancer` command.
+Look into the cloud provider documentation on how to troubleshoot the load balancer controller.

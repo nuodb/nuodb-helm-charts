@@ -68,7 +68,7 @@ There will be 2 _smaller_ TEs dedicated for the _OLTP_ and 1 _bigger_ TE dedicat
 
 To satisfy the requirement having several workloads targeting different set of TEs, the `LBQuery` connection property with the correct syntax will be used.
 Alternatively a load balancer policies can be configured and SQL clients can reference them using `LBPolicy` connection property.
-For simplicity, `tx_type` database process label will be used to identify which workload is served by a set of TEs.
+For simplicity, `tx-type` database process label will be used to identify which workload is served by a set of TEs.
 The label value is either `oltp` or `cob`.
 
 For more advanced load balancer configuration, check [Load Balancer Policies](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/).
@@ -82,10 +82,11 @@ The below diagram illustrates the deployed resources and SQL clients along with 
 
 The steps below will deploy NuoDB database with 2 TE groups in GKE cluster.
 If you are deploying in different environment, make sure that the correct cloud provider is set in the `cloud.provider` option.
-Use the `nuodb.image.tag` option to specify the NuoDB product version. 
+Use the `nuodb.image.tag` option to specify the NuoDB product version.
 NuoDB 4.2.4+ docker image should be used.
 
-Install the `admin` chart and enable external access with services of type `LoadBalancer`:
+Install the `admin` chart and enable external access.
+Service of type `LoadBalancer` will be provisioned by default.
 
 ```shell
 helm install admin nuodb/admin \
@@ -94,7 +95,8 @@ helm install admin nuodb/admin \
     --set admin.externalAccess.enabled=true
 ```
 
-Install the `database` chart for the primary Helm release and deploying TE _group 1_:
+Install the `database` chart for the primary Helm release and deploying TE _group 1_.
+Configure `tx-type=oltp` label for the TEs in this group.
 
 ```shell
 helm install database-group1 nuodb/database \
@@ -112,6 +114,7 @@ helm install database-group1 nuodb/database \
 ```
 
 Install the `database` chart for the secondary Helm release and deploying TE _group 2_:
+Configure `tx-type=cob` label for the TEs in this group.
 
 ```shell
 helm install database-group2 nuodb/database \
@@ -141,7 +144,7 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- nuocmd check database \
 
 ### Verification
 
-Obtain the external address for the NuoDB Admin services:
+Obtain the external address for the NuoDB Admin service:
 
 ```shell
 DOMAIN_ADDRESS=$(kubectl get services nuodb-balancer -o jsonpath='{.status.loadBalancer.ingress[].ip}')
@@ -186,7 +189,7 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- bash -c \
 
 ### Native CNI
 
-Most of the cloud providers have support for native Kubernetes CNI plugins which allows the Pod IPs to be assigned with IPs from the VPC...
+Most of the cloud providers have support for native Kubernetes CNI plugins which allows the Pod IPs to be assigned with IPs from the virtual network...
 
 TBD
 
@@ -219,23 +222,34 @@ There may be different reasons for client connectivity problems such as:
 - incorrect NLB configuration
 - network connectivity problems including lack of routing, firewall configuration and many more
 
-You can rule out any of the points above one by one.
-Start by checking the database availability inside the cluster using the same connection properties as the application uses.
+> **ACTION**: You can rule out any of the points above one by one.
+Start by checking the overall Pod status for the NuoDB domain and database.
+Some of the common troubleshooting steps are listed below, however, there might be additional verifications specific to your deployment.
 
-TBD
+1. Verify that all AP, TE and SM pods are reported _Ready_ using `kubectl get pods`.
+2. Check the NuoDB domain and database using `nuocmd show domain`.
+3. Verify the database availability inside the cluster using the same connection properties as the application uses.
+The easiest way to do that is using `nuosql` tool inside some of the AP Pods.
+4. Make sure that `external-address` and/or `external-port` process labels are configured correctly on the TE database processes using `nuocmd --show-json-fields hostname,labels get processes`.
+If you are using the `--enable-external-access` process option, verify that the configured values are the same as the `EXTERNAL-IP` shown for the Kubernetes service in `kubectl get services` output.
+If the value is not the same restart the TE database process and verify again.
+5. Verify that the `LBQuery` or `LBPolicy` syntax is correct and the expected policies are configured in the NuoDB Admin using `nuocmd get load-balancers` and `nuocmd get load-balancer-config`.
+6. Verify that the cloud load balancer is provisioned correctly and forwards traffic to the correct Kubernetes cluster.
+Check that its configuration is correct and modify the Kubernetes service annotations if needed.
+7. Verify that the configured security rules allows external access.
 
 ### TE does not start
 
 TE started with `--enable-external-access` process option will wait for the `LoadBalancer` service IP address or hostname to be available before they start.
-In case of a problem during NLB provisioning, the IP address will never be populated and the _engine_ container will fail.
+In a case of a problem during NLB provisioning, the IP address will never be populated and the _engine_ container will fail.
 The following errors can be seen the TE container logs:
 
 ```text
-TBD
+2021-12-15T07:43:05.015+0000 INFO  [admin-nuodb-cluster0-0:te-database-nuodb-cluster0-demo-55d664c8d7-bn57p] CustomAdminCommands Found service name=database-nuodb-cluster0-demo-balancer, type=LoadBalancer, selector={u'app': u'database-nuodb-cluster0-demo', u'component': u'te'}
+2021-12-15T07:43:05.015+0000 INFO  [admin-nuodb-cluster0-0:te-database-nuodb-cluster0-demo-55d664c8d7-bn57p] CustomAdminCommands Waiting for load balancer service database-nuodb-cluster0-demo-balancer ingress address...
+'start te' failed: Timeout after 120.0 sec waiting for ingress hostname in service database-nuodb-cluster0-demo-balancer
 ```
 
-> **ACTION**: Check the evetns for the Kubernetes service of type `LoadBalancer` for this TE group using `kubectl describe service <service-name>`. Check the cloud provider documentation on how to troubleshoot the load balancer controller.
-
-### Wrong TE is provided
-
-TBD
+> **ACTION**: Verify that the `EXTERNAL-IP` for the service is available using `kubectl get services`.
+Check the events for the service for this TE group using `kubectl describe service database-nuodb-cluster0-demo-balancer`.
+Look into the cloud provider documentation on how to troubleshoot the load balancer controller.
