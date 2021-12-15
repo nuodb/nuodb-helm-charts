@@ -116,7 +116,7 @@ helm install database-group1 nuodb/database \
     --set database.te.labels.tx-type=oltp
 ```
 
-Install the [database](../stable/database/README.md) chart for the secondary Helm release which deploys TE _group 2_:
+Install the [database](../stable/database/README.md) chart for the secondary Helm release which deploys TE _group 2_.
 Configure the `tx-type=cob` label for the TEs in this group.
 
 ```shell
@@ -150,6 +150,7 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- nuocmd check database \
 Obtain the external address for the NuoDB Admin service:
 
 ```shell
+kubectl config set-context --current --namespace=nuodb
 DOMAIN_ADDRESS=$(kubectl get services nuodb-balancer -o jsonpath='{.status.loadBalancer.ingress[].ip}')
 ```
 
