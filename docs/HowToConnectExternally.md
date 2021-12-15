@@ -3,23 +3,23 @@
 ## Introduction
 
 NuoDB supports SQL interface used by the client applications to connect to the database.
-The connection protocol used by the NuoDB drivers is a two stage process.
-First the driver establishes connection with the NuoDB Admin which provides the driver with a Transaction Engine (TE) connection information.
+The connection protocol used by the NuoDB drivers is a two-stage process.
+First, the driver establishes a connection with the NuoDB Admin which provides the driver with Transaction Engine (TE) connection information.
 A new connection is established to the provided TE. After completing the client protocol, the connection can be used by the application to execute SQL statements.
-The two stage connection process allows custom configuration of flexible and rich connection load balancing rules.
+The two-stage connection protocol allows the configuration of flexible and rich connection load balancing rules.
 The `LBQuery` expression syntax can be used to specify the set of suitable TEs to service SQL clients and the strategy used to distribute connections to these TEs among SQL clients.
-A _direct_ connection towards TEs is also supported, however, the load balancing must be done by the client application.
+A _direct_ connection towards TEs is also supported, however, the connection load balancing must be done by the client application.
 
 For more information on NuoDB client connections, check [Client Development](https://doc.nuodb.com/nuodb/latest/client-development/).
 
-SQL clients and applications running in the same Kubernetes cluster as the NuoDB domain can connect to the database with the default NuoDB Helm Charts configuration using the NuoDB Admin `ClusterIP` service or directly using the TE `ClusterIP` service. This document focuses on external client applications running outside of the Kubernetes cluster where the NuoDB database is hosted. Allowing external access to NuoDB database is not enabled by default and requires additional configuration.
+SQL clients and applications running in the same Kubernetes cluster as the NuoDB domain can connect to the database with the default NuoDB Helm Charts configuration using the NuoDB Admin `ClusterIP` service or directly using the TE `ClusterIP` service. This document focuses on external client applications running outside of the Kubernetes cluster where the NuoDB database is hosted. Allowing external access to the NuoDB database is not enabled by default and requires additional configuration.
 
 ## Transaction Engine Groups
 
-A TE group consist of TEs with the same configuration which are part of the same database most often used to serve specific SQL workload.
-NuoDB Helm Charts 3.4.0+ supports deployment of one or more TE groups per database.
+A TE group consists of TEs with the same configuration which is part of the same database most often used to serve specific SQL workload.
+NuoDB Helm Charts 3.4.0+ supports the deployment of one or more TE groups per database.
 
-Multiple deployments of `database` chart for the same NuoDB database can be done in the same Kubernetes namespace where only one of them is _primary_.
+Multiple deployments of the `database` chart for the same NuoDB database can be done in the same Kubernetes namespace where only one of them is _primary_.
 One or more _secondary_ Helm releases are used to deploy additional TE groups for the same database with different configuration options.
 This allows flexible configuration of each TE group including but not limited to the number of TEs in a group, their resource requirements, process labels, and scheduling rules.
 SQL clients can be configured to target each TE group separately using NuoDB Admin load balancer rules.
@@ -27,31 +27,33 @@ Specifying the type of the Helm `database` release is controlled by `database.pr
 
 ## External Access for TE Groups
 
-External access for NuoDB database is _not_ enabled by default and is supported when using NuoDB Helm Charts 3.4.0+ and NuoDB 4.2.4+.
+External access for the NuoDB database is _not_ enabled by default and is supported when using NuoDB Helm Charts 3.4.0+ and NuoDB 4.2.4+.
 To enable external access to NuoDB domain and database set the `admin.externalAccess.enabled=true` and `database.te.externalAccess.enabled=true` options.
 
 A Kubernetes service of type `LoadBalancer` or `NodePort` is created per TE group.
-The Kubernetes cluster should be properly configured so that external network (Layer4) cloud load balancer is provisioned automatically.
+The Kubernetes cluster should be properly configured so that the external network (Layer4) cloud load balancer is provisioned automatically.
 This should allow the external SQL clients to connect to the TEs backing the service by uniquely targeting each TE group.
-Most of the cloud vendors provide Kubernetes Load Balancer controllers that support different service annotation used to control the properties and configuration of the provisioned cloud load balancer.
+Most of the cloud vendors provide Kubernetes Load Balancer controllers that support different service annotations used to control the properties and configuration of the provisioned cloud load balancer.
 
-> **NOTE**: When external access is enabled, the NuoDB Helm Charts will create internet-facing load balancers by default.
+> **NOTE**: When external access is enabled, the NuoDB Helm Charts will create Internet-facing load balancers by default.
 This can be changed by setting the `admin.externalAccess.internalIP=true` and `database.te.externalAccess.internalIP=true` or further customized by explicitly configuring custom annotations for the Kubernetes services using `admin.externalAccess.annotations` and `database.te.externalAccess.annotations` options.
-The user provided custom annotations will overwrite the default annotations for the services.
-It is a customer responsibility to correctly configure security rules and restrict access to the cloud load balancers.
+The user-provided custom annotations will overwrite the default annotations for the services.
 
-Services of type `NodePort` can be created as well which won't automatically provision cloud load balancer.
-For this type of deployment it is required that custom manually provisions the L4 load balancers that load balance traffic across all Kubernetes worker nodes.
-Different TE groups will be reachable on different node port.
+> **IMPORTANT**: It is a customer's responsibility to correctly configure security rules and restrict access to the cloud load balancers.
+
+Services of type `NodePort` can be created as well by setting the `admin.externalAccess.type=NodePort` and `database.te.externalAccess.type=NodePort` options.
+For this type of deployment, it is required that a Layer4 load balancer is manually provisioned. It should be configured to load balance traffic across all worker nodes in the Kubernetes cluster.
+The different TE groups will be reachable on different node ports.
 
 The external address and port for TEs are configured using the `external-address` and `external-port` process labels.
-If supplied, they will be advertized by NuoDB Admin to the SQL clients during the second stage of the connection protocol. For more information, check [Use External Address](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#_use_external_address).
+If supplied, they will be advertised by NuoDB Admin to the SQL clients during the second stage of the client connection protocol.
+For more information, check [Use External Address](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#_use_external_address).
 
 Obtaining and configuring the hostname or IP address of the L4 load balancers can be tedious and error-prone as they are provisioned asynchronously by the Kubernetes controllers.
-NuoDB can inspect the Kubernetes services and configure the TE database processes with the `external-address` and `external-port` process labels when `--enable-external-access` process option is provided.
-This simplifies the deployment and ensures correct configuration of the TE database processes.
+NuoDB can inspect the Kubernetes services and configure the TE database processes with the `external-address` and `external-port` process labels automatically if the `--enable-external-access` process option is provided.
+This simplifies the deployment and ensures the correct configuration of the TE database processes.
 
-> **NOTE**: If the hostname or the IP address of the provisioned cloud load balancer change over time, the TE database process needs to be restarted so that the new value is obtained.
+> **NOTE**: If the hostname or the IP address of the provisioned cloud load balancer change over time, the TE database process needs to be restarted so that the new value comes into play.
 
 ## Examples
 
@@ -60,32 +62,33 @@ To demonstrate the external access using TE groups, let's consider a working exa
 - NuoDB database is deployed in a single Kubernetes cluster.
 - Online Transaction Processing (OLTP) SQL workload should be processed by TEs in _group 1_.
 - Close of Business (COB) SQL workload should be processed by TEs in _group 2_.
-- A set of the applications are installed in the same Kubernetes custom as NuoDB.
-- Another set of the applications are installed in different Kubernetes cluster, on bare metal or in different cloud.
+- A set of the applications are installed in the same Kubernetes cluster as NuoDB.
+- Another set of the applications are installed in a different Kubernetes cluster, on bare metal, or in a different cloud.
 
-The resource requirements for the different TE groups may be different as there is a direct dependency to the type of SQL workload that TEs will serve.
+The resource requirements for the different TE groups may be different as there is a direct dependency on the type of SQL workload that TEs will serve.
 There will be 2 _smaller_ TEs dedicated for the _OLTP_ and 1 _bigger_ TE dedicated for the _COB_ workload deployed in _nuodb_ namespace.
 
-To satisfy the requirement having several workloads targeting different set of TEs, the `LBQuery` connection property with the correct syntax will be used.
-Alternatively a load balancer policies can be configured and SQL clients can reference them using `LBPolicy` connection property.
+To satisfy the requirement of having several workloads targeting a different set of TEs, the `LBQuery` connection property with the correct syntax will be used.
+Alternatively, load balancer policies can be configured and SQL clients can reference them using `LBPolicy` connection property.
 For simplicity, `tx-type` database process label will be used to identify which workload is served by a set of TEs.
 The label value is either `oltp` or `cob`.
 
 For more advanced load balancer configuration, check [Load Balancer Policies](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/).
 
-NuoDB supports multi-tenant, multi-cluster and multi-cloud database deployments using TE groups, however, for simplicity a single-cluster single-tenant deployment will be demonstrated here.
+NuoDB supports multi-tenant, multi-cluster, and multi-cloud database deployments using TE groups, however, for simplicity a single-cluster single-tenant deployment will be demonstrated here.
 The below diagram illustrates the deployed resources and SQL clients along with the `LBQuery` syntax.
 
 ![External Access with TE Groups](../images/database-groups.png)
 
 ### Deployment
 
-The steps below will deploy NuoDB database with 2 TE groups in GKE cluster.
-If you are deploying in different environment, make sure that the correct cloud provider is set in the `cloud.provider` option.
-Use the `nuodb.image.tag` option to specify the NuoDB product version.
+The steps below will deploy NuoDB database with 2 TE groups in Google Kubernetes Engine (GKE).
+If you are deploying in a different environment, make sure that the correct cloud provider is set in the `cloud.provider` option.
+
+> **NOTE**: Use the `nuodb.image.tag` option to specify the NuoDB product version.
 NuoDB 4.2.4+ docker image should be used.
 
-Install the `admin` chart and enable external access.
+Install the [admin](../stable/admin/README.md) chart and enable external access.
 Service of type `LoadBalancer` will be provisioned by default.
 
 ```shell
@@ -95,8 +98,8 @@ helm install admin nuodb/admin \
     --set admin.externalAccess.enabled=true
 ```
 
-Install the `database` chart for the primary Helm release and deploying TE _group 1_.
-Configure `tx-type=oltp` label for the TEs in this group.
+Install the [database](../stable/database/README.md) chart for the primary Helm release which deploys TE _group 1_.
+Configure the `tx-type=oltp` label for the TEs in this group.
 
 ```shell
 helm install database-group1 nuodb/database \
@@ -113,8 +116,8 @@ helm install database-group1 nuodb/database \
     --set database.te.labels.tx-type=oltp
 ```
 
-Install the `database` chart for the secondary Helm release and deploying TE _group 2_:
-Configure `tx-type=cob` label for the TEs in this group.
+Install the [database](../stable/database/README.md) chart for the secondary Helm release which deploys TE _group 2_:
+Configure the `tx-type=cob` label for the TEs in this group.
 
 ```shell
 helm install database-group2 nuodb/database \
@@ -158,8 +161,8 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- nuocmd show database \
     --process-format '{type} {hostname} {node_id}'
 ```
 
-Use `nuosql`, found in [NuoDB Client-only Package](https://github.com/nuodb/nuodb-client), to connect to the NuoDB database from the local machine.
-Repeat the command several times to ensure that the each time the expected node ID is printed.
+Use `nuosql`, which can be found in [NuoDB Client-only Package](https://github.com/nuodb/nuodb-client), to connect to the NuoDB database from the local machine.
+Repeat the command several times to ensure that each time the expected node ID is printed.
 
 ```shell
 echo 'select GETNODEID() from dual;' |  nuosql demo@${DOMAIN_ADDRESS} \
@@ -189,13 +192,13 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- bash -c \
 
 ### Native CNI
 
-Most of the cloud providers have support for native Kubernetes CNI plugins which allows the Pod IPs to be assigned with IPs from the virtual network...
+Most of the cloud providers have support for native Kubernetes CNI plugins which allow the Pod IPs to be assigned with IPs from the virtual network...
 
 TBD
 
 ### GCP
 
-No additional configuration is needed to enable NuoDB database external access in Google Kubernetes Engine (GKE).
+No additional configuration is needed to enable NuoDB database external access in GKE.
 For more information, check [Configuring TCP/UDP load balancing](https://cloud.google.com/kubernetes-engine/docs/how-to/service-parameters).
 
 ### AWS
@@ -220,29 +223,29 @@ There may be different reasons for client connectivity problems such as:
 - incorrect external access configuration
 - incorrect NuoDB Load Balancer configuration
 - incorrect NLB configuration
-- network connectivity problems including lack of routing, firewall configuration and many more
+- network connectivity problems including lack of routing, firewall configuration, and many more
 
 > **ACTION**: You can rule out any of the points above one by one.
 Start by checking the overall Pod status for the NuoDB domain and database.
 Some of the common troubleshooting steps are listed below, however, there might be additional verifications specific to your deployment.
 
-1. Verify that all AP, TE and SM pods are reported _Ready_ using `kubectl get pods`.
-2. Check the NuoDB domain and database using `nuocmd show domain`.
+1. Verify that all AP, TE, and SM pods are reported _Ready_ using `kubectl get pods` command.
+2. Check the NuoDB domain and database using `nuocmd show domain` command.
 3. Verify the database availability inside the cluster using the same connection properties as the application uses.
 The easiest way to do that is using `nuosql` tool inside some of the AP Pods.
-4. Make sure that `external-address` and/or `external-port` process labels are configured correctly on the TE database processes using `nuocmd --show-json-fields hostname,labels get processes`.
+4. Make sure that `external-address` and/or `external-port` process labels are configured correctly on the TE database processes using `nuocmd --show-json-fields hostname,labels get processes` command.
 If you are using the `--enable-external-access` process option, verify that the configured values are the same as the `EXTERNAL-IP` shown for the Kubernetes service in `kubectl get services` output.
 If the value is not the same restart the TE database process and verify again.
-5. Verify that the `LBQuery` or `LBPolicy` syntax is correct and the expected policies are configured in the NuoDB Admin using `nuocmd get load-balancers` and `nuocmd get load-balancer-config`.
+5. Verify that the `LBQuery` or `LBPolicy` syntax is correct and the expected policies are configured in the NuoDB Admin using `nuocmd get load-balancers` and `nuocmd get load-balancer-config` commands.
 6. Verify that the cloud load balancer is provisioned correctly and forwards traffic to the correct Kubernetes cluster.
 Check that its configuration is correct and modify the Kubernetes service annotations if needed.
-7. Verify that the configured security rules allows external access.
+7. Verify that the configured security rules allow external access.
 
 ### TE does not start
 
 TE started with `--enable-external-access` process option will wait for the `LoadBalancer` service IP address or hostname to be available before they start.
 In a case of a problem during NLB provisioning, the IP address will never be populated and the _engine_ container will fail.
-The following errors can be seen the TE container logs:
+The following errors can be seen in the TE container logs:
 
 ```text
 2021-12-15T07:43:05.015+0000 INFO  [admin-nuodb-cluster0-0:te-database-nuodb-cluster0-demo-55d664c8d7-bn57p] CustomAdminCommands Found service name=database-nuodb-cluster0-demo-balancer, type=LoadBalancer, selector={u'app': u'database-nuodb-cluster0-demo', u'component': u'te'}
@@ -250,6 +253,6 @@ The following errors can be seen the TE container logs:
 'start te' failed: Timeout after 120.0 sec waiting for ingress hostname in service database-nuodb-cluster0-demo-balancer
 ```
 
-> **ACTION**: Verify that the `EXTERNAL-IP` for the service is available using `kubectl get services`.
-Check the events for the service for this TE group using `kubectl describe service database-nuodb-cluster0-demo-balancer`.
+> **ACTION**: Verify that the `EXTERNAL-IP` for the service is available using `kubectl get services` command.
+Check the events for the service for this TE group using `kubectl describe service database-nuodb-cluster0-demo-balancer` command.
 Look into the cloud provider documentation on how to troubleshoot the load balancer controller.
