@@ -3,7 +3,7 @@
 ## Introduction
 
 NuoDB supports SQL clients via a NuoDB-provided client driver such as JDBC.
-NuoDB provides a configurable internal load balancer which can direct clients to Transaction Engines (TEs) according to user-specified load balancing rules.
+NuoDB provides a configurable internal load balancer that can direct clients to Transaction Engines (TEs) according to user-specified load balancing rules.
 This enables the administrator to direct different client workloads to different pools of TEs in order to maximize cache locality and execute certain workloads on a TE with the best configuration for that workload.
 
 When a SQL client connects to a database, the driver first establishes a connection with the NuoDB Admin, which will perform load balancing and redirect the client to an appropriate TE in that database.
@@ -13,7 +13,7 @@ For more information on NuoDB client connections, see [Client Development](https
 
 For more information on the LBQuery language syntax, see [Load Balancer Policies](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/).
 
-A _direct_ connection to TEs is also supported by NuoDB; however, in this case load balancing must be performed by the client application.
+A _direct_ connection to TEs is also supported by NuoDB, however, in this case, the load balancing must be performed by the client application.
 
 SQL clients and applications running in the same Kubernetes cluster as the NuoDB domain can connect to the database with the default NuoDB Helm Charts configuration using the NuoDB Admin `ClusterIP` service or directly using the TE `ClusterIP` service. This document focuses on external client applications running outside of the Kubernetes cluster where the NuoDB database is hosted. Allowing external access to the NuoDB database is not enabled by default and requires additional configuration.
 
@@ -41,9 +41,9 @@ Most of the cloud vendors provide Kubernetes Load Balancer controllers that supp
 The Kubernetes cluster should be properly configured so that the external network (Layer4) cloud load balancer is provisioned automatically.
 For more information on additional cluster configuration, see [Cloud Provider Specifics](#cloud-provider-specifics).
 
-> **NOTE**: When external access is enabled, the NuoDB Helm Charts will create Internet-facing load balancers by default.
+> **NOTE**: When external access is enabled, the NuoDB Helm Charts will create Internet-facing load balancers by default.  Be sure to understand the difference between _internet facing_ load balancers (allowing connectivity external to the cloud and Kubernetes cluster) and  _internal_ load balancers (allowing connectivity external to the Kubernetes cluster but within the cloud virtual network).
 
-If the SQL clients are located outside of the Kubernetes cluster where NuoDB is deployed but in the same cloud provider or virtual network, then it might be better to use an “internal” cloud load balancer.
+If the SQL clients are located outside of the Kubernetes cluster where NuoDB is deployed but in the same cloud provider or virtual network, then _internal_ load balancer can be used.
 This is configured by setting the `admin.externalAccess.internalIP=true` and `database.te.externalAccess.internalIP=true` or further customized by explicitly setting custom annotations for the Kubernetes services using `admin.externalAccess.annotations` and `database.te.externalAccess.annotations` options.
 The user-provided custom annotations will overwrite the default annotations for the services.
 
@@ -64,6 +64,7 @@ This simplifies the deployment and ensures the correct configuration of the TE d
 - For services of type `LoadBalancer`, NuoDB will configure the `external-address` process label with the service ingress IP or hostname as a value.
 - For services of type `NodePort` are provisioned, the customer must configure the  `external-address` and NuoDB will configure the `external-port` process label with the service node port as a value.
 If the `--enable-external-access` process option is supplied but the `external-address` process label is no defined, then external access won’t be enabled and a warning message will be logged.
+
 
 > **NOTE**: If either the hostname or the IP address value(s) of the provisioned cloud load balancer change, the TE database process must be restarted for the new value(s) to take effect.
 
@@ -205,8 +206,6 @@ kubectl exec -ti admin-nuodb-cluster0-0 -- bash -c \
 
 ### Native CNI
 
-TBD
-
 All of the managed Kubernetes offerings from cloud providers supported by the NuoDB Helm Charts (EKS, AKS, GKE) have the ability to deploy Kubernetes with a native Container Network Interface (CNI) plugin.
 This causes Kubernetes pods to be assigned IP addresses from the underlying virtual network CIDR, making them addressable by SQL clients running in the same VPC (or peered VPCs / VPN connections with the correct routing configured).
 As such, the TE IP address returned by the second stage of the client connection protocol is already addressable by the client, and it is enough to make only the Admin layer available external to the Kubernetes cluster using the `admin.externalAccess.*` values, to receive client connections.  
@@ -220,9 +219,32 @@ For more information, check [Configuring TCP/UDP load balancing](https://cloud.g
 
 ### AWS
 
-To automatically provision AWS Network Load Balancer (NLB) for Kubernetes services of type `LoadBalancer`, please follow the steps in the [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html) guide.
-The [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) should be deployed in the Amazon Elastic Kubernetes Service (EKS).
+By default, the NuoDB Helm Charts 3.4.0 excepts that the [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) is deployed in the Amazon Elastic Kubernetes Service (EKS) and the native CNI plugin is used when provisioning internet-facing load balancer.
+It will automatically provision AWS Network Load Balancer (NLB) for Kubernetes services of type `LoadBalancer`, as described in the [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html) guide.
 For more information on how to customize the provisioned NLB, check [Network Load Balancer](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/service/nlb/).
+When the `internalIP` option is set to “true”, no additional configuration is needed.
+
+If the [legacy AWS cloud provider load balancer controller](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer) is used the Kubernetes service annotations must be changed. For example:
+
+```yaml
+cloud:
+  provider: aws
+
+admin:
+  externalAccess:
+    enabled: true
+    internalIP: false
+    annotations:
+      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+
+database:
+  te:
+    externalAccess:
+      enabled: true
+      internalIP: false
+      annotations:
+        service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
+```
 
 ### Azure
 
