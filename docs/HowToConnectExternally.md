@@ -22,7 +22,7 @@ SQL clients and applications running in the same Kubernetes cluster as the NuoDB
 A TE group consists of TEs with the same configuration which is part of the same database most often used to serve specific SQL workload.
 NuoDB Helm Charts 3.4.0+ supports the deployment of one or more TE groups per database.
 
-Multiple deployments of the `database` chart for the same NuoDB database can be done in the same Kubernetes namespace where only one of them is _primary_.
+Multiple Helm releases of the `database` chart for the same NuoDB database can be installed in the same Kubernetes namespace where only one of them is _primary_.
 One or more _secondary_ Helm releases are used to deploy additional TE groups for the same database with different configuration options.
 This allows flexible configuration of each TE group including but not limited to the number of TEs in a group, their resource requirements, process labels, and scheduling rules.
 SQL clients can be configured to target each TE group separately using NuoDB Admin load balancer rules.
@@ -64,7 +64,6 @@ This simplifies the deployment and ensures the correct configuration of the TE d
 - For services of type `LoadBalancer`, NuoDB will configure the `external-address` process label with the service ingress IP or hostname as a value.
 - For services of type `NodePort` are provisioned, the customer must configure the  `external-address` and NuoDB will configure the `external-port` process label with the service node port as a value.
 If the `--enable-external-access` process option is supplied but the `external-address` process label is no defined, then external access won’t be enabled and a warning message will be logged.
-
 
 > **NOTE**: If either the hostname or the IP address value(s) of the provisioned cloud load balancer change, the TE database process must be restarted for the new value(s) to take effect.
 
@@ -151,7 +150,7 @@ helm install database-group2 nuodb/database \
 Wait for the NuoDB database to become ready:
 
 ```shell
-kubectl exec -ti admin-nuodb-cluster0-0 -- nuocmd check database \
+kubectl exec -ti admin-nuodb-cluster0-0 -n nuodb -- nuocmd check database \
     --db-name demo \
     --check-running \
     --num-processes 4 \
