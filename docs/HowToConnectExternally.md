@@ -58,12 +58,12 @@ If supplied, they will be advertised by NuoDB Admin to the SQL clients during th
 For more information, see [Use External Address](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#_use_external_address).
 
 Obtaining and configuring the address of the L4 load balancers can be tedious and error-prone as they are provisioned asynchronously by the Kubernetes controllers.
-NuoDB can inspect the Kubernetes services and configure the TE database processes with the `external-address` and `external-port` process labels automatically if the `--enable-external-access` process option is provided.
+NuoDB can inspect the Kubernetes services and configure the TE database processes with the `external-address` and `external-port` process labels automatically if the `--enable-external-access` argument is provided.
 This simplifies the deployment and ensures the correct configuration of the TE database processes.
 
 - For services of type `LoadBalancer`, NuoDB will configure the `external-address` process label with the service ingress IP or hostname as a value.
 - For services of type `NodePort` are provisioned, the customer must configure the  `external-address` and NuoDB will configure the `external-port` process label with the service node port as a value.
-If the `--enable-external-access` process option is supplied but the `external-address` process label is no defined, then external access won’t be enabled and a warning message will be logged.
+If the `--enable-external-access` argument is supplied but the `external-address` process label is not defined, then external access won’t be enabled and a warning message will be logged.
 
 > **NOTE**: If either the hostname or the IP address value(s) of the provisioned cloud load balancer change, the TE database process must be restarted for the new value(s) to take effect.
 
@@ -218,7 +218,7 @@ For more information, check [Configuring TCP/UDP load balancing](https://cloud.g
 
 ### AWS
 
-By default, the NuoDB Helm Charts 3.4.0 excepts that the [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) is deployed in the Amazon Elastic Kubernetes Service (EKS) and the native CNI plugin is used when provisioning internet-facing load balancer.
+By default, the NuoDB Helm Charts 3.4.0 expect that the [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) is deployed in the Amazon Elastic Kubernetes Service (EKS) and the native CNI plugin is used when provisioning internet-facing load balancer.
 It will automatically provision AWS Network Load Balancer (NLB) for Kubernetes services of type `LoadBalancer`, as described in the [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html) guide.
 For more information on how to customize the provisioned NLB, check [Network Load Balancer](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/service/nlb/).
 When the `internalIP` option is set to “true”, no additional configuration is needed.
@@ -269,12 +269,14 @@ Some of the common troubleshooting steps are listed below, however, there might 
 
 1. Verify that all AP, TE, and SM pods are reported _Ready_ using `kubectl get pods`.
 2. Check the NuoDB domain and database using `nuocmd show domain`.
-3. Verify the database availability inside the cluster is using the same connection properties as the application uses.
-To verify this, use the  `nuosql` tool inside an AP Pod.
+3. Verify that the database is available to SQL clients within the Kubernetes cluster by using the same connection properties that the application uses.
+To verify this, use the `nuosql` tool inside an AP Pod.
 4. Make sure that `external-address` and/or `external-port` process labels are configured correctly on the TE database processes using `nuocmd --show-json-fields hostname,labels get processes`.
-If you are using the `--enable-external-access` process option, verify that the configured values are the same as the `EXTERNAL-IP` shown for the Kubernetes service in `kubectl get services` output.
+If you are using the `--enable-external-access` argument, verify that the configured values are the same as the `EXTERNAL-IP` shown for the Kubernetes service in `kubectl get services` output.
 If the value is not the same, restart the TE database process and verify again.
-5. Verify that the `LBQuery` or `LBPolicy` syntax is correct. If using `LBPolicy`, verify that the expected policies are configured in the NuoDB Admin using `nuocmd get load-balancers` and `nuocmd get load-balancer-config`.
+5. Verify that the `LBQuery` or `LBPolicy` syntax is correct.
+The expected TE process should be shown when using `nuocmd get sql-connection`.
+If using `LBPolicy`, verify that the expected policies are configured in the NuoDB Admin using `nuocmd get load-balancers` and `nuocmd get load-balancer-config`.
 6. Check Kubernetes events for issues deploying cloud load balancers and external addresses.
 For more information on this, see the [TE does not start](#te-does-not-start) section.
 7. Verify that the cloud load balancer is provisioned and forwards traffic to the correct Kubernetes cluster.
@@ -283,7 +285,7 @@ Check that its configuration is correct and modify the Kubernetes service annota
 
 ### TE does not start
 
-TEs started with the `--enable-external-access` process option will wait for the `LoadBalancer` service IP address or hostname to be available before they start.
+TEs started with the `--enable-external-access` argument will wait for the `LoadBalancer` service IP address or hostname to be available before they start.
 In a case of a problem during NLB provisioning, the IP address will never be populated and the _engine_ container will fail.
 The following errors can be seen in the TE container logs:
 
