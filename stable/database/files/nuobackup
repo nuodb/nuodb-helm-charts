@@ -68,16 +68,16 @@ function execute_backup() {
 
    # call nuodocker to perform the actual backup
    echo "Starting ${type} backup for database ${db_name} on processes with labels '${labels}' ..."
-   nuodocker backup database \
+   output=$(nuodocker backup database \
       --db-name "${db_name}" \
       --type "${type}" \
       --backup-root "${backup_root}" \
       --labels "${labels}" \
-      "${extra_flags[@]}"
+      "${extra_flags[@]}" 2>&1)
 
    retval=$?
+   echo "$output"
    if [ $retval != 0 ]; then
-      echo >&2 "Error running hotcopy $retval"
       # Store failed backupset in KV store
       if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
          backupset=$(get_current_backup)
@@ -87,8 +87,18 @@ function execute_backup() {
                --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed" \
                --value "${failed} ${backupset}" --expected-value "${failed}"
          fi
-      fi 
-      exit $retval
+      fi
+
+      if [ "$type" = "journal" ] && echo "$output" | grep -q "Full or incremental hot copy must be completed before journal hot copy"; then
+         echo "Executing incremental hot copy as journal hot copy is temporarily suspended"
+         execute_backup "incremental" || return $?
+         # retry the journal backup which should suceed now
+         execute_backup "journal"
+         return $?
+      else
+         echo >&2 "Error running hotcopy ${retval}: ${output}"
+         return $retval
+      fi
    fi
 
    if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
