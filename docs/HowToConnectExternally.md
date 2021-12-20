@@ -44,7 +44,7 @@ For more information on additional cluster configuration, see [Cloud Provider Sp
 > **NOTE**: When external access is enabled, the NuoDB Helm Charts will create Internet-facing load balancers by default.  Be sure to understand the difference between _internet facing_ load balancers (allowing connectivity external to the cloud and Kubernetes cluster) and  _internal_ load balancers (allowing connectivity external to the Kubernetes cluster but within the cloud virtual network).
 
 If the SQL clients are located outside of the Kubernetes cluster where NuoDB is deployed but in the same cloud provider or virtual network, then _internal_ load balancer can be used.
-This is configured by setting the `admin.externalAccess.internalIP=true` and `database.te.externalAccess.internalIP=true` or further customized by explicitly setting custom annotations for the Kubernetes services using `admin.externalAccess.annotations` and `database.te.externalAccess.annotations` options.
+This is configured by setting the `admin.externalAccess.internalIP=true` and `database.te.externalAccess.internalIP=true` or further customized by explicitly setting custom annotations for the Kubernetes services using the `admin.externalAccess.annotations` and `database.te.externalAccess.annotations` options.
 The user-provided custom annotations will overwrite the default annotations for the services.
 
 > **IMPORTANT**: The customer is responsible for correctly configuring security rules and restricting access to the cloud load balancers.
@@ -267,11 +267,11 @@ There may be different reasons for client connectivity problems such as:
 Start by checking the overall Pod status for the NuoDB domain and database.
 Some of the common troubleshooting steps are listed below, however, there might be additional verifications specific to your deployment.
 
-1. Verify that all AP, TE, and SM pods are reported _Ready_ using `kubectl get pods` command.
-2. Check the NuoDB domain and database using `nuocmd show domain` command.
+1. Verify that all AP, TE, and SM pods are reported _Ready_ using `kubectl get pods`.
+2. Check the NuoDB domain and database using `nuocmd show domain`.
 3. Verify the database availability inside the cluster is using the same connection properties as the application uses.
 To verify this, use the  `nuosql` tool inside an AP Pod.
-4. Make sure that `external-address` and/or `external-port` process labels are configured correctly on the TE database processes using `nuocmd --show-json-fields hostname,labels get processes` command.
+4. Make sure that `external-address` and/or `external-port` process labels are configured correctly on the TE database processes using `nuocmd --show-json-fields hostname,labels get processes`.
 If you are using the `--enable-external-access` process option, verify that the configured values are the same as the `EXTERNAL-IP` shown for the Kubernetes service in `kubectl get services` output.
 If the value is not the same, restart the TE database process and verify again.
 5. Verify that the `LBQuery` or `LBPolicy` syntax is correct. If using `LBPolicy`, verify that the expected policies are configured in the NuoDB Admin using `nuocmd get load-balancers` and `nuocmd get load-balancer-config`.
@@ -293,6 +293,6 @@ The following errors can be seen in the TE container logs:
 'start te' failed: Timeout after 120.0 sec waiting for ingress hostname in service database-nuodb-cluster0-demo-balancer
 ```
 
-> **ACTION**: Verify that the `EXTERNAL-IP` for the service is available using `kubectl get services` command.
-Check the events for the service for this TE group using `kubectl describe service database-nuodb-cluster0-demo-balancer` command.
-Look into the cloud provider documentation on how to troubleshoot the load balancer controller.
+> **ACTION**: Verify that the `EXTERNAL-IP` for the service is available using `kubectl get services`.
+Check the events for the service for this TE group using `kubectl describe service database-nuodb-cluster0-demo-balancer`.
+Refer to your cloud provider's documentation on how to troubleshoot the load balancer controller.
