@@ -218,7 +218,7 @@ For more information, check [Configuring TCP/UDP load balancing](https://cloud.g
 
 ### AWS
 
-By default, the NuoDB Helm Charts 3.4.0 except that the [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) is deployed in the Amazon Elastic Kubernetes Service (EKS) and the native CNI plugin is used when provisioning internet-facing load balancer.
+By default, the NuoDB Helm Charts 3.4.0 expect that the [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) is deployed in the Amazon Elastic Kubernetes Service (EKS) and the native CNI plugin is used when provisioning internet-facing load balancer.
 It will automatically provision AWS Network Load Balancer (NLB) for Kubernetes services of type `LoadBalancer`, as described in the [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html) guide.
 For more information on how to customize the provisioned NLB, check [Network Load Balancer](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/service/nlb/).
 When the `internalIP` option is set to “true”, no additional configuration is needed.
