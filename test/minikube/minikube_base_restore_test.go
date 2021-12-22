@@ -149,7 +149,7 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "journal-hotcopy-demo-cronjob",
 		"-p", "{\"spec\" : {\"schedule\" : \"?/1 * * * *\" }}")
 	testlib.AwaitJobSucceeded(t, namespaceName, "journal-hotcopy-demo-cronjob", 120*time.Second)
-	// verify that journal
+	// verify that the journal backup fails and it's retried after requesting incremental
 	podName := testlib.GetPodName(t, namespaceName, "journal-hotcopy-demo-cronjob")
 	require.Equal(t, testlib.GetStringOccurrenceInLog(t, namespaceName, podName,
 		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}), 1,

@@ -46,6 +46,7 @@ labels=""
 semaphore=""
 timeout=""
 backup_root=$BACKUP_DIR
+retry_failed="True"
 
 function get_current_backup() {
    output=$( nuodocker get current-backup \
@@ -88,17 +89,20 @@ function execute_backup() {
                --value "${failed} ${backupset}" --expected-value "${failed}"
          fi
       fi
-
-      if [ "$type" = "journal" ] && echo "$output" | grep -q "Full or incremental hot copy must be completed before journal hot copy"; then
-         echo "Executing incremental hot copy as journal hot copy is temporarily suspended"
-         execute_backup "incremental" || return $?
-         # retry the journal backup which should suceed now
-         execute_backup "journal"
-         return $?
+      if [ -n "$retry_failed" ]; then
+         # Retry only once if failures can be automatically resolved
+         retry_failed=""
+         if [ "$type" = "journal" ] && echo "$output" | grep -q "Full or incremental hot copy must be completed before journal hot copy"; then
+            echo "Executing incremental hot copy as journal hot copy is temporarily suspended"
+            execute_backup "incremental" || return $?
+            # retry the journal backup which should succeed now
+            execute_backup "journal"
+            retval=$?
+         fi
       else
          echo >&2 "Error running hotcopy ${retval}: ${output}"
-         return $retval
       fi
+      return $retval
    fi
 
    if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
