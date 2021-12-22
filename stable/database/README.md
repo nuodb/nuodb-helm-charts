@@ -189,10 +189,14 @@ The following tables list the configurable parameters of the `database` chart an
 | `name` | Database name | `demo` |
 | `rootUser` | Database root user | `dba` |
 | `rootPassword` | Database root password | `secret` |
-| `securityContext.enabled` | Enable security context | `false` |
-| `securityContext.runAsUser` | User ID for the container | `1000` |
-| `securityContext.fsGroup` | Group ID for the container | `1000` |
-| `securityContext.capabilities` | Enable capabilities for the container - disregards `securityContext.enabled` | `[]` |
+| `initContainers.runInitDisk` | Whether to run the `init-disk` init container to set volume permissions | `true` |
+| `initContainers.runInitDiskAsRoot` | Whether to run the `init-disk` init container as root | `true` |
+| `securityContext.fsGroupOnly` | Creates a security context for Pods containing only the `securityContext.fsGroup` value | `false` |
+| `securityContext.runAsNonRootGroup` | Creates a security context for Pods containing a non-root user and group (1000:1000) along with the `securityContext.fsGroup` value | `false` |
+| `securityContext.enabled` | Creates a security context for Pods containing the `securityContext.runAsUser` and `securityContext.fsGroup` values | `false` |
+| `securityContext.runAsUser` | The user ID for the Pod security context created if `securityContext.enabled` is `true`. | `1000` |
+| `securityContext.fsGroup` | The `fsGroup` for the Pod security context created if any of `securityContext.fsGroupOnly`, `securityContext.runAsNonRootGroup`, or `securityContext.enabled` are `true`. | `1000` |
+| `securityContext.capabilities` | Capabilities to add to engine container security context | `[]` |
 | `env` | Import ENV vars inside containers | `[]` |
 | `envFrom` | Import ENV vars from configMap(s) | `[]` |
 | `lbConfig.prefilter` | Database load balancer prefilter expression | `nil` |

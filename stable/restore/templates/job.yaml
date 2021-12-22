@@ -13,6 +13,7 @@ spec:
   activeDeadlineSeconds: {{ .Values.restore.timeout }}
   template:
     spec:
+      {{- include "securityContext" . | indent 6 }}
 {{- if .Values.restore.affinity }}
       affinity:
 {{ tpl .Values.restore.affinity . | trim | indent 8 }}

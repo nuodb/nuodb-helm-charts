@@ -127,6 +127,76 @@ imagePullSecrets:
 {{- end -}}
 
 {{/*
+Get Pod securityContext
+*/}}
+{{- define "securityContext" -}}
+{{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
+securityContext:
+  runAsUser: {{ default 1000 .Values.database.securityContext.runAsUser }}
+  runAsGroup: 0
+  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- else if eq (include "defaultfalse" .Values.database.securityContext.runAsNonRootGroup) "true" }}
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- else if eq (include "defaultfalse" .Values.database.securityContext.fsGroupOnly) "true" }}
+securityContext:
+  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Get fsGroupChangePolicy if Kubernetes version supports it
+*/}}
+{{- define "sc.fsGroupChangePolicy" -}}
+{{- if semverCompare ">=1.20" .Capabilities.KubeVersion.Version }}
+  fsGroupChangePolicy: OnRootMismatch
+{{- end }}
+{{- end -}}
+
+{{/*
+Validates parameter that supports bool value only
+*/}}
+{{- define "validate.boolString" -}}
+{{- $valid := list "true" "false" "" nil }}
+{{- if not (has . $valid) }}
+{{- fail (printf "Invalid boolean value: %s" .) }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Takes a boolean as argument return it's value if it was defined or return true otherwise
+Note: Sprig's default function on an empty/not defined variable returns false, workaround
+it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
+*/}}
+{{- define "defaulttrue" -}}
+{{- if typeIs "bool" . -}}
+{{- . -}}
+{{- else -}}
+{{- template "validate.boolString" . -}}
+{{- default true . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Takes a boolean as argument return it's value if it was defined or return false otherwise
+Note: Sprig's default function on an empty/not defined variable returns false, workaround
+it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
+*/}}
+{{- define "defaultfalse" -}}
+{{- if typeIs "bool" . -}}
+{{- . -}}
+{{- else -}}
+{{- template "validate.boolString" . -}}
+{{- default false . -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Import ENV vars from configMaps
 **BEWARE!!**
    The values for envFrom are formated into a single line because some parsers

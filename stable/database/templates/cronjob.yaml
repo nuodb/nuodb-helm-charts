@@ -19,6 +19,7 @@ spec:
     spec:
       template:
         spec:
+          {{- include "securityContext" . | indent 10 }}
           containers:
           - name: nuodb
             image: {{ template "nuodb.image" . }}
@@ -107,6 +108,7 @@ spec:
     spec:
       template:
         spec:
+          {{- include "securityContext" . | indent 10 }}
           containers:
           - name: nuodb
             image: {{ template "nuodb.image" . }}
@@ -193,6 +195,7 @@ spec:
     spec:
       template:
         spec:
+          {{- include "securityContext" . | indent 10 }}
           containers:
           - name: nuodb
             image: {{ template "nuodb.image" . }}
