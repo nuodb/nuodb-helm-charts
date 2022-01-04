@@ -91,7 +91,9 @@ function execute_backup() {
          fi
       fi
       if [ -n "$retry_failed" ] && [ "$type" = "journal" ] && echo "$output" | grep -q "Full or incremental hot copy must be completed before journal hot copy"; then
-         # Retry only once if failures can be automatically resolved
+         # journal hot copy has been temporarly suspended due to archive sync;
+         # perform incremental first and once completed retry the journal hot
+         # copy
          retry_failed=""
          echo "Executing incremental hot copy as journal hot copy is temporarily suspended"
          execute_backup "incremental" || return $?
