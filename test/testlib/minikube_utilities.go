@@ -523,6 +523,15 @@ func DescribePods(t *testing.T, namespace string, expectedName string) {
 	}
 }
 
+func DeleteJobPods(t *testing.T, namespace string, jobName string) {
+	for _, pod := range findAllPodsInSchema(t, namespace) {
+		if strings.Contains(pod.Name, jobName) {
+			t.Logf("Deleting pod %s for job %s", pod.Name, jobName)
+			DeletePod(t, namespace, pod.Name)
+		}
+	}
+}
+
 func AwaitPodStatus(t *testing.T, namespace string, podName string, condition corev1.PodConditionType,
 	status corev1.ConditionStatus, timeout time.Duration) {
 	options := k8s.NewKubectlOptions("", "", namespace)
