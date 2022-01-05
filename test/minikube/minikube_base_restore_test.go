@@ -20,22 +20,6 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-func verifyPacketFetch(t *testing.T, namespaceName string, adminPod string) {
-	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-
-	// verify the container can actually download the file from the internet
-	start := time.Now()
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions,
-		"exec", adminPod, "-c", "admin", "--",
-		"bash", "-c",
-		fmt.Sprintf("curl -k %s | tar tzf - ", testlib.IMPORT_ARCHIVE_URL),
-	)
-	require.NoError(t, err, "Could not fetch archive")
-	elapsed := time.Since(start)
-	t.Logf("Fetching package (%s) took %f seconds", testlib.IMPORT_ARCHIVE_URL, elapsed.Seconds())
-	t.Log("tar contents: ", output)
-}
-
 func verifyBackup(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
 	// verify that the backup has been documented by the Admin layer
 	backupset, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions,
@@ -266,10 +250,9 @@ func TestKubernetesImportDatabase(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	verifyPacketFetch(t, namespaceName, admin0)
-
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+		defer testlib.Teardown(testlib.TEARDOWN_NGINX)
 
 		databaseOptions := &helm.Options{
 			SetValues: map[string]string{
@@ -297,20 +280,22 @@ func TestKubernetesImportDatabase(t *testing.T) {
 			"Restore: unable to download/unpack backup", &corev1.PodLogOptions{Previous: true}), 1)
 
 		// Use the correct IMPORT URL without credentials
-		databaseOptions.SetValues["database.autoImport.source"] = testlib.IMPORT_ARCHIVE_URL
+		remoteUrl := testlib.ServeFileViaHTTP(t, namespaceName, testlib.IMPORT_ARCHIVE_FILE)
+		databaseOptions.SetValues["database.autoImport.source"] = remoteUrl
 		databaseOptions.SetValues["database.autoImport.credentials"] = ""
 		helm.Upgrade(t, databaseOptions, testlib.DATABASE_HELM_CHART_PATH, databaseReleaseName)
 
 		smPod0 := testlib.GetPod(t, namespaceName, smPodName0)
 		testlib.DeletePod(t, namespaceName, "pod/"+smPodName0)
 		testlib.AwaitPodObjectRecreated(t, namespaceName, smPod0, 30*time.Second)
+		testlib.AwaitPodLog(t, namespaceName, smPodName0, "_no-credentials")
 		testlib.AwaitPodUp(t, namespaceName, smPodName0, 120*time.Second)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 		// verify that the database contains the restored data
-		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		require.NoError(t, err, "error running SQL: show schema User")
-		require.True(t, strings.Contains(tables, "HOCKEY"))
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema HOCKEY")
+		require.NoError(t, err, "error running SQL: show schema HOCKEY")
+		require.True(t, strings.Contains(tables, "PLAYERS"))
 	})
 }
 

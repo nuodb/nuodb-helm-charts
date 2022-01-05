@@ -427,6 +427,18 @@ func ServePodFileViaHTTP(t *testing.T, namespaceName string, srcPodName string, 
 	return fmt.Sprintf("http://nginx.%s.svc.cluster.local/%s", namespaceName, fileName)
 }
 
+func ServeFileViaHTTP(t *testing.T, namespaceName string, localFilePath string) string {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "deployment", NGINX_DEPLOYMENT)
+	if !strings.Contains(output, NGINX_DEPLOYMENT) || err != nil {
+		CreateNginxDeployment(t, namespaceName)
+	}
+	fileName := filepath.Base(localFilePath)
+	nginxPod := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
+	k8s.RunKubectl(t, kubectlOptions, "cp", localFilePath, nginxPod+":/usr/share/nginx/html/"+fileName)
+	return fmt.Sprintf("http://nginx.%s.svc.cluster.local/%s", namespaceName, fileName)
+}
+
 func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) string {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	randomSuffix := strings.ToLower(random.UniqueId())
