@@ -23,7 +23,7 @@ import (
 func verifyExternalJournal(t *testing.T, namespaceName string, adminPod string,
 	databaseReleaseName string, databaseOptions *helm.Options) {
 	opt := testlib.GetExtractedOptions(databaseOptions)
-	if source, ok := databaseOptions.SetValues["database.autoImport.source"]; ok && source == testlib.IMPORT_ARCHIVE_URL {
+	if _, ok := databaseOptions.SetValues["database.autoImport.source"]; ok {
 		// verify that the journal content is moved to the external journal dir
 		smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
 		smPodName0 := fmt.Sprintf("%s-hotcopy-0", smPodNameTemplate)
@@ -31,9 +31,9 @@ func verifyExternalJournal(t *testing.T, namespaceName string, adminPod string,
 			fmt.Sprintf("Moving restored journal content to /var/opt/nuodb/journal/nuodb/%s", opt.DbName),
 			&corev1.PodLogOptions{}), 1)
 		// verify that the database contains the restored data
-		tables, err := testlib.RunSQL(t, namespaceName, adminPod, "demo", "show schema User")
-		require.NoError(t, err, "error running SQL: show schema User")
-		require.True(t, strings.Contains(tables, "HOCKEY"))
+		tables, err := testlib.RunSQL(t, namespaceName, adminPod, "demo", "show schema HOCKEY")
+		require.NoError(t, err, "error running SQL: show schema HOCKEY")
+		require.True(t, strings.Contains(tables, "PLAYERS"))
 	}
 	// check that archives are created with external journal directory
 	archives, _ := testlib.CheckArchives(t, namespaceName, adminPod, opt.DbName, opt.NrSmPods, 0)
@@ -344,16 +344,18 @@ func TestKubernetesImportDatabaseSeparateJournal(t *testing.T) {
 	defer testlib.VerifyTeardown(t)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	defer testlib.Teardown(testlib.TEARDOWN_NGINX)
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+	remoteUrl := testlib.ServeFileViaHTTP(t, namespaceName, testlib.IMPORT_ARCHIVE_FILE)
 
 	t.Run("autoImportStream", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
 		databaseOptions := &helm.Options{
 			SetValues: map[string]string{
-				"database.autoImport.source":              testlib.IMPORT_ARCHIVE_URL,
+				"database.autoImport.source":              remoteUrl,
 				"database.sm.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.sm.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
@@ -373,7 +375,7 @@ func TestKubernetesImportDatabaseSeparateJournal(t *testing.T) {
 
 		databaseOptions := &helm.Options{
 			SetValues: map[string]string{
-				"database.autoImport.source":              testlib.IMPORT_ARCHIVE_URL,
+				"database.autoImport.source":              remoteUrl,
 				"database.autoImport.type":                "backupset",
 				"database.sm.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.sm.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
@@ -396,10 +398,12 @@ func TestKubernetesRestoreDatabaseSeparateJournal(t *testing.T) {
 	defer testlib.VerifyTeardown(t)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	defer testlib.Teardown(testlib.TEARDOWN_NGINX)
 
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+	remoteUrl := testlib.ServeFileViaHTTP(t, namespaceName, testlib.IMPORT_ARCHIVE_FILE)
 
 	t.Run("databaseRestoreStream", func(t *testing.T) {
 		databaseOptions := &helm.Options{
@@ -410,7 +414,7 @@ func TestKubernetesRestoreDatabaseSeparateJournal(t *testing.T) {
 				"database.te.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.te.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.sm.hotCopy.journalPath.enabled": "true",
-				"restore.source":                          testlib.IMPORT_ARCHIVE_URL,
+				"restore.source":                          remoteUrl,
 			},
 		}
 

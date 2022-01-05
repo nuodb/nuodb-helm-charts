@@ -41,7 +41,7 @@ const UPGRADE_INJECT_FILE = "../../upgradeInject.yaml"
 const INJECT_VALUES_FILE = "../../valuesInject.yaml"
 const INJECT_CLUSTERS_FILE = "../../clustersInject.yaml"
 
-const IMPORT_ARCHIVE_URL = "https://download.nuohub.org/ce_releases/restore.bak.tz"
+const IMPORT_ARCHIVE_FILE = "../files/restore.bak.tz"
 
 // suffix "m" for spec.containers[].resources.requests.cpu denotes "millicores",
 // and 1 CPU is equivalent to 1000m
