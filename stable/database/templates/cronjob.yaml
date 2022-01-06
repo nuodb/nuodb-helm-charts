@@ -232,7 +232,6 @@ spec:
             - "{{ .Values.database.sm.hotCopy.journalBackup.timeout }}"      
             - "--backup-root"
             - "{{ .Values.database.sm.hotCopy.backupDir }}"
-            - "--labels"
             {{- if $backupGroupLabels }}
             - "--labels"
             - "{{ $backupGroupLabels }}"
