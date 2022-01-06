@@ -44,6 +44,7 @@ spec:
         group: nuodb
     spec:
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      {{- include "securityContext" . | indent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -57,18 +58,26 @@ spec:
 {{ toYaml .Values.admin.tolerations | trim | indent 8 }}
       {{- end }}
       terminationGracePeriodSeconds: 15
+      {{- if eq (include "defaulttrue" .Values.admin.initContainers.runInitDisk) "true" }}
       initContainers:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
-        command: ['sh', '-c', '
-          find /var/opt/nuodb -not -perm 770 -maxdepth 1 -exec chmod -R 770 {} \; &&
-          find /var/log/nuodb -not -perm 770 -maxdepth 1 -exec chmod -R 770 {} \;']
+        command:
+          - sh
+          - -c
+          - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
         volumeMounts:
         - name: raftlog
-          mountPath: /var/opt/nuodb
+          mountPath: /mnt/vardir
         - name: log-volume
-          mountPath: /var/log/nuodb
+          mountPath: /mnt/logdir
+        {{- if eq (include "defaulttrue" .Values.admin.initContainers.runInitDiskAsRoot) "true" }}
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+        {{- end }}
+      {{- end }}
       containers:
       - name: admin
         image: {{ template "nuodb.image" . }}

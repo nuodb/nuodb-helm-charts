@@ -1,6 +1,8 @@
 package integration
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -513,4 +515,184 @@ func TestAdminEvictedServers(t *testing.T) {
 		assert.Contains(t, container.Args, "--evicted-servers")
 		assert.Contains(t, container.Args, "nuoadmin-1,nuoadmin-2")
 	}
+}
+
+func TestAdminSecurityContext(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testDefault", func(t *testing.T) {
+		options := &helm.Options{}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.Nil(t, securityContext)
+		}
+	})
+
+	t.Run("testEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabled": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, int64(0), *securityContext.RunAsGroup)
+			assert.Equal(t, int64(1000), *securityContext.FSGroup)
+		}
+	})
+
+	t.Run("testRunAsNonRootGroup", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.runAsNonRootGroup": "true",
+				"admin.securityContext.runAsUser": "5555",
+				"admin.securityContext.fsGroup": "1234",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			// runAsUser should be disregarded, since we can only use 1000:1000 or <uid>:0
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, int64(1000), *securityContext.RunAsGroup)
+			assert.Equal(t, int64(1234), *securityContext.FSGroup)
+		}
+	})
+
+	t.Run("testFsGroupOnly", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.fsGroupOnly": "true",
+				"admin.securityContext.fsGroup": "1234",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			// user and group should be absent
+			assert.Nil(t, securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsGroup)
+			assert.Equal(t, int64(1234), *securityContext.FSGroup)
+		}
+	})
+
+	t.Run("testEnabledPrecedence", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabled": "true",
+				"admin.securityContext.runAsNonRootGroup": "true",
+				"admin.securityContext.runAsUser": "5555",
+				"admin.securityContext.fsGroup": "1234",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(5555), *securityContext.RunAsUser)
+			assert.Equal(t, int64(0), *securityContext.RunAsGroup)
+			assert.Equal(t, int64(1234), *securityContext.FSGroup)
+		}
+	})
+
+	t.Run("testRunAsNonRootGroupPrecedence", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.runAsNonRootGroup": "true",
+				"admin.securityContext.fsGroupOnly": "true",
+				"admin.securityContext.runAsUser": "5555",
+				"admin.securityContext.fsGroup": "1234",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			// runAsUser should be disregarded, since we can only use 1000:1000 or <uid>:0
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, int64(1000), *securityContext.RunAsGroup)
+			assert.Equal(t, int64(1234), *securityContext.FSGroup)
+		}
+	})
+}
+
+func getContainerNamed(containers []v1.Container, name string) (*v1.Container, error) {
+	var containerNames string
+	for _, container := range containers {
+		if container.Name == name {
+			return &container, nil
+		}
+		if containerNames != "" {
+			containerNames += ", "
+		}
+		containerNames += container.Name
+	}
+	return nil, errors.New(fmt.Sprintf("No container named %s found in [%s]", name, containerNames))
+}
+
+func TestAdminInitContainers(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testDefault", func(t *testing.T) {
+		options := &helm.Options{}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			// look for expected init-disk container
+			initContainers := obj.Spec.Template.Spec.InitContainers
+			assert.Equal(t, 1, len(initContainers))
+			container, err := getContainerNamed(initContainers, "init-disk")
+			assert.NoError(t, err)
+			// check that security context for container specifies root user and group
+			securityContext := container.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(0), *securityContext.RunAsUser)
+			assert.Equal(t, int64(0), *securityContext.RunAsGroup)
+		}
+	})
+
+	t.Run("testRunInitDiskAsNonRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.initContainers.runInitDisk": "true",
+				"admin.initContainers.runInitDiskAsRoot": "false",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			// look for expected init-disk container
+			initContainers := obj.Spec.Template.Spec.InitContainers
+			assert.Equal(t, 1, len(initContainers))
+			container, err := getContainerNamed(initContainers, "init-disk")
+			assert.NoError(t, err)
+			// check that security context is not defined
+			securityContext := container.SecurityContext
+			assert.Nil(t, securityContext)
+		}
+	})
+
+	t.Run("testDisabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.initContainers.runInitDisk": "false",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			initContainers := obj.Spec.Template.Spec.InitContainers
+			assert.Equal(t, 0, len(initContainers))
+		}
+	})
 }

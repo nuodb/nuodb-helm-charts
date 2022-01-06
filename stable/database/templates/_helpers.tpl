@@ -123,31 +123,40 @@ imagePullSecrets:
 {{- end -}}
 {{- end -}}
 
-
 {{/*
-Resolve the os.user
+Get Pod securityContext
 */}}
-{{- define "os.user" -}}
-{{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" -}}
-  {{ .Values.database.securityContext.runAsUser }}
-{{- else -}}
-   "1000"
-{{- end -}}
+{{- define "securityContext" -}}
+{{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
+securityContext:
+  runAsUser: {{ default 1000 .Values.database.securityContext.runAsUser }}
+  runAsGroup: 0
+  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- else if eq (include "defaultfalse" .Values.database.securityContext.runAsNonRootGroup) "true" }}
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- else if eq (include "defaultfalse" .Values.database.securityContext.fsGroupOnly) "true" }}
+securityContext:
+  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- end }}
 {{- end -}}
 
 {{/*
-Resolve the os.group
+Get fsGroupChangePolicy if Kubernetes version supports it
 */}}
-{{- define "os.group" -}}
-{{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" -}}
-  {{ .Values.database.securityContext.fsGroup }}
-{{- else -}}
-   "0"
-{{- end -}}
+{{- define "sc.fsGroupChangePolicy" -}}
+{{- if semverCompare ">=1.20" .Capabilities.KubeVersion.Version }}
+  fsGroupChangePolicy: OnRootMismatch
+{{- end }}
 {{- end -}}
 
 {{/*
-Add capabilities in a securityContext
+Get container securityContext defining capabilities
 */}}
 {{- define "database.capabilities" -}}
 {{- with .Values.database.securityContext.capabilities }}

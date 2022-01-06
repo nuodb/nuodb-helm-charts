@@ -84,8 +84,6 @@ data:
   {{- if .Values.admin.tde }}
   NUODB_STORAGE_PASSWORDS_DIR: {{ default "/etc/nuodb/tde" .Values.admin.tde.storagePasswordsDir | quote }}
   {{- end }}
-  NUODB_OS_USER: {{ include "os.user" . | quote }}
-  NUODB_OS_GROUP: {{ include "os.group" . | quote }}
 {{- end }}
 {{- if .Values.database.configFiles }}
 ---
