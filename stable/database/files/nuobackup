@@ -58,6 +58,7 @@ function execute_backup() {
    local backupset
    local output
    local failed
+   local pods
 
    extra_flags=()
    [ -n "$timeout" ] && extra_flags+=("--timeout" "${timeout}")
@@ -138,7 +139,7 @@ function execute_backup() {
          echo "$NUODB_BACKUP_KEY/$db_name/latest = $backup_group"
 
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next" --value "$backupset" --expected-value "" && \
-         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next/pods" --value "${pods[@]}" --expected-value "" && \
+         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next/pods" --value "${pods[*]}" --expected-value "" && \
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" --value "$next" --expected-value "$latest" && \
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/latest" --value "$backup_group" --unconditional
       else
@@ -153,6 +154,10 @@ function execute_backup() {
          echo "$NUODB_BACKUP_KEY/$db_name/backup-groups = $new_list"
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/backup-groups" --value "$new_list" --expected-value "$group_list"
       fi
+   elif [ -n "$backup_group" ]; then
+      # update the backup group that performed the latest backup
+      latest=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/latest" )
+      nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/latest" --value "$backup_group" --expected-value "$latest"
    fi
 }
 
@@ -208,6 +213,8 @@ if [ "$backup_type" = "report-latest" ]; then
    fi
    exit 0
 elif [ "$backup_type" = "report-groups" ]; then
+   # Report all backup groups and the pods that participated in the latest
+   # backup for each backup group
    for group in $(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/backup-groups"); do
       latest=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/latest" )
       last_pods=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${latest}/pods")
@@ -215,6 +222,8 @@ elif [ "$backup_type" = "report-groups" ]; then
    done
    exit 0
 elif [ "$backup_type" = "report-backups" ]; then
+   # Report all recorded backups for specific backup group or for all backup
+   # groups; 
    groups="$backup_group"
    if [ -z "$groups" ]; then
       groups=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/backup-groups")

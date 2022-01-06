@@ -301,7 +301,8 @@ func BackupDatabase(t *testing.T, namespaceName string, podName string,
 	defer func() {
 		if t.Failed() {
 			DescribePods(t, namespaceName, jobName)
-			GetAppLog(t, namespaceName, jobName, "", &corev1.PodLogOptions{})
+			podName := GetPodName(t, namespaceName, jobName)
+			GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
 		}
 		k8s.RunKubectl(t, opts, "delete", "job", jobName)
 	}()
@@ -542,5 +543,18 @@ func PurgeDatabaseArchives(t *testing.T, namespaceName string, adminPod string, 
 	for _, archive := range append(archives, removed...) {
 		k8s.RunKubectl(t, options, "exec", adminPod, "-c", "admin", "--",
 			"nuocmd", "delete", "archive", "--archive-id", strconv.Itoa(archive.Id), "--purge")
+	}
+}
+
+func SuspendDatabaseBackupJobs(t *testing.T, namespaceName string, dbName string, backupGroup string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	cronJobs := ListCronJobs(t, namespaceName)
+	expectedSuffix := fmt.Sprintf("-hotcopy-%s-%s", dbName, backupGroup)
+	for _, cronJob := range cronJobs {
+		if strings.HasSuffix(cronJob.Name, expectedSuffix) {
+			t.Logf("Suspending cronjob/%s", cronJob.Name)
+			k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", cronJob.Name,
+				"-p", "{\"spec\" : {\"suspend\" : true }}")
+		}
 	}
 }

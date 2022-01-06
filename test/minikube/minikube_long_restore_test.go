@@ -42,6 +42,27 @@ func verifyExternalJournal(t *testing.T, namespaceName string, adminPod string,
 	}
 }
 
+func verifyBackupSet(t *testing.T, namespaceName string, backupSet string,
+	expectedBackupGroup string, expectedIndex int, expectedPods string) {
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	pods := strings.Split(expectedPods, " ")
+	// verify that the correct information is recorded in the KV store for this
+	// backup set
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", pods[0], "-c", "engine", "--",
+		"nuobackup", "--type", "report-backups", "--group", expectedBackupGroup)
+	require.NoError(t, err, output)
+	expectedLine := fmt.Sprintf("%s:%d %s %s", expectedBackupGroup, expectedIndex, backupSet, expectedPods)
+	require.Contains(t, output, expectedLine)
+	require.NotContains(t, output, expectedLine+" ")
+	// verify that the backup set exist on all expected HCSMs
+	for _, podName := range pods {
+		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"ls", "-1", "/var/opt/nuodb/backup")
+		require.Contains(t, output, backupSet)
+	}
+}
+
 func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
@@ -167,6 +188,136 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 	})
 }
 
+func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
+	}
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "demo",
+			"database.sm.resources.requests.cpu":    "250m",
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    "250m",
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.hotCopy.replicas":          "2",
+			"database.sm.noHotCopy.replicas":        "1",
+			"database.te.logPersistence.enabled":    "true",
+			"database.env[0].name":                  "NUODB_DEBUG",
+			"database.env[0].value":                 "debug",
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		pvcName := fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseChartName, opt.ClusterName, opt.DbName)
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te", pvcName)
+	})
+
+	hcSmPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy", databaseChartName, opt.ClusterName, opt.DbName)
+	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
+	hcSmPodName1 := fmt.Sprintf("%s-1", hcSmPodNameTemplate)
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	backupGroup1 := fmt.Sprintf("%s-1", opt.ClusterName)
+
+	// Suspend backup jobs for all backup groups
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup0)
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup1)
+
+	t.Run("restoreToLatest", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+		// Execute backup for backup group 1
+		backupsetGroup1 := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup1)
+		verifyBackupSet(t, namespaceName, backupsetGroup1, backupGroup1, 1, hcSmPodName1)
+
+		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
+		// restore database
+		databaseOptions.SetValues["restore.source"] = ":latest"
+		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		// HCSM with ordinal 0 should not be selected for restore
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
+			"Waiting for database restore to complete", &corev1.PodLogOptions{}), 1)
+		// verify that the correct backupset is used to restore the archive of
+		// HCSM with ordinal 1
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
+			fmt.Sprintf("Restoring %s", backupsetGroup1), &corev1.PodLogOptions{}), 1)
+
+		// verify that the database does NOT contain the data from AFTER the backup
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "show schema User")
+		require.NoError(t, err, "error running SQL: show schema User")
+		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
+		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 3, 0)
+		testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
+	})
+
+	t.Run("restoreToGroupLatest", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+		// Execute backup for backup group 0
+		backupsetGroup0 := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
+		verifyBackupSet(t, namespaceName, backupsetGroup0, backupGroup0, 1, hcSmPodName0)
+
+		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
+		// restore database
+		databaseOptions.SetValues["restore.source"] = "cluster0-0:latest"
+		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		// HCSM with ordinal 1 should not be selected for restore
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
+			"Waiting for database restore to complete", &corev1.PodLogOptions{}), 1)
+		// verify that the correct backupset is used to restore the archive of
+		// HCSM with ordinal 0
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
+			fmt.Sprintf("Restoring %s", backupsetGroup0), &corev1.PodLogOptions{}), 1)
+		// verify that the database does NOT contain the data from AFTER the backup
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "show schema User")
+		require.NoError(t, err, "error running SQL: show schema User")
+		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
+		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 3, 0)
+		testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
+	})
+
+	t.Run("restoreToGroupSpecific", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+		// Create another backup for backup group 0 (index 2)
+		newBackupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
+		verifyBackupSet(t, namespaceName, newBackupset, backupGroup0, 2, hcSmPodName0)
+
+		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
+		// restore database
+		databaseOptions.SetValues["restore.source"] = "cluster0-0:2"
+		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+
+		// HCSM with ordinal 1 should not be selected for restore
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
+			"Waiting for database restore to complete", &corev1.PodLogOptions{}), 1)
+		// verify that the correct backupset is used to restore the archive of
+		// HCSM with ordinal 0
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
+			fmt.Sprintf("Restoring %s", newBackupset), &corev1.PodLogOptions{}), 1)
+		// verify that the database does NOT contain the data from AFTER the backup
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "show schema User")
+		require.NoError(t, err, "error running SQL: show schema User")
+		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
+		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 3, 0)
+		testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
+	})
+}
+
 func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
@@ -237,8 +388,10 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	testlib.RunSQL(t, namespaceName, admin0, opt.DbName,
 		"INSERT INTO codes VALUES ('sg1', '2001')")
 
-	// Execute backup
-	backupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", "group0")
+	// Suspend the backup jobs and perform a backup
+	backupGroup0 := "group0"
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup0)
+	testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
 
 	// Insert more rows
 	testlib.RunSQL(t, namespaceName, admin0, opt.DbName,
@@ -259,15 +412,12 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 		testlib.GetAppLog(t, namespaceName, hcSmPodName1, "_post-restore", &corev1.PodLogOptions{})
 	})
 
-	// restore database
-	databaseOptions.SetValues["restore.source"] = backupset
-	databaseOptions.SetValues["restore.labels"] = "role hotcopy"
+	// restore database to the latest backup
 	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 	testlib.AwaitPodLog(t, namespaceName, hcSmPodName0, "_post-restart")
 	testlib.AwaitPodLog(t, namespaceName, hcSmPodName1, "_post-restart")
 
 	// verify that the database does NOT contain the data from AFTER the backup
-
 	output, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "select sg, count(*) from codes group by sg")
 	require.NoError(t, err, "error running SQL: select sg, count(*) from codes group by sg")
 	require.True(t, regexp.MustCompile(`sg0\s+1`).MatchString(output), "Unexpected data in sg0: ", output)

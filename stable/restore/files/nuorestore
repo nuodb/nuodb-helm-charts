@@ -57,6 +57,18 @@ function wrapLogfile() {
   fi
 }
 
+#=======================================
+# function - report an error and exit
+#
+function die() {
+  local retval=$1
+  shift
+  error="$*"
+  [ -n "$wotIdid" ] && error="Error while ${wotIdid}: ${error}"
+  log "$error"
+  exit "$retval"
+}
+
 # function - NuoDB 4.2+ supports new way of requesting database in-place
 # restore build into nuodocker.
 #
@@ -84,6 +96,7 @@ restore_source=":latest"
 auto="false"
 labels=""
 archive_ids=""
+backup_group=""
 backup_index=""
 
 restore_credentials=$NUODB_RESTORE_CREDENTIALS
@@ -131,24 +144,34 @@ done
 restore_type=$(echo $restore_type | tr '[:upper:]' '[:lower:]')
 auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 
-# Resolve special restore sources - ":latest" and "<backup_group>:latest"; fail
-# the database restore early if we are not able to do that
-if echo "$restore_source" | grep -Eq ":latest$"; then
-   backup_group="${restore_source%%:latest}"
-   if [ -z "$backup_group" ]; then
-      backup_group=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/latest")
-   fi
-   backup_index=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/latest")
-   if [ -z "$backup_index" ]; then
-      log "Unable to find a backup for backup group '${backup_group}'"
-      exit 1
-   fi
-   backup_set=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/$backup_index")
-   if [ -n "$backup_set" ]; then
-      restore_source="$backup_set"
-   else
-      log "Unable to find a valid backup set for restore source '${restore_source}'"
-      exit 1
+if ! isUrl "$restore_source"; then
+   # Resolve special restore sources - ":latest", "<backup_group>:latest" or
+   # "<backup_group>:<index>"; fail the database restore early if we are not
+   # able to do that
+   if echo "$restore_source" | grep -Eq ":latest$"; then
+      backup_group="${restore_source%:latest}"
+      if [ -z "$backup_group" ]; then
+         backup_group=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/latest")
+      fi
+      backup_index=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/latest")
+      if [ -z "$backup_index" ]; then
+         die 1 "Unable to find the latest backup for backup group '${backup_group}'"
+      fi
+      backup_set=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/$backup_index")
+      if [ -n "$backup_set" ]; then
+         restore_source="$backup_set"
+      else
+         die 1 "Unable to find a valid backup set for restore source '${restore_source}'"
+      fi
+   elif echo "$restore_source" | grep -Eq ":[0-9]+$"; then
+      backup_group="${restore_source%:*}"
+      backup_index="${restore_source##*:}"
+      backup_set=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/$backup_index")
+      if [ -n "$backup_set" ]; then
+         restore_source="$backup_set"
+      else
+         die 1 "Unable to find a valid backup set for restore source '${restore_source}'"
+      fi
    fi
 fi
 
@@ -158,7 +181,7 @@ if isRestoreRequestSupported; then
    restore_source_encoded="$(printf "%s" "${restore_source}" | base64 -w 0)"
    user_data="restore_source_encoded='${restore_source_encoded}'"
    if [ -z "$labels" ] && [ -z "$archive_ids" ]; then
-      if [ -n "$backup_index" ]; then
+      if [ -n "$backup_group" ] && [ -n "$backup_index" ]; then
          # no archive selection was provided by the user but a special restore
          # source has been used; fetch the pods participated in the backup and
          # select them for restore
@@ -172,8 +195,7 @@ if isRestoreRequestSupported; then
          fi
       fi
       if [ -z "$labels" ] && ! isUrl "$restore_source"; then
-         log "Please select the SMs to be restored using either --labels or --archive-ids"
-         exit 1
+         die 1 "Please select the SMs to be restored using either --labels or --archive-ids"
       fi
    fi
    [ -n "$labels" ] && additional_args="${additional_args} --labels ${labels}"
@@ -194,8 +216,7 @@ if isRestoreRequestSupported; then
       --user-data "${user_data}" $additional_args
    rc=$?
    if [ $rc -ne 0 ]; then
-      log "Restore request failed"
-      exit $rc
+      die $rc "Restore request failed"
    fi
 
    if [ "$auto" = "true" ]; then

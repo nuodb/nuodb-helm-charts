@@ -27,6 +27,7 @@ import (
 
 	v1 "k8s.io/api/apps/v1"
 
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -686,7 +687,8 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 		t.Log("Generating diagnose archive...")
 		k8s.RunKubectl(t, options, "exec", podName, "--", "nuocmd", "get", "diagnose-info",
 			"--include-cores", "--output-dir", "/tmp")
-		diagnoseFile, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "--", "bash", "-c", "ls -1 /tmp | grep diagnose-")
+		diagnoseFile, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", "-c", "admin", podName, "--",
+			"bash", "-c", "ls -1 /tmp | grep diagnose-")
 		require.NoError(t, err, "Can not find diagnose archive")
 
 		k8s.RunKubectl(t, options, "cp", podName+":/tmp/"+diagnoseFile, filepath.Join(targetDirPath, diagnoseFile))
@@ -1020,8 +1022,18 @@ func GetReplicationController(t *testing.T, namespace string, replicationControl
 	require.NoError(t, err)
 
 	controller, err := clientset.CoreV1().ReplicationControllers(namespace).Get(context.TODO(), replicationControllerName, metav1.GetOptions{})
+	require.NoError(t, err)
 
 	return controller
+}
+
+func ListCronJobs(t *testing.T, namespace string) []batchv1beta1.CronJob {
+	options := k8s.NewKubectlOptions("", "", namespace)
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+	cronJobList, err := clientset.BatchV1beta1().CronJobs(namespace).List(context.TODO(), metav1.ListOptions{})
+	require.NoError(t, err)
+	return cronJobList.Items
 }
 
 func DeleteDatabase(t *testing.T, namespace string, dbName string, podName string) {
