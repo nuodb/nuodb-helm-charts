@@ -999,9 +999,7 @@ func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *v1.Daem
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
-
-	daemonSet, err := clientset.AppsV1().DaemonSets(namespace).Get(context.TODO(), daemonSetName, metav1.GetOptions{})
-
+	daemonSet, _ := clientset.AppsV1().DaemonSets(namespace).Get(context.TODO(), daemonSetName, metav1.GetOptions{})
 	return daemonSet
 }
 
@@ -1017,13 +1015,9 @@ func GetPvc(t *testing.T, namespace string, pvcName string) *corev1.PersistentVo
 
 func GetReplicationController(t *testing.T, namespace string, replicationControllerName string) *corev1.ReplicationController {
 	options := k8s.NewKubectlOptions("", "", namespace)
-
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
-
-	controller, err := clientset.CoreV1().ReplicationControllers(namespace).Get(context.TODO(), replicationControllerName, metav1.GetOptions{})
-	require.NoError(t, err)
-
+	controller, _ := clientset.CoreV1().ReplicationControllers(namespace).Get(context.TODO(), replicationControllerName, metav1.GetOptions{})
 	return controller
 }
 
