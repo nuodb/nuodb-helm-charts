@@ -400,7 +400,7 @@ function completeRestoreRequest(){
 #
 function getMyBackupGroup() {
   local group
-  group=$(nuobackup --type report-groups --db-name "$DB_NAME" | grep "$POD_NAME" | awk '{print $1}')
+  group=$(nuobackup --type report-groups --db-name "$DB_NAME" 2>/dev/null | grep "$POD_NAME" | awk '{print $1}')
   echo "${group:-UNKNOWN_BACKUP_GROUP}"
 }
 
