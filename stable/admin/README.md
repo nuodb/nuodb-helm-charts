@@ -170,8 +170,15 @@ The following tables list the configurable parameters for the `admin` option of 
 | `logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
 | `logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
 | `envFrom` | Import ENV vars from one or more configMaps | `[]` |
-| `options` | Set optons to be passed to nuoadmin as arguments | `{}` |
-| `securityContext.capabilities` | add capabilities to the container | `[]` |
+| `options` | Set options to be passed to nuoadmin as arguments | `{}` |
+| `initContainers.runInitDisk` | Whether to run the `init-disk` init container to set volume permissions | `true` |
+| `initContainers.runInitDiskAsRoot` | Whether to run the `init-disk` init container as root | `true` |
+| `securityContext.fsGroupOnly` | Creates a security context for Pods containing only the `securityContext.fsGroup` value | `false` |
+| `securityContext.runAsNonRootGroup` | Creates a security context for Pods containing a non-root user and group (1000:1000) along with the `securityContext.fsGroup` value | `false` |
+| `securityContext.enabled` | Creates a security context for Pods containing the `securityContext.runAsUser` and `securityContext.fsGroup` values | `false` |
+| `securityContext.runAsUser` | The user ID for the Pod security context created if `securityContext.enabled` is `true`. | `1000` |
+| `securityContext.fsGroup` | The `fsGroup` for the Pod security context created if any of `securityContext.fsGroupOnly`, `securityContext.runAsNonRootGroup`, or `securityContext.enabled` are `true`. | `1000` |
+| `securityContext.capabilities` | Capabilities to add to admin container security context | `[]` |
 | `tlsCACert.secret` | TLS CA certificate secret name | `nil` |
 | `tlsCACert.key` | TLS CA certificate secret key | `nil` |
 | `tlsKeyStore.secret` | TLS keystore secret name | `nil` |

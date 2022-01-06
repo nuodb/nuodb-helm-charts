@@ -132,7 +132,39 @@ imagePullSecrets:
 {{- end -}}
 
 {{/*
-Add capabilities in a securityContext
+Get Pod securityContext
+*/}}
+{{- define "securityContext" -}}
+{{- if eq (include "defaultfalse" .Values.admin.securityContext.enabled) "true" }}
+securityContext:
+  runAsUser: {{ default 1000 .Values.admin.securityContext.runAsUser }}
+  runAsGroup: 0
+  fsGroup: {{ default 1000 .Values.admin.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- else if eq (include "defaultfalse" .Values.admin.securityContext.runAsNonRootGroup) "true" }}
+securityContext:
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: {{ default 1000 .Values.admin.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- else if eq (include "defaultfalse" .Values.admin.securityContext.fsGroupOnly) "true" }}
+securityContext:
+  fsGroup: {{ default 1000 .Values.admin.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Get fsGroupChangePolicy if Kubernetes version supports it
+*/}}
+{{- define "sc.fsGroupChangePolicy" -}}
+{{- if semverCompare ">=1.20" .Capabilities.KubeVersion.Version }}
+  fsGroupChangePolicy: OnRootMismatch
+{{- end }}
+{{- end -}}
+
+{{/*
+Get container securityContext defining capabilities
 */}}
 {{- define "admin.capabilities" -}}
 {{- with .Values.admin.securityContext.capabilities }}

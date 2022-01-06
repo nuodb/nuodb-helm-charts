@@ -328,7 +328,7 @@ func arePodConditionsMet(pod *corev1.Pod, condition corev1.PodConditionType,
 	return false
 }
 
-func findAllPodsInSchema(t *testing.T, namespace string) []corev1.Pod {
+func FindAllPodsInSchema(t *testing.T, namespace string) []corev1.Pod {
 	options := k8s.NewKubectlOptions("", "", namespace)
 	filter := metav1.ListOptions{}
 	pods := k8s.ListPods(t, options, filter)
@@ -338,9 +338,40 @@ func findAllPodsInSchema(t *testing.T, namespace string) []corev1.Pod {
 	return pods
 }
 
-func findAdminOrEngineContainer(containers []corev1.Container) *corev1.Container {
-	for _, container := range containers {
-		if container.Name == "admin" || container.Name == "engine" {
+func doesContainerHaveLogs(container *corev1.Container, containerStatuses []corev1.ContainerStatus) bool {
+	for _, status := range containerStatuses {
+		// check the status of the container; if it is in Waiting state,
+		// then check that it has a non-0 restart count; otherwise the
+		// container has no logs to retrieve
+		if status.Name == container.Name && (status.State.Waiting == nil || status.RestartCount > 0) {
+			return true
+		}
+	}
+	return false
+}
+
+func findAdminOrEngineContainer(pod *corev1.Pod) *corev1.Container {
+	// look for any container named "admin" or "engine" that has logs
+	for _, container := range pod.Spec.Containers {
+		if (container.Name == "admin" || container.Name == "engine") && doesContainerHaveLogs(&container, pod.Status.ContainerStatuses) {
+			return &container
+		}
+	}
+	// look for any container that has logs
+	for _, container := range pod.Spec.Containers {
+		if doesContainerHaveLogs(&container, pod.Status.ContainerStatuses) {
+			return &container
+		}
+	}
+	// look for any init container named "init-disk" that has logs
+	for _, container := range pod.Spec.InitContainers {
+		if container.Name == "init-disk" && doesContainerHaveLogs(&container, pod.Status.InitContainerStatuses) {
+			return &container
+		}
+	}
+	// look for any init container that has logs
+	for _, container := range pod.Spec.InitContainers {
+		if doesContainerHaveLogs(&container, pod.Status.InitContainerStatuses) {
 			return &container
 		}
 	}
@@ -395,7 +426,7 @@ func AwaitTillerUp(t *testing.T) {
 	}
 
 	Await(t, func() bool {
-		for _, pod := range findAllPodsInSchema(t, "kube-system") {
+		for _, pod := range FindAllPodsInSchema(t, "kube-system") {
 			if strings.Contains(pod.Name, "tiller-deploy") {
 				if arePodConditionsMet(&pod, corev1.PodReady, corev1.ConditionTrue) {
 					return true
@@ -415,25 +446,38 @@ func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName strin
 		timeout *= time.Duration(nrReplicas)
 	}
 	Await(t, func() bool {
-		var cnt int
-		for _, pod := range findAllPodsInSchema(t, namespace) {
+		var pods []corev1.Pod
+		var podNames string
+		for _, pod := range FindAllPodsInSchema(t, namespace) {
 			if strings.Contains(pod.Name, expectedName) {
 				if arePodConditionsMet(&pod, corev1.PodScheduled, corev1.ConditionTrue) {
-					cnt++
+					// build array of scheduled pods
+					pods = append(pods, pod)
+
+					// build formatted list of pod names
+					if podNames != "" {
+						podNames += ", "
+					}
+					podNames += pod.Name
+
+					// log any pods not in Pending or Running phase
+					if pod.Status.Phase != corev1.PodPending && pod.Status.Phase != corev1.PodRunning {
+						t.Logf("Unexpected phase for pod %s: %s", pod.Name, pod.Status.Phase)
+					}
 				}
 			}
 		}
 
-		t.Logf("%d pods SCHEDULED for name '%s'\n", cnt, expectedName)
+		t.Logf("%d pods SCHEDULED for name '%s': expected=%d, pods=[%s]\n", len(pods), expectedName, nrReplicas, podNames)
 
-		return cnt == nrReplicas
+		return len(pods) == nrReplicas
 	}, timeout)
 }
 
 func AwaitNrReplicasReady(t *testing.T, namespace string, expectedName string, nrReplicas int) {
 	Await(t, func() bool {
 		var cnt int
-		for _, pod := range findAllPodsInSchema(t, namespace) {
+		for _, pod := range FindAllPodsInSchema(t, namespace) {
 			if strings.Contains(pod.Name, expectedName) {
 				if arePodConditionsMet(&pod, corev1.PodReady, corev1.ConditionTrue) {
 					cnt++
@@ -450,7 +494,7 @@ func AwaitNrReplicasReady(t *testing.T, namespace string, expectedName string, n
 func AwaitNoPods(t *testing.T, namespace string, expectedName string) {
 	Await(t, func() bool {
 		var cnt int
-		for _, pod := range findAllPodsInSchema(t, namespace) {
+		for _, pod := range FindAllPodsInSchema(t, namespace) {
 			if strings.Contains(pod.Name, expectedName) {
 				cnt++
 			}
@@ -461,13 +505,13 @@ func AwaitNoPods(t *testing.T, namespace string, expectedName string) {
 }
 
 func findPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, error) {
-	for _, pod := range findAllPodsInSchema(t, namespace) {
+	for _, pod := range FindAllPodsInSchema(t, namespace) {
 		if strings.Contains(pod.Name, expectedName) {
 			return &pod, nil
 		}
 	}
 
-	for _, pod := range findAllPodsInSchema(t, namespace) {
+	for _, pod := range FindAllPodsInSchema(t, namespace) {
 		t.Logf("Pods %s\n", pod.Name)
 	}
 
@@ -477,7 +521,7 @@ func findPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, 
 func findPods(t *testing.T, namespace string, expectedName string) ([]corev1.Pod, error) {
 	var pods []corev1.Pod
 
-	for _, pod := range findAllPodsInSchema(t, namespace) {
+	for _, pod := range FindAllPodsInSchema(t, namespace) {
 		if strings.Contains(pod.Name, expectedName) {
 			pods = append(pods, pod)
 		}
@@ -517,7 +561,7 @@ func GetPodNames(t *testing.T, namespaceName string, expectedName string) []stri
 
 func DescribePods(t *testing.T, namespace string, expectedName string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
-	for _, pod := range findAllPodsInSchema(t, namespace) {
+	for _, pod := range FindAllPodsInSchema(t, namespace) {
 		if strings.Contains(pod.Name, expectedName) {
 			k8s.RunKubectl(t, options, "describe", "pod", pod.Name)
 		}
@@ -525,7 +569,7 @@ func DescribePods(t *testing.T, namespace string, expectedName string) {
 }
 
 func DeleteJobPods(t *testing.T, namespace string, jobName string) {
-	for _, pod := range findAllPodsInSchema(t, namespace) {
+	for _, pod := range FindAllPodsInSchema(t, namespace) {
 		if strings.Contains(pod.Name, jobName) {
 			t.Logf("Deleting pod %s for job %s", pod.Name, jobName)
 			DeletePod(t, namespace, pod.Name)
@@ -625,7 +669,7 @@ func AwaitPodHasVersion(t *testing.T, namespace string, podName string, expected
 
 func AwaitBalancerTerminated(t *testing.T, namespace string, expectedName string) {
 	Await(t, func() bool {
-		for _, pod := range findAllPodsInSchema(t, namespace) {
+		for _, pod := range FindAllPodsInSchema(t, namespace) {
 			if strings.Contains(pod.Name, expectedName) {
 				if pod.Status.Phase == "Succeeded" {
 					t.Logf("Pod (%s) TERMINATED\n", expectedName)
@@ -896,9 +940,9 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 	writer := io.Writer(f)
 
 	reader, err := getAppLogStreamE(t, namespace, podName, podLogOptions)
-	// avoid generating test failure just because container has not been started
-	if ctrerr, ok := err.(*ContainerNotStarted); ok {
-		t.Logf("Skipping log collection for pod %s because container %s has not been started", podName, ctrerr.Name)
+	// avoid generating test failure just because container logs are not available
+	if _, ok := err.(*ContainersNotStarted); ok {
+		t.Logf("Skipping log collection for pod %s because no container has been started", podName)
 		return ""
 	}
 	require.NoError(t, err)
@@ -911,12 +955,12 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 	return filePath
 }
 
-type ContainerNotStarted struct {
+type ContainersNotStarted struct {
 	Name string
 }
 
-func (e *ContainerNotStarted) Error() string {
-	return fmt.Sprintf("Container %s not started", e.Name)
+func (e *ContainersNotStarted) Error() string {
+	return "No containers with logs"
 }
 
 func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) (reader io.ReadCloser, err error) {
@@ -931,22 +975,25 @@ func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOpti
 			err = e
 			return
 		}
-		if len(pod.Spec.Containers) == 0 {
-			err = errors.New("No containers found")
+		container := findAdminOrEngineContainer(pod)
+		if container == nil {
+			err = &ContainersNotStarted{}
 			return
 		}
-		container := findAdminOrEngineContainer(pod.Spec.Containers)
-		if container == nil {
-			container = &pod.Spec.Containers[0]
-		}
+		podLogOptions.Container = container.Name
 		for _, containerStatus := range pod.Status.ContainerStatuses {
+			// if the container is in Waiting state (e.g. because
+			// the pod is in CrashLoopBackOff state), then get the
+			// logs from the previous invocation of the container
 			if containerStatus.Name == container.Name && containerStatus.State.Waiting != nil {
-				err = &ContainerNotStarted{container.Name}
-				return
+				podLogOptions.Previous = true
 			}
 		}
-		podLogOptions.Container = container.Name
-		t.Logf("Multiple containers found in pod %s. Getting logs from container %s.", podName, podLogOptions.Container)
+		if podLogOptions.Previous {
+			t.Logf("Multiple containers found in pod %s. Getting logs from previous container %s.", podName, podLogOptions.Container)
+		} else {
+			t.Logf("Multiple containers found in pod %s. Getting logs from container %s.", podName, podLogOptions.Container)
+		}
 	}
 
 	reader, err = client.CoreV1().Pods(options.Namespace).GetLogs(podName, podLogOptions).Stream(context.TODO())

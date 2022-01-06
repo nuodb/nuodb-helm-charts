@@ -91,7 +91,7 @@ func TestKubernetesTLS(t *testing.T) {
 		localOptions.SetValues["database.te.resources.requests.cpu"] = testlib.MINIMAL_VIABLE_ENGINE_CPU
 		localOptions.SetValues["database.te.resources.requests.memory"] = testlib.MINIMAL_VIABLE_ENGINE_MEMORY
 
-		defer testlib.Teardown("database")
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
 		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &localOptions)
 
@@ -116,7 +116,7 @@ func TestKubernetesTLS(t *testing.T) {
 		localOptions.SetValues["database.te.otherOptions.keystore"] = "/etc/nuodb/keys/nuoadmin.p12"
 		localOptions.SetValues["database.sm.otherOptions.keystore"] = "/etc/nuodb/keys/nuoadmin.p12"
 
-		defer testlib.Teardown("database")
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
 		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &localOptions)
 

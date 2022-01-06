@@ -79,20 +79,18 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		helm.Delete(t, options, helmChartReleaseName, true)
 	})
 
-	adminNames := make([]string, replicaCount)
 	var adminStatefulSet string
+	if options.SetValues["admin.fullnameOverride"] != "" {
+		adminStatefulSet = fmt.Sprintf("%s", options.SetValues["admin.fullnameOverride"])
+	} else if options.SetValues["admin.nameOverride"] != "" {
+		adminStatefulSet = fmt.Sprintf("%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, options.SetValues["admin.nameOverride"])
+	} else {
+		adminStatefulSet = fmt.Sprintf("%s-nuodb-%s", helmChartReleaseName, opt.ClusterName)
+	}
 
+	adminNames := make([]string, replicaCount)
 	for i := 0; i < replicaCount; i++ {
-		if options.SetValues["admin.fullnameOverride"] != "" {
-			adminStatefulSet = fmt.Sprintf("%s", options.SetValues["admin.fullnameOverride"])
-			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
-		} else if options.SetValues["admin.nameOverride"] != "" {
-			adminStatefulSet = fmt.Sprintf("%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, options.SetValues["admin.nameOverride"])
-			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
-		} else {
-			adminStatefulSet = fmt.Sprintf("%s-nuodb-%s", helmChartReleaseName, opt.ClusterName)
-			adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
-		}
+		adminNames[i] = fmt.Sprintf("%s-%d", adminStatefulSet, i)
 	}
 
 	defer func() {
@@ -103,17 +101,13 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		}
 	}()
 
-	if options.SetValues["admin.fullnameOverride"] != "" {
-		AwaitNrReplicasScheduled(t, namespaceName, options.SetValues["admin.fullnameOverride"], replicaCount)
-	} else {
-		AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, replicaCount)
-	}
-
 	if AdminRolesRequirePatching {
 		// workaround for https://github.com/nuodb/nuodb-helm-charts/issues/140
 		output := helm.RenderTemplate(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName, []string{"templates/role.yaml"})
 		k8s.RunKubectl(t, kubectlOptions, "patch", "role", "nuodb-kube-inspector", "-p", output)
 	}
+
+	AwaitNrReplicasScheduled(t, namespaceName, adminStatefulSet, replicaCount)
 
 	for i := 0; i < replicaCount; i++ {
 		adminName := adminNames[i] // array will be out of scope for defer

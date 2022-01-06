@@ -265,7 +265,7 @@ function perform_restore() {
       return $retval
     fi
 
-    chown -R $(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"') $download_dir
+    chown -R "$(id -u):$(id -g)" "$download_dir"
 
     # restore data and/or fix the metadata
     log "restoring archive and/or clearing restored archive physical metadata"
@@ -285,7 +285,7 @@ function perform_restore() {
       # consumed during SM shutdown
       log "Moving restored journal content to $JOURNAL_DIR"
       mv "$download_dir/journal/"* "$JOURNAL_DIR"
-      chown -R "$(echo "${NUODB_OS_USER:-1000}:${NUODB_OS_GROUP:-0}" | tr -d '"')" "$JOURNAL_DIR"
+      chown -R "$(id -u):$(id -g)" "$JOURNAL_DIR"
     fi
 
     if [ "$download_dir" != "$DB_DIR" ]; then

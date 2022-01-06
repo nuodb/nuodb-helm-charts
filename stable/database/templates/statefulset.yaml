@@ -47,11 +47,7 @@ spec:
     spec:
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
-      {{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
-      securityContext:
-        fsGroup: {{ .Values.database.securityContext.fsGroup }}
-        runAsUser: {{ .Values.database.securityContext.runAsUser }}
-      {{- end }}
+      {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.sm.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -64,28 +60,36 @@ spec:
       tolerations:
 {{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
       {{- end }}
+      {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDisk) "true" }}
       initContainers:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
-        command: ['sh', '-c', '
-          find /var/opt/nuodb -not -perm 770 -maxdepth 2 -exec chmod -R 770 {} \; &&
-          find /var/log/nuodb -not -perm 770 -maxdepth 1 -exec chmod -R 770 {} \;']
+        command:
+          - sh
+          - -c
+          - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
         volumeMounts:
         - name: archive-volume
-          mountPath: /var/opt/nuodb/archive
+          mountPath: /mnt/archive
         {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
         - name: journal-volume
-          mountPath: /var/opt/nuodb/journal
+          mountPath: /mnt/journal
         {{- end }}
         - name: log-volume
-          mountPath: /var/log/nuodb
+          mountPath: /mnt/logdir
+        {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDiskAsRoot) "true" }}
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+        {{- end }}
+      {{- end }}
       containers:
       - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
     {{- include "database.capabilities" . | indent 8 }}
-        args: 
+        args:
           - "nuosm"
           - "--servers-ready-timeout"
           - "300"
@@ -94,7 +98,7 @@ spec:
     {{- end }}
           - "--options"
           - "mem {{ .Values.database.sm.resources.requests.memory}} {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
-    {{- with .Values.database.sm.labels }}      
+    {{- with .Values.database.sm.labels }}
           - "--labels"
           - "{{- include "opt.key-values" . }}"
     {{- end }}
@@ -416,11 +420,7 @@ spec:
     spec:
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
-      {{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
-      securityContext:
-        fsGroup: {{ .Values.database.securityContext.fsGroup }}
-        runAsUser: {{ .Values.database.securityContext.runAsUser }}
-      {{- end }}
+      {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.sm.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -433,24 +433,30 @@ spec:
       tolerations:
 {{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
       {{- end }}
+      {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDisk) "true" }}
       initContainers:
       - name: init-disk
         image: {{ template "init.image" . }}
         imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy | quote }}
-        command: ['sh', '-c', '
-          find /var/opt/nuodb -not -perm 770 -maxdepth 2 -exec chmod -R 770 {} \; &&
-          find /var/log/nuodb -not -perm 770 -maxdepth 1 -exec chmod -R 770 {} \;']
+        command:
+          - sh
+          - -c
+          - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
         volumeMounts:
         - name: archive-volume
-          mountPath: /var/opt/nuodb/archive
+          mountPath: /mnt/archive
         {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
         - name: journal-volume
-          mountPath: /var/opt/nuodb/journal
+          mountPath: /mnt/journal
         {{- end }}
-        - name: backup-volume
-          mountPath: /var/opt/nuodb/backup
         - name: log-volume
-          mountPath: /var/log/nuodb
+          mountPath: /mnt/logdir
+        {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDiskAsRoot) "true" }}
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+        {{- end }}
+      {{- end }}
       containers:
       - name: engine
         image: {{ template "nuodb.image" . }}

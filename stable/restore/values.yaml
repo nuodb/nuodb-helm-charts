@@ -62,6 +62,38 @@ admin:
   #   secret: nuodb-client-pem
   #   key: client.pem
 
+database:
+  securityContext:
+    # Whether to create a security context for Pods containing only the fsGroup
+    # value defined below. This is less restrictive than runAsNonRootGroup,
+    # because it allows all containers in the Pod, including init and sidecar
+    # containers to run using the default user (assuming that the containers
+    # does not explicitly specify runAsUser and runAsGroup in their own
+    # security contexts).
+    fsGroupOnly: false
+
+    # Whether to create a security context for Pods restricting the uid and gid
+    # of the runtime "nuodb" user to 1000:1000, which is supported starting
+    # with NuoDB image version 4.3.
+    #
+    # runAsNonRootGroup must be set to false with NuoDB image versions older
+    # than 4.3.
+    runAsNonRootGroup: false
+
+    # Whether to create a security context for Pods containing the runAsUser
+    # and fsGroup values defined below.
+    enabled: false
+
+    # runAsUser must be an integer between 1000 and 65533.
+    runAsUser: 1000
+
+    # Defining fsGroup in a security context causes volumes mounted into the
+    # containers (including those defined by secrets and config maps) to be
+    # owned by the specified group ID, which is also added as a supplementary
+    # group to the runtime user. This allows a non-root user and group to read,
+    # write, and execute files with permissions 440, 660, and 770.
+    fsGroup: 1000
+
 restore:
 
   ## Provide a name in place of the chart name for `app:` labels
