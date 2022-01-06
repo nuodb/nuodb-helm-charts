@@ -152,7 +152,7 @@ The following tables list the configurable parameters of the restore chart and t
 | ----- | ----------- | ------ |
 | `restore.type` | What type of restore to perform: [ "database" \| "archive" ]. A "database" restore restarts the entire database at a previous state. An "archive" restore restores/repairs a SINGLE archive in a RUNNING database. | `"database"` |
 | `restore.target` | The database name to request restore operations for | `"demo"` |
-| `restore.source` | The source which will be restored from. Supported values are [ _backupset_ \| _URL_ \| `:latest` \| `<backup group>:latest` ]. URL restore source is expected to be in form of `protocol://authority/path`. Otherwise the value is interpreted as backupset name. The URL can point to a downloadable _tag.gz_ file containing a hotcopy backupset or an exact copy of a NuoDB archive (called _stream_). | `:latest` |
+| `restore.source` | The source which will be restored from. Supported values are [ `:latest` \| `<backup group>:latest` \| `<backup group>:<index>` \| _backupset_ \| _URL_ ]. URL restore source is expected to be in form of `protocol://authority/path`. Otherwise the value is interpreted as backupset name. The URL can point to a downloadable _tag.gz_ file containing a hot copy backup set or an exact copy of a NuoDB archive (called _stream_). | `:latest` |
 | `restore.credentials` | Credentials to use for a URL source (user:password) | `""` |
 | `restore.stripLevels` | The number of levels to strip off path names when unpacking a TAR file of an archive or backup set | `"1"` |
 | `restore.autoRestart` | Whether to automatically restart the database and trigger the restore (true/false). Only valid for a "database" restore | `true` |
