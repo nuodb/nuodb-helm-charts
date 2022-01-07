@@ -228,15 +228,20 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.successHistory` | Number of successful Jobs to keep | `5` |
 | `sm.hotCopy.failureHistory` | Number of failed jobs to keep | `5` |
 | `sm.hotCopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
-| `sm.hotCopy.backupGroup` | Name of the backup group | `{{ .Values.cloud.cluster.name }}` |
-| `sm.hotCopy.fullSchedule` | cron schedule for FULL hotcopy jobs | `35 22 * * 6` |
-| `sm.hotCopy.incrementalSchedule` | cron schedule for INCREMENTAL hotcopy jobs | `35 22 * * 0-5` |
+| `sm.hotCopy.backupGroupPrefix` | Prefix for the automatically generated backup groups | `{{ .Values.cloud.cluster.name }}` |
+| `sm.hotCopy.backupGroups` | Backup groups configuration. By default a backup group per HCSM is created automatically | `{}` |
+| `sm.hotCopy.backupGroups.<name>.labels` | Space separated process labels used to select the Storage Managers which are part of this backup group. _Any_ label key and value should match for the SM to be selected | `nil` |
+| `sm.hotCopy.backupGroups.<name>.overwrites.fullSchedule` | cron schedule for _FULL_ hot copy performed by this backup group. If not defined the `sm.hotCopy.fullSchedule` setting will be used | `nil` |
+| `sm.hotCopy.backupGroups.<name>.overwrites.incrementalSchedule` | cron schedule for _INCREMENTAL_ hot copy performed by this backup group. If not defined the `sm.hotCopy.incrementalSchedule` setting will be used | `nil` |
+| `sm.hotCopy.backupGroups.<name>.overwrites.journalSchedule` | cron schedule for _JOURNAL_ hot copy performed by this backup group. If not defined the `sm.hotCopy.journalBackup.journalSchedule` setting will be used | `nil` |
+| `sm.hotCopy.fullSchedule` | cron schedule for _FULL_ hotcopy jobs | `35 22 * * 6` |
+| `sm.hotCopy.incrementalSchedule` | cron schedule for _INCREMENTAL_ hotcopy jobs | `35 22 * * 0-5` |
 | `sm.hotCopy.restartPolicy` | Restart policy for backup related JOBs and CRON JOBs | `OnFailure` |
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
 | `sm.hotCopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
 | `sm.hotCopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
-| `sm.hotCopy.journalBackup.intervalMinutes` | Frequency of running `journal hotcopy` (minutes) | `15` |
+| `sm.hotCopy.journalBackup.journalSchedule` | cron schedule for _JOURNAL_ hotcopy jobs | `?/15 * * * *` |
 | `sm.hotCopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
 | `sm.hotCopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
 | `sm.hotCopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |
