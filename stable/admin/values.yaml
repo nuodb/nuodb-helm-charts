@@ -64,6 +64,7 @@ nuodb:
   # the name of the ServiceAccount to use for all NuoDB Pods
   serviceAccount: nuodb
 
+  addServiceAccount: true
   # unless set to false, a Role and RoleBinding named "nuodb-kube-inspector"
   # that grants access to Pods, PersistentVolumeClaims, PersistentVolumes, and
   # StatefulSets is added to nuodb.serviceAccount
@@ -188,6 +189,9 @@ admin:
 
     # Specify additional container capabilities such as "NET_ADMIN"
     capabilities: []
+
+    privileged: false
+    allowPrivilegeEscalation: false
 
   ## Specify one or more configMaps to import Environment Variables from
   # Ex:  configMapRef: [ myConfigMap, myOtherConfigMap ]

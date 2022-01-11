@@ -94,6 +94,9 @@ database:
     # write, and execute files with permissions 440, 660, and 770.
     fsGroup: 1000
 
+    privileged: false
+    allowPrivilegeEscalation: false
+
 restore:
 
   ## Provide a name in place of the chart name for `app:` labels
@@ -166,4 +169,6 @@ restore:
   affinity: {}
   
   timeout: 1800
+
+  resources: {}
 

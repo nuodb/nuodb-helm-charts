@@ -42,7 +42,9 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      {{- if or (not (hasKey .Values.nuodb "addServiceAccount")) .Values.nuodb.addServiceAccount }}
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      {{- end }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.te.nodeSelector }}
       nodeSelector:
@@ -92,6 +94,7 @@ spec:
           - "{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}"
         {{- end }}
     {{- include "database.otherOptions" .Values.database.te.otherOptions | indent 10 }}
+    {{- include "sc.podSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
           - name: NODE_NAME

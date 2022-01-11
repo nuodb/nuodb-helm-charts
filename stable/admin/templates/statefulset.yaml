@@ -43,7 +43,9 @@ spec:
         domain: {{ .Values.admin.domain }}
         group: nuodb
     spec:
+      {{- if or (not (hasKey .Values.nuodb "addServiceAccount")) .Values.nuodb.addServiceAccount }}
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      {{- end -}}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
@@ -67,6 +69,7 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
+        {{- include "sc.podSecurityContext" . | indent 8 }}
         volumeMounts:
         - name: raftlog
           mountPath: /mnt/vardir
@@ -140,6 +143,7 @@ spec:
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
           {{- end}}
+        {{- include "sc.podSecurityContext" . | indent 8 }}
         livenessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15

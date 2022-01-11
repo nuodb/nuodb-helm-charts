@@ -45,7 +45,9 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      {{- if or (not (hasKey .Values.nuodb "addServiceAccount")) .Values.nuodb.addServiceAccount }}
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      {{- end }}
       terminationGracePeriodSeconds: 15
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.sm.nodeSelector }}
@@ -69,6 +71,7 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
+        {{- include "sc.podSecurityContext" . | indent 8 }}
         volumeMounts:
         - name: archive-volume
           mountPath: /mnt/archive
@@ -106,6 +109,7 @@ spec:
           - "--database-options"
           - "{{- include "opt.key-values" . }}"
     {{- end }}
+    {{- include "sc.podSecurityContext" . | indent 8 }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
@@ -418,7 +422,9 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
+      {{- if or (not (hasKey .Values.nuodb "addServiceAccount")) .Values.nuodb.addServiceAccount }}
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      {{- end }}
       terminationGracePeriodSeconds: 15
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.sm.nodeSelector }}
@@ -442,6 +448,7 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
+        {{- include "sc.podSecurityContext" . | indent 8 }}
         volumeMounts:
         - name: archive-volume
           mountPath: /mnt/archive
@@ -474,6 +481,7 @@ spec:
           - "--database-options"
           - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{ end}}"
 {{- end}}
+    {{- include "sc.podSecurityContext" . | indent 8 }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
