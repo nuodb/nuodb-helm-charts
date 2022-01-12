@@ -305,10 +305,9 @@ database:
       backupGroups: {}
       #  cluster0-0:
       #    labels: "pod-name sm-database-nuodb-cluster0-demo-hotcopy-0"
-      #    overwrites:
-      #      fullSchedule: "35 22 * * 6"
-      #      incrementalSchedule: "35 22 * * 0-5"
-      #      journalSchedule: "?/15 * * * *"
+      #    fullSchedule: "35 22 * * 6"
+      #    incrementalSchedule: "35 22 * * 0-5"
+      #    journalSchedule: "?/15 * * * *"
 
 
       ## Schedule for the running of the full backup cron job

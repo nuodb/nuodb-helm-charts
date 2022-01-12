@@ -312,15 +312,15 @@ func TestDatabaseBackupGroupsCustom(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.sm.hotCopy.replicas":                                        "2",
-			"database.sm.hotCopy.journalBackup.enabled":                           "true",
-			"database.sm.hotCopy.fullSchedule":                                    "35 22 * * 6",
-			"database.sm.hotCopy.incrementalSchedule":                             "35 22 * * 0-5",
-			"database.sm.hotCopy.journalBackup.journalSchedule":                   "?/15 * * * *",
-			"database.sm.hotCopy.backupGroups.aws.labels":                         "cloud aws",
-			"database.sm.hotCopy.backupGroups.aws.overwrites.fullSchedule":        "35 22 * * 1",
-			"database.sm.hotCopy.backupGroups.aws.overwrites.incrementalSchedule": "35 22 * * 2-7",
-			"database.sm.hotCopy.backupGroups.gcp.labels":                         "cloud gcp",
+			"database.sm.hotCopy.replicas":                             "2",
+			"database.sm.hotCopy.journalBackup.enabled":                "true",
+			"database.sm.hotCopy.fullSchedule":                         "35 22 * * 6",
+			"database.sm.hotCopy.incrementalSchedule":                  "35 22 * * 0-5",
+			"database.sm.hotCopy.journalBackup.journalSchedule":        "?/15 * * * *",
+			"database.sm.hotCopy.backupGroups.aws.labels":              "cloud aws",
+			"database.sm.hotCopy.backupGroups.aws.fullSchedule":        "35 22 * * 1",
+			"database.sm.hotCopy.backupGroups.aws.incrementalSchedule": "35 22 * * 2-7",
+			"database.sm.hotCopy.backupGroups.gcp.labels":              "cloud gcp",
 		},
 	}
 
@@ -346,12 +346,12 @@ func TestDatabaseBackupGroupsCustom(t *testing.T) {
 		}
 		expectedSchedule := options.SetValues["database.sm.hotCopy.fullSchedule"]
 		if backupGroup == "aws" {
-			expectedSchedule = options.SetValues["database.sm.hotCopy.backupGroups.aws.overwrites.fullSchedule"]
+			expectedSchedule = options.SetValues["database.sm.hotCopy.backupGroups.aws.fullSchedule"]
 		}
 		if strings.Contains(obj.Name, "incremental") {
 			expectedSchedule = options.SetValues["database.sm.hotCopy.incrementalSchedule"]
 			if backupGroup == "aws" {
-				expectedSchedule = options.SetValues["database.sm.hotCopy.backupGroups.aws.overwrites.incrementalSchedule"]
+				expectedSchedule = options.SetValues["database.sm.hotCopy.backupGroups.aws.incrementalSchedule"]
 			}
 		} else if strings.Contains(obj.Name, "journal") {
 			expectedSchedule = options.SetValues["database.sm.hotCopy.journalBackup.journalSchedule"]

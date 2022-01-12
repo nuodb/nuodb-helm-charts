@@ -193,25 +193,22 @@ Return the hotcopy group prefix
 
 {{/*
 Return the hotcopy cronjob schedule by backup group and hot copy type. It will take 
-into account any schedule overwrites configured per backup group.
+into account any schedule overrides configured per backup group.
 */}}
 {{- define "hotcopy.group.schedule" -}}
   {{- $scheduleProp := printf "%sSchedule" .hotCopyType -}}
   {{- $schedule := index .Values.database.sm.hotCopy ( print $scheduleProp ) -}}
-  {{- $overwrite := "" -}}
+  {{- $override := "" -}}
   {{- if eq .hotCopyType "journal" -}}
     {{- $schedule = .Values.database.sm.hotCopy.journalBackup.journalSchedule -}}
   {{- end -}}
   {{- if .Values.database.sm.hotCopy.backupGroups -}}
     {{- $group := (index .Values.database.sm.hotCopy.backupGroups ( print .backupGroup )) -}}
     {{- if $group -}}
-      {{- $overwrites := $group.overwrites -}}
-      {{- if $overwrites -}}
-        {{- $overwrite = index $overwrites ( print $scheduleProp ) -}}
-      {{- end -}}
+      {{- $override = index $group ( print $scheduleProp ) -}}
     {{- end -}}
   {{- end -}}
-{{ default $schedule $overwrite }}
+  {{- default $schedule $override }}
 {{- end -}}
 
 
@@ -225,11 +222,11 @@ backup group labels or empty value (representing all HCSMs in the database).
   {{- if .Values.database.sm.hotCopy.backupGroups -}}
     {{- $group := index .Values.database.sm.hotCopy.backupGroups (print .backupGroup) -}}
     {{- if $group -}}
-{{- default "" $group.labels -}}
+    {{- default "" $group.labels -}}
     {{- end -}}
   {{- else -}}
     {{- $groupPrefix := include "hotcopy.groupPrefix" . -}}
-{{ printf "pod-name sm-%s-hotcopy%s" (include "database.fullname" .) (trimPrefix $groupPrefix .backupGroup) }}
+    {{- printf "pod-name sm-%s-hotcopy%s" (include "database.fullname" .) (trimPrefix $groupPrefix .backupGroup) }}
   {{- end -}}
 {{- end -}}
 
