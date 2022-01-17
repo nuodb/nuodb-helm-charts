@@ -241,7 +241,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
 | `sm.hotCopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
-| `sm.hotCopy.journalBackup.journalSchedule` | cron schedule for _JOURNAL_ hotcopy jobs | `?/15 * * * *` |
+| `sm.hotCopy.journalBackup.journalSchedule` | cron schedule for _JOURNAL_ hotcopy jobs. When journal backup is enabled, an SM will retain each journal file on disk until it is journal hot copied into a backup set. This means that journal hot copy must be executed periodically to prevent SMs from running out of disk space on the journal volume | `?/15 * * * *` |
 | `sm.hotCopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
 | `sm.hotCopy.journalBackup.timeout` | Timeout for a started `journal hotcopy` to complete (seconds). The default timeout of "0" will force the backup jobs to wait forever for the requested hotcopy operation to complete | `0` |
 | `sm.hotCopy.coldStorage.credentials` | Credentials for accessing backup cold storage (user:password) | `""` |

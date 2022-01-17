@@ -340,6 +340,11 @@ database:
       ## settings for the journal backup
       journalBackup:
         enabled: false
+        # schedule for the running the journal backup cron job; when journal
+        # backup is enabled, an SM will retain each journal file on disk until
+        # it is journal hot copied into a backup set; this means that journal
+        # hot copy must be executed periodically to prevent SMs from running out
+        # of disk space on the journal volume
         journalSchedule: "?/15 * * * *"
         deadline: 90
         # timeout for completing a journal hotcopy job - if a job hasn't
