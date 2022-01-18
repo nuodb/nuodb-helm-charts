@@ -36,8 +36,6 @@ func TestRestoreDefaults(t *testing.T) {
 			"true",
 			"--manual",
 			"false",
-			"--labels",
-			"backup cluster0",
 		})
 	}
 }
@@ -70,8 +68,6 @@ func TestRestoreNoDatabaseRestart(t *testing.T) {
 			"false",
 			"--manual",
 			"false",
-			"--labels",
-			"backup cluster0",
 		})
 	}
 }
@@ -147,6 +143,40 @@ func TestRestoreSpecificLabels(t *testing.T) {
 	}
 }
 
+func TestRestoreSpecificLabelsAsString(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.RESTORE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"restore.labels": "labelA labelA_value labelB labelB_value",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/job.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderJob(t, output, 1) {
+		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+		restoreContainer := obj.Spec.Template.Spec.Containers[0]
+		assert.ElementsMatch(t, restoreContainer.Args, []string{
+			"nuorestore",
+			"--type",
+			"database",
+			"--db-name",
+			"demo",
+			"--source",
+			":latest",
+			"--auto",
+			"true",
+			"--manual",
+			"false",
+			"--labels",
+			"labelA labelA_value labelB labelB_value",
+		})
+	}
+}
+
 func TestManualRestore(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.RESTORE_HELM_CHART_PATH
@@ -175,8 +205,6 @@ func TestManualRestore(t *testing.T) {
 			"true",
 			"--manual",
 			"true",
-			"--labels",
-			"backup cluster0",
 		})
 	}
 }

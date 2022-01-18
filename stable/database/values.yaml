@@ -290,8 +290,25 @@ database:
 
       backupDir: /var/opt/nuodb/backup
 
-      # group for selecting the SM(s) to backup - the default is the cloud.cluster.name
-      backupGroup: ""
+      # automatically generated backup groups will have this prefix - defaults
+      # to cloud.cluster.name
+      backupGroupPrefix: ""
+
+      # hot-copy operation is requested separately per backup group; if not
+      # configured, a backup group per HCSM is created automatically to ensure
+      # that the configured backup redundancy is met; the automatically
+      # generated backup group name of "<backupGroupPrefix>-<ordinal>" is used
+      # where the ordinal matches the HCSM ordinal; if the database is split
+      # across archives (storage groups are in use), each backup group should
+      # have a minimum set of archives that together contain the entire contents
+      # of the database
+      backupGroups: {}
+      #  cluster0-0:
+      #    labels: "pod-name sm-database-nuodb-cluster0-demo-hotcopy-0"
+      #    fullSchedule: "35 22 * * 6"
+      #    incrementalSchedule: "35 22 * * 0-5"
+      #    journalSchedule: "?/15 * * * *"
+
 
       ## Schedule for the running of the full backup cron job
       # Eg: At 22:35 on every day-of-month that is a Sunday
@@ -323,7 +340,12 @@ database:
       ## settings for the journal backup
       journalBackup:
         enabled: false
-        intervalMinutes: 15
+        # schedule for the running the journal backup cron job; when journal
+        # backup is enabled, an SM will retain each journal file on disk until
+        # it is journal hot copied into a backup set; this means that journal
+        # hot copy must be executed periodically to prevent SMs from running out
+        # of disk space on the journal volume
+        journalSchedule: "?/15 * * * *"
         deadline: 90
         # timeout for completing a journal hotcopy job - if a job hasn't
         # completed in this time - stop waiting for it; the default timeout of

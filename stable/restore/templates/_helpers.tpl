@@ -223,7 +223,7 @@ Return the restore source.
 */}}
 {{- define "restore.source" -}}
 {{- if hasPrefix ":" .Values.restore.source }}
-{{- $valid := list ":latest" ":group-latest" "" }}
+{{- $valid := list ":latest" "" }}
 {{- if not (has .Values.restore.source $valid) }}
 {{- fail (printf "Invalid autorestore source: %s" .Values.restore.source) }}
 {{- end -}}
@@ -241,10 +241,11 @@ selector. If archiveIds are specified, they take precedence over labels.
 - {{ join " " .Values.restore.archiveIds | quote }}
 {{- else if .Values.restore.labels }}
 - "--labels"
+{{- if typeIs "string" .Values.restore.labels }}
+- {{ .Values.restore.labels }}
+{{- else }}
 - {{ range $opt, $val := .Values.restore.labels }} {{$opt}} {{$val}} {{- end}}
-{{- else -}}
-- "--labels"
-- "backup {{ .Values.cloud.cluster.name }}"
+{{- end -}}
 {{- end -}}
 {{- end -}}
 

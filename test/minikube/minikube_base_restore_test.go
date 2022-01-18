@@ -63,7 +63,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 
 		// Generate diagnose in case this test fails
 		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
-			podName := testlib.GetPodName(t, namespaceName, "incremental-hotcopy-demo-cronjob")
+			podName := testlib.GetPodName(t, namespaceName, "incremental-hotcopy-demo-cluster0-0")
 			testlib.AwaitPodPhase(t, namespaceName, podName, corev1.PodFailed, 20*time.Second)
 			testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
 		})
@@ -71,7 +71,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 
 		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
-		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-demo-cronjob", 120*time.Second)
+		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-demo-cluster0-0", 120*time.Second)
 		verifyBackup(t, namespaceName, admin0, "demo", &databaseOptions)
 	})
 }
@@ -105,7 +105,7 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 
 	// Get logs from journal backup job in case this test fails
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
-		podName := testlib.GetPodName(t, namespaceName, "journal-hotcopy-demo-cronjob")
+		podName := testlib.GetPodName(t, namespaceName, "journal-hotcopy-demo-cluster0-0")
 		testlib.AwaitPodPhase(t, namespaceName, podName, corev1.PodFailed, 20*time.Second)
 		testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
 	})
@@ -116,25 +116,26 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	smPodName0 := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy-0", databaseReleaseName, opt.ClusterName, opt.DbName)
 	// suspend full and incremental backup jobs
-	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "full-hotcopy-demo-cronjob",
+	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "full-hotcopy-demo-cluster0-0",
 		"-p", "{\"spec\" : {\"suspend\" : true }}")
-	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "incremental-hotcopy-demo-cronjob",
+	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "incremental-hotcopy-demo-cluster0-0",
 		"-p", "{\"spec\" : {\"suspend\" : true }}")
 	// Execute initial backup
-	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
 	// restarting one of the SMs will disable journal backup temporary until
 	// full or incremental are requested and complete
 	smPod0 := testlib.GetPod(t, namespaceName, smPodName0)
 	testlib.DeletePod(t, namespaceName, "pod/"+smPodName0)
 	testlib.AwaitPodObjectRecreated(t, namespaceName, smPod0, 30*time.Second)
-	testlib.DeleteJobPods(t, namespaceName, "journal-hotcopy-demo-cronjob")
+	testlib.DeleteJobPods(t, namespaceName, "journal-hotcopy-demo-cluster0-0")
 	testlib.AwaitPodUp(t, namespaceName, smPodName0, 120*time.Second)
 	// schedule the journal backup job in the next munute
-	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "journal-hotcopy-demo-cronjob",
+	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "journal-hotcopy-demo-cluster0-0",
 		"-p", "{\"spec\" : {\"schedule\" : \"?/1 * * * *\" }}")
-	testlib.AwaitJobSucceeded(t, namespaceName, "journal-hotcopy-demo-cronjob", 120*time.Second)
+	testlib.AwaitJobSucceeded(t, namespaceName, "journal-hotcopy-demo-cluster0-0", 120*time.Second)
 	// verify that the journal backup fails and it's retried after requesting incremental
-	podName := testlib.GetPodName(t, namespaceName, "journal-hotcopy-demo-cronjob")
+	podName := testlib.GetPodName(t, namespaceName, "journal-hotcopy-demo-cluster0-0")
 	require.Equal(t, testlib.GetStringOccurrenceInLog(t, namespaceName, podName,
 		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}), 1,
 		"Incremental hot copy not requested to enable journal after sync")
@@ -195,7 +196,8 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 	smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
 
 	// Execute initial backup
-	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
 
 	t.Run("restoreDatabaseSameVersion", func(t *testing.T) {
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
@@ -355,7 +357,8 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	go testlib.GetAppLog(t, namespaceName, hcSmPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	testlib.CreateQuickstartSchema(t, namespaceName, admin0)
-	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", opt.ClusterName)
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	backupset := testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
 
 	moveArchiveData := func(podName string) {
 		// Move the archive data which will cause the SM to ASSERT when an atom needs to be loaded

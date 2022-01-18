@@ -422,6 +422,7 @@ func TestDatabaseLabeling(t *testing.T) {
 
 			if testlib.IsStatefulSetHotCopyEnabled(&obj) {
 				assert.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "backup cluster0"))
+				assert.True(t, testlib.ArgContains(obj.Spec.Template.Spec.Containers[0].Args, "role hotcopy"))
 			}
 		}
 	})

@@ -10,7 +10,6 @@
 # args are:
 #   --type      - retore type: ( database | archive )
 #   --db-name   - database name to perform the restore operation on
-#   --semaphore - a key in the raftlog KV store to set to trigger a full backup after the restore
 #   --source    - source to restore from - can be a backupset or a URL
 #   --auto      - automatically start the restore operation ( true | false )
 #   --labels         - additional arbitrary labels to select the SMs for restore
@@ -58,6 +57,18 @@ function wrapLogfile() {
   fi
 }
 
+#=======================================
+# function - report an error and exit
+#
+function die() {
+  local retval=$1
+  shift
+  error="$*"
+  [ -n "$wotIdid" ] && error="Error while ${wotIdid}: ${error}"
+  log "$error"
+  exit "$retval"
+}
+
 # function - NuoDB 4.2+ supports new way of requesting database in-place
 # restore build into nuodocker.
 #
@@ -70,11 +81,23 @@ function isRestoreRequestSupported() {
    fi
 }
 
+#=======================================
+# function - checks if URL is provided in a form of scheme:[//authority]path
+#
+function isUrl() {
+  local url="$1"
+  echo "$url" | grep -q '^[a-z]\+:/[^ ]\+'
+  return $?
+}
+
 restore_type="database"
 db_name=$DB_NAME
-semaphore="/nuobackup/semaphore"
 restore_source=":latest"
 auto="false"
+labels=""
+archive_ids=""
+backup_group=""
+backup_index=""
 
 restore_credentials=$NUODB_RESTORE_CREDENTIALS
 [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:=:}
@@ -94,10 +117,6 @@ do
            db_name="$1"; shift;;
         "--db-name="* )
            db_name="${opt#*=}";;
-        "--semaphore" )
-           semaphore="$1"; shift;;
-        "--semaphore="* )
-           semaphore="${opt#*=}";;
         "--source" )
            restore_source="$1"; shift;;
         "--source="* )
@@ -125,12 +144,60 @@ done
 restore_type=$(echo $restore_type | tr '[:upper:]' '[:lower:]')
 auto=$(echo $auto | tr '[:upper:]' '[:lower:]')
 
+if ! isUrl "$restore_source"; then
+   # Resolve special restore sources - ":latest", "<backup_group>:latest" or
+   # "<backup_group>:<index>"; fail the database restore early if we are not
+   # able to do that
+   if echo "$restore_source" | grep -Eq ":latest$"; then
+      backup_group="${restore_source%:latest}"
+      if [ -z "$backup_group" ]; then
+         backup_group=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/latest")
+      fi
+      backup_index=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/latest")
+      if [ -z "$backup_index" ]; then
+         die 1 "Unable to find the latest backup for backup group '${backup_group}'"
+      fi
+      backup_set=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/$backup_index")
+      if [ -n "$backup_set" ]; then
+         restore_source="$backup_set"
+      else
+         die 1 "Unable to find a valid backup set for restore source '${restore_source}'"
+      fi
+   elif echo "$restore_source" | grep -Eq ":[0-9]+$"; then
+      backup_group="${restore_source%:*}"
+      backup_index="${restore_source##*:}"
+      backup_set=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/$backup_index")
+      if [ -n "$backup_set" ]; then
+         restore_source="$backup_set"
+      else
+         die 1 "Unable to find a valid backup set for restore source '${restore_source}'"
+      fi
+   fi
+fi
 
 if isRestoreRequestSupported; then
    # Use nuodocker to place restore request
    additional_args=""
    restore_source_encoded="$(printf "%s" "${restore_source}" | base64 -w 0)"
    user_data="restore_source_encoded='${restore_source_encoded}'"
+   if [ -z "$labels" ] && [ -z "$archive_ids" ]; then
+      if [ -n "$backup_group" ] && [ -n "$backup_index" ]; then
+         # no archive selection was provided by the user but a special restore
+         # source has been used; fetch the pods participated in the backup and
+         # select them for restore
+         pods=$( nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/$backup_group/$backup_index/pods")
+         if [ -n "$pods" ]; then
+            for pod in $pods; do
+               labels="${labels} pod-name ${pod}"
+            done
+         else
+            log "Unable to automatically determine the SMs to be restored with source ${restore_source}"
+         fi
+      fi
+      if [ -z "$labels" ] && ! isUrl "$restore_source"; then
+         die 1 "Please select the SMs to be restored using either --labels or --archive-ids"
+      fi
+   fi
    [ -n "$labels" ] && additional_args="${additional_args} --labels ${labels}"
    [ -n "$archive_ids" ] && additional_args="${additional_args} --archive-ids ${archive_ids}"
    [ "$manual" == "true" ] && additional_args="${additional_args} --manual"
@@ -149,8 +216,7 @@ if isRestoreRequestSupported; then
       --user-data "${user_data}" $additional_args
    rc=$?
    if [ $rc -ne 0 ]; then
-      echo "Restore request failed" >&2
-      exit $rc
+      die $rc "Restore request failed"
    fi
 
    if [ "$auto" = "true" ]; then
@@ -193,16 +259,6 @@ else
    log "Setting flag for database $db_name to restore from $restore_source on next database/SM startup"
 
    if [ "$restore_type" = "database" ]; then
-
-      log "Setting flag for database $db_name to initiate a new FULL backup after next restart"
-
-      # Set the semaphores to create a new backupset from a full backup
-      nuocmd set value --key $semaphore/$db_name --value "true" --unconditional
-
-      for group in $(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups); do
-         nuocmd set value --key $semaphore/$db_name/$group --value "true" --unconditional
-      done
-
       # optionally do automatic initiation of the restore
       if [ "$auto" = "true" ]; then
          log "restore.autoRestart=true - initiating full database restart for database $db_name"

@@ -185,12 +185,50 @@ Return options as $key $value
 {{- end -}}
 
 {{/*
-Return the hotcopy group
+Return the hotcopy group prefix
 */}}
-{{- define "hotcopy.group" -}}
-{{ default .Values.cloud.cluster.name .Values.database.sm.hotCopy.backupGroup }}
+{{- define "hotcopy.groupPrefix" -}}
+{{ default .Values.cloud.cluster.name .Values.database.sm.hotCopy.backupGroupPrefix }}
 {{- end -}}
 
+{{/*
+Return the hotcopy cronjob schedule by backup group and hot copy type. It will take 
+into account any schedule overrides configured per backup group.
+*/}}
+{{- define "hotcopy.group.schedule" -}}
+  {{- $scheduleProp := printf "%sSchedule" .hotCopyType -}}
+  {{- $schedule := index .Values.database.sm.hotCopy ( print $scheduleProp ) -}}
+  {{- $override := "" -}}
+  {{- if eq .hotCopyType "journal" -}}
+    {{- $schedule = .Values.database.sm.hotCopy.journalBackup.journalSchedule -}}
+  {{- end -}}
+  {{- if .Values.database.sm.hotCopy.backupGroups -}}
+    {{- $group := (index .Values.database.sm.hotCopy.backupGroups ( print .backupGroup )) -}}
+    {{- if $group -}}
+      {{- $override = index $group ( print $scheduleProp ) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- default $schedule $override }}
+{{- end -}}
+
+
+{{/*
+Return labels for a specific backup group. If there is no user-defined backup
+groups, return the pod name of a single HCSM by extracting the pod ordinal from
+the automatically generated backup group name. Otherwise return the configured 
+backup group labels or empty value (representing all HCSMs in the database).
+*/}}
+{{- define "hotcopy.group.labels" -}}
+  {{- if .Values.database.sm.hotCopy.backupGroups -}}
+    {{- $group := index .Values.database.sm.hotCopy.backupGroups (print .backupGroup) -}}
+    {{- if $group -}}
+    {{- default "" $group.labels -}}
+    {{- end -}}
+  {{- else -}}
+    {{- $groupPrefix := include "hotcopy.groupPrefix" . -}}
+    {{- printf "pod-name sm-%s-hotcopy%s" (include "database.fullname" .) (trimPrefix $groupPrefix .backupGroup) }}
+  {{- end -}}
+{{- end -}}
 
 {{/*
 Import user defined ENV vars
