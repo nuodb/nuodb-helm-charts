@@ -779,7 +779,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testDefault", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
 			},
 		}
@@ -793,7 +793,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 
 		// check security context on TE Deployment
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
-		for _, dep:= range testlib.SplitAndRenderDeployment(t, output, 1) {
+		for _, dep := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			securityContext := dep.Spec.Template.Spec.SecurityContext
 			assert.Nil(t, securityContext)
 		}
@@ -802,9 +802,9 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testEnabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.securityContext.enabled": "true",
+				"database.securityContext.enabled":          "true",
 			},
 		}
 
@@ -832,11 +832,11 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testRunAsNonRootGroup", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
-				"database.sm.noHotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":    "true",
+				"database.sm.noHotCopy.journalPath.enabled":  "true",
 				"database.securityContext.runAsNonRootGroup": "true",
-				"database.securityContext.runAsUser": "5555",
-				"database.securityContext.fsGroup": "1234",
+				"database.securityContext.runAsUser":         "5555",
+				"database.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -866,10 +866,10 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testFsGroupOnly", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.securityContext.fsGroupOnly": "true",
-				"database.securityContext.fsGroup": "1234",
+				"database.securityContext.fsGroupOnly":      "true",
+				"database.securityContext.fsGroup":          "1234",
 			},
 		}
 
@@ -899,12 +899,12 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testEnabledPrecedence", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
-				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.securityContext.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":    "true",
+				"database.sm.noHotCopy.journalPath.enabled":  "true",
+				"database.securityContext.enabled":           "true",
 				"database.securityContext.runAsNonRootGroup": "true",
-				"database.securityContext.runAsUser": "5555",
-				"database.securityContext.fsGroup": "1234",
+				"database.securityContext.runAsUser":         "5555",
+				"database.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -932,12 +932,12 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testRunAsNonRootGroupPrecedence", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
-				"database.sm.noHotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":    "true",
+				"database.sm.noHotCopy.journalPath.enabled":  "true",
 				"database.securityContext.runAsNonRootGroup": "true",
-				"database.securityContext.fsGroupOnly": "true",
-				"database.securityContext.runAsUser": "5555",
-				"database.securityContext.fsGroup": "1234",
+				"database.securityContext.fsGroupOnly":       "true",
+				"database.securityContext.runAsUser":         "5555",
+				"database.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -972,7 +972,7 @@ func TestDatabaseInitContainers(t *testing.T) {
 	t.Run("testDefault", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
 			},
 		}
@@ -1011,9 +1011,9 @@ func TestDatabaseInitContainers(t *testing.T) {
 	t.Run("testRunInitDiskAsNonRoot", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.initContainers.runInitDisk": "true",
+				"database.initContainers.runInitDisk":       "true",
 				"database.initContainers.runInitDiskAsRoot": "false",
 			},
 		}
@@ -1048,9 +1048,9 @@ func TestDatabaseInitContainers(t *testing.T) {
 	t.Run("testDisabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.initContainers.runInitDisk": "false",
+				"database.initContainers.runInitDisk":       "false",
 			},
 		}
 

@@ -71,7 +71,6 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
-        {{- include "sc.containerSecurityContext" . | indent 8 }}
         resources:
 {{ toYaml .Values.database.initContainers.resources | trim | indent 10 }}
         volumeMounts:
@@ -110,8 +109,8 @@ spec:
           - "--database-options"
           - "{{- include "opt.key-values" . }}"
     {{- end }}
-    {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
+    {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -449,7 +448,6 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
-        {{- include "sc.containerSecurityContext" . | indent 8 }}
         resources:
 {{ toYaml .Values.database.initContainers.resources | trim | indent 10 }}
         volumeMounts:
@@ -483,8 +481,8 @@ spec:
           - "--database-options"
           - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{ end}}"
 {{- end}}
-    {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
+    {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME

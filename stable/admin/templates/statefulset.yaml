@@ -69,7 +69,6 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
-        {{- include "sc.containerSecurityContext" . | indent 8 }}
         volumeMounts:
         - name: raftlog
           mountPath: /mnt/vardir

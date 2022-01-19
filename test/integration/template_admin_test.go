@@ -100,7 +100,7 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.securityContext.capabilities":    "[ NET_ADMIN ]",
+			"admin.securityContext.capabilities[0]": "NET_ADMIN",
 			"admin.envFrom.configMapRef[0]":         "test-config",
 			"admin.options.leaderAssignmentTimeout": "30000",
 		},
@@ -551,8 +551,8 @@ func TestAdminSecurityContext(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"admin.securityContext.runAsNonRootGroup": "true",
-				"admin.securityContext.runAsUser": "5555",
-				"admin.securityContext.fsGroup": "1234",
+				"admin.securityContext.runAsUser":         "5555",
+				"admin.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -571,7 +571,7 @@ func TestAdminSecurityContext(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"admin.securityContext.fsGroupOnly": "true",
-				"admin.securityContext.fsGroup": "1234",
+				"admin.securityContext.fsGroup":     "1234",
 			},
 		}
 
@@ -589,10 +589,10 @@ func TestAdminSecurityContext(t *testing.T) {
 	t.Run("testEnabledPrecedence", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"admin.securityContext.enabled": "true",
+				"admin.securityContext.enabled":           "true",
 				"admin.securityContext.runAsNonRootGroup": "true",
-				"admin.securityContext.runAsUser": "5555",
-				"admin.securityContext.fsGroup": "1234",
+				"admin.securityContext.runAsUser":         "5555",
+				"admin.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -610,9 +610,9 @@ func TestAdminSecurityContext(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"admin.securityContext.runAsNonRootGroup": "true",
-				"admin.securityContext.fsGroupOnly": "true",
-				"admin.securityContext.runAsUser": "5555",
-				"admin.securityContext.fsGroup": "1234",
+				"admin.securityContext.fsGroupOnly":       "true",
+				"admin.securityContext.runAsUser":         "5555",
+				"admin.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -666,7 +666,7 @@ func TestAdminInitContainers(t *testing.T) {
 	t.Run("testRunInitDiskAsNonRoot", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"admin.initContainers.runInitDisk": "true",
+				"admin.initContainers.runInitDisk":       "true",
 				"admin.initContainers.runInitDiskAsRoot": "false",
 			},
 		}
