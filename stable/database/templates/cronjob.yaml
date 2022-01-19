@@ -74,7 +74,7 @@ spec:
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
-            {{- include "sc.podSecurityContext" . | indent 12 }}
+            {{- include "sc.containerSecurityContext" . | indent 12 }}
             resources:
 {{ toYaml .Values.database.sm.hotCopy.jobResources | trim | indent 14 }}
             volumeMounts:
@@ -167,7 +167,7 @@ spec:
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
-            {{- include "sc.podSecurityContext" . | indent 12 }}
+            {{- include "sc.containerSecurityContext" . | indent 12 }}
             resources:
 {{ toYaml .Values.database.sm.hotCopy.jobResources | trim | indent 14 }}
             volumeMounts:
@@ -262,7 +262,7 @@ spec:
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
-            {{- include "sc.podSecurityContext" . | indent 12 }}
+            {{- include "sc.containerSecurityContext" . | indent 12 }}
             resources:
 {{ toYaml .Values.database.sm.hotCopy.jobResources | trim | indent 14 }}
             volumeMounts:

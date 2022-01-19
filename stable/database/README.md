@@ -191,12 +191,15 @@ The following tables list the configurable parameters of the `database` chart an
 | `rootPassword` | Database root password | `secret` |
 | `initContainers.runInitDisk` | Whether to run the `init-disk` init container to set volume permissions | `true` |
 | `initContainers.runInitDiskAsRoot` | Whether to run the `init-disk` init container as root | `true` |
+| `initContainers.resources` | Kubernetes resource requests and limits set on the database init containers | `{}` |
 | `securityContext.fsGroupOnly` | Creates a security context for Pods containing only the `securityContext.fsGroup` value | `false` |
 | `securityContext.runAsNonRootGroup` | Creates a security context for Pods containing a non-root user and group (1000:1000) along with the `securityContext.fsGroup` value | `false` |
 | `securityContext.enabled` | Creates a security context for Pods containing the `securityContext.runAsUser` and `securityContext.fsGroup` values | `false` |
 | `securityContext.runAsUser` | The user ID for the Pod security context created if `securityContext.enabled` is `true`. | `1000` |
 | `securityContext.fsGroup` | The `fsGroup` for the Pod security context created if any of `securityContext.fsGroupOnly`, `securityContext.runAsNonRootGroup`, or `securityContext.enabled` are `true`. | `1000` |
-| `securityContext.capabilities` | Capabilities to add to engine container security context | `[]` |
+| `securityContext.capabilities` | Capabilities for to engine container security context | `{ add: [], drop: [] }` |
+| `securityContext.privileged` | Run the NuoDB database containers in privileged mode. Processes in privileged containers are essentially equivalent to root on the host | `false` |
+| `securityContext.allowPrivilegeEscalation` | Whether a process can gain more privileges than its parent process. This boolean directly controls if the `no_new_privs` flag will be set on the container process | `false` |
 | `env` | Import ENV vars inside containers | `[]` |
 | `envFrom` | Import ENV vars from configMap(s) | `[]` |
 | `lbConfig.prefilter` | Database load balancer prefilter expression | `nil` |
@@ -228,6 +231,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.successHistory` | Number of successful Jobs to keep | `5` |
 | `sm.hotCopy.failureHistory` | Number of failed jobs to keep | `5` |
 | `sm.hotCopy.backupDir` | Directory path where backupsets will be stored | `/var/opt/nuodb/backup` |
+| `sm.hotCopy.jobResources` | Kubernetes resource requests and limits set on the backup jobs | `{}` |
 | `sm.hotCopy.backupGroupPrefix` | Prefix for the automatically generated backup groups | `{{ .Values.cloud.cluster.name }}` |
 | `sm.hotCopy.backupGroups` | Backup groups configuration. By default a backup group per HCSM is created automatically | `{}` |
 | `sm.hotCopy.backupGroups.<name>.labels` | Space separated process labels used to select the Storage Managers which are part of this backup group. _Any_ label key and value should match for the SM to be selected | `nil` |
@@ -329,6 +333,7 @@ The following tables list the configurable parameters for the `nuocollector` opt
 | `watcher.tag` | ConfigMap watcher container image tag | `0.1.259` |
 | `watcher.pullPolicy` | ConfigMap watcher container pull policy |`IfNotPresent`|
 | `plugins.database` | NuoDB Collector additional plugins for database services |`{}`|
+| `resources` | Kubernetes resource requests and limits used for the nuocollector sidecar |`{}`|
 
 ### Running
 

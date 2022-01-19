@@ -159,12 +159,14 @@ Get fsGroupChangePolicy if Kubernetes version supports it
 {{- end -}}
 
 {{/*
-Render podSecutiryContext object for containers
+Get the Container securityContext (core/v1/SecurityContext)
 */}}
-{{- define "sc.podSecurityContext" }}
+{{- define "sc.containerSecurityContext" }}
+{{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
 securityContext:
   privileged: {{ include "defaultfalse" .Values.database.securityContext.privileged }}
   allowPrivilegeEscalation: {{ include "defaultfalse" .Values.database.securityContext.allowPrivilegeEscalation }}
+{{- end }}
 {{- end -}}
 
 {{/*

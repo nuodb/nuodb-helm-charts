@@ -124,7 +124,7 @@ imagePullSecrets:
 {{- end -}}
 
 {{/*
-Get Pod securityContext
+Get Pod securityContext (core/v1/PodSecurityContext)
 */}}
 {{- define "securityContext" -}}
 {{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
@@ -156,23 +156,37 @@ Get fsGroupChangePolicy if Kubernetes version supports it
 {{- end -}}
 
 {{/*
-Render podSecutiryContext object for containers
+Get the Container securityContext (core/v1/SecurityContext)
 */}}
-{{- define "sc.podSecurityContext" }}
+{{- define "sc.containerSecurityContext" }}
 securityContext:
   privileged: {{ include "defaultfalse" .Values.database.securityContext.privileged }}
   allowPrivilegeEscalation: {{ include "defaultfalse" .Values.database.securityContext.allowPrivilegeEscalation }}
+  {{- include "sc.capabilities" . | indent 2 }}
 {{- end -}}
 
 {{/*
 Get container securityContext defining capabilities
 */}}
-{{- define "database.capabilities" -}}
-{{- with .Values.database.securityContext.capabilities }}
-securityContext:
-  capabilities:
-    add: {{ . }}
-{{- end }}
+{{- define "sc.capabilities" -}}
+  {{- if .Values.database.securityContext.capabilities }}
+    {{- if typeIs "[]interface {}" .Values.database.securityContext.capabilities }}
+capabilities:
+      {{- with .Values.database.securityContext.capabilities }}
+  add: {{ . }}
+      {{- end }}
+    {{- else if or .Values.database.securityContext.capabilities.add .Values.database.securityContext.capabilities.drop }}
+capabilities:
+      {{- if .Values.database.securityContext.capabilities.add }}
+  add:
+{{ toYaml .Values.database.securityContext.capabilities.add | trim | indent 4 }}
+      {{- end }}
+      {{- if .Values.database.securityContext.capabilities.drop }}
+  drop:
+{{ toYaml .Values.database.securityContext.capabilities.drop | trim | indent 4 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end -}}
 
 {{/*

@@ -66,12 +66,6 @@ nuodb:
   # the name of the ServiceAccount to use for all NuoDB Pods
   serviceAccount: nuodb
 
-  addServiceAccount: true
-  # unless set to false, a Role and RoleBinding named "nuodb-kube-inspector"
-  # that grants access to Pods, PersistentVolumeClaims, PersistentVolumes, and
-  # StatefulSets is added to nuodb.serviceAccount
-  addRoleBinding: true
-
 admin:
   # domain is the name of the NuoDB administration domain (e.g. the cluster name)
   domain: nuodb
@@ -151,6 +145,10 @@ database:
     # default user for the init-disk container image (busybox) will be used.
     runInitDiskAsRoot: true
 
+    # Kubernetes resource requests and limits set on the init containers
+    # Ref: http://kubernetes.io/docs/user-guide/compute-resources/
+    resources: {}
+
   securityContext:
     # Whether to create a security context for Pods containing only the fsGroup
     # value defined below. This is less restrictive than runAsNonRootGroup,
@@ -183,9 +181,19 @@ database:
     fsGroup: 1000
 
     # Specify additional container capabilities such as "NET_ADMIN"
-    capabilities: []
+    # Object of type Capabilities v1 core
+    # ref: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#capabilities-v1-core
+    capabilities:
+      add: []
+      drop: []
 
+    # Run container in privileged mode. Processes in privileged containers are
+    # essentially equivalent to root on the host
     privileged: false
+
+    # Whether a process can gain more privileges than its parent process. This
+    # bool directly controls if the "no_new_privs" flag will be set on the
+    # container process
     allowPrivilegeEscalation: false
 
   ## Import Environment Variables inside containers
@@ -292,6 +300,8 @@ database:
       successHistory: 5
       failureHistory: 5
 
+      # Kubernetes resource requests and limits set on the backup jobs;
+      # Ref: http://kubernetes.io/docs/user-guide/compute-resources/
       jobResources: {}
 
       backupDir: /var/opt/nuodb/backup
@@ -513,6 +523,12 @@ nuocollector:
     repository: kiwigrid/k8s-sidecar
     tag: 1.10.8
     pullPolicy: IfNotPresent
+
+  # Kubernetes resource requests and limits used for the nuocollector sidecar
+  # container
+  # ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  resources: {}
+
   plugins:
     ## NuoDB Collector compatible plugins specific for database services
     database: {}

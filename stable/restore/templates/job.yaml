@@ -59,7 +59,7 @@ spec:
         - { name: NUODB_RESTORE_URL,   value: "{{ include "restore.source" . }}" }
         - { name: NUODB_RESTORE_CREDENTIALS, value: "{{ .Values.restore.credentials }}" }
         - { name: NUODB_RESTORE_REQUEST_STRIP_LEVELS, value: {{ default "1" .Values.restore.stripLevels | quote }} }
-        {{- include "sc.podSecurityContext" . | indent 8 }}
+        {{- include "sc.containerSecurityContext" . | indent 8 }}
         resources:
 {{ toYaml .Values.restore.resources | trim | indent 10 }}
         volumeMounts:

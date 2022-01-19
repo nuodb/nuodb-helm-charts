@@ -94,7 +94,13 @@ database:
     # write, and execute files with permissions 440, 660, and 770.
     fsGroup: 1000
 
+    # Run container in privileged mode. Processes in privileged containers are
+    # essentially equivalent to root on the host
     privileged: false
+
+    # Whether a process can gain more privileges than its parent process. This
+    # bool directly controls if the "no_new_privs" flag will be set on the
+    # container process
     allowPrivilegeEscalation: false
 
 restore:
@@ -170,5 +176,7 @@ restore:
   
   timeout: 1800
 
+  # Kubernetes resource requests and limits set on the restore job container
+  # Ref: http://kubernetes.io/docs/user-guide/compute-resources/
   resources: {}
 

@@ -43,9 +43,9 @@ spec:
         domain: {{ .Values.admin.domain }}
         group: nuodb
     spec:
-      {{- if or (not (hasKey .Values.nuodb "addServiceAccount")) .Values.nuodb.addServiceAccount }}
+      {{- if .Values.nuodb.serviceAccount }}
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
-      {{- end -}}
+      {{- end }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
@@ -69,7 +69,7 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
-        {{- include "sc.podSecurityContext" . | indent 8 }}
+        {{- include "sc.containerSecurityContext" . | indent 8 }}
         volumeMounts:
         - name: raftlog
           mountPath: /mnt/vardir
@@ -85,7 +85,6 @@ spec:
       - name: admin
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "admin.capabilities" . | indent 8 }}
         ports:
         - { containerPort: 8888,  protocol: TCP }
         - { containerPort: 48004, protocol: TCP }
@@ -143,7 +142,7 @@ spec:
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
           {{- end}}
-        {{- include "sc.podSecurityContext" . | indent 8 }}
+        {{- include "sc.containerSecurityContext" . | indent 8 }}
         livenessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15

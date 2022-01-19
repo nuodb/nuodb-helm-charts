@@ -42,7 +42,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
-      {{- if or (not (hasKey .Values.nuodb "addServiceAccount")) .Values.nuodb.addServiceAccount }}
+      {{- if .Values.nuodb.serviceAccount }}
       serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
       {{- end }}
       {{- include "securityContext" . | indent 6 }}
@@ -80,7 +80,6 @@ spec:
       - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "database.capabilities" . | indent 8 }}
         args:
           - "nuote"
           - "--database-created-timeout"
@@ -94,7 +93,7 @@ spec:
           - "{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}"
         {{- end }}
     {{- include "database.otherOptions" .Values.database.te.otherOptions | indent 10 }}
-    {{- include "sc.podSecurityContext" . | indent 8 }}
+    {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
           - name: NODE_NAME

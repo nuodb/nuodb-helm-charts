@@ -5,6 +5,9 @@
   image: {{ template "nuocollector.image" . }}
   imagePullPolicy: {{ .Values.nuocollector.image.pullPolicy }}
   tty: true
+  resources:
+{{ toYaml .Values.nuocollector.resources | trim | indent 4 }}
+  {{- include "sc.containerSecurityContext" . | indent 2 }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
     name: nuocollector-config
@@ -13,6 +16,9 @@
 - name: nuocollector-config
   image: {{ template "nuocollector.watcher" . }}
   imagePullPolicy: {{ .Values.nuocollector.watcher.pullPolicy }}
+  resources:
+{{ toYaml .Values.nuocollector.resources | trim | indent 4 }}
+  {{- include "sc.containerSecurityContext" . | indent 2 }}
   env:
   - name: LABEL
     value: "nuodb.com/nuocollector-plugin in ({{ template "database.fullname" $ }}, insights)"

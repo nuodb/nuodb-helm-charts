@@ -64,7 +64,9 @@ nuodb:
   # the name of the ServiceAccount to use for all NuoDB Pods
   serviceAccount: nuodb
 
+  # unless set to false, a new service account will be created
   addServiceAccount: true
+
   # unless set to false, a Role and RoleBinding named "nuodb-kube-inspector"
   # that grants access to Pods, PersistentVolumeClaims, PersistentVolumes, and
   # StatefulSets is added to nuodb.serviceAccount
@@ -188,9 +190,19 @@ admin:
     fsGroup: 1000
 
     # Specify additional container capabilities such as "NET_ADMIN"
-    capabilities: []
+    # Object of type Capabilities v1 core
+    # ref: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#capabilities-v1-core
+    capabilities:
+      add: []
+      drop: []
 
+    # Run container in privileged mode. Processes in privileged containers are
+    # essentially equivalent to root on the host
     privileged: false
+
+    # Whether a process can gain more privileges than its parent process. This
+    # bool directly controls if the "no_new_privs" flag will be set on the
+    # container process
     allowPrivilegeEscalation: false
 
   ## Specify one or more configMaps to import Environment Variables from
@@ -330,6 +342,12 @@ nuocollector:
     repository: kiwigrid/k8s-sidecar
     tag: 1.10.8
     pullPolicy: IfNotPresent
+
+  # Kubernetes resource requests and limits used for the nuocollector sidecar
+  # container
+  # ref: http://kubernetes.io/docs/user-guide/compute-resources/
+  resources: {}
+
   plugins:
     ## NuoDB Collector compatible plugins specific for admin services
     admin: {}
