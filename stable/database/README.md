@@ -197,6 +197,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `securityContext.enabled` | Creates a security context for Pods containing the `securityContext.runAsUser` and `securityContext.fsGroup` values | `false` |
 | `securityContext.runAsUser` | The user ID for the Pod security context created if `securityContext.enabled` is `true`. | `1000` |
 | `securityContext.fsGroup` | The `fsGroup` for the Pod security context created if any of `securityContext.fsGroupOnly`, `securityContext.runAsNonRootGroup`, or `securityContext.enabled` are `true`. | `1000` |
+| `securityContext.enabledOnContainer` | Whether to create SecurityContext for containers | `false` |
 | `securityContext.capabilities` | Capabilities for to engine container security context | `{ add: [], drop: [] }` |
 | `securityContext.privileged` | Run the NuoDB database containers in privileged mode. Processes in privileged containers are essentially equivalent to root on the host | `false` |
 | `securityContext.allowPrivilegeEscalation` | Whether a process can gain more privileges than its parent process. This boolean directly controls if the `no_new_privs` flag will be set on the container process | `false` |

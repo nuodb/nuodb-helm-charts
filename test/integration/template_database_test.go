@@ -350,8 +350,9 @@ func TestDatabaseVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.securityContext.capabilities[0]": "NET_ADMIN",
-			"database.envFrom.configMapRef[0]":         "test-config",
+			"database.securityContext.enabledOnContainer": "true",
+			"database.securityContext.capabilities[0]":    "NET_ADMIN",
+			"database.envFrom.configMapRef[0]":            "test-config",
 		},
 	}
 

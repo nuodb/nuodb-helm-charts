@@ -180,6 +180,9 @@ database:
     # write, and execute files with permissions 440, 660, and 770.
     fsGroup: 1000
 
+    # Whether to create SecurityContext for containers
+    enabledOnContainer: false
+
     # Specify additional container capabilities such as "NET_ADMIN"
     # Object of type Capabilities v1 core
     # ref: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.22/#capabilities-v1-core

@@ -100,9 +100,10 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.securityContext.capabilities[0]": "NET_ADMIN",
-			"admin.envFrom.configMapRef[0]":         "test-config",
-			"admin.options.leaderAssignmentTimeout": "30000",
+			"admin.securityContext.enabledOnContainer": "true",
+			"admin.securityContext.capabilities[0]":    "NET_ADMIN",
+			"admin.envFrom.configMapRef[0]":            "test-config",
+			"admin.options.leaderAssignmentTimeout":    "30000",
 		},
 	}
 
