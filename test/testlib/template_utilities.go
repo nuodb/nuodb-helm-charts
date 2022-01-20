@@ -2,9 +2,10 @@ package testlib
 
 import (
 	"fmt"
-	"k8s.io/api/batch/v1beta1"
 	"strings"
 	"testing"
+
+	"k8s.io/api/batch/v1beta1"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -328,6 +329,28 @@ func SplitAndRenderRole(t *testing.T, output string, expectedNrObjects int) []rb
 
 		if strings.Contains(part, fmt.Sprintf("kind: %s", "Role")) {
 			var obj rbacv1.Role
+			helm.UnmarshalK8SYaml(t, part, &obj)
+
+			objects = append(objects, obj)
+		}
+	}
+
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
+
+	return objects
+}
+
+func SplitAndRenderServiceAccount(t *testing.T, output string, expectedNrObjects int) []v1.ServiceAccount {
+	objects := make([]v1.ServiceAccount, 0)
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if strings.Contains(part, fmt.Sprintf("kind: %s", "ServiceAccount")) {
+			var obj v1.ServiceAccount
 			helm.UnmarshalK8SYaml(t, part, &obj)
 
 			objects = append(objects, obj)

@@ -767,3 +767,65 @@ func TestAdminInitContainers(t *testing.T) {
 		}
 	})
 }
+
+func TestAdminServiceAccount(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testCreated", func(t *testing.T) {
+		output := helm.RenderTemplate(t, &helm.Options{}, helmChartPath,
+			"release-name", []string{"templates/serviceaccount.yaml", "templates/statefulset.yaml"})
+
+		// Verify that nuodb ServiceAccount is created
+		for _, obj := range testlib.SplitAndRenderServiceAccount(t, output, 1) {
+			assert.Equal(t, "nuodb", obj.Name)
+		}
+
+		// Verify that the correct service account name is used by the admin Pods
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Equal(t, "nuodb", obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
+	t.Run("testNotCreated", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.addServiceAccount": "false",
+			},
+		}
+
+		// nuodb ServiceAccount is not created; a template file passed with
+		// "--show-only" is checked by Helm after rendering so expect an error;
+		// ref: https://github.com/helm/helm/issues/7295
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/serviceaccount.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "could not find template templates/serviceaccount.yaml in chart")
+
+		// it is expected for the nuodb ServiceAccout to be pre-created
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Equal(t, "nuodb", obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
+	t.Run("testDefaultServiceAccount", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.addServiceAccount": "false",
+				"nuodb.serviceAccount":    "",
+			},
+		}
+
+		// nuodb ServiceAccount is not created
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/serviceaccount.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "could not find template templates/serviceaccount.yaml in chart")
+
+		// the default ServiceAccount for the namespace will be used
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
+}

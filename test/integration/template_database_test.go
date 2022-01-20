@@ -1174,3 +1174,45 @@ func TestDatabaseInitContainers(t *testing.T) {
 		}
 	})
 }
+
+func TestDatabaseServiceAccount(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	t.Run("testUsage", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.serviceAccount": "foo",
+			},
+		}
+
+		// correct ServiceAccount is used
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml", "templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			assert.Equal(t, "foo", obj.Spec.Template.Spec.ServiceAccountName)
+		}
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "foo", obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
+	t.Run("testDefaultServiceAccount", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.serviceAccount": "",
+			},
+		}
+
+		// the default ServiceAccount for the namespace will be used
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml", "templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
+}
