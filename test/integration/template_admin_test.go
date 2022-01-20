@@ -528,6 +528,8 @@ func TestAdminSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			securityContext := obj.Spec.Template.Spec.SecurityContext
 			assert.Nil(t, securityContext)
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.Nil(t, containerSecurityContext)
 		}
 	})
 
@@ -625,6 +627,74 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
 			assert.Equal(t, int64(1000), *securityContext.RunAsGroup)
 			assert.Equal(t, int64(1234), *securityContext.FSGroup)
+		}
+	})
+
+	t.Run("testContainerEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.False(t, *containerSecurityContext.Privileged)
+			assert.False(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+	})
+
+	t.Run("testContainerPrivileged", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer":       "true",
+				"admin.securityContext.privileged":               "true",
+				"admin.securityContext.allowPrivilegeEscalation": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.True(t, *containerSecurityContext.Privileged)
+			assert.True(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+	})
+
+	t.Run("testCapabilitiesAdd", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer":  "true",
+				"admin.securityContext.capabilities.add[0]": "NET_ADMIN",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Contains(t, containerSecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+			assert.Nil(t, containerSecurityContext.Capabilities.Drop)
+		}
+	})
+
+	t.Run("testCapabilitiesDrop", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer":   "true",
+				"admin.securityContext.capabilities.drop[0]": "CAP_NET_RAW",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
+			assert.Nil(t, containerSecurityContext.Capabilities.Add)
 		}
 	})
 }

@@ -18,6 +18,8 @@ import (
 func checkSidecarContainers(t *testing.T, containers []v1.Container, options *helm.Options, chartPath string) {
 	require.NotEmpty(t, containers)
 	found := 0
+	securityContextEnabled := options.SetValues["admin.securityContext.enabledOnContainer"] == "true" ||
+		options.SetValues["database.securityContext.enabledOnContainer"] == "true"
 
 	for _, container := range containers {
 		t.Logf("Inspecting container %s in chart %s", container.Name, chartPath)
@@ -64,6 +66,11 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 			Name:      "log-volume",
 			MountPath: "/var/log/nuodb",
 		})
+		if securityContextEnabled {
+			assert.NotNil(t, container.SecurityContext)
+		} else {
+			assert.Nil(t, container.SecurityContext)
+		}
 	}
 
 	expectedContainersCount := 0
@@ -223,5 +230,22 @@ func TestNuoDBCollectorPluginsRendered(t *testing.T) {
 		checkPluginsRendered(t, configMaps, options, helmChartPath, 1)
 
 	})
+}
 
+func TestNuoDBCollectorSidecarsSecurityContext(t *testing.T) {
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.securityContext.enabledOnContainer":    "true",
+			"database.securityContext.enabledOnContainer": "true",
+			"nuocollector.enabled":                        "true",
+			"nuocollector.image.registry":                 "docker.io",
+			"nuocollector.image.repository":               "nuodb/nuocd",
+			"nuocollector.image.tag":                      "1.0.0",
+			"nuocollector.watcher.registry":               "docker.io",
+			"nuocollector.watcher.repository":             "kiwigrid/k8s-sidecar",
+			"nuocollector.watcher.tag":                    "latest",
+		},
+	}
+	executeSidecarTests(t, options)
 }
