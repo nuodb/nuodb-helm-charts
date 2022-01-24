@@ -120,9 +120,11 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 		"-p", "{\"spec\" : {\"suspend\" : true }}")
 	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "incremental-hotcopy-demo-cluster0-0",
 		"-p", "{\"spec\" : {\"suspend\" : true }}")
-	// Execute initial backup
+	// Execute initial backup for all backup groups
 	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	backupGroup1 := fmt.Sprintf("%s-1", opt.ClusterName)
 	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
+	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup1)
 	// restarting one of the SMs will disable journal backup temporary until
 	// full or incremental are requested and complete
 	smPod0 := testlib.GetPod(t, namespaceName, smPodName0)
