@@ -71,6 +71,10 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 		} else {
 			assert.Nil(t, container.SecurityContext)
 		}
+		testlib.AssertResourceValue(t, options, "nuocollector.resources.limits.cpu", container.Resources.Limits.Cpu())
+		testlib.AssertResourceValue(t, options, "nuocollector.resources.limits.memory", container.Resources.Limits.Memory())
+		testlib.AssertResourceValue(t, options, "nuocollector.resources.requests.cpu", container.Resources.Requests.Cpu())
+		testlib.AssertResourceValue(t, options, "nuocollector.resources.requests.memory", container.Resources.Requests.Memory())
 	}
 
 	expectedContainersCount := 0
@@ -245,6 +249,27 @@ func TestNuoDBCollectorSidecarsSecurityContext(t *testing.T) {
 			"nuocollector.watcher.registry":               "docker.io",
 			"nuocollector.watcher.repository":             "kiwigrid/k8s-sidecar",
 			"nuocollector.watcher.tag":                    "latest",
+		},
+	}
+	executeSidecarTests(t, options)
+}
+
+func TestNuoDBCollectorResources(t *testing.T) {
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.securityContext.enabledOnContainer":    "true",
+			"database.securityContext.enabledOnContainer": "true",
+			"nuocollector.enabled":                        "true",
+			"nuocollector.image.registry":                 "docker.io",
+			"nuocollector.image.repository":               "nuodb/nuocd",
+			"nuocollector.image.tag":                      "1.0.0",
+			"nuocollector.watcher.registry":               "docker.io",
+			"nuocollector.watcher.repository":             "kiwigrid/k8s-sidecar",
+			"nuocollector.watcher.tag":                    "latest",
+			"nuocollector.resources.limits.cpu":           "100m",
+			"nuocollector.resources.limits.memory":        "128Mi",
+			"nuocollector.resources.requests.cpu":         "100m",
+			"nuocollector.resources.requests.memory":      "128Mi",
 		},
 	}
 	executeSidecarTests(t, options)

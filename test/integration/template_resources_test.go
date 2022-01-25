@@ -126,15 +126,20 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":    "1",
-			"database.sm.resources.requests.memory": "4Gi",
-			"database.sm.noHotCopy.replicas":        strconv.Itoa(noHotCopyReplicas),
-			"database.sm.hotCopy.replicas":          strconv.Itoa(hotcopyReplicas),
+			"database.sm.resources.requests.cpu":                "1",
+			"database.sm.resources.requests.memory":             "4Gi",
+			"database.initContainers.resources.requests.memory": "128Mi",
+			"database.initContainers.resources.limits.cpu":      "100m",
+			"database.sm.hotCopy.jobResources.limits.cpu":       "100m",
+			"database.sm.hotCopy.jobResources.requests.memory":  "128Mi",
+			"database.sm.noHotCopy.replicas":                    strconv.Itoa(noHotCopyReplicas),
+			"database.sm.hotCopy.replicas":                      strconv.Itoa(hotcopyReplicas),
 		},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",
+		[]string{"templates/statefulset.yaml", "templates/cronjob.yaml"})
 
 	foundBackupEnabled := false
 	foundBackupDisabled := false
@@ -164,6 +169,20 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 			assert.EqualValues(t, noHotCopyReplicas, *obj.Spec.Replicas)
 			foundBackupDisabled = true
 		}
+		// verify that init container is configured with requested resources
+		initContainer := obj.Spec.Template.Spec.InitContainers[0]
+		testlib.AssertResourceValue(t, options, "database.initContainers.resources.limits.cpu",
+			initContainer.Resources.Limits.Cpu())
+		testlib.AssertResourceValue(t, options, "database.initContainers.resources.requests.memory",
+			initContainer.Resources.Requests.Memory())
+	}
+
+	for _, obj := range testlib.SplitAndRenderCronJob(t, output, 2) {
+		container := obj.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+		testlib.AssertResourceValue(t, options, "database.sm.hotCopy.jobResources.limits.cpu",
+			container.Resources.Limits.Cpu())
+		testlib.AssertResourceValue(t, options, "database.sm.hotCopy.jobResources.requests.memory",
+			container.Resources.Requests.Memory())
 	}
 
 	assert.True(t, foundBackupEnabled)
