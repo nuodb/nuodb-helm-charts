@@ -238,6 +238,14 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup0)
 	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup1)
 
+	// multiple restore operations with autoRestart=true may cause containers to
+	// be reported as "CrashLoopBackOff" although the engines will exit with
+	// zero return code; currently it's not possible to configure the
+	// maxBackoffTime in kubelet so monitor and restart such pods
+	testlib.StartBackgroundTask(testlib.TEARDOWN_ADMIN, func() {
+		testlib.DeleteCrashLoopBackOffPods(t, namespaceName, true)
+	})
+
 	t.Run("restoreToLatest", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		// Execute backup for backup group 1
@@ -250,8 +258,8 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		// HCSM with ordinal 0 should not be selected for restore
-		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
-			"Waiting for database restore to complete", &corev1.PodLogOptions{}), 1)
+		require.Equal(t, 0, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
+			"Restoring ", &corev1.PodLogOptions{}))
 		// verify that the correct backupset is used to restore the archive of
 		// HCSM with ordinal 1
 		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
@@ -277,8 +285,8 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		// HCSM with ordinal 1 should not be selected for restore
-		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
-			"Waiting for database restore to complete", &corev1.PodLogOptions{}), 1)
+		require.Equal(t, 0, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
+			"Restoring ", &corev1.PodLogOptions{}))
 		// verify that the correct backupset is used to restore the archive of
 		// HCSM with ordinal 0
 		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
@@ -303,8 +311,8 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		// HCSM with ordinal 1 should not be selected for restore
-		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
-			"Waiting for database restore to complete", &corev1.PodLogOptions{}), 1)
+		require.Equal(t, 0, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
+			"Restoring ", &corev1.PodLogOptions{}))
 		// verify that the correct backupset is used to restore the archive of
 		// HCSM with ordinal 0
 		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
