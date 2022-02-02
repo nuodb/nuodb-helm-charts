@@ -97,14 +97,18 @@ func RestartDatabasePods(t *testing.T, namespaceName string, helmChartReleaseNam
 	hcSmPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy", helmChartReleaseName, opt.ClusterName, opt.DbName)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
 	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	var toDelete []string
+	tes := GetPodNames(t, namespaceName, tePodNameTemplate)
+	require.Equal(t, opt.NrTePods, len(tes), "Unexpected number of TE Pods")
+	toDelete = append(toDelete, tes...)
 	for i := 0; i < opt.NrSmHotCopyPods; i++ {
-		DeletePod(t, namespaceName, fmt.Sprintf("pod/%s-%d", hcSmPodNameTemplate, i))
+		toDelete = append(toDelete, fmt.Sprintf("%s-%d", hcSmPodNameTemplate, i))
 	}
 	for i := 0; i < opt.NrSmNoHotCopyPods; i++ {
-		DeletePod(t, namespaceName, fmt.Sprintf("pod/%s-%d", smPodNameTemplate, i))
+		toDelete = append(toDelete, fmt.Sprintf("%s-%d", smPodNameTemplate, i))
 	}
-	for _, te := range GetPodNames(t, namespaceName, tePodNameTemplate) {
-		DeletePod(t, namespaceName, "pod/"+te)
+	for _, podName := range toDelete {
+		DeletePod(t, namespaceName, "pod/"+podName)
 	}
 	AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, opt.NrTePods)
 	AwaitNrReplicasScheduled(t, namespaceName, smPodNameTemplate, opt.NrSmPods)
