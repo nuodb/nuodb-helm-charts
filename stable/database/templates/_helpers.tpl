@@ -181,11 +181,11 @@ capabilities:
 capabilities:
       {{- if .Values.database.securityContext.capabilities.add }}
   add:
-{{ toYaml .Values.database.securityContext.capabilities.add | trim | indent 4 }}
+        {{- toYaml .Values.database.securityContext.capabilities.add | trim | nindent 4 }}
       {{- end }}
       {{- if .Values.database.securityContext.capabilities.drop }}
   drop:
-{{ toYaml .Values.database.securityContext.capabilities.drop | trim | indent 4 }}
+        {{- toYaml .Values.database.securityContext.capabilities.drop | trim | nindent 4 }}
       {{- end }}
     {{- end }}
   {{- end }}

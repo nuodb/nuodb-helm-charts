@@ -189,11 +189,11 @@ capabilities:
 capabilities:
       {{- if .Values.admin.securityContext.capabilities.add }}
   add:
-{{ toYaml .Values.admin.securityContext.capabilities.add | trim | indent 4 }}
+        {{- toYaml .Values.admin.securityContext.capabilities.add | trim | nindent 4 }}
       {{- end }}
       {{- if .Values.admin.securityContext.capabilities.drop }}
   drop:
-{{ toYaml .Values.admin.securityContext.capabilities.drop | trim | indent 4 }}
+        {{- toYaml .Values.admin.securityContext.capabilities.drop | trim | nindent 4 }}
       {{- end }}
     {{- end }}
   {{- end }}

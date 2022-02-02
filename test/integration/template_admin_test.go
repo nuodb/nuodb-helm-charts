@@ -826,6 +826,24 @@ func TestAdminServiceAccount(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
 		}
+
+		options = &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.addServiceAccount": "false",
+				"nuodb.serviceAccount":    "null",
+			},
+		}
+
+		// nuodb ServiceAccount is not created
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/serviceaccount.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "could not find template templates/serviceaccount.yaml in chart")
+
+		// the default ServiceAccount for the namespace will be used
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
 	})
 
 }

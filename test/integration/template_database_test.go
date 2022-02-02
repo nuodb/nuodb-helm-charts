@@ -1213,6 +1213,22 @@ func TestDatabaseServiceAccount(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
 		}
+
+		options = &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.serviceAccount": "null",
+			},
+		}
+
+		// the default ServiceAccount for the namespace will be used
+		output = helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml", "templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
 	})
 
 }

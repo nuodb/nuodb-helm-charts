@@ -6,7 +6,7 @@
   imagePullPolicy: {{ .Values.nuocollector.image.pullPolicy }}
   tty: true
   resources:
-{{ toYaml .Values.nuocollector.resources | trim | indent 4 }}
+  {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
   {{- include "sc.containerSecurityContext" . | indent 2 }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
@@ -17,7 +17,7 @@
   image: {{ template "nuocollector.watcher" . }}
   imagePullPolicy: {{ .Values.nuocollector.watcher.pullPolicy }}
   resources:
-{{ toYaml .Values.nuocollector.resources | trim | indent 4 }}
+  {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
   {{- include "sc.containerSecurityContext" . | indent 2 }}
   env:
   - name: LABEL

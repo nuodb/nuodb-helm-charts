@@ -61,7 +61,7 @@ spec:
         - { name: NUODB_RESTORE_REQUEST_STRIP_LEVELS, value: {{ default "1" .Values.restore.stripLevels | quote }} }
         {{- include "sc.containerSecurityContext" . | indent 8 }}
         resources:
-{{ toYaml .Values.restore.resources | trim | indent 10 }}
+        {{- toYaml .Values.restore.resources | trim | nindent 10 }}
         volumeMounts:
         - name: log-volume
           mountPath: /var/log/nuodb

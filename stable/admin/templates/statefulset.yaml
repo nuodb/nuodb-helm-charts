@@ -43,9 +43,7 @@ spec:
         domain: {{ .Values.admin.domain }}
         group: nuodb
     spec:
-      {{- if .Values.nuodb.serviceAccount }}
-      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
-      {{- end }}
+      serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:

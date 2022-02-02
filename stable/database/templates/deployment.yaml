@@ -42,9 +42,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
-      {{- if .Values.nuodb.serviceAccount }}
-      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
-      {{- end }}
+      serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.te.nodeSelector }}
       nodeSelector:
