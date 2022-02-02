@@ -214,6 +214,10 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 			"database.te.logPersistence.enabled":    "true",
 			"database.env[0].name":                  "NUODB_DEBUG",
 			"database.env[0].value":                 "debug",
+			// multiple restore operations with autoRestart=true may cause
+			// containers to be reported as "CrashLoopBackOff" although the
+			// engines will exit with zero return code
+			"restore.autoRestart": "false",
 		},
 	}
 
@@ -238,14 +242,6 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup0)
 	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup1)
 
-	// multiple restore operations with autoRestart=true may cause containers to
-	// be reported as "CrashLoopBackOff" although the engines will exit with
-	// zero return code; currently it's not possible to configure the
-	// maxBackoffTime in kubelet so monitor and restart such pods
-	testlib.StartBackgroundTask(testlib.TEARDOWN_ADMIN, func() {
-		testlib.DeleteCrashLoopBackOffPods(t, namespaceName, true)
-	})
-
 	t.Run("restoreToLatest", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		// Execute backup for backup group 1
@@ -256,6 +252,8 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		// restore database
 		databaseOptions.SetValues["restore.source"] = ":latest"
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.RestartDatabasePods(t, namespaceName, databaseChartName, &databaseOptions)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrTePods+opt.NrSmPods)
 
 		// HCSM with ordinal 0 should not be selected for restore
 		require.Equal(t, 0, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName0,
@@ -283,6 +281,8 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		// restore database
 		databaseOptions.SetValues["restore.source"] = "cluster0-0:latest"
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.RestartDatabasePods(t, namespaceName, databaseChartName, &databaseOptions)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrTePods+opt.NrSmPods)
 
 		// HCSM with ordinal 1 should not be selected for restore
 		require.Equal(t, 0, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,
@@ -309,6 +309,8 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		// restore database
 		databaseOptions.SetValues["restore.source"] = "cluster0-0:2"
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
+		testlib.RestartDatabasePods(t, namespaceName, databaseChartName, &databaseOptions)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrTePods+opt.NrSmPods)
 
 		// HCSM with ordinal 1 should not be selected for restore
 		require.Equal(t, 0, testlib.GetStringOccurrenceInLog(t, namespaceName, hcSmPodName1,

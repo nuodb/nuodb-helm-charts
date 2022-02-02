@@ -92,6 +92,24 @@ func EnsureDatabaseNotRunning(t *testing.T, adminPod string, opt ExtractedOption
 	k8s.RunKubectl(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "check", "database", "--db-name", opt.DbName, "--num-processes", "0", "--timeout", "30")
 }
 
+func RestartDatabasePods(t *testing.T, namespaceName string, helmChartReleaseName string, options *helm.Options) {
+	opt := GetExtractedOptions(options)
+	hcSmPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	for i := 0; i < opt.NrSmHotCopyPods; i++ {
+		DeletePod(t, namespaceName, fmt.Sprintf("pod/%s-%d", hcSmPodNameTemplate, i))
+	}
+	for i := 0; i < opt.NrSmNoHotCopyPods; i++ {
+		DeletePod(t, namespaceName, fmt.Sprintf("pod/%s-%d", smPodNameTemplate, i))
+	}
+	for _, te := range GetPodNames(t, namespaceName, tePodNameTemplate) {
+		DeletePod(t, namespaceName, "pod/"+te)
+	}
+	AwaitNrReplicasScheduled(t, namespaceName, tePodNameTemplate, opt.NrTePods)
+	AwaitNrReplicasScheduled(t, namespaceName, smPodNameTemplate, opt.NrSmPods)
+}
+
 type DatabaseInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
 
 func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, options *helm.Options, installationStep DatabaseInstallationStep, awaitDatabase bool) (helmChartReleaseName string) {
