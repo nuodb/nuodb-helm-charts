@@ -442,6 +442,26 @@ database:
       # type: LoadBalancer
       # annotations: {}
     
+    ingress:
+      enabled: false
+      # the fully qualified domain name (FQDN) of the network host for SQL
+      # clients
+      hostname: ""
+      # For Kubernetes >= 1.18 the ingress class name should be specified via the
+      # ingressClassName option instead of using annotation
+      className: ""
+      # custom annotations that are set on the Ingress resource; SSL Passthrough
+      # feature should be configured so that SQL clients TLS connections are
+      # send directly to the Transaction Engines
+      annotations: 
+        ingress.kubernetes.io/ssl-passthrough: "true"
+      # Enable TLS termination in the ingress controller; it is recommended to
+      # use SSL Passthrough feature instead
+      tls: false
+      # the name of the secret used by Ingress controller to terminate the TLS
+      # traffic on port 443
+      secretName: ""
+
     ## By default, database clusterip and headless services for direct TE connections are enabled,
     ## but can be optionally disabled here
     dbServices: {}

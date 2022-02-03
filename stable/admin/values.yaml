@@ -129,25 +129,45 @@ admin:
   ingress:
     enabled: false
     api:
+      # the fully qualified domain name (FQDN) of the network host for the NuoDB
+      # Admin REST API
       hostname: ""
+      # path that is matched against the path of the incoming HTTP request
       path: /
-      # For Kubernetes >= 1.18 the ingress class name should be specified via the
-      # ingressClassName option instead of using annotation
+      # the associated IngressClass name defines which controller will implement
+      # the resource; for Kubernetes >= 1.18 the ingress class name should be
+      # specified via the className option instead of using annotation
       className: ""
-      annotations: {}
+      # custom annotations that are set on the Ingress resource; if NuoDB has
+      # TLS enabled, it is recommended that SSL Passthrough feature is
+      # configured which allows the controller to send the TLS connection
+      # directly to the NuoDB Admin instead of decrypting the communication
+      annotations: 
+        ingress.kubernetes.io/ssl-passthrough: "true"
+      # Enable TLS termination in the ingress controller; it is recommended to
+      # use SSL Passthrough feature instead
       tls: false
+      # the name of the secret used by Ingress controller to terminate the TLS
+      # traffic on port 443
       secretName: ""
-      suffix: "api"
     sql:
+      # the fully qualified domain name (FQDN) of the network host for SQL
+      # clients
       hostname: ""
       # For Kubernetes >= 1.18 the ingress class name should be specified via the
       # ingressClassName option instead of using annotation
       className: ""
+      # custom annotations that are set on the Ingress resource; SSL Passthrough
+      # feature should be configured so that SQL clients TLS connections are
+      # send directly to the NuoDB Admin
       annotations: 
-        ingress.kubernetes.io/ssl-passthrough: "true" 
+        ingress.kubernetes.io/ssl-passthrough: "true"
+      # Enable TLS termination in the ingress controller; it is recommended to
+      # use SSL Passthrough feature instead
       tls: false
+      # the name of the secret used by Ingress controller to terminate the TLS
+      # traffic on port 443
       secretName: ""
-      suffix: "sql"
 
   persistence:
     size: 1Gi
