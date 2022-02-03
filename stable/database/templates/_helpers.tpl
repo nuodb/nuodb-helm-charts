@@ -439,8 +439,6 @@ if Ingress is enabled
       {{- end }}
     {{- end }}
   {{- end }}
-  {{- with .Values.database.te.labels }}
 - "--labels"
-- "{{ $extraLabels }}{{ include "opt.key-values" . }}"
-  {{- end }}
+- "{{ $extraLabels }}{{ include "opt.key-values" .Values.database.te.labels }}"
 {{- end -}}
