@@ -126,6 +126,29 @@ admin:
   #   type: LoadBalancer
   #   annotations: {}
 
+  ingress:
+    enabled: false
+    api:
+      hostname: ""
+      path: /
+      # For Kubernetes >= 1.18 the ingress class name should be specified via the
+      # ingressClassName option instead of using annotation
+      className: ""
+      annotations: {}
+      tls: false
+      secretName: ""
+      suffix: "api"
+    sql:
+      hostname: ""
+      # For Kubernetes >= 1.18 the ingress class name should be specified via the
+      # ingressClassName option instead of using annotation
+      className: ""
+      annotations: 
+        ingress.kubernetes.io/ssl-passthrough: "true" 
+      tls: false
+      secretName: ""
+      suffix: "sql"
+
   persistence:
     size: 1Gi
     accessModes:
