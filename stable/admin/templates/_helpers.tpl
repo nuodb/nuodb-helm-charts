@@ -164,14 +164,39 @@ Get fsGroupChangePolicy if Kubernetes version supports it
 {{- end -}}
 
 {{/*
+Get the Container securityContext (core/v1/SecurityContext)
+*/}}
+{{- define "sc.containerSecurityContext" }}
+  {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabledOnContainer) "true" }}
+securityContext:
+  privileged: {{ include "defaultfalse" .Values.admin.securityContext.privileged }}
+  allowPrivilegeEscalation: {{ include "defaultfalse" .Values.admin.securityContext.allowPrivilegeEscalation }}
+  {{- include "sc.capabilities" . | indent 2 }}
+  {{- end }}
+{{- end -}}
+
+{{/*
 Get container securityContext defining capabilities
 */}}
-{{- define "admin.capabilities" -}}
-{{- with .Values.admin.securityContext.capabilities }}
-securityContext:
-  capabilities:
-    add: {{ . }}
-{{- end }}
+{{- define "sc.capabilities" -}}
+  {{- if .Values.admin.securityContext.capabilities }}
+    {{- if typeIs "[]interface {}" .Values.admin.securityContext.capabilities }}
+capabilities:
+      {{- with .Values.admin.securityContext.capabilities }}
+  add: {{ . }}
+      {{- end }}
+    {{- else if or .Values.admin.securityContext.capabilities.add .Values.admin.securityContext.capabilities.drop }}
+capabilities:
+      {{- if .Values.admin.securityContext.capabilities.add }}
+  add:
+        {{- toYaml .Values.admin.securityContext.capabilities.add | trim | nindent 4 }}
+      {{- end }}
+      {{- if .Values.admin.securityContext.capabilities.drop }}
+  drop:
+        {{- toYaml .Values.admin.securityContext.capabilities.drop | trim | nindent 4 }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
 {{- end -}}
 
 {{/*

@@ -22,7 +22,7 @@ spec:
         release: {{ .Release.Name | quote }}
       name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
     spec:
-      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:

@@ -100,9 +100,10 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.securityContext.capabilities":    "[ NET_ADMIN ]",
-			"admin.envFrom.configMapRef[0]":         "test-config",
-			"admin.options.leaderAssignmentTimeout": "30000",
+			"admin.securityContext.enabledOnContainer": "true",
+			"admin.securityContext.capabilities[0]":    "NET_ADMIN",
+			"admin.envFrom.configMapRef[0]":            "test-config",
+			"admin.options.leaderAssignmentTimeout":    "30000",
 		},
 	}
 
@@ -527,6 +528,8 @@ func TestAdminSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			securityContext := obj.Spec.Template.Spec.SecurityContext
 			assert.Nil(t, securityContext)
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.Nil(t, containerSecurityContext)
 		}
 	})
 
@@ -551,8 +554,8 @@ func TestAdminSecurityContext(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"admin.securityContext.runAsNonRootGroup": "true",
-				"admin.securityContext.runAsUser": "5555",
-				"admin.securityContext.fsGroup": "1234",
+				"admin.securityContext.runAsUser":         "5555",
+				"admin.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -571,7 +574,7 @@ func TestAdminSecurityContext(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"admin.securityContext.fsGroupOnly": "true",
-				"admin.securityContext.fsGroup": "1234",
+				"admin.securityContext.fsGroup":     "1234",
 			},
 		}
 
@@ -589,10 +592,10 @@ func TestAdminSecurityContext(t *testing.T) {
 	t.Run("testEnabledPrecedence", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"admin.securityContext.enabled": "true",
+				"admin.securityContext.enabled":           "true",
 				"admin.securityContext.runAsNonRootGroup": "true",
-				"admin.securityContext.runAsUser": "5555",
-				"admin.securityContext.fsGroup": "1234",
+				"admin.securityContext.runAsUser":         "5555",
+				"admin.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -610,9 +613,9 @@ func TestAdminSecurityContext(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"admin.securityContext.runAsNonRootGroup": "true",
-				"admin.securityContext.fsGroupOnly": "true",
-				"admin.securityContext.runAsUser": "5555",
-				"admin.securityContext.fsGroup": "1234",
+				"admin.securityContext.fsGroupOnly":       "true",
+				"admin.securityContext.runAsUser":         "5555",
+				"admin.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -624,6 +627,74 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
 			assert.Equal(t, int64(1000), *securityContext.RunAsGroup)
 			assert.Equal(t, int64(1234), *securityContext.FSGroup)
+		}
+	})
+
+	t.Run("testContainerEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.False(t, *containerSecurityContext.Privileged)
+			assert.False(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+	})
+
+	t.Run("testContainerPrivileged", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer":       "true",
+				"admin.securityContext.privileged":               "true",
+				"admin.securityContext.allowPrivilegeEscalation": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.True(t, *containerSecurityContext.Privileged)
+			assert.True(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+	})
+
+	t.Run("testCapabilitiesAdd", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer":  "true",
+				"admin.securityContext.capabilities.add[0]": "NET_ADMIN",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Contains(t, containerSecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+			assert.Nil(t, containerSecurityContext.Capabilities.Drop)
+		}
+	})
+
+	t.Run("testCapabilitiesDrop", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer":   "true",
+				"admin.securityContext.capabilities.drop[0]": "CAP_NET_RAW",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
+			assert.Nil(t, containerSecurityContext.Capabilities.Add)
 		}
 	})
 }
@@ -666,7 +737,7 @@ func TestAdminInitContainers(t *testing.T) {
 	t.Run("testRunInitDiskAsNonRoot", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"admin.initContainers.runInitDisk": "true",
+				"admin.initContainers.runInitDisk":       "true",
 				"admin.initContainers.runInitDiskAsRoot": "false",
 			},
 		}
@@ -695,4 +766,96 @@ func TestAdminInitContainers(t *testing.T) {
 			assert.Equal(t, 0, len(initContainers))
 		}
 	})
+}
+
+func TestAdminServiceAccount(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testCreated", func(t *testing.T) {
+		output := helm.RenderTemplate(t, &helm.Options{}, helmChartPath,
+			"release-name", []string{"templates/serviceaccount.yaml", "templates/statefulset.yaml"})
+
+		// Verify that nuodb ServiceAccount is created
+		for _, obj := range testlib.SplitAndRenderServiceAccount(t, output, 1) {
+			assert.Equal(t, "nuodb", obj.Name)
+		}
+
+		// Verify that the correct service account name is used by the admin Pods
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Equal(t, "nuodb", obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
+	t.Run("testNotCreated", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.addServiceAccount": "false",
+			},
+		}
+
+		// nuodb ServiceAccount is not created; a template file passed with
+		// "--show-only" is checked by Helm after rendering so expect an error;
+		// ref: https://github.com/helm/helm/issues/7295
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/serviceaccount.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "could not find template templates/serviceaccount.yaml in chart")
+
+		// it is expected for the nuodb ServiceAccout to be pre-created
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Equal(t, "nuodb", obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
+	t.Run("testDefaultServiceAccount", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.addServiceAccount": "false",
+				"nuodb.serviceAccount":    "",
+			},
+		}
+
+		// nuodb ServiceAccount is not created
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/serviceaccount.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "could not find template templates/serviceaccount.yaml in chart")
+
+		// the default ServiceAccount for the namespace will be used
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+
+		options = &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.addServiceAccount": "false",
+				"nuodb.serviceAccount":    "null",
+			},
+		}
+
+		// nuodb ServiceAccount is not created
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/serviceaccount.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "could not find template templates/serviceaccount.yaml in chart")
+
+		// the default ServiceAccount for the namespace will be used
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+
+		options = &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.addServiceAccount": "true",
+				"nuodb.serviceAccount":    "",
+			},
+		}
+
+		// nuodb ServiceAccount is not created
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/serviceaccount.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "could not find template templates/serviceaccount.yaml in chart")
+	})
+
 }

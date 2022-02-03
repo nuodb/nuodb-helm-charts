@@ -2,9 +2,11 @@ package testlib
 
 import (
 	"fmt"
-	"k8s.io/api/batch/v1beta1"
 	"strings"
 	"testing"
+
+	"k8s.io/api/batch/v1beta1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -339,6 +341,28 @@ func SplitAndRenderRole(t *testing.T, output string, expectedNrObjects int) []rb
 	return objects
 }
 
+func SplitAndRenderServiceAccount(t *testing.T, output string, expectedNrObjects int) []v1.ServiceAccount {
+	objects := make([]v1.ServiceAccount, 0)
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if strings.Contains(part, fmt.Sprintf("kind: %s", "ServiceAccount")) {
+			var obj v1.ServiceAccount
+			helm.UnmarshalK8SYaml(t, part, &obj)
+
+			objects = append(objects, obj)
+		}
+	}
+
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
+
+	return objects
+}
+
 func IsStatefulSetHotCopyEnabled(ss *appsv1.StatefulSet) bool {
 	return strings.Contains(ss.Name, "hotcopy")
 }
@@ -380,4 +404,11 @@ func InferVersionFromTemplate(t *testing.T, options *helm.Options) {
 	options.SetValues["nuodb.image.registry"] = registry
 	options.SetValues["nuodb.image.repository"] = repository
 	options.SetValues["nuodb.image.tag"] = tag
+}
+
+func AssertResourceValue(t *testing.T, options *helm.Options, key string, actual *resource.Quantity) {
+	if expected, ok := options.SetValues[key]; ok {
+		require.Equal(t, 0, actual.Cmp(resource.MustParse(expected)),
+			fmt.Sprintf("Resource mismatch key='%s', expected='%s', actual='%s'", key, expected, actual.String()))
+	}
 }

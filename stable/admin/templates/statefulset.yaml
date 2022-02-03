@@ -43,7 +43,7 @@ spec:
         domain: {{ .Values.admin.domain }}
         group: nuodb
     spec:
-      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
@@ -82,7 +82,6 @@ spec:
       - name: admin
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "admin.capabilities" . | indent 8 }}
         ports:
         - { containerPort: 8888,  protocol: TCP }
         - { containerPort: 48004, protocol: TCP }
@@ -140,6 +139,7 @@ spec:
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
           {{- end}}
+        {{- include "sc.containerSecurityContext" . | indent 8 }}
         livenessProbe:
           initialDelaySeconds: 30
           periodSeconds: 15

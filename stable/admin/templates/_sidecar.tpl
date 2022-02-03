@@ -51,6 +51,9 @@ Also, we can't use a single if because lazy evaluation is not an option
   image: {{ template "nuocollector.image" . }}
   imagePullPolicy: {{ $.Values.nuocollector.image.pullPolicy }}
   tty: true
+  resources:
+  {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
+  {{- include "sc.containerSecurityContext" . | indent 2 }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
     name: nuocollector-config
@@ -59,6 +62,9 @@ Also, we can't use a single if because lazy evaluation is not an option
 - name: nuocollector-config
   image: {{ template "nuocollector.watcher" . }}
   imagePullPolicy: {{ $.Values.nuocollector.watcher.pullPolicy }}
+  resources:
+  {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
+  {{- include "sc.containerSecurityContext" . | indent 2 }}
   env:
   - name: LABEL
     value: "nuodb.com/nuocollector-plugin in ({{ template "admin.fullname" $ }}, insights)"
