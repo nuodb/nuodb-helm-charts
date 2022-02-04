@@ -159,6 +159,17 @@ Get fsGroupChangePolicy if Kubernetes version supports it
 {{- end -}}
 
 {{/*
+Get the Container securityContext (core/v1/SecurityContext)
+*/}}
+{{- define "sc.containerSecurityContext" }}
+{{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
+securityContext:
+  privileged: {{ include "defaultfalse" .Values.database.securityContext.privileged }}
+  allowPrivilegeEscalation: {{ include "defaultfalse" .Values.database.securityContext.allowPrivilegeEscalation }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Validates parameter that supports bool value only
 */}}
 {{- define "validate.boolString" -}}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 
+	"github.com/Masterminds/semver"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
@@ -379,4 +380,44 @@ func TestKubernetesSeparateJournalLocation(t *testing.T) {
 			require.Equal(t, "/var/opt/nuodb/journal/nuodb/demo", archive.JournalPath)
 		}
 	})
+}
+
+func TestKubernetesRestrictedDatabase(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{
+		SetValues: map[string]string{
+			"admin.initContainers.runInitDisk":                 "false",
+			"admin.resources.requests.cpu":                     "256m",
+			"admin.resources.requests.memory":                  "512Mi",
+			"admin.securityContext.enabledOnContainer":         "true",
+			"admin.securityContext.capabilities.drop[0]":       "CAP_NET_RAW",
+			"admin.securityContext.capabilities.drop[1]":       "ALL",
+			"database.initContainers.runInitDisk":              "false",
+			"database.securityContext.enabledOnContainer":      "true",
+			"database.securityContext.capabilities.drop[0]":    "CAP_NET_RAW",
+			"database.securityContext.capabilities.drop[1]":    "ALL",
+			"database.sm.resources.requests.cpu":               "256m",
+			"database.sm.resources.requests.memory":            testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":               "256m",
+			"database.te.resources.requests.memory":            testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.hotCopy.jobResources.requests.cpu":    "100m",
+			"database.sm.hotCopy.jobResources.requests.memory": "128Mi",
+		},
+	}
+
+	testlib.RunOnNuoDBVersionCondition(t, ">4.2.3", func(version *semver.Version) {
+		options.SetValues["admin.securityContext.runAsNonRootGroup"] = "true"
+		options.SetValues["database.securityContext.runAsNonRootGroup"] = "true"
+	})
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	testlib.StartDatabase(t, namespaceName, admin0, &options)
+
+	t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 }

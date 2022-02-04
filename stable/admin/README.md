@@ -106,6 +106,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
+| `addServiceAccount` | Whether to create a new service account for NuoDB containers | `true` |
 | `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
@@ -154,7 +155,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `externalAccess.type` | The service type used to enable external access for NuoDB Admin. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |
 | `externalAccess.annotations` | Annotations to pass through to the Service of type `LoadBalancer` | `{}` |
-| `resources` | Labels to apply to all resources | `{}` |
+| `resources` | Kubernetes resource requests and limits used for the NuoDB Admin containers | `{}` |
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |
 | `tolerations` | Tolerations for NuoDB Admin | `[]` |
@@ -178,7 +179,10 @@ The following tables list the configurable parameters for the `admin` option of 
 | `securityContext.enabled` | Creates a security context for Pods containing the `securityContext.runAsUser` and `securityContext.fsGroup` values | `false` |
 | `securityContext.runAsUser` | The user ID for the Pod security context created if `securityContext.enabled` is `true`. | `1000` |
 | `securityContext.fsGroup` | The `fsGroup` for the Pod security context created if any of `securityContext.fsGroupOnly`, `securityContext.runAsNonRootGroup`, or `securityContext.enabled` are `true`. | `1000` |
-| `securityContext.capabilities` | Capabilities to add to admin container security context | `[]` |
+| `securityContext.enabledOnContainer` | Whether to create SecurityContext for containers | `false` |
+| `securityContext.capabilities` | Capabilities for to admin container security context | `{ add: [], drop: [] }` |
+| `securityContext.privileged` | Run the NuoDB Admin containers in privileged mode. Processes in privileged containers are essentially equivalent to root on the host | `false` |
+| `securityContext.allowPrivilegeEscalation` | Whether a process can gain more privileges than its parent process. This boolean directly controls if the `no_new_privs` flag will be set on the container process | `false` |
 | `tlsCACert.secret` | TLS CA certificate secret name | `nil` |
 | `tlsCACert.key` | TLS CA certificate secret key | `nil` |
 | `tlsKeyStore.secret` | TLS keystore secret name | `nil` |
@@ -257,6 +261,7 @@ The following tables list the configurable parameters for the `nuocollector` opt
 | `watcher.tag` | ConfigMap watcher container image tag | `0.1.259` |
 | `watcher.pullPolicy` | ConfigMap watcher container pull policy |`IfNotPresent`|
 | `plugins.admin` | NuoDB Collector additional plugins for admin services |`{}`|
+| `resources` | Kubernetes resource requests and limits used for the nuocollector sidecar |`{}`|
 
 ### Running
 

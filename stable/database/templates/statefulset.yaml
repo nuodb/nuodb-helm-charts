@@ -45,7 +45,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
-      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.sm.nodeSelector }}
@@ -69,6 +69,8 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
+        resources:
+        {{- toYaml .Values.database.initContainers.resources | trim | nindent 10 }}
         volumeMounts:
         - name: archive-volume
           mountPath: /mnt/archive
@@ -88,7 +90,6 @@ spec:
       - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "database.capabilities" . | indent 8 }}
         args:
           - "nuosm"
           - "--servers-ready-timeout"
@@ -107,6 +108,7 @@ spec:
           - "{{- include "opt.key-values" . }}"
     {{- end }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
+    {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -167,7 +169,7 @@ spec:
         - containerPort: 48006
           protocol: TCP
         resources:
-{{ toYaml .Values.database.sm.resources | trim | indent 10 }}
+        {{- toYaml .Values.database.sm.resources | trim | nindent 10 }}
         volumeMounts:
         {{- with .Values.database.configFiles }}
         {{- range $key, $val := . }}
@@ -418,7 +420,7 @@ spec:
         chart: {{ template "database.chart" . }}
         release: {{ .Release.Name | quote }}
     spec:
-      serviceAccountName: {{ default "nuodb" .Values.nuodb.serviceAccount }}
+      serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.sm.nodeSelector }}
@@ -442,6 +444,8 @@ spec:
           - sh
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
+        resources:
+        {{- toYaml .Values.database.initContainers.resources | trim | nindent 10 }}
         volumeMounts:
         - name: archive-volume
           mountPath: /mnt/archive
@@ -461,7 +465,6 @@ spec:
       - name: engine
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
-    {{- include "database.capabilities" . | indent 8 }}
         args:
           - "nuosm"
           - "--servers-ready-timeout"
@@ -475,6 +478,7 @@ spec:
           - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{ end}}"
 {{- end}}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
+    {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME

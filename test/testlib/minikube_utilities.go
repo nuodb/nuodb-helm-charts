@@ -569,10 +569,13 @@ func DescribePods(t *testing.T, namespace string, expectedName string) {
 }
 
 func DeleteJobPods(t *testing.T, namespace string, jobName string) {
+	options := k8s.NewKubectlOptions("", "", namespace)
 	for _, pod := range FindAllPodsInSchema(t, namespace) {
 		if strings.Contains(pod.Name, jobName) {
 			t.Logf("Deleting pod %s for job %s", pod.Name, jobName)
-			DeletePod(t, namespace, pod.Name)
+			// The job delete could fail as the cron job controller may delete
+			// it concurrently
+			k8s.RunKubectlE(t, options, "delete", "pod", pod.Name)
 		}
 	}
 }

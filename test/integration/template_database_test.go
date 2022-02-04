@@ -350,8 +350,9 @@ func TestDatabaseVPNRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.securityContext.capabilities[0]": "NET_ADMIN",
-			"database.envFrom.configMapRef[0]":         "test-config",
+			"database.securityContext.enabledOnContainer": "true",
+			"database.securityContext.capabilities[0]":    "NET_ADMIN",
+			"database.envFrom.configMapRef[0]":            "test-config",
 		},
 	}
 
@@ -779,7 +780,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testDefault", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
 			},
 		}
@@ -789,22 +790,26 @@ func TestDatabaseSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			securityContext := obj.Spec.Template.Spec.SecurityContext
 			assert.Nil(t, securityContext)
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.Nil(t, containerSecurityContext)
 		}
 
 		// check security context on TE Deployment
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
-		for _, dep:= range testlib.SplitAndRenderDeployment(t, output, 1) {
+		for _, dep := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			securityContext := dep.Spec.Template.Spec.SecurityContext
 			assert.Nil(t, securityContext)
+			containerSecurityContext := dep.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.Nil(t, containerSecurityContext)
 		}
 	})
 
 	t.Run("testEnabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.securityContext.enabled": "true",
+				"database.securityContext.enabled":          "true",
 			},
 		}
 
@@ -832,11 +837,11 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testRunAsNonRootGroup", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
-				"database.sm.noHotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":    "true",
+				"database.sm.noHotCopy.journalPath.enabled":  "true",
 				"database.securityContext.runAsNonRootGroup": "true",
-				"database.securityContext.runAsUser": "5555",
-				"database.securityContext.fsGroup": "1234",
+				"database.securityContext.runAsUser":         "5555",
+				"database.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -866,10 +871,10 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testFsGroupOnly", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.securityContext.fsGroupOnly": "true",
-				"database.securityContext.fsGroup": "1234",
+				"database.securityContext.fsGroupOnly":      "true",
+				"database.securityContext.fsGroup":          "1234",
 			},
 		}
 
@@ -899,12 +904,12 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testEnabledPrecedence", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
-				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.securityContext.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":    "true",
+				"database.sm.noHotCopy.journalPath.enabled":  "true",
+				"database.securityContext.enabled":           "true",
 				"database.securityContext.runAsNonRootGroup": "true",
-				"database.securityContext.runAsUser": "5555",
-				"database.securityContext.fsGroup": "1234",
+				"database.securityContext.runAsUser":         "5555",
+				"database.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -932,12 +937,12 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testRunAsNonRootGroupPrecedence", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
-				"database.sm.noHotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":    "true",
+				"database.sm.noHotCopy.journalPath.enabled":  "true",
 				"database.securityContext.runAsNonRootGroup": "true",
-				"database.securityContext.fsGroupOnly": "true",
-				"database.securityContext.runAsUser": "5555",
-				"database.securityContext.fsGroup": "1234",
+				"database.securityContext.fsGroupOnly":       "true",
+				"database.securityContext.runAsUser":         "5555",
+				"database.securityContext.fsGroup":           "1234",
 			},
 		}
 
@@ -963,6 +968,106 @@ func TestDatabaseSecurityContext(t *testing.T) {
 			assert.Equal(t, int64(1234), *securityContext.FSGroup)
 		}
 	})
+
+	t.Run("testContainerEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.enabledOnContainer": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.False(t, *containerSecurityContext.Privileged)
+			assert.False(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.False(t, *containerSecurityContext.Privileged)
+			assert.False(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+	})
+
+	t.Run("testContainerPrivileged", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.enabledOnContainer":       "true",
+				"database.securityContext.privileged":               "true",
+				"database.securityContext.allowPrivilegeEscalation": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.True(t, *containerSecurityContext.Privileged)
+			assert.True(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.True(t, *containerSecurityContext.Privileged)
+			assert.True(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+	})
+
+	t.Run("testCapabilitiesAdd", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.enabledOnContainer":  "true",
+				"database.securityContext.capabilities.add[0]": "NET_ADMIN",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Contains(t, containerSecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+			assert.Nil(t, containerSecurityContext.Capabilities.Drop)
+		}
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Contains(t, containerSecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+			assert.Nil(t, containerSecurityContext.Capabilities.Drop)
+		}
+	})
+
+	t.Run("testCapabilitiesDrop", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.enabledOnContainer":   "true",
+				"database.securityContext.capabilities.drop[0]": "CAP_NET_RAW",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
+			assert.Nil(t, containerSecurityContext.Capabilities.Add)
+		}
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
+			assert.Nil(t, containerSecurityContext.Capabilities.Add)
+		}
+	})
 }
 
 func TestDatabaseInitContainers(t *testing.T) {
@@ -972,7 +1077,7 @@ func TestDatabaseInitContainers(t *testing.T) {
 	t.Run("testDefault", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
 			},
 		}
@@ -1011,9 +1116,9 @@ func TestDatabaseInitContainers(t *testing.T) {
 	t.Run("testRunInitDiskAsNonRoot", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.initContainers.runInitDisk": "true",
+				"database.initContainers.runInitDisk":       "true",
 				"database.initContainers.runInitDiskAsRoot": "false",
 			},
 		}
@@ -1048,9 +1153,9 @@ func TestDatabaseInitContainers(t *testing.T) {
 	t.Run("testDisabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.hotCopy.journalPath.enabled": "true",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
 				"database.sm.noHotCopy.journalPath.enabled": "true",
-				"database.initContainers.runInitDisk": "false",
+				"database.initContainers.runInitDisk":       "false",
 			},
 		}
 
@@ -1068,4 +1173,62 @@ func TestDatabaseInitContainers(t *testing.T) {
 			assert.Equal(t, 0, len(initContainers))
 		}
 	})
+}
+
+func TestDatabaseServiceAccount(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	t.Run("testUsage", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.serviceAccount": "foo",
+			},
+		}
+
+		// correct ServiceAccount is used
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml", "templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			assert.Equal(t, "foo", obj.Spec.Template.Spec.ServiceAccountName)
+		}
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "foo", obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
+	t.Run("testDefaultServiceAccount", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.serviceAccount": "",
+			},
+		}
+
+		// the default ServiceAccount for the namespace will be used
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml", "templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+
+		options = &helm.Options{
+			SetValues: map[string]string{
+				"nuodb.serviceAccount": "null",
+			},
+		}
+
+		// the default ServiceAccount for the namespace will be used
+		output = helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml", "templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Empty(t, obj.Spec.Template.Spec.ServiceAccountName)
+		}
+	})
+
 }
