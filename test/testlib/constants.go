@@ -28,6 +28,7 @@ const TEARDOWN_COLLECTOR = "nuocollector"
 const TEARDOWN_VAULT = "vault"
 const TEARDOWN_MULTICLUSTER = "multicluster"
 const TEARDOWN_NGINX = "nginx"
+const TEARDOWN_HAPROXY = "haproxy"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"
@@ -53,3 +54,9 @@ const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
 const ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS = "ALWAYS_RUN_DIAGNOSTIC_TEARDOWNS"
 
 const NGINX_DEPLOYMENT = "nginx"
+
+// FQDNs used for Ingress testing that point to minikube IP address; they must
+// be aligned with the /etc/hosts entries in the `install_deps.sh` script
+const ADMIN_API_INGRESS_HOSTNAME = "api.nuodb.local"
+const ADMIN_SQL_INGRESS_HOSTNAME = "sql.nuodb.local"
+const DATABASE_TE_INGRESS_HOSTNAME = "demo.nuodb.local"

@@ -435,7 +435,12 @@ if Ingress is enabled
   {{- if .Values.database.te.ingress }}
     {{- if eq (include "defaultfalse" .Values.database.te.ingress.enabled) "true" }}
       {{- if .Values.database.te.ingress.hostname }}
-        {{- $extraLabels = printf "external-address %s external-port 443" .Values.database.te.ingress.hostname }}
+        {{- if not (index .Values.database.te.labels "external-address") }}
+          {{- $extraLabels = printf "external-address %s" .Values.database.te.ingress.hostname }}
+        {{- end }}
+        {{- if not (index .Values.database.te.labels "external-port") }}
+          {{- $extraLabels = printf "%s external-port 443" $extraLabels }}
+        {{- end }}
       {{- end }}
     {{- end }}
   {{- end }}

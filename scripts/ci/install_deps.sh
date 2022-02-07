@@ -32,6 +32,12 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
 
   sudo chmod 700 $HOME/.kube/config
 
+  # Configure DNS entries for Ingress testing
+  ip=$(sudo minikube ip)
+  echo "$ip api.nuodb.local
+$ip sql.nuodb.local
+$ip demo.nuodb.local" | sudo tee -a /etc/hosts
+
   # Start 'minikube tunnel' so that services with type LoadBalancer are correctly
   # provisioned and routes to the minikube IP are created; 
   # see https://minikube.sigs.k8s.io/docs/handbook/accessing/#using-minikube-tunnel
@@ -54,6 +60,9 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
 
   # get HC Vault for testing
   helm repo add hashicorp https://helm.releases.hashicorp.com
+
+  # get HAProxy for Ingress testing
+  helm repo add haproxytech https://haproxytech.github.io/helm-charts
 
 elif [[ "$REQUIRES_MINISHIFT" == "true" ]]; then
   wget https://github.com/openshift/origin/releases/download/v3.11.0/openshift-origin-client-tools-v3.11.0-0cbc58b-linux-64bit.tar.gz -O /tmp/oc.tar.gz

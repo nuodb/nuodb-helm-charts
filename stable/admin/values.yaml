@@ -126,6 +126,10 @@ admin:
   #   type: LoadBalancer
   #   annotations: {}
 
+  # Enable NuoDB external access via Ingress; the provisioned Ingress controller
+  # should support SSL passthrough feature allowing it to send the TLS
+  # connections directly to the NuoDB Admin instead of decrypting the
+  # communication; supported starting with NuoDB image version 4.2.3
   ingress:
     enabled: false
     api:
@@ -138,10 +142,7 @@ admin:
       # the resource; for Kubernetes >= 1.18 the ingress class name should be
       # specified via the className option instead of using annotation
       className: ""
-      # custom annotations that are set on the Ingress resource; if NuoDB has
-      # TLS enabled, it is recommended that SSL Passthrough feature is
-      # configured which allows the controller to send the TLS connection
-      # directly to the NuoDB Admin instead of decrypting the communication
+      # custom annotations that are set on the Ingress resource
       annotations: 
         ingress.kubernetes.io/ssl-passthrough: "true"
       # Enable TLS termination in the ingress controller; it is recommended to
@@ -157,9 +158,7 @@ admin:
       # For Kubernetes >= 1.18 the ingress class name should be specified via the
       # ingressClassName option instead of using annotation
       className: ""
-      # custom annotations that are set on the Ingress resource; SSL Passthrough
-      # feature should be configured so that SQL clients TLS connections are
-      # send directly to the NuoDB Admin
+      # custom annotations that are set on the Ingress resource
       annotations: 
         ingress.kubernetes.io/ssl-passthrough: "true"
       # Enable TLS termination in the ingress controller; it is recommended to

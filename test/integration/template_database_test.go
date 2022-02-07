@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -1231,4 +1232,53 @@ func TestDatabaseServiceAccount(t *testing.T) {
 		}
 	})
 
+}
+
+func TestDatabaseIngressRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.te.ingress.enabled":         "true",
+			"database.te.ingress.hostname":        testlib.DATABASE_TE_INGRESS_HOSTNAME,
+			"database.te.ingress.className":       "classSQL",
+			"database.te.ingress.annotations.bar": "bar",
+		},
+	}
+
+	// verify that Ingress resource for SQL clients is created only
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name",
+		[]string{"templates/ingress.yaml", "templates/deployment.yaml"})
+	for _, obj := range testlib.SplitAndRenderIngress(t, output, 1) {
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Name)
+		assert.Equal(t, options.SetValues["database.te.ingress.className"], *obj.Spec.IngressClassName)
+		assert.Equal(t, options.SetValues["database.te.ingress.hostname"], obj.Spec.Rules[0].Host)
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-clusterip",
+			obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
+		assert.Equal(t, "48006-tcp", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name)
+		assert.Contains(t, obj.Annotations, "ingress.kubernetes.io/ssl-passthrough")
+	}
+
+	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+		assert.Contains(t, obj.Spec.Template.Spec.Containers[0].Args,
+			fmt.Sprintf("external-address %s external-port 443", options.SetValues["database.te.ingress.hostname"]))
+	}
+
+	options = &helm.Options{
+		SetValues: map[string]string{
+			"database.te.ingress.enabled":      "true",
+			"database.te.ingress.hostname":     testlib.DATABASE_TE_INGRESS_HOSTNAME,
+			"database.te.labels.external-port": "51243",
+		},
+	}
+
+	// verify that configured external-port takes precedence
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+		assert.Contains(t, obj.Spec.Template.Spec.Containers[0].Args,
+			fmt.Sprintf("external-address %s external-port %s",
+				options.SetValues["database.te.ingress.hostname"],
+				options.SetValues["database.te.labels.external-port"]))
+	}
 }

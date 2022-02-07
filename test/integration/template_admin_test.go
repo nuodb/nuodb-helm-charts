@@ -859,3 +859,67 @@ func TestAdminServiceAccount(t *testing.T) {
 	})
 
 }
+
+func TestAdminIngressRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.ingress.enabled":       "true",
+			"admin.ingress.sql.hostname":  testlib.ADMIN_SQL_INGRESS_HOSTNAME,
+			"admin.ingress.sql.className": "classSQL",
+		},
+	}
+
+	// verify that Ingress resource for SQL clients is created only
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/ingress.yaml"})
+	for _, obj := range testlib.SplitAndRenderIngress(t, output, 1) {
+		assert.Equal(t, "release-name-nuodb-cluster0-admin", obj.Name)
+		assert.Equal(t, options.SetValues["admin.ingress.sql.className"], *obj.Spec.IngressClassName)
+		assert.Equal(t, options.SetValues["admin.ingress.sql.hostname"], obj.Spec.Rules[0].Host)
+		assert.Equal(t, "nuodb-clusterip", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
+		assert.Equal(t, "48004-tcp", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name)
+		assert.Contains(t, obj.Annotations, "ingress.kubernetes.io/ssl-passthrough")
+	}
+
+	options = &helm.Options{
+		SetValues: map[string]string{
+			"admin.ingress.enabled":             "true",
+			"admin.ingress.api.hostname":        testlib.ADMIN_API_INGRESS_HOSTNAME,
+			"admin.ingress.api.className":       "classAPI",
+			"admin.ingress.api.path":            "/admin",
+			"admin.ingress.api.tls":             "true",
+			"admin.ingress.api.secretName":      "exampleSecret",
+			"admin.ingress.api.annotations.bar": "bar",
+			"admin.ingress.sql.hostname":        testlib.ADMIN_SQL_INGRESS_HOSTNAME,
+			"admin.ingress.sql.className":       "classSQL",
+			"admin.ingress.sql.annotations.foo": "foo",
+		},
+	}
+
+	// verify that Ingress resource for the REST service and for SQL clients are created
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/ingress.yaml"})
+	for _, obj := range testlib.SplitAndRenderIngress(t, output, 2) {
+		if strings.HasSuffix(obj.Name, "-api") {
+			assert.Equal(t, options.SetValues["admin.ingress.api.className"], *obj.Spec.IngressClassName)
+			assert.Equal(t, options.SetValues["admin.ingress.api.hostname"], obj.Spec.Rules[0].Host)
+			assert.Equal(t, options.SetValues["admin.ingress.api.path"], obj.Spec.Rules[0].HTTP.Paths[0].Path)
+			assert.Equal(t, "nuodb-clusterip", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
+			assert.Equal(t, "8888-tcp", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name)
+			assert.Equal(t, options.SetValues["admin.ingress.api.hostname"], obj.Spec.TLS[0].Hosts[0])
+			assert.Equal(t, options.SetValues["admin.ingress.api.secretName"], obj.Spec.TLS[0].SecretName)
+			assert.Contains(t, obj.Annotations, "bar")
+			assert.Equal(t, "bar", obj.Annotations["bar"])
+		} else {
+			assert.Equal(t, options.SetValues["admin.ingress.sql.className"], *obj.Spec.IngressClassName)
+			assert.Equal(t, options.SetValues["admin.ingress.sql.hostname"], obj.Spec.Rules[0].Host)
+			assert.Equal(t, "nuodb-clusterip", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
+			assert.Equal(t, "48004-tcp", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name)
+			assert.Contains(t, obj.Annotations, "foo")
+			assert.Equal(t, "foo", obj.Annotations["foo"])
+		}
+		assert.Contains(t, obj.Annotations, "ingress.kubernetes.io/ssl-passthrough")
+	}
+
+}
