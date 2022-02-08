@@ -155,6 +155,18 @@ The following tables list the configurable parameters for the `admin` option of 
 | `externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `externalAccess.type` | The service type used to enable external access for NuoDB Admin. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |
 | `externalAccess.annotations` | Annotations to pass through to the Service of type `LoadBalancer` | `{}` |
+| `ingress.enabled` | Whether to deploy an Ingress resources for the NuoDB Admin | `false` |
+| `ingress.api.hostname` | The fully qualified domain name (FQDN) of the network host for the NuoDB Admin REST API | `""` |
+| `ingress.api.path` | Path that is matched against the path of the incoming HTTP request | `/` |
+| `ingress.api.className` | The associated IngressClass name defines which Ingress controller will implement the resource | `""` |
+| `ingress.api.annotations` | Custom annotations that are set on the Ingress resource | `{ ingress.kubernetes.io/ssl-passthrough: "true" }` |
+| `ingress.api.tls` | Enable TLS termination in the Ingress controller. It is recommended to use SSL Passthrough feature instead | `false` |
+| `ingress.api.secretName` | The name of the secret used by Ingress controller to terminate the TLS traffic | `""` |
+| `ingress.sql.hostname` | The fully qualified domain name (FQDN) of the network host used by SQL clients | `""` |
+| `ingress.sql.className` | The associated IngressClass name defines which Ingress controller will implement the resource | `""` |
+| `ingress.sql.annotations` | Custom annotations that are set on the Ingress resource | `{ ingress.kubernetes.io/ssl-passthrough: "true" }` |
+| `ingress.sql.tls` | Enable TLS termination in the Ingress controller. It is recommended to use SSL Passthrough feature instead | `false` |
+| `ingress.sql.secretName` | The name of the secret used by Ingress controller to terminate the TLS traffic | `""` |
 | `resources` | Kubernetes resource requests and limits used for the NuoDB Admin containers | `{}` |
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |

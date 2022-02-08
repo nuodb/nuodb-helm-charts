@@ -444,6 +444,8 @@ if Ingress is enabled
       {{- end }}
     {{- end }}
   {{- end }}
+  {{- if or .Values.database.te.labels $extraLabels }}
 - "--labels"
 - "{{ $extraLabels }}{{ include "opt.key-values" .Values.database.te.labels }}"
+  {{- end }}
 {{- end -}}
