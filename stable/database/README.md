@@ -271,12 +271,10 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
 | `te.externalAccess.type` | The service type used to enable external database access. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |
 | `te.externalAccess.annotations` | Annotations to pass through to the Service of type `LoadBalancer` | `{}` |
-| `te.ingress.enabled` | Whether to deploy an Ingress resources for the NuoDB Database | `false` |
+| `te.ingress.enabled` | Whether to deploy an Ingress resources for the NuoDB Database. Supported starting with Kubernetes v1.19.0 and NuoDB image version 4.2.3 | `false` |
 | `te.ingress.hostname` | The fully qualified domain name (FQDN) of the network host used by SQL clients to reach this database | `""` |
 | `te.ingress.className` | The associated IngressClass name defines which Ingress controller will implement the resource | `""` |
-| `te.ingress.annotations` | Custom annotations that are set on the Ingress resource | `{ ingress.kubernetes.io/ssl-passthrough: "true" }` |
-| `te.ingress.tls` | Enable TLS termination in the Ingress controller. It is recommended to use SSL Passthrough feature instead | `false` |
-| `te.ingress.secretName` | The name of the secret used by Ingress controller to terminate the TLS traffic | `""` |
+| `te.ingress.annotations` | Custom annotations that are set on the Ingress resource. SSL passthrough feature should be configured so that SQL clients TLS connections are send directly to the Transaction Engines | `{ ingress.kubernetes.io/ssl-passthrough: "true" }` |
 | `te.dbServices.enabled` | Whether to deploy clusterip and headless services for direct TE connections (defaults true) | `nil` |
 | `te.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `te.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |

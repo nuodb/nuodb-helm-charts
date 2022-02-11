@@ -445,7 +445,8 @@ database:
     # Enable NuoDB external access via Ingress; the provisioned Ingress
     # controller should support SSL passthrough feature allowing it to send the
     # TLS connections directly to the Transaction Engines instead of decrypting
-    # the communication; supported starting with NuoDB image version 4.2.3
+    # the communication; supported starting with Kubernetes v1.19.0 and NuoDB
+    # image version 4.2.3
     ingress:
       enabled: false
       # the fully qualified domain name (FQDN) of the network host for SQL
@@ -454,17 +455,11 @@ database:
       # For Kubernetes >= 1.18 the ingress class name should be specified via the
       # ingressClassName option instead of using annotation
       className: ""
-      # custom annotations that are set on the Ingress resource; SSL Passthrough
+      # custom annotations that are set on the Ingress resource; SSL passthrough
       # feature should be configured so that SQL clients TLS connections are
       # send directly to the Transaction Engines
       annotations: 
         ingress.kubernetes.io/ssl-passthrough: "true"
-      # Enable TLS termination in the ingress controller; it is recommended to
-      # use SSL Passthrough feature instead
-      tls: false
-      # the name of the secret used by Ingress controller to terminate the TLS
-      # traffic on port 443
-      secretName: ""
 
     ## By default, database clusterip and headless services for direct TE connections are enabled,
     ## but can be optionally disabled here

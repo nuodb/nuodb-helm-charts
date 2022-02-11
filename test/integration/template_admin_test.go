@@ -888,9 +888,6 @@ func TestAdminIngressRenders(t *testing.T) {
 			"admin.ingress.enabled":             "true",
 			"admin.ingress.api.hostname":        testlib.ADMIN_API_INGRESS_HOSTNAME,
 			"admin.ingress.api.className":       "classAPI",
-			"admin.ingress.api.path":            "/admin",
-			"admin.ingress.api.tls":             "true",
-			"admin.ingress.api.secretName":      "exampleSecret",
 			"admin.ingress.api.annotations.bar": "bar",
 			"admin.ingress.sql.hostname":        testlib.ADMIN_SQL_INGRESS_HOSTNAME,
 			"admin.ingress.sql.className":       "classSQL",
@@ -904,11 +901,8 @@ func TestAdminIngressRenders(t *testing.T) {
 		if strings.HasSuffix(obj.Name, "-api") {
 			assert.Equal(t, options.SetValues["admin.ingress.api.className"], *obj.Spec.IngressClassName)
 			assert.Equal(t, options.SetValues["admin.ingress.api.hostname"], obj.Spec.Rules[0].Host)
-			assert.Equal(t, options.SetValues["admin.ingress.api.path"], obj.Spec.Rules[0].HTTP.Paths[0].Path)
 			assert.Equal(t, "nuodb-clusterip", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
 			assert.Equal(t, "8888-tcp", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name)
-			assert.Equal(t, options.SetValues["admin.ingress.api.hostname"], obj.Spec.TLS[0].Hosts[0])
-			assert.Equal(t, options.SetValues["admin.ingress.api.secretName"], obj.Spec.TLS[0].SecretName)
 			assert.Contains(t, obj.Annotations, "bar")
 			assert.Equal(t, "bar", obj.Annotations["bar"])
 		} else {

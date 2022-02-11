@@ -15,14 +15,6 @@ metadata:
     chart: {{ template "database.chart" . }}
     release: {{ .Release.Name | quote }}
 spec:
-  {{- if .Values.database.te.ingress.tls }}
-  tls:
-    - hosts:
-      - {{ .Values.database.te.ingress.hostname | quote }}
-    {{- if .Values.database.te.ingress.secretName }}
-      secretName: {{ .Values.database.te.ingress.secretName }}
-    {{- end -}}
-  {{- end }}
   {{- if .Values.database.te.ingress.className }}
   ingressClassName: {{ .Values.database.te.ingress.className | quote }}
   {{- end }}
