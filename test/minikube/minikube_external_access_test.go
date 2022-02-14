@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"regexp"
 	"strconv"
 	"strings"
@@ -16,23 +17,24 @@ import (
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 
+	"github.com/Masterminds/semver"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/random"
 
 	corev1 "k8s.io/api/core/v1"
 )
 
-func findServiceNodePortE(service *corev1.Service, portName string) (int32, error) {
+func findServicePortE(service *corev1.Service, portName string) (*corev1.ServicePort, error) {
 	for _, port := range service.Spec.Ports {
 		if port.Name == portName {
-			return port.NodePort, nil
+			return &port, nil
 		}
 	}
-	return 0, errors.New(
-		fmt.Sprintf("Unable to find NodePort for service %s", service.Name))
+	return nil, errors.New(
+		fmt.Sprintf("Unable to find Port with name %s for service %s", portName, service.Name))
 }
 
-func findDomainExternalInfo(t *testing.T, namespaceName string, serviceName string) (string, int32) {
+func findDomainExternalInfo(t *testing.T, namespaceName string, serviceName string, portName string) (string, int32) {
 	var domainAddress string
 	var domainPort int32
 	domainService := testlib.GetService(t, namespaceName, serviceName)
@@ -44,11 +46,14 @@ func findDomainExternalInfo(t *testing.T, namespaceName string, serviceName stri
 		}
 		var err error
 		// get the nodePort of the domain service
-		domainPort, err = findServiceNodePortE(domainService, "48004-tcp")
+		servicePort, err := findServicePortE(domainService, portName)
 		require.NoError(t, err)
+		domainPort = servicePort.NodePort
 	} else {
 		domainAddress = domainService.Status.LoadBalancer.Ingress[0].IP
-		domainPort = 48004
+		servicePort, err := findServicePortE(domainService, portName)
+		require.NoError(t, err)
+		domainPort = servicePort.Port
 	}
 	return domainAddress, domainPort
 }
@@ -93,6 +98,36 @@ func verifyService(t *testing.T, namespaceName string, podName string, serviceNa
 	return service
 }
 
+func verifyDomainProcesses(t *testing.T, api_server string, databaseName string, keysPath string, expectedNrProcesses int) []testlib.NuoDBProcess {
+	pathToNuoCmd, ok := os.LookupEnv("NUOCMD_PATH")
+	if !ok {
+		pathToNuoCmd = "nuocmd"
+	}
+	cmd := fmt.Sprintf("%s --api-server %s", pathToNuoCmd, api_server)
+	if keysPath != "" {
+		cmd += fmt.Sprintf(" --client-key %s --verify-server %s",
+			path.Join(keysPath, testlib.NUOCMD_FILE), path.Join(keysPath, testlib.CA_CERT_FILE))
+	}
+	cmd += fmt.Sprintf(" --show-json get processes --db-name %s", databaseName)
+	t.Logf("Running command: <%s>", cmd)
+	out, err := exec.Command("sh", "-c", cmd).Output()
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		// nuocmd has exited with an non zero exit code; generate better error
+		// message by including the command stderr
+		require.NoError(t, err, string(exiterr.Stderr))
+	} else {
+		require.NoError(t, err)
+	}
+	err, processes := testlib.Unmarshal(string(out))
+	require.NoError(t, err)
+	require.Equal(t, expectedNrProcesses, len(processes), "Unexpected number of domain processes")
+	for _, process := range processes {
+		require.Equal(t, "MONITORED", process.DState)
+		require.Equal(t, "RUNNING", process.State)
+	}
+	return processes
+}
+
 func verifyProcessExternalAccessLabels(t *testing.T, namespaceName string, adminPod string,
 	databaseName string, services map[string]*corev1.Service) {
 
@@ -124,11 +159,11 @@ func verifyProcessExternalAccessLabels(t *testing.T, namespaceName string, admin
 				_, ok := process.Labels["external-address"]
 				require.True(t, ok)
 				// verify that external-port is set correctly
-				nodePort, err := findServiceNodePortE(s, "48006-tcp")
+				servicePort, err := findServicePortE(s, "48006-tcp")
 				require.NoError(t, err)
 				val, ok := process.Labels["external-port"]
 				require.True(t, ok)
-				require.Equal(t, strconv.Itoa(int(nodePort)), val)
+				require.Equal(t, strconv.Itoa(int(servicePort.NodePort)), val)
 			}
 		}
 	}
@@ -219,7 +254,7 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 		// verify external-address and external-port labels for TE processes
 		verifyProcessExternalAccessLabels(t, namespaceName, admin0, opt.DbName, balancerServices)
 
-		address, port := findDomainExternalInfo(t, namespaceName, fmt.Sprintf("nuodb-%s", serviceSuffix))
+		address, port := findDomainExternalInfo(t, namespaceName, fmt.Sprintf("nuodb-%s", serviceSuffix), "48004-tcp")
 
 		for txType, group := range map[string]string{"OLTP": group1ReleaseName, "TAP": group2ReleaseName} {
 			var expectedNodeIds []int32
@@ -239,4 +274,93 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 
 	t.Run("testServiceLoadBalancer", func(t *testing.T) { deployMultipleTEGroups(t, corev1.ServiceTypeLoadBalancer) })
 	t.Run("testServiceNodePort", func(t *testing.T) { deployMultipleTEGroups(t, corev1.ServiceTypeNodePort) })
+}
+
+func TestKubernetesIngress(t *testing.T) {
+	// this requires support for "external-address" and "external-port" labels
+	testlib.SkipTestOnNuoDBVersionCondition(t, "< 4.2.3")
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("%skubernetesingress-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	defer testlib.Teardown(testlib.TEARDOWN_HAPROXY)
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	// install HAProxy Ingress controller
+	haProxyReleaseName := testlib.StartHAProxyIngress(t, &helm.Options{}, namespaceName)
+	_, ingressPort := findDomainExternalInfo(t, namespaceName, fmt.Sprintf("%s-kubernetes-ingress", haProxyReleaseName), "https")
+
+	options := helm.Options{
+		SetValues: map[string]string{
+			"admin.ingress.enabled":                 "true",
+			"admin.ingress.api.hostname":            testlib.ADMIN_API_INGRESS_HOSTNAME,
+			"admin.ingress.api.className":           "haproxy",
+			"admin.ingress.sql.hostname":            testlib.ADMIN_SQL_INGRESS_HOSTNAME,
+			"admin.ingress.sql.className":           "haproxy",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.ingress.enabled":           "true",
+			"database.te.ingress.hostname":          testlib.DATABASE_TE_INGRESS_HOSTNAME,
+			"database.te.ingress.className":         "haproxy",
+			// The product doesn't support Ingress resource lookup, so define
+			// the port manually; most of the time in production a service of
+			// type=LoadBalancer will be provisioned for the Ingress Controller
+			// which will keep the default HTTPs port to 443; helm charts will
+			// configure automatically port 443 if nothing else is configured
+			"database.te.labels.external-port": strconv.Itoa(int(ingressPort)),
+		},
+	}
+
+	_, keysLocation := testlib.GenerateAndSetTLSKeys(t, &options, namespaceName)
+	helmChartReleaseName, _ := testlib.StartAdmin(t, &options, 1, namespaceName)
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// install the database Helm release
+	testlib.StartDatabase(t, namespaceName, admin0, &options)
+	opt := testlib.GetExtractedOptions(&options)
+
+	// verify that we can connect to REST API from the test machine
+	admin_url := fmt.Sprintf("https://%s:%d", testlib.ADMIN_API_INGRESS_HOSTNAME, ingressPort)
+	processes := verifyDomainProcesses(t, admin_url, opt.DbName, keysLocation, opt.NrSmPods+opt.NrTePods)
+	// verify that external-address and external-port labels are set correctly
+	for _, process := range processes {
+		if process.Type == "TE" {
+			val, ok := process.Labels["external-address"]
+			require.True(t, ok)
+			require.Equal(t, testlib.DATABASE_TE_INGRESS_HOSTNAME, val)
+			val, ok = process.Labels["external-port"]
+			require.True(t, ok)
+			require.Equal(t, strconv.Itoa(int(ingressPort)), val)
+		}
+	}
+
+	// this requires CDriver to support Server Name Indication (SNI); there is
+	// no straightforward way to make this logic conditional because in internal
+	// CI we use the nuosql from the package installation but in CircleCI, we
+	// use the client package
+	// TODO: Change the version once DB-34466 is fixed
+	testlib.RunOnNuoDBVersionCondition(t, ">=4.5", func(version *semver.Version) {
+		var expectedNodeIds []int32
+		for _, process := range processes {
+			if process.Type == "TE" {
+				expectedNodeIds = append(expectedNodeIds, process.NodeId)
+			}
+		}
+
+		verifyNuoSQLEngine(t, testlib.ADMIN_SQL_INGRESS_HOSTNAME, ingressPort,
+			opt.DbName, map[string]string{
+				"trustStore":       path.Join(keysLocation, testlib.CA_CERT_FILE),
+				"verifyHostname":   "false",
+				"allowSRPFallback": "false",
+			},
+			expectedNodeIds)
+	})
 }

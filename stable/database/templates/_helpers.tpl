@@ -425,3 +425,27 @@ networking.gke.io/load-balancer-type: "Internal"
     {{- end }}
   {{- end }}
 {{- end -}}
+
+{{/*
+Renders the Transaction engine labels and injects external address and port
+if Ingress is enabled
+*/}}
+{{- define "database.teLabels" -}}
+  {{- $extraLabels := ""  }}
+  {{- if .Values.database.te.ingress }}
+    {{- if eq (include "defaultfalse" .Values.database.te.ingress.enabled) "true" }}
+      {{- if .Values.database.te.ingress.hostname }}
+        {{- if not (index .Values.database.te.labels "external-address") }}
+          {{- $extraLabels = printf "external-address %s" .Values.database.te.ingress.hostname }}
+        {{- end }}
+        {{- if not (index .Values.database.te.labels "external-port") }}
+          {{- $extraLabels = printf "%s external-port 443" $extraLabels }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if or .Values.database.te.labels $extraLabels }}
+- "--labels"
+- "{{ $extraLabels }}{{ include "opt.key-values" .Values.database.te.labels }}"
+  {{- end }}
+{{- end -}}

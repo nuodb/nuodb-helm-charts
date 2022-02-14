@@ -14,6 +14,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	v1 "k8s.io/api/core/v1"
+	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
 )
@@ -352,6 +353,28 @@ func SplitAndRenderServiceAccount(t *testing.T, output string, expectedNrObjects
 
 		if strings.Contains(part, fmt.Sprintf("kind: %s", "ServiceAccount")) {
 			var obj v1.ServiceAccount
+			helm.UnmarshalK8SYaml(t, part, &obj)
+
+			objects = append(objects, obj)
+		}
+	}
+
+	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
+
+	return objects
+}
+
+func SplitAndRenderIngress(t *testing.T, output string, expectedNrObjects int) []networkingv1.Ingress {
+	objects := make([]networkingv1.Ingress, 0)
+
+	parts := strings.Split(output, "---")
+	for _, part := range parts {
+		if len(part) == 0 {
+			continue
+		}
+
+		if strings.Contains(part, fmt.Sprintf("kind: %s", "Ingress")) {
+			var obj networkingv1.Ingress
 			helm.UnmarshalK8SYaml(t, part, &obj)
 
 			objects = append(objects, obj)

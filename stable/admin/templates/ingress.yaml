@@ -1,0 +1,67 @@
+{{- if .Values.admin.ingress }}
+{{- if eq (include "defaultfalse" .Values.admin.ingress.enabled) "true" }}
+{{- if .Values.admin.ingress.api }}
+{{- if .Values.admin.ingress.api.hostname }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ template "admin.fullname" . }}-api
+  annotations:
+    {{- toYaml .Values.admin.ingress.api.annotations | trim | nindent 4 }}
+  labels:
+    app: {{ template "admin.fullname" . }}
+    chart: {{ template "admin.chart" . }}
+    release: {{ .Release.Name | quote }}
+    domain: {{ .Values.admin.domain }}
+    group: nuodb
+spec:
+  {{- if .Values.admin.ingress.api.className }}
+  ingressClassName: {{ .Values.admin.ingress.api.className | quote }}
+  {{- end }}
+  rules:
+  - host: {{ .Values.admin.ingress.api.hostname | quote }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.clusterip }}
+            port:
+              name: 8888-tcp
+{{- end }}
+{{- end }}
+{{- if .Values.admin.ingress.sql }}
+{{- if .Values.admin.ingress.sql.hostname }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ template "admin.fullname" . }}
+  annotations:
+    {{- toYaml .Values.admin.ingress.sql.annotations | trim | nindent 4 }}
+  labels:
+    app: {{ template "admin.fullname" . }}
+    chart: {{ template "admin.chart" . }}
+    release: {{ .Release.Name | quote }}
+    domain: {{ .Values.admin.domain }}
+    group: nuodb
+spec:
+  {{- if .Values.admin.ingress.sql.className }}
+  ingressClassName: {{ .Values.admin.ingress.sql.className | quote }}
+  {{- end }}
+  rules:
+  - host: {{ .Values.admin.ingress.sql.hostname | quote }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.clusterip }}
+            port:
+              name: 48004-tcp
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

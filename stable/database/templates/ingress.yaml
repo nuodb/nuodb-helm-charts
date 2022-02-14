@@ -1,0 +1,34 @@
+{{- if .Values.database.te.ingress }}
+{{- if eq (include "defaultfalse" .Values.database.te.ingress.enabled) "true" }}
+{{- if .Values.database.te.ingress.hostname }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ template "database.fullname" . }}
+  annotations:
+    {{- toYaml .Values.database.te.ingress.annotations | trim | nindent 4 }}
+  labels:
+    app: {{ template "database.fullname" . }}
+    group: nuodb
+    database: {{ .Values.database.name }}
+    domain: {{ .Values.admin.domain }}
+    chart: {{ template "database.chart" . }}
+    release: {{ .Release.Name | quote }}
+spec:
+  {{- if .Values.database.te.ingress.className }}
+  ingressClassName: {{ .Values.database.te.ingress.className | quote }}
+  {{- end }}
+  rules:
+  - host: {{ .Values.database.te.ingress.hostname | quote }}
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: {{ template "database.fullname" . }}-{{ default .Values.admin.serviceSuffix.clusterip .Values.database.serviceSuffix.clusterip }}
+            port:
+              name: 48006-tcp
+{{- end }}
+{{- end }}
+{{- end }}
