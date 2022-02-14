@@ -546,6 +546,7 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.NotNil(t, securityContext)
 			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
 			assert.Equal(t, int64(0), *securityContext.RunAsGroup)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
 			assert.Equal(t, int64(1000), *securityContext.FSGroup)
 		}
 	})
@@ -645,6 +646,7 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.False(t, *containerSecurityContext.Privileged)
 			assert.False(t, *containerSecurityContext.AllowPrivilegeEscalation)
 			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, true, *containerSecurityContext.RunAsNonRoot)
 			assert.Equal(t, int64(0), *containerSecurityContext.RunAsGroup)
 		}
 	})

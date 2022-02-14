@@ -142,9 +142,13 @@ Get security context runAsUser and runAsGroup
 {{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
 runAsUser: {{ default 1000 .Values.database.securityContext.runAsUser }}
 runAsGroup: 0
+  {{- if ne (toString (default 1000 .Values.database.securityContext.runAsUser)) "0" }}
+runAsNonRoot: true
+  {{- end }}
 {{- else if eq (include "defaultfalse" .Values.database.securityContext.runAsNonRootGroup) "true" }}
 runAsUser: 1000
 runAsGroup: 1000
+runAsNonRoot: true
 {{- end }}
 {{- end -}}
 
