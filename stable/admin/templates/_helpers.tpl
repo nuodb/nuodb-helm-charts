@@ -150,13 +150,15 @@ Get security context runAsUser and runAsGroup
 {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabled) "true" }}
 runAsUser: {{ default 1000 .Values.admin.securityContext.runAsUser }}
 runAsGroup: 0
-  {{- if ne (toString (default 1000 .Values.admin.securityContext.runAsUser)) "0" }}
+  {{- if and (eq (include "defaulttrue" .Values.admin.initContainers.runInitDiskAsRoot) "false") (ne (toString (default 1000 .Values.admin.securityContext.runAsUser)) "0")  }}
 runAsNonRoot: true
   {{- end }}
 {{- else if eq (include "defaultfalse" .Values.admin.securityContext.runAsNonRootGroup) "true" }}
 runAsUser: 1000
 runAsGroup: 1000
+  {{- if eq (include "defaulttrue" .Values.admin.initContainers.runInitDiskAsRoot) "false" }}
 runAsNonRoot: true
+  {{- end }}
 {{- end }}
 {{- end -}}
 
