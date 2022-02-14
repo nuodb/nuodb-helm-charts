@@ -1227,6 +1227,33 @@ func TestDatabaseSecurityContext(t *testing.T) {
 		}
 	})
 
+	t.Run("testEnabledNotRunInit", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.enabled":    "true",
+				"database.initContainers.runInitDisk": "false",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+	})
+
 	t.Run("testEnabledRunInitAsNonRoot", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
