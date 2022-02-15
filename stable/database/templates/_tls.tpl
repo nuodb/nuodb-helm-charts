@@ -52,17 +52,8 @@
   value: /etc/nuodb/keys/ca.cert
 - name: NUOCMD_CLIENT_KEY
   value: /etc/nuodb/keys/nuocmd.pem
-- name: PATH
-  value: /usr/bin:/bin:/usr/local/bin:/opt/nuodb/bin
-- name: NUODB_HOME
-  value: /opt/nuodb
 {{- end }}
 {{- end -}}
-
-
-NUOCMD_PROCESS_FORMAT=[{engine_type}] {address::<UNKNOWN ADDRESS>} [start_id = {start_id}] [archive_id = {archive_id::}] [server_id = {server_id}] [pid = {pid::}] [node_id = {node_id::}]  [last_ack = {last_ack:5.2f:>60}] {durable_state}:{engine_state}
-NUOCMD_API_SERVER=nuodb.nuodb.svc:8888
-NUOCMD_VERIFY_SERVER=
 
 {{/*
 Add to environment list variables related to enabling TLS.
