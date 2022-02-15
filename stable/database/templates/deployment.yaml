@@ -116,12 +116,8 @@ spec:
           - { name: COMPONENT_NAME,      value: "te" }
           - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.te.logPersistence.overwriteBackoff.copies | default "3" }}" }
           - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.te.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
-{{- include "database.env" . | indent 10 }}
-      {{- if .Values.admin.tlsKeyStore }}
-        {{- if .Values.admin.tlsKeyStore.password }}
-          - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
-        {{- end }}
-      {{- end }}
+          {{- include "database.env" . | indent 10 }}
+          {{- include "tls.env" . | indent 10 }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -145,21 +141,7 @@ spec:
         - name: readinessprobe
           mountPath: /usr/local/bin/readinessprobe
           subPath: readinessprobe
-        {{- if .Values.admin.tlsCACert }}
-        - name: tls-ca-cert
-          mountPath: /etc/nuodb/keys/ca.cert
-          subPath: {{ .Values.admin.tlsCACert.key }}
-        {{- end }}
-        {{- if .Values.admin.tlsClientPEM }}
-        - name: tls-client-pem
-          mountPath: /etc/nuodb/keys/nuocmd.pem
-          subPath: {{ .Values.admin.tlsClientPEM.key }}
-        {{- end }}
-        {{- if .Values.admin.tlsKeyStore }}
-        - name: tls-keystore
-          mountPath: /etc/nuodb/keys/nuoadmin.p12
-          subPath: {{ .Values.admin.tlsKeyStore.key }}
-        {{- end }}
+        {{- include "tls.mounts" . | nindent 8 }}
         readinessProbe:
           initialDelaySeconds: 30
           periodSeconds: 5
@@ -193,24 +175,7 @@ spec:
           configMap:
             name: {{ template "database.fullname" . }}-readinessprobe
             defaultMode: 0777
-        {{- if .Values.admin.tlsCACert }}
-        - name: tls-ca-cert
-          secret:
-            secretName: {{ .Values.admin.tlsCACert.secret }}
-            defaultMode: 0440
-        {{- end }}
-        {{- if .Values.admin.tlsClientPEM }}
-        - name: tls-client-pem
-          secret:
-            secretName: {{ .Values.admin.tlsClientPEM.secret }}
-            defaultMode: 0440
-        {{- end }}
-        {{- if .Values.admin.tlsKeyStore }}
-        - name: tls-keystore
-          secret:
-            secretName: {{ .Values.admin.tlsKeyStore.secret }}
-            defaultMode: 0440
-        {{- end }}
+        {{- include "tls.volumes" . | nindent 8 }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler

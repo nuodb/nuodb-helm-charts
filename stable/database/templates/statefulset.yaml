@@ -159,12 +159,7 @@ spec:
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
         - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled}}" }
-{{- include "database.env" . | indent 8 }}
-    {{- if .Values.admin.tlsKeyStore }}
-      {{- if .Values.admin.tlsKeyStore.password }}
-        - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
-      {{- end }}
-    {{- end }}
+        {{- include "tls.env" . | indent 8 }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -195,21 +190,7 @@ spec:
         - name: journal-volume
           mountPath: /var/opt/nuodb/journal
         {{- end }}
-        {{- if .Values.admin.tlsCACert }}
-        - name: tls-ca-cert
-          mountPath: /etc/nuodb/keys/ca.cert
-          subPath: {{ .Values.admin.tlsCACert.key }}
-        {{- end }}
-        {{- if .Values.admin.tlsClientPEM }}
-        - name: tls-client-pem
-          mountPath: /etc/nuodb/keys/nuocmd.pem
-          subPath: {{ .Values.admin.tlsClientPEM.key }}
-        {{- end }}
-        {{- if .Values.admin.tlsKeyStore }}
-        - name: tls-keystore
-          mountPath: /etc/nuodb/keys/nuoadmin.p12
-          subPath: {{ .Values.admin.tlsKeyStore.key }}
-        {{- end }}
+        {{- include "tls.mounts" . | nindent 8 }}
         {{- if .Values.admin.tde }}
         {{- if .Values.admin.tde.secrets }}
         {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
@@ -259,24 +240,7 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
-      {{- if .Values.admin.tlsCACert }}
-      - name: tls-ca-cert
-        secret:
-          secretName: {{ .Values.admin.tlsCACert.secret }}
-          defaultMode: 0440
-      {{- end }}
-      {{- if .Values.admin.tlsClientPEM }}
-      - name: tls-client-pem
-        secret:
-          secretName: {{ .Values.admin.tlsClientPEM.secret }}
-          defaultMode: 0440
-      {{- end }}
-      {{- if .Values.admin.tlsKeyStore }}
-      - name: tls-keystore
-        secret:
-          secretName: {{ .Values.admin.tlsKeyStore.secret }}
-          defaultMode: 0440
-      {{- end }}
+      {{- include "tls.volumes" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}
       {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
@@ -534,12 +498,8 @@ spec:
         - { name: OVERWRITE_COPIES,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
         - { name: SEPARATE_JOURNAL,  value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled}}" }
-{{- include "database.env" . | indent 8 }}
-    {{- if .Values.admin.tlsKeyStore }}
-      {{- if .Values.admin.tlsKeyStore.password }}
-        - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
-      {{- end }}
-    {{- end }}
+        {{- include "database.env" . | indent 8 }}
+        {{- include "tls.env" . | indent 8 }}	
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -572,21 +532,7 @@ spec:
         {{- end }}
         - mountPath: /var/opt/nuodb/backup
           name: backup-volume
-        {{- if .Values.admin.tlsCACert }}
-        - name: tls-ca-cert
-          mountPath: /etc/nuodb/keys/ca.cert
-          subPath: {{ .Values.admin.tlsCACert.key }}
-        {{- end }}
-        {{- if .Values.admin.tlsClientPEM }}
-        - name: tls-client-pem
-          mountPath: /etc/nuodb/keys/nuocmd.pem
-          subPath: {{ .Values.admin.tlsClientPEM.key }}
-        {{- end }}
-        {{- if .Values.admin.tlsKeyStore }}
-        - name: tls-keystore
-          mountPath: /etc/nuodb/keys/nuoadmin.p12
-          subPath: {{ .Values.admin.tlsKeyStore.key }}
-        {{- end }}
+        {{- include "tls.mounts" . | nindent 8 }}
         {{- if .Values.admin.tde }}
         {{- if .Values.admin.tde.secrets }}
         {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
@@ -636,24 +582,7 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
-      {{- if .Values.admin.tlsCACert }}
-      - name: tls-ca-cert
-        secret:
-          secretName: {{ .Values.admin.tlsCACert.secret }}
-          defaultMode: 0440
-      {{- end }}
-      {{- if .Values.admin.tlsClientPEM }}
-      - name: tls-client-pem
-        secret:
-          secretName: {{ .Values.admin.tlsClientPEM.secret }}
-          defaultMode: 0440
-      {{- end }}
-      {{- if .Values.admin.tlsKeyStore }}
-      - name: tls-keystore
-        secret:
-          secretName: {{ .Values.admin.tlsKeyStore.secret }}
-          defaultMode: 0440
-      {{- end }}
+      {{- include "tls.volumes" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}
       {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}

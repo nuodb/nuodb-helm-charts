@@ -81,33 +81,13 @@ spec:
             - name: nuobackup
               mountPath: /usr/local/bin/nuobackup
               subPath: nuobackup
-            {{- if .Values.admin.tlsCACert }}
-            - name: tls-ca-cert
-              mountPath: /etc/nuodb/keys/ca.cert
-              subPath: {{ .Values.admin.tlsCACert.key }}
-            {{- end }}
-            {{- if .Values.admin.tlsClientPEM }}
-            - name: tls-client-pem
-              mountPath: /etc/nuodb/keys/nuocmd.pem
-              subPath: {{ .Values.admin.tlsClientPEM.key }}
-            {{- end }}
+            {{- include "tls.client.mounts" . | indent 12 }}
           volumes:
           - name: nuobackup
             configMap:
               name: {{ template "database.fullname" . }}-nuobackup
               defaultMode: 0777
-          {{- if .Values.admin.tlsCACert }}
-          - name: tls-ca-cert
-            secret:
-              secretName: {{ .Values.admin.tlsCACert.secret }}
-              defaultMode: 0440
-          {{- end }}
-          {{- if .Values.admin.tlsClientPEM }}
-          - name: tls-client-pem
-            secret:
-              secretName: {{ .Values.admin.tlsClientPEM.secret }}
-              defaultMode: 0440
-          {{- end }}
+          {{- include "tls.client.volumes" . | indent 10 }}
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 ---
@@ -174,33 +154,13 @@ spec:
             - name: nuobackup
               mountPath: /usr/local/bin/nuobackup
               subPath: nuobackup
-            {{- if .Values.admin.tlsCACert }}
-            - name: tls-ca-cert
-              mountPath: /etc/nuodb/keys/ca.cert
-              subPath: {{ .Values.admin.tlsCACert.key }}
-            {{- end }}
-            {{- if .Values.admin.tlsClientPEM }}
-            - name: tls-client-pem
-              mountPath: /etc/nuodb/keys/nuocmd.pem
-              subPath: {{ .Values.admin.tlsClientPEM.key }}
-            {{- end }}
+            {{- include "tls.client.mounts" . | indent 12 }}
           volumes:
           - name: nuobackup
             configMap:
               name: {{ template "database.fullname" . }}-nuobackup
               defaultMode: 0777
-          {{- if .Values.admin.tlsCACert }}
-          - name: tls-ca-cert
-            secret:
-              secretName: {{ .Values.admin.tlsCACert.secret }}
-              defaultMode: 0440
-          {{- end }}
-          {{- if .Values.admin.tlsClientPEM }}
-          - name: tls-client-pem
-            secret:
-              secretName: {{ .Values.admin.tlsClientPEM.secret }}
-              defaultMode: 0440
-          {{- end }}
+          {{- include "tls.client.volumes" . | indent 10 }}
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 
@@ -269,33 +229,13 @@ spec:
             - name: nuobackup
               mountPath: /usr/local/bin/nuobackup
               subPath: nuobackup
-            {{- if .Values.admin.tlsCACert }}
-            - name: tls-ca-cert
-              mountPath: /etc/nuodb/keys/ca.cert
-              subPath: {{ .Values.admin.tlsCACert.key }}
-            {{- end }}
-            {{- if .Values.admin.tlsClientPEM }}
-            - name: tls-client-pem
-              mountPath: /etc/nuodb/keys/nuocmd.pem
-              subPath: {{ .Values.admin.tlsClientPEM.key }}
-            {{- end }}
+            {{- include "tls.client.mounts" . | indent 12 }}
           volumes:
           - name: nuobackup
             configMap:
               name: {{ template "database.fullname" . }}-nuobackup
               defaultMode: 0777
-          {{- if .Values.admin.tlsCACert }}
-          - name: tls-ca-cert
-            secret:
-              secretName: {{ .Values.admin.tlsCACert.secret }}
-              defaultMode: 0440
-          {{- end }}
-          {{- if .Values.admin.tlsClientPEM }}
-          - name: tls-client-pem
-            secret:
-              secretName: {{ .Values.admin.tlsClientPEM.secret }}
-              defaultMode: 0440
-          {{- end }}
+          {{- include "tls.client.volumes" . | indent 10 }}
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 {{- end }}
