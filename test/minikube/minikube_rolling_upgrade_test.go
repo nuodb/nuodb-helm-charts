@@ -169,9 +169,9 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 			"nuodb.image.repository":                "nuodb/nuodb-ce",
 			"nuodb.image.tag":                       OLD_RELEASE,
 			"admin.bootstrapServers":                "0",
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.cpu":    "0.25",
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.cpu":    "0.25",
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 		},
 	}
