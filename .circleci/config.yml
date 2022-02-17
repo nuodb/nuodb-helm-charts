@@ -79,7 +79,7 @@ jobs:
         type: string
 
     machine:
-      image: ubuntu-2004:202111-02
+      image: ubuntu-1604:202007-01
 
     resource_class: <<parameters.resource-class>>
 
