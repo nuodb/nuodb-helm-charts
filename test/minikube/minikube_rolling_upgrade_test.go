@@ -24,7 +24,7 @@ import (
 	v12 "k8s.io/api/core/v1"
 )
 
-const OLD_RELEASE = "4.0.4"
+const OLD_RELEASE = "4.1.1"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {
