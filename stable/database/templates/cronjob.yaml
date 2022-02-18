@@ -17,11 +17,10 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: full-hotcopy-{{ .Values.database.name }}-{{ $backupGroup }}
+  name: full-hotcopy-{{ .Values.admin.domain }}-{{ .Values.database.name }}-{{ $backupGroup }}
   labels:
-    group: nuodb
+    {{- include "database.resourceLabels" . | nindent 4 }}
     subgroup: backup
-    database: {{ .Values.database.name }}
     backup-group: {{ $backupGroup }}
 spec:
   schedule: {{ include "hotcopy.group.schedule" (merge (dict "backupGroup" $backupGroup "hotCopyType" "full") . ) }}
@@ -29,6 +28,11 @@ spec:
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory}}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
   jobTemplate:
+    metadata:
+      labels:
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        subgroup: backup
+        backup-group: {{ $backupGroup }}
     spec:
       template:
         spec:
@@ -114,11 +118,10 @@ spec:
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: incremental-hotcopy-{{ .Values.database.name }}-{{ $backupGroup }}
+  name: incremental-hotcopy-{{ .Values.admin.domain }}-{{ .Values.database.name }}-{{ $backupGroup }}
   labels:
-    group: nuodb
+    {{- include "database.resourceLabels" . | nindent 4 }}
     subgroup: backup
-    database: {{ .Values.database.name }}
     backup-group: {{ $backupGroup }}
 spec:
   schedule: {{ include "hotcopy.group.schedule" (merge (dict "backupGroup" $backupGroup "hotCopyType" "incremental") . ) }}
@@ -126,6 +129,11 @@ spec:
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory}}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
   jobTemplate:
+    metadata:
+      labels:
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        subgroup: backup
+        backup-group: {{ $backupGroup }}
     spec:
       template:
         spec:
@@ -209,11 +217,10 @@ spec:
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: journal-hotcopy-{{ .Values.database.name }}-{{ $backupGroup }}
+  name: journal-hotcopy-{{ .Values.admin.domain }}-{{ .Values.database.name }}-{{ $backupGroup }}
   labels:
-    group: nuodb
+    {{- include "database.resourceLabels" . | nindent 4 }}
     subgroup: backup
-    database: {{ .Values.database.name }}
     backup-group: {{ $backupGroup }} 
 spec:
   schedule: {{ include "hotcopy.group.schedule" (merge (dict "backupGroup" $backupGroup "hotCopyType" "journal") . ) }}
@@ -221,6 +228,11 @@ spec:
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory }}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory }}
   jobTemplate:
+    metadata:
+      labels:
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        subgroup: backup
+        backup-group: {{ $backupGroup }}
     spec:
       template:
         spec:

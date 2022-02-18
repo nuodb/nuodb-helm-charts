@@ -287,3 +287,26 @@ args:
 {{- end }}
 {{ template "restore.archives" . }}
 {{- end -}}
+
+{{/*
+Renders the labels for all resources deployed by this Helm chart
+*/}}
+{{- define "restore.resourceLabels" -}}
+app: {{ template "restore.fullname" . }}
+group: nuodb
+subgroup: restore
+domain: {{ .Values.admin.domain }}
+database: "{{ include "restore.target" }}"
+chart: {{ template "nuodb.chart" . }}
+release: {{ .Release.Name | quote }}
+{{- range $k, $v := .Values.restore.resourceLabels }}
+"{{ $k }}": "{{ $v | quote }}"
+{{- end }}
+{{- end -}}
+
+{{/*
+Renders the name of the Secret for the database selected for restore
+*/}}
+{{- define "database.secretName" -}}
+{{ .Values.admin.domain }}-{{ include "restore.target" }}
+{{- end -}}

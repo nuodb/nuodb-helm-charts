@@ -532,6 +532,15 @@ database:
     # (https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#_lbquery_expression_syntax).
     tePreferenceQuery: ""
 
+  # Custom labels attached to the Kubernetes resources installed by this Helm
+  # Chart; for allowed syntax and character sets, please check
+  # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+  resourceLabels: {}
+
+  legacy:
+    headlessService: 
+      enabled: false
+
 nuocollector:
   # Enable NuoDB Collector by setting nuocollector.enabled=true
   enabled: false

@@ -13,12 +13,7 @@ metadata:
     kubectl.kubernetes.io/default-container: engine
     kubectl.kubernetes.io/default-logs-container: engine
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: sm-{{ template "database.fullname" . }}
 spec:
   replicas: {{ .Values.database.sm.noHotCopy.replicas }}
@@ -36,14 +31,9 @@ spec:
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
-        app: {{ template "database.fullname" . }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
         component: sm
         role: nohotcopy
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
@@ -130,27 +120,27 @@ spec:
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-name
         - name: DB_USER
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-username
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-password
         - name: DATABASE_IMPORT_CREDENTIALS
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-import-credentials
         - name: DATABASE_RESTORE_CREDENTIALS
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-restore-credentials
         - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
@@ -294,12 +284,8 @@ spec:
   - metadata:
       name: archive-volume
       labels:
-        app: {{ template "database.fullname" . }}
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        nuodb.com/used-for: archive
     spec:
       accessModes:
       {{- range .Values.database.persistence.accessModes }}
@@ -324,12 +310,8 @@ spec:
   - metadata:
       name: journal-volume
       labels:
-        app: {{ template "database.fullname" . }}
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        nuodb.com/used-for: journal
     spec:
       accessModes:
       {{- range .Values.database.sm.noHotCopy.journalPath.persistence.accessModes }}
@@ -355,12 +337,8 @@ spec:
   - metadata:
       name: log-volume
       labels:
-        app: {{ template "database.fullname" . }}
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        nuodb.com/used-for: log
     spec:
       accessModes:
       {{- range .Values.database.sm.logPersistence.accessModes }}
@@ -388,12 +366,7 @@ metadata:
     description: |-
       Database deployment resource for NuoDB Storage Engines (SM).
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: sm-{{ template "database.fullname" . }}-hotcopy
 spec:
   replicas: {{ .Values.database.sm.hotCopy.replicas }}
@@ -411,14 +384,9 @@ spec:
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
-        app: {{ template "database.fullname" . }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
         component: sm
         role: hotcopy
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
@@ -502,32 +470,32 @@ spec:
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-name
         - name: DB_USER
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-username
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-password
         - name: DATABASE_IMPORT_CREDENTIALS
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-import-credentials
         - name: DATABASE_RESTORE_CREDENTIALS
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-restore-credentials
         - name: DATABASE_BACKUP_CREDENTIALS
           valueFrom:
             secretKeyRef:
-              name: {{ .Values.database.name }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-backup-credentials
         - { name: NUODB_DOMAIN,      value: "{{ .Values.admin.domain }}" }
         - { name: NUOCMD_API_SERVER, value: "{{ template "admin.address" . }}:8888" }
@@ -673,12 +641,8 @@ spec:
   - metadata:
       name: archive-volume
       labels:
-        app: {{ template "database.fullname" . }}
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        nuodb.com/used-for: archive
     spec:
       accessModes:
       {{- range .Values.database.persistence.accessModes }}
@@ -703,12 +667,8 @@ spec:
   - metadata:
       name: journal-volume
       labels:
-        app: {{ template "database.fullname" . }}
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
+       {{- include "database.resourceLabels" . | nindent 8 }}
+        nuodb.com/used-for: journal
     spec:
       accessModes:
       {{- range .Values.database.sm.hotCopy.journalPath.persistence.accessModes }}
@@ -733,12 +693,8 @@ spec:
   - metadata:
       name: backup-volume
       labels:
-        app: {{ template "database.fullname" . }}
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        nuodb.com/used-for: backup
     spec:
       accessModes:
       {{- range .Values.database.sm.hotCopy.persistence.accessModes }}
@@ -758,12 +714,8 @@ spec:
   - metadata:
       name: log-volume
       labels:
-        app: {{ template "database.fullname" . }}
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
+        nuodb.com/used-for: log
     spec:
       accessModes:
       {{- range .Values.database.sm.logPersistence.accessModes }}

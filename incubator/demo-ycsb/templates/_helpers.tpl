@@ -102,3 +102,10 @@ imagePullSecrets:
 {{- end }}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Renders the name of the Secret for the target database
+*/}}
+{{- define "database.secretName" -}}
+{{ .Values.admin.domain }}-{{ .Values.database.name }}
+{{- end -}}

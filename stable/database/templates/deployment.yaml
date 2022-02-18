@@ -12,12 +12,7 @@ metadata:
     nuodb.com/database-secondary-release: "true"
     {{- end }}
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: te-{{ template "database.fullname" . }}
 spec:
   replicas: {{ .Values.database.te.replicas }}
@@ -34,13 +29,8 @@ spec:
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
-        app: {{ template "database.fullname" . }}
-        group: nuodb
-        database: {{ .Values.database.name }}
-        domain: {{ .Values.admin.domain }}
+        {{- include "database.resourceLabels" . | nindent 8 }}
         component: te
-        chart: {{ template "database.chart" . }}
-        release: {{ .Release.Name | quote }}
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- include "securityContext" . | indent 6 }}

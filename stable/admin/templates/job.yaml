@@ -3,11 +3,7 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   labels:
-    app: job-lb-policy-{{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "admin.resourceLabels" . | nindent 4 }}
   name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
 spec:
   parallelism: 1
@@ -15,11 +11,7 @@ spec:
   template:
     metadata:
       labels:
-        app: job-lb-policy-{{ template "admin.fullname" . }}
-        group: nuodb
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "admin.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "admin.resourceLabels" . | nindent 4 }}
       name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
@@ -92,6 +84,6 @@ spec:
       {{- end }}
       - name: waitscript
         configMap:
-          name: waitscript
+          name: {{ template "admin.fullname" . }}-waitscript
           defaultMode: 0777
 {{- end }}

@@ -325,11 +325,11 @@ Renders the admin service name for external access based on the service type
 {{- define "admin.externalServiceName" -}}
   {{- $serviceType := (default "LoadBalancer" .Values.admin.externalAccess.type) -}}
   {{- if eq $serviceType "LoadBalancer" -}}
-{{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.balancer }}
+{{ template "admin.fullname" . }}-{{ .Values.admin.serviceSuffix.balancer }}
   {{- else if eq $serviceType "NodePort" -}}
-{{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.nodeport }}
+{{ template "admin.fullname" . }}-{{ .Values.admin.serviceSuffix.nodeport }}
   {{- else -}}
-{{ .Values.admin.domain }}
+{{ template "admin.fullname" . }}
   {{- end }}
 {{- end }}
 
@@ -362,4 +362,18 @@ networking.gke.io/load-balancer-type: "Internal"
       {{- end -}}
     {{- end }}
   {{- end }}
+{{- end -}}
+
+{{/*
+Renders the labels for all resources deployed by this Helm chart
+*/}}
+{{- define "admin.resourceLabels" -}}
+app: {{ template "admin.fullname" . }}
+group: nuodb
+domain: {{ .Values.admin.domain }}
+chart: {{ template "admin.chart" . }}
+release: {{ .Release.Name | quote }}
+{{- range $k, $v := .Values.admin.resourceLabels }}
+"{{ $k }}": "{{ $v | quote }}"
+{{- end }}
 {{- end -}}

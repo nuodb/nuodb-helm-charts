@@ -5,12 +5,8 @@ kind: PersistentVolumeClaim
 metadata:
   name: {{ template "database.fullname" . }}-log-te-volume
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
+    nuodb.com/used-for: log
 spec:
   accessModes:
   {{- range .Values.database.te.logPersistence.accessModes }}

@@ -6,12 +6,7 @@ metadata:
     description: "Service (and load-balancer) for TE pods."
 {{- include "database.externalAccessAnnotations" . | indent 4 }}
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.externalServiceName" . }}
 spec:
   ports:

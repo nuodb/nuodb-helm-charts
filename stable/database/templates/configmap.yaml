@@ -3,11 +3,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.fullname" . }}-nuote
 data:
 {{ (.Files.Glob "files/nuote").AsConfig | indent 2 }}
@@ -20,11 +16,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.fullname" . }}-nuosm
 data:
 {{ (.Files.Glob "files/nuosm").AsConfig | indent 2 }}
@@ -33,11 +25,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.fullname" . }}-nuobackup
 data:
 {{ (.Files.Glob "files/nuobackup").AsConfig | indent 2 }}
@@ -47,11 +35,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.fullname" . }}-readinessprobe
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}
@@ -65,12 +49,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
-  name: {{ .Values.database.name }}-restore
+    {{- include "database.resourceLabels" . | nindent 4 }}
+  name: {{ .Values.admin.domain }}-{{ .Values.database.name }}-restore
 data:
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.autoImport.stripLevels | quote }}
   NUODB_RESTORE_STRIP_LEVELS: {{ default "1" .Values.database.autoRestore.stripLevels | quote }}
@@ -91,11 +71,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.fullname" . }}-configuration
 data:
 {{- range $key, $val := .Values.database.configFiles }}

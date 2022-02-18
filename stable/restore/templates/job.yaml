@@ -2,11 +2,9 @@
 apiVersion: batch/v1
 kind: Job
 metadata:
-  name: restore-{{ $restoreTarget }}
+  name: {{ template "restore.fullname" . }}
   labels:
-    group: nuodb
-    subgroup: restore
-    database: "{{ $restoreTarget }}"
+    {{- include "restore.resourceLabels" . | nindent 4 }}
 spec:
   parallelism: 1
   completions: 1
@@ -48,12 +46,12 @@ spec:
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
-              name: {{ $restoreTarget }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-name
         - name: DATABASE_RESTORE_CREDENTIALS
           valueFrom:
             secretKeyRef:
-              name: {{ $restoreTarget }}.nuodb.com
+              name: {{ template "database.secretName" . }}
               key: database-restore-credentials
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888"}
         - { name: NUODB_RESTORE_URL,   value: "{{ include "restore.source" . }}" }
