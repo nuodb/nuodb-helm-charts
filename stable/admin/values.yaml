@@ -49,7 +49,7 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.2.1
+    tag: 4.2.4.vee
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
