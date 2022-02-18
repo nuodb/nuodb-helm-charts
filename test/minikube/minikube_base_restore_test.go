@@ -89,6 +89,8 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
+	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	options := helm.Options{
 		SetValues: map[string]string{

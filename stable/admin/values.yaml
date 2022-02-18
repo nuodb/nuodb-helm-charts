@@ -49,7 +49,7 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.2.1
+    tag: 4.2.4.vee
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -125,6 +125,36 @@ admin:
   #   internalIP: true
   #   type: LoadBalancer
   #   annotations: {}
+
+  # Enable NuoDB external access via Ingress; the provisioned Ingress controller
+  # should support SSL passthrough feature allowing it to send the TLS
+  # connections directly to the NuoDB Admin instead of decrypting the
+  # communication; supported starting with Kubernetes v1.19.0
+  ingress:
+    enabled: false
+    api:
+      # the fully qualified domain name (FQDN) of the network host for the NuoDB
+      # Admin REST API
+      hostname: ""
+      # the associated IngressClass name defines which controller will implement
+      # the resource; for Kubernetes >= 1.18 the ingress class name should be
+      # specified via the className option instead of using annotation
+      className: ""
+      # custom annotations that are set on the Ingress resource
+      annotations: 
+        ingress.kubernetes.io/ssl-passthrough: "true"
+    sql:
+      # the fully qualified domain name (FQDN) of the network host for SQL
+      # clients
+      hostname: ""
+      # For Kubernetes >= 1.18 the ingress class name should be specified via the
+      # ingressClassName option instead of using annotation
+      className: ""
+      # custom annotations that are set on the Ingress resource; SSL passthrough
+      # feature should be configured so that SQL clients TLS connections are
+      # send directly to the  NuoDB Admin
+      annotations: 
+        ingress.kubernetes.io/ssl-passthrough: "true"
 
   persistence:
     size: 1Gi
