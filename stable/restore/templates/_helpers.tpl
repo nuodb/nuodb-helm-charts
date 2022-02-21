@@ -296,7 +296,7 @@ app: {{ template "restore.fullname" . }}
 group: nuodb
 subgroup: restore
 domain: {{ .Values.admin.domain }}
-database: "{{ include "restore.target" }}"
+database: {{ include "restore.target" . | quote }}
 chart: {{ template "nuodb.chart" . }}
 release: {{ .Release.Name | quote }}
 {{- range $k, $v := .Values.restore.resourceLabels }}

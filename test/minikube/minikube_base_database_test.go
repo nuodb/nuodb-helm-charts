@@ -163,7 +163,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-	clusterServiceName := fmt.Sprintf("nuodb-demo-clusterip")
+	clusterServiceName := fmt.Sprintf("demo-clusterip")
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
