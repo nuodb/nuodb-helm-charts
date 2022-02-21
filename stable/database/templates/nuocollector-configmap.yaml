@@ -9,7 +9,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-   {{- include "database.resourceLabels" . | nindent 4 }}
+   {{- include "database.resourceLabels" $ | nindent 4 }}
     "nuodb.com/nuocollector-plugin": {{ template "database.fullname" $ }}
   name: nuocollector-{{ template "database.fullname" $ }}-{{ $pluginName }}
 data:

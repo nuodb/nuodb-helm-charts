@@ -285,7 +285,6 @@ spec:
       name: archive-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: archive
     spec:
       accessModes:
       {{- range .Values.database.persistence.accessModes }}
@@ -311,7 +310,6 @@ spec:
       name: journal-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: journal
     spec:
       accessModes:
       {{- range .Values.database.sm.noHotCopy.journalPath.persistence.accessModes }}
@@ -338,7 +336,6 @@ spec:
       name: log-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: log
     spec:
       accessModes:
       {{- range .Values.database.sm.logPersistence.accessModes }}
@@ -642,7 +639,6 @@ spec:
       name: archive-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: archive
     spec:
       accessModes:
       {{- range .Values.database.persistence.accessModes }}
@@ -667,8 +663,7 @@ spec:
   - metadata:
       name: journal-volume
       labels:
-       {{- include "database.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: journal
+        {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
       accessModes:
       {{- range .Values.database.sm.hotCopy.journalPath.persistence.accessModes }}
@@ -694,7 +689,6 @@ spec:
       name: backup-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: backup
     spec:
       accessModes:
       {{- range .Values.database.sm.hotCopy.persistence.accessModes }}
@@ -715,7 +709,6 @@ spec:
       name: log-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: log
     spec:
       accessModes:
       {{- range .Values.database.sm.logPersistence.accessModes }}

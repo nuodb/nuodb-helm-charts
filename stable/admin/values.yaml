@@ -360,7 +360,8 @@ admin:
     servers: []
 
   # Custom labels attached to the Kubernetes resources installed by this Helm
-  # Chart; for allowed syntax and character sets, please check
+  # Chart; the labels are immutable and can't be changed with Helm upgrade; for
+  # allowed syntax and character sets, please check
   # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
   resourceLabels: {}
 

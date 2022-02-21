@@ -461,7 +461,7 @@ database:
       annotations: 
         ingress.kubernetes.io/ssl-passthrough: "true"
 
-    ## By default, database clusterip and headless services for direct TE connections are enabled,
+    ## By default, database clusterip services for direct TE connections are enabled,
     ## but can be optionally disabled here
     dbServices: {}
       # enabled: false
@@ -533,7 +533,8 @@ database:
     tePreferenceQuery: ""
 
   # Custom labels attached to the Kubernetes resources installed by this Helm
-  # Chart; for allowed syntax and character sets, please check
+  # Chart; the labels are immutable and can't be changed with Helm upgrade; for
+  # allowed syntax and character sets, please check
   # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
   resourceLabels: {}
 

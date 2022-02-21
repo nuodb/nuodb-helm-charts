@@ -251,7 +251,6 @@ spec:
       name: raftlog
       labels:
         {{- include "admin.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: raft
     spec:
     {{- if .Values.admin.persistence.storageClass }}
       {{- if (eq "-" .Values.admin.persistence.storageClass) }}
@@ -267,12 +266,10 @@ spec:
       resources:
         requests:
           storage: {{ .Values.admin.persistence.size }}
-{{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
   - metadata:
       name: log-volume
       labels:
         {{- include "admin.resourceLabels" . | nindent 8 }}
-        nuodb.com/used-for: log
     spec:
     {{- if .Values.admin.logPersistence.storageClass }}
       {{- if (eq "-" .Values.admin.logPersistence.storageClass) }}

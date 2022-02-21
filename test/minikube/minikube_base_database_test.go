@@ -98,7 +98,7 @@ func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseN
 }
 
 func verifySecret(t *testing.T, namespaceName string) {
-	secret := testlib.GetSecret(t, namespaceName, "demo.nuodb.com")
+	secret := testlib.GetSecret(t, namespaceName, "nuodb-demo")
 
 	_, ok := secret.Data["database-name"]
 	require.True(t, ok)
@@ -163,8 +163,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-	headlessServiceName := fmt.Sprintf("demo")
-	clusterServiceName := fmt.Sprintf("demo-clusterip")
+	clusterServiceName := fmt.Sprintf("nuodb-demo-clusterip")
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
@@ -185,7 +184,6 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 		})
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
-		t.Run("verifyDBHeadlessService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, headlessServiceName, true) })
 		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
 		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })

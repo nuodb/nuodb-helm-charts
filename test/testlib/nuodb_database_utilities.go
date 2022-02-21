@@ -316,7 +316,7 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 func BackupDatabase(t *testing.T, namespaceName string, podName string,
 	databaseName string, backupType string, backupGroup string) string {
 
-	cronJobName := fmt.Sprintf("%s-hotcopy-%s-%s", backupType, databaseName, backupGroup)
+	cronJobName := fmt.Sprintf("%s-hotcopy-nuodb-%s-%s", backupType, databaseName, backupGroup)
 	jobName := fmt.Sprintf("backup-database-%s", strings.ToLower(random.UniqueId()))
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.RunKubectl(t, opts, "create", "job", "--from=cronjob/"+cronJobName, jobName)
