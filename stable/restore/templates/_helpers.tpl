@@ -296,7 +296,7 @@ app: {{ template "restore.fullname" . }}
 group: nuodb
 subgroup: restore
 domain: {{ .Values.admin.domain }}
-database: {{ include "restore.target" . | quote }}
+database: {{ template "restore.target" . | quote }}
 chart: {{ template "nuodb.chart" . }}
 release: {{ .Release.Name | quote }}
 {{- range $k, $v := .Values.restore.resourceLabels }}
@@ -308,5 +308,5 @@ release: {{ .Release.Name | quote }}
 Renders the name of the Secret for the database selected for restore
 */}}
 {{- define "database.secretName" -}}
-{{ .Values.admin.domain }}-{{ include "restore.target" }}
+{{ .Values.admin.domain }}-{{ template "restore.target" . }}
 {{- end -}}
