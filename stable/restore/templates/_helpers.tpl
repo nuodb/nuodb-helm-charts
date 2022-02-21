@@ -215,7 +215,7 @@ Import ENV vars from configMaps
    You Have Been Warned.
 */}}
 {{- define "restore.envFrom" }}
-envFrom: [ configMapRef: { name: {{ include "restore.target" . }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+envFrom: [ configMapRef: { name: {{ .Values.admin.domain }}-{{ include "restore.target" . }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
 {{- end -}}
 
 {{/*
@@ -296,7 +296,7 @@ app: {{ template "restore.fullname" . }}
 group: nuodb
 subgroup: restore
 domain: {{ .Values.admin.domain }}
-database: {{ template "restore.target" . | quote }}
+database: {{ template "restore.target" . }}
 chart: {{ template "nuodb.chart" . }}
 release: {{ .Release.Name | quote }}
 {{- range $k, $v := .Values.restore.resourceLabels }}
