@@ -266,6 +266,7 @@ spec:
       resources:
         requests:
           storage: {{ .Values.admin.persistence.size }}
+{{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
   - metadata:
       name: log-volume
       labels:
