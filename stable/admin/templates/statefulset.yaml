@@ -258,11 +258,7 @@ spec:
   - metadata:
       name: raftlog
       labels:
-        app: {{ template "admin.fullname" . }}
-        group: nuodb
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "admin.chart" . }}
-        release: {{ .Release.Name | quote }}
+        use: raftlog-volume
     spec:
     {{- if .Values.admin.persistence.storageClass }}
       {{- if (eq "-" .Values.admin.persistence.storageClass) }}
@@ -282,11 +278,7 @@ spec:
   - metadata:
       name: log-volume
       labels:
-        app: {{ template "admin.fullname" . }}
-        group: nuodb
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "admin.chart" . }}
-        release: {{ .Release.Name | quote }}
+        use: log-volume
     spec:
     {{- if .Values.admin.logPersistence.storageClass }}
       {{- if (eq "-" .Values.admin.logPersistence.storageClass) }}
