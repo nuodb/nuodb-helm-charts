@@ -14,7 +14,11 @@
   {{- with $globalScope }}
     {{ $backupGroupLabels := include "hotcopy.group.labels" (merge (dict "backupGroup" $backupGroup) .) }}
 ---
-apiVersion: batch/v1beta1
+{{- if .Capabilities.APIVersions.Has "batch/v1" }}
+apiVersion: batch/v1
+{{- else }}
+apiVersion: batch/v1beta
+{{- end }}
 kind: CronJob
 metadata:
   name: full-hotcopy-{{ .Values.database.name }}-{{ $backupGroup }}
@@ -29,8 +33,26 @@ spec:
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory}}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
   jobTemplate:
+    metadata:
+      annotations:
+        backup-group-labels: "{{ $backupGroupLabels }}"
+        operation: full-hotcopy
+      labels:
+        group: nuodb
+        subgroup: backup
+        database: {{ .Values.database.name }}
+        backup-group: {{ $backupGroup }}
     spec:
       template:
+        metadata:
+          annotations:
+            backup-group-labels: "{{ $backupGroupLabels }}"
+            operation: full-hotcopy
+          labels:
+            group: nuodb
+            subgroup: backup
+            database: {{ .Values.database.name }}
+            backup-group: {{ $backupGroup }}
         spec:
           {{- include "securityContext" . | indent 10 }}
           containers:
@@ -91,10 +113,17 @@ spec:
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 ---
-apiVersion: batch/v1beta1
+{{- if .Capabilities.APIVersions.Has "batch/v1" }}
+apiVersion: batch/v1
+{{- else }}
+apiVersion: batch/v1beta
+{{- end }}
 kind: CronJob
 metadata:
   name: incremental-hotcopy-{{ .Values.database.name }}-{{ $backupGroup }}
+  annotations:
+    backup-group-labels: "{{ $backupGroupLabels }}"
+    operation: full-hotcopy
   labels:
     group: nuodb
     subgroup: backup
@@ -106,6 +135,15 @@ spec:
   successfulJobsHistoryLimit: {{ .Values.database.sm.hotCopy.successHistory}}
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
   jobTemplate:
+    metadata:
+      annotations:
+        backup-group-labels: "{{ $backupGroupLabels }}"
+        operation: incremental-hotcopy
+      labels:
+        group: nuodb
+        subgroup: backup
+        database: {{ .Values.database.name }}
+        backup-group: {{ $backupGroup }}
     spec:
       template:
         spec:
@@ -166,15 +204,23 @@ spec:
 
 {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true" }}
 ---
-apiVersion: batch/v1beta1
+{{- if .Capabilities.APIVersions.Has "batch/v1" }}
+apiVersion: batch/v1
+{{- else }}
+apiVersion: batch/v1beta
+{{- end }}
 kind: CronJob
 metadata:
   name: journal-hotcopy-{{ .Values.database.name }}-{{ $backupGroup }}
+  annotations:
+    backup-group-labels: "{{ $backupGroupLabels }}"
+    operation: journal-hotcopy
   labels:
     group: nuodb
     subgroup: backup
     database: {{ .Values.database.name }}
-    backup-group: {{ $backupGroup }} 
+    backup-group: {{ $backupGroup }}
+    backup-group-labels: "{{ $backupGroupLabels }}"
 spec:
   schedule: {{ include "hotcopy.group.schedule" (merge (dict "backupGroup" $backupGroup "hotCopyType" "journal") . ) }}
   startingDeadlineSeconds: {{ .Values.database.sm.hotCopy.journalBackup.deadline }}
@@ -183,6 +229,15 @@ spec:
   jobTemplate:
     spec:
       template:
+        metadata:
+          annotations:
+            backup-group-labels: "{{ $backupGroupLabels }}"
+            operation: journal-hotcopy
+          labels:
+            group: nuodb
+            subgroup: backup
+            database: {{ .Values.database.name }}
+            backup-group: "{{ $backupGroup }}"
         spec:
           {{- include "securityContext" . | indent 10 }}
           containers:

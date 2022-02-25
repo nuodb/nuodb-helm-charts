@@ -59,9 +59,9 @@
 Add to environment list variables related to enabling TLS.
 */}}
 {{- define "tls.env" -}}
-{{- if .Values.admin.tlsKeyStore }}
-{{- if .Values.admin.tlsKeyStore.password }}
+{{ if .Values.admin.tlsKeyStore }}
+{{ if .Values.admin.tlsKeyStore.password }}
 - { name: NUODOCKER_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
-{{- end }}
-{{- end }}
+{{ end }}
+{{ end }}
 {{- end -}}
