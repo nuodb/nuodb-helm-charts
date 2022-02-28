@@ -973,6 +973,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 	t.Run("testContainerEnabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
+				"database.securityContext.enabled":            "true",
 				"database.securityContext.enabledOnContainer": "true",
 			},
 		}
@@ -983,6 +984,8 @@ func TestDatabaseSecurityContext(t *testing.T) {
 			assert.NotNil(t, containerSecurityContext)
 			assert.False(t, *containerSecurityContext.Privileged)
 			assert.False(t, *containerSecurityContext.AllowPrivilegeEscalation)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(0), *containerSecurityContext.RunAsGroup)
 		}
 		// check security context on TE Deployment
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
@@ -991,6 +994,8 @@ func TestDatabaseSecurityContext(t *testing.T) {
 			assert.NotNil(t, containerSecurityContext)
 			assert.False(t, *containerSecurityContext.Privileged)
 			assert.False(t, *containerSecurityContext.AllowPrivilegeEscalation)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(0), *containerSecurityContext.RunAsGroup)
 		}
 	})
 
@@ -1067,6 +1072,266 @@ func TestDatabaseSecurityContext(t *testing.T) {
 			assert.NotNil(t, containerSecurityContext)
 			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
 			assert.Nil(t, containerSecurityContext.Capabilities.Add)
+		}
+	})
+
+	t.Run("testContainerRunAsNonRootGroup", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.hotCopy.journalPath.enabled":     "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+				"database.securityContext.runAsNonRootGroup":  "true",
+				"database.securityContext.runAsUser":          "5555",
+				"database.securityContext.enabledOnContainer": "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			// runAsUser should be disregarded, since we can only use 1000:1000 or <uid>:0
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsGroup)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, dep := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			containerSecurityContext := dep.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			// runAsUser should be disregarded, since we can only use 1000:1000 or <uid>:0
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsGroup)
+		}
+	})
+
+	t.Run("testContainerFsGroupOnly", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.hotCopy.journalPath.enabled":     "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+				"database.securityContext.fsGroupOnly":        "true",
+				"database.securityContext.enabledOnContainer": "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			// user and group should be absent
+			assert.Nil(t, containerSecurityContext.RunAsUser)
+			assert.Nil(t, containerSecurityContext.RunAsGroup)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, dep := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			containerSecurityContext := dep.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			// user and group should be absent
+			assert.Nil(t, containerSecurityContext.RunAsUser)
+			assert.Nil(t, containerSecurityContext.RunAsGroup)
+		}
+	})
+
+	t.Run("testContainerEnabledPrecedence", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.hotCopy.journalPath.enabled":     "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+				"database.securityContext.enabled":            "true",
+				"database.securityContext.runAsNonRootGroup":  "true",
+				"database.securityContext.runAsUser":          "5555",
+				"database.securityContext.enabledOnContainer": "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Equal(t, int64(5555), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(0), *containerSecurityContext.RunAsGroup)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, dep := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			containerSecurityContext := dep.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Equal(t, int64(5555), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(0), *containerSecurityContext.RunAsGroup)
+		}
+	})
+
+	t.Run("testContainerRunAsNonRootGroupPrecedence", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.hotCopy.journalPath.enabled":     "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+				"database.securityContext.runAsNonRootGroup":  "true",
+				"database.securityContext.fsGroupOnly":        "true",
+				"database.securityContext.runAsUser":          "5555",
+				"database.securityContext.enabledOnContainer": "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			// runAsUser should be disregarded, since we can only use 1000:1000 or <uid>:0
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsGroup)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, dep := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			containerSecurityContext := dep.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			// runAsUser should be disregarded, since we can only use 1000:1000 or <uid>:0
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsGroup)
+		}
+	})
+
+	t.Run("testEnabledRunInitAsRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.enabled": "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsNonRoot)
+		}
+	})
+
+	t.Run("testEnabledNotRunInit", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.enabled":    "true",
+				"database.initContainers.runInitDisk": "false",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+	})
+
+	t.Run("testEnabledRunInitAsNonRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.enabled":          "true",
+				"database.initContainers.runInitDiskAsRoot": "false",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+	})
+
+	t.Run("testRunAsNonRootGroupRunInitAsRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.runAsNonRootGroup": "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsNonRoot)
+		}
+	})
+
+	t.Run("testRunAsNonRootRunInitAsNonRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.runAsNonRootGroup": "true",
+				"database.initContainers.runInitDiskAsRoot":  "false",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
 		}
 	})
 }
