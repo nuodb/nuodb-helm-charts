@@ -1,7 +1,6 @@
 {{- if or (not (hasKey .Values.database.te.dbServices "enabled")) (eq (include "defaultfalse" .Values.database.te.dbServices.enabled) "true") }}
+{{- if or (not (hasKey .Values.database.namespaceCoexistence "enabled")) (eq (include "defaultfalse" .Values.database.namespaceCoexistence.enabled) "false") }}
 {{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
-{{- $svc := lookup "v1" "Service" .Release.Namespace (printf "%s-%s" .Values.database.name (default .Values.admin.serviceSuffix.clusterip .Values.database.serviceSuffix.clusterip)) -}}
-{{- if not $svc -}}
 apiVersion: v1
 kind: Service
 metadata:

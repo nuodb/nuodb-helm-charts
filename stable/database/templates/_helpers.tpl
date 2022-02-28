@@ -470,7 +470,7 @@ domain: {{ .Values.admin.domain }}
 chart: {{ template "database.chart" . }}
 release: {{ .Release.Name | quote }}
 {{- range $k, $v := .Values.database.resourceLabels }}
-"{{ $k }}": "{{ $v | quote }}"
+"{{ $k }}": "{{ $v }}"
 {{- end }}
 {{- end -}}
 

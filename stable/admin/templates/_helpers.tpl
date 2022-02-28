@@ -374,6 +374,6 @@ domain: {{ .Values.admin.domain }}
 chart: {{ template "admin.chart" . }}
 release: {{ .Release.Name | quote }}
 {{- range $k, $v := .Values.admin.resourceLabels }}
-"{{ $k }}": "{{ $v | quote }}"
+"{{ $k }}": "{{ $v }}"
 {{- end }}
 {{- end -}}
