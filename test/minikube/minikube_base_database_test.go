@@ -230,6 +230,57 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 	})
 }
 
+func TestSmVolumePermissionChange(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	options := helm.Options{}
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.hotCopy.journalPath.enabled": "true",
+		},
+	}
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+
+	// simulate the creation of a real filesystem by creating a lost+found
+	// directory in all mounted volumes (archive, journal, and backup); with
+	// certain PV provisioners, the directory is owned by root and has
+	// permissions 700 (not group-writable)
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	for _, dir := range []string{"/var/opt/nuodb/archive", "/var/opt/nuodb/journal", "/var/opt/nuodb/backup"} {
+		k8s.RunKubectl(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--", "mkdir", dir+"/lost+found")
+		k8s.RunKubectl(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--", "chmod", "700", dir+"/lost+found")
+
+		output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--", "stat", "-c", "%a", dir+"/lost+found")
+		require.NoError(t, err, output)
+		require.Equal(t, "700", strings.TrimSpace(output))
+	}
+
+	// delete SM pod to cause init container to be invoked
+	testlib.AwaitDatabaseRestart(t, namespaceName, admin0, opt.DbName, &databaseOptions, func() {
+		k8s.RunKubectl(t, kubectlOptions, "delete", "pod", smPodName)
+	})
+
+	// check that directories group-writable after restart
+	for _, dir := range []string{"/var/opt/nuodb/archive", "/var/opt/nuodb/journal", "/var/opt/nuodb/backup"} {
+		output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--", "stat", "-c", "%a", dir+"/lost+found")
+		require.NoError(t, err, output)
+		require.Equal(t, "770", strings.TrimSpace(output))
+	}
+}
+
 func TestKubernetesAccessWithinPods(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 
