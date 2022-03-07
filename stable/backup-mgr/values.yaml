@@ -38,6 +38,10 @@ admin:
   #   secret: nuodb-client-pem
   #   key: nuocmd.pem
 
+#
+#  These defaults are for testing (in nuodb-medidata account).
+#  These should be changed.
+
 backupmgr:
   image:
     registry: 697369079385.dkr.ecr.us-east-2.amazonaws.com
