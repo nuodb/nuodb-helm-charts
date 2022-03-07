@@ -25,6 +25,10 @@ spec:
     matchLabels:
       app: {{ template "database.fullname" . }}
       component: te
+      group: nuodb
+      database: {{ .Values.database.name }}
+      domain: {{ .Values.admin.domain }}
+      release: {{ .Release.Name | quote }}
   strategy:
     type: RollingUpdate
   template:

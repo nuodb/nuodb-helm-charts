@@ -27,6 +27,10 @@ spec:
       app: {{ template "database.fullname" . }}
       component: sm
       role: nohotcopy
+      group: nuodb
+      database: {{ .Values.database.name }}
+      domain: {{ .Values.admin.domain }}
+      release: {{ .Release.Name | quote }}
   podManagementPolicy: Parallel
   serviceName: {{ .Values.database.name }}
   template:
@@ -351,6 +355,10 @@ spec:
       app: {{ template "database.fullname" . }}
       component: sm
       role: hotcopy
+      group: nuodb
+      database: {{ .Values.database.name }}
+      domain: {{ .Values.admin.domain }}
+      release: {{ .Release.Name | quote }}
   podManagementPolicy: Parallel
   serviceName: {{ .Values.database.name }}
   template:

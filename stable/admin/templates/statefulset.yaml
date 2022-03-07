@@ -27,7 +27,10 @@ spec:
   selector:
     matchLabels:
       app: {{ template "admin.fullname" . }}
+      release: {{ .Release.Name | quote }}
       component: admin
+      domain: {{ .Values.admin.domain }}
+      group: nuodb
   template:
     metadata:
       name: {{ template "admin.fullname" . }}

@@ -39,16 +39,22 @@ admin:
   #   key: nuocmd.pem
 
 backupmgr:
-  enabled: true
-  type: s3
   image:
     registry: 697369079385.dkr.ecr.us-east-2.amazonaws.com
     repository: nuodb/aws-sidecar
-    tag: 0.2.5
-    pullPolicy: Always
-  init:
-    enabled: false
-    backup-type: backupset
-    bucket: nuodb-cloud-east-2
-    key: transfer/20220209T223502.tgz
-    directory: init-archive
+    tag: 0.5.1
+    pullPolicy: IfNotPresent
+  snapshot:
+    addServiceAccount: true
+    serviceAccount:
+        name: nuodb-backup-manager
+        annotations:
+          "eks.amazonaws.com/role-arn": arn:aws:iam::697369079385:role/nuodb-sa-role-green  
+    addRoleBinding: true
+  restore:
+    addServiceAccount: true
+    serviceAccount:
+        name: nuodb-restore-manager
+        annotations:
+          "eks.amazonaws.com/role-arn": arn:aws:iam::697369079385:role/nuodb-sa-role-green  
+    addRoleBinding: true

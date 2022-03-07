@@ -340,6 +340,7 @@ database:
       restartPolicy: OnFailure
 
       persistence:
+        restore: ""
         size: 20Gi
         accessModes:
           - ReadWriteOnce
@@ -535,3 +536,13 @@ nuocollector:
   plugins:
     ## NuoDB Collector compatible plugins specific for database services
     database: {}
+
+backupmgr:
+  image:
+    registry: 697369079385.dkr.ecr.us-east-2.amazonaws.com
+    repository: nuodb/aws-sidecar
+    tag: 0.5.1
+    pullPolicy: IfNotPresent
+  restore:
+    serviceAccount:
+        name: nuodb-restore-manager

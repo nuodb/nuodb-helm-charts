@@ -1,5 +1,5 @@
 {{/*
-Docket image for aws sidecar
+Docker image for aws sidecar
 */}}
 {{- define "aws.sidecar" -}}
 {{- $registryName :=  default "docker.io" .Values.backupmgr.image.registry -}}
@@ -7,7 +7,6 @@ Docket image for aws sidecar
 {{- $tag := default "latest" .Values.backupmgr.image.tag | toString -}}
 {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
 {{- end -}}
-
 
 {{- define "aws.sidecar.setup" -}}
 image: {{ template "aws.sidecar" . }}
@@ -32,4 +31,15 @@ volumeMounts:
   mountPath: /var/log/backupmgr
 {{- include "tls.client.mounts" . }}
 {{- end -}}
+
+{{- define "restore.serviceaccount" -}}
+{{- default "nuodb-restore-mgr"  .Values.backupmgr.restore.serviceAccount.name }}
+{{- end -}}
+
+{{- define "snapshot.serviceaccount" }}
+{{- default "nuodb-backup-mgr"  .Values.backupmgr.snapshot.serviceAccount.name }}
+{{- end -}}
+
+
+
 

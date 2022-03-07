@@ -16,7 +16,7 @@ spec:
         k8s-app: nuodb-backup-mgr
         name: nuodb-backup-mgr
     spec:
-      serviceAccountName: nuodb-backup-manager
+      serviceAccountName: {{ include "snapshot.serviceaccount" . | quote }}
       containers:
       - name: logger
         command: 
