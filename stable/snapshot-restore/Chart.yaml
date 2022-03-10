@@ -1,0 +1,17 @@
+apiVersion: "v1"
+name: snapshot-restore
+version: 1.0.0
+description: NuoDB distributed SQL database.
+keywords:
+- nuodb
+- database
+- snapshot
+- restore
+home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/snapshot-restore
+maintainers:
+- name: NuoDB
+  email: support@nuodb.com
+engine: gotpl
+icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+appVersion: 4.2.1
+tillerVersion: ">=2.9"

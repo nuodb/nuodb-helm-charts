@@ -1,0 +1,92 @@
+{{- if and .Values.backupmgr.restore.source  .Values.backupmgr.restore.fsr.enabled }}
+{{/*
+
+ This job is used to enable fast snapshot restore before creating the hotcopy backup volume PVCs based upon
+ the snapshot handle.
+
+*/}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-fsr
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      name: {{ .Release.Name }}-fsr
+      labels:
+        app: {{ template "database.fullname" . }}
+        component: sm
+        role: hotcopy
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: "{{ .Values.backupmgr.restore.serviceAccount.name }}"
+      containers:
+      - name: main
+        image: {{ template "aws.sidecar" . }}
+        imagePullPolicy: {{ .Values.backupmgr.image.pullPolicy }}
+        command:
+        - enable_fsr
+        - {{ .Values.backupmgr.restore.source }}
+        {{- toYaml .Values.backupmgr.restore.fsr.zones | nindent 8 }}
+---
+{{/*
+
+ This job is used to disable fast snapshot restore when helm release is uninstalled. Which
+ can be done after volumes have been created.
+
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ .Release.Name }}-fsr
+  labels:
+    app.kubernetes.io/managed-by: {{ .Release.Service | quote }}
+    app.kubernetes.io/instance: {{ .Release.Name | quote }}
+    app.kubernetes.io/version: {{ .Chart.AppVersion }}
+    helm.sh/chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
+  annotations:
+    "helm.sh/hook": pre-delete
+    "helm.sh/hook-weight": "-10"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    metadata:
+      name: {{ .Release.Name }}-fsr
+      labels:
+        app: {{ template "database.fullname" . }}
+        component: sm
+        role: hotcopy
+        group: nuodb
+        database: {{ .Values.database.name }}
+        domain: {{ .Values.admin.domain }}
+        chart: {{ template "database.chart" . }}
+        release: {{ .Release.Name | quote }}
+    spec:
+      restartPolicy: Never
+      serviceAccountName: "{{ .Values.backupmgr.restore.serviceAccount.name }}"
+      containers:
+      - name: main
+        image: {{ template "aws.sidecar" . }}
+        imagePullPolicy: {{ .Values.backupmgr.image.pullPolicy }}
+        command:
+        - disable_fsr
+        - {{ .Values.backupmgr.restore.source }}
+        {{- toYaml .Values.backupmgr.restore.fsr.zones | nindent 8 }}
+{{- end }}
