@@ -25,7 +25,7 @@ backupmgr:
   image:
     registry: 697369079385.dkr.ecr.us-east-2.amazonaws.com
     repository: nuodb/aws-sidecar
-    tag: 0.5.7
+    tag: 0.6.0
     pullPolicy: IfNotPresent
   restore:
     source: ""

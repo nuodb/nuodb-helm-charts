@@ -46,19 +46,19 @@ backupmgr:
   image:
     registry: 697369079385.dkr.ecr.us-east-2.amazonaws.com
     repository: nuodb/aws-sidecar
-    tag: 0.5.1
+    tag: 0.6.0
     pullPolicy: IfNotPresent
   snapshot:
     addServiceAccount: true
     serviceAccount:
         name: nuodb-backup-manager
         annotations:
-          "eks.amazonaws.com/role-arn": arn:aws:iam::697369079385:role/nuodb-sa-role-green  
+          "eks.amazonaws.com/role-arn": arn:aws:iam::697369079385:role/nuodb-backup-mgr-role-green  
     addRoleBinding: true
   restore:
     addServiceAccount: true
     serviceAccount:
         name: nuodb-restore-manager
         annotations:
-          "eks.amazonaws.com/role-arn": arn:aws:iam::697369079385:role/nuodb-sa-role-green  
+          "eks.amazonaws.com/role-arn": arn:aws:iam::697369079385:role/nuodb-backup-mgr-role-green  
     addRoleBinding: true
