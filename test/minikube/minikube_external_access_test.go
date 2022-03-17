@@ -1,3 +1,4 @@
+//go:build long
 // +build long
 
 package minikube
@@ -347,7 +348,7 @@ func TestKubernetesIngress(t *testing.T) {
 	// CI we use the nuosql from the package installation but in CircleCI, we
 	// use the client package
 	// TODO: Change the version once DB-34466 is fixed
-	testlib.RunOnNuoDBVersionCondition(t, ">=4.5", func(version *semver.Version) {
+	testlib.RunOnNuoDBVersionCondition(t, ">=5.1", func(version *semver.Version) {
 		var expectedNodeIds []int32
 		for _, process := range processes {
 			if process.Type == "TE" {
