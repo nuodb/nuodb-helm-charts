@@ -208,9 +208,9 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 
 		databaseOptions := helm.Options{
 			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":              testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.cpu":              "0.25",
 				"database.sm.resources.requests.memory":           testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":              testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.cpu":              "0.25",
 				"database.te.resources.requests.memory":           testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 				"database.te.externalAccess.enabled":              "true",
 				"database.te.externalAccess.type":                 fmt.Sprintf("%s", serviceType),
