@@ -1,5 +1,5 @@
 {{- if or (not (hasKey .Values.database.te.dbServices "enabled")) (eq (include "defaultfalse" .Values.database.te.dbServices.enabled) "true") }}
-{{- if or (not (hasKey .Values.database.namespaceCoexistence "enabled")) (eq (include "defaultfalse" .Values.database.namespaceCoexistence.enabled) "false") }}
+{{- if eq (include "defaultfalse" .Values.database.legacy.directService.enabled) "true" }}
 {{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 apiVersion: v1
 kind: Service

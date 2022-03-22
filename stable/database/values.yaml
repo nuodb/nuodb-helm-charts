@@ -266,11 +266,6 @@ database:
   # `false` to deploy secondary database Helm releases.
   primaryRelease: true
 
-  # Allows two database primary Helm releases with the same database name to coexist
-  # in the same Kubernetes namespace; by default it is disabled
-  namespaceCoexistence: {}
-    # enabled: false
-
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
     logPersistence:
@@ -545,6 +540,8 @@ database:
 
   legacy:
     headlessService: 
+      enabled: false
+    directService:
       enabled: false
 
 nuocollector:
