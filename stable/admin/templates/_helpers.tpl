@@ -135,22 +135,30 @@ imagePullSecrets:
 Get Pod securityContext
 */}}
 {{- define "securityContext" -}}
+{{- if or (eq (include "defaultfalse" .Values.admin.securityContext.enabled) "true") (eq (include "defaultfalse" .Values.admin.securityContext.runAsNonRootGroup) "true") (eq (include "defaultfalse" .Values.admin.securityContext.fsGroupOnly) "true") }}
+securityContext:
+  fsGroup: {{ default 1000 .Values.admin.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . | indent 2 }}
+  {{- include "sc.runAs" . | indent 2 }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Get security context runAsUser and runAsGroup
+*/}}
+{{- define "sc.runAs" -}}
 {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabled) "true" }}
-securityContext:
-  runAsUser: {{ default 1000 .Values.admin.securityContext.runAsUser }}
-  runAsGroup: 0
-  fsGroup: {{ default 1000 .Values.admin.securityContext.fsGroup }}
-  {{- include "sc.fsGroupChangePolicy" . }}
+runAsUser: {{ default 1000 .Values.admin.securityContext.runAsUser }}
+runAsGroup: 0
+  {{- if and (or (eq (include "defaulttrue" .Values.admin.initContainers.runInitDisk) "false") (eq (include "defaulttrue" .Values.admin.initContainers.runInitDiskAsRoot) "false")) (ne (toString (default 1000 .Values.admin.securityContext.runAsUser)) "0")  }}
+runAsNonRoot: true
+  {{- end }}
 {{- else if eq (include "defaultfalse" .Values.admin.securityContext.runAsNonRootGroup) "true" }}
-securityContext:
-  runAsUser: 1000
-  runAsGroup: 1000
-  fsGroup: {{ default 1000 .Values.admin.securityContext.fsGroup }}
-  {{- include "sc.fsGroupChangePolicy" . }}
-{{- else if eq (include "defaultfalse" .Values.admin.securityContext.fsGroupOnly) "true" }}
-securityContext:
-  fsGroup: {{ default 1000 .Values.admin.securityContext.fsGroup }}
-  {{- include "sc.fsGroupChangePolicy" . }}
+runAsUser: 1000
+runAsGroup: 1000
+  {{- if or (eq (include "defaulttrue" .Values.admin.initContainers.runInitDisk) "false") (eq (include "defaulttrue" .Values.admin.initContainers.runInitDiskAsRoot) "false") }}
+runAsNonRoot: true
+  {{- end }}
 {{- end }}
 {{- end -}}
 
@@ -159,7 +167,7 @@ Get fsGroupChangePolicy if Kubernetes version supports it
 */}}
 {{- define "sc.fsGroupChangePolicy" -}}
 {{- if semverCompare ">=1.20" .Capabilities.KubeVersion.Version }}
-  fsGroupChangePolicy: OnRootMismatch
+fsGroupChangePolicy: OnRootMismatch
 {{- end }}
 {{- end -}}
 
@@ -172,6 +180,7 @@ securityContext:
   privileged: {{ include "defaultfalse" .Values.admin.securityContext.privileged }}
   allowPrivilegeEscalation: {{ include "defaultfalse" .Values.admin.securityContext.allowPrivilegeEscalation }}
   {{- include "sc.capabilities" . | indent 2 }}
+  {{- include "sc.runAs" . | indent 2 }}
   {{- end }}
 {{- end -}}
 

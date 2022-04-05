@@ -90,10 +90,7 @@ spec:
           - "300"
           - "--options"
           - "mem {{ .Values.database.te.resources.requests.memory}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
-        {{- with .Values.database.te.labels }}
-          - "--labels"
-          - "{{- range $opt, $val := . }} {{$opt}} {{$val}} {{- end}}"
-        {{- end }}
+          {{- include "database.teLabels" . | indent 10 }}
     {{- include "database.otherOptions" .Values.database.te.otherOptions | indent 10 }}
     {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}

@@ -127,22 +127,30 @@ imagePullSecrets:
 Get Pod securityContext (core/v1/PodSecurityContext)
 */}}
 {{- define "securityContext" -}}
+{{- if or (eq (include "defaultfalse" .Values.database.securityContext.enabled) "true") (eq (include "defaultfalse" .Values.database.securityContext.runAsNonRootGroup) "true") (eq (include "defaultfalse" .Values.database.securityContext.fsGroupOnly) "true") }}
+securityContext:
+  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
+  {{- include "sc.fsGroupChangePolicy" . | indent 2 }}
+  {{- include "sc.runAs" . | indent 2 }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Get security context runAsUser and runAsGroup
+*/}}
+{{- define "sc.runAs" -}}
 {{- if eq (include "defaultfalse" .Values.database.securityContext.enabled) "true" }}
-securityContext:
-  runAsUser: {{ default 1000 .Values.database.securityContext.runAsUser }}
-  runAsGroup: 0
-  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
-  {{- include "sc.fsGroupChangePolicy" . }}
+runAsUser: {{ default 1000 .Values.database.securityContext.runAsUser }}
+runAsGroup: 0
+  {{- if and (or (eq (include "defaulttrue" .Values.database.initContainers.runInitDisk) "false") (eq (include "defaulttrue" .Values.database.initContainers.runInitDiskAsRoot) "false")) (ne (toString (default 1000 .Values.database.securityContext.runAsUser)) "0") }}
+runAsNonRoot: true
+  {{- end }}
 {{- else if eq (include "defaultfalse" .Values.database.securityContext.runAsNonRootGroup) "true" }}
-securityContext:
-  runAsUser: 1000
-  runAsGroup: 1000
-  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
-  {{- include "sc.fsGroupChangePolicy" . }}
-{{- else if eq (include "defaultfalse" .Values.database.securityContext.fsGroupOnly) "true" }}
-securityContext:
-  fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
-  {{- include "sc.fsGroupChangePolicy" . }}
+runAsUser: 1000
+runAsGroup: 1000
+  {{- if or (eq (include "defaulttrue" .Values.database.initContainers.runInitDisk) "false") (eq (include "defaulttrue" .Values.database.initContainers.runInitDiskAsRoot) "false") }}
+runAsNonRoot: true
+  {{- end }}
 {{- end }}
 {{- end -}}
 
@@ -151,7 +159,7 @@ Get fsGroupChangePolicy if Kubernetes version supports it
 */}}
 {{- define "sc.fsGroupChangePolicy" -}}
 {{- if semverCompare ">=1.20" .Capabilities.KubeVersion.Version }}
-  fsGroupChangePolicy: OnRootMismatch
+fsGroupChangePolicy: OnRootMismatch
 {{- end }}
 {{- end -}}
 
@@ -164,6 +172,7 @@ securityContext:
   privileged: {{ include "defaultfalse" .Values.database.securityContext.privileged }}
   allowPrivilegeEscalation: {{ include "defaultfalse" .Values.database.securityContext.allowPrivilegeEscalation }}
   {{- include "sc.capabilities" . | indent 2 }}
+  {{- include "sc.runAs" . | indent 2 }}
   {{- end }}
 {{- end -}}
 
@@ -423,5 +432,29 @@ networking.gke.io/load-balancer-type: "Internal"
         {{- end -}}
       {{- end -}}
     {{- end }}
+  {{- end }}
+{{- end -}}
+
+{{/*
+Renders the Transaction engine labels and injects external address and port
+if Ingress is enabled
+*/}}
+{{- define "database.teLabels" -}}
+  {{- $extraLabels := ""  }}
+  {{- if .Values.database.te.ingress }}
+    {{- if eq (include "defaultfalse" .Values.database.te.ingress.enabled) "true" }}
+      {{- if .Values.database.te.ingress.hostname }}
+        {{- if not (index .Values.database.te.labels "external-address") }}
+          {{- $extraLabels = printf "external-address %s" .Values.database.te.ingress.hostname }}
+        {{- end }}
+        {{- if not (index .Values.database.te.labels "external-port") }}
+          {{- $extraLabels = printf "%s external-port 443" $extraLabels }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if or .Values.database.te.labels $extraLabels }}
+- "--labels"
+- "{{ $extraLabels }}{{ include "opt.key-values" .Values.database.te.labels }}"
   {{- end }}
 {{- end -}}

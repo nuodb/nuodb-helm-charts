@@ -167,12 +167,12 @@ func RotateTLSCertificates(t *testing.T, options *helm.Options, namespaceName st
 	AwaitDatabaseUp(t, namespaceName, admin0, "demo", 2)
 }
 
-func GenerateAndSetTLSKeys(t *testing.T, options *helm.Options, namespaceName string) {
+func GenerateAndSetTLSKeys(t *testing.T, options *helm.Options, namespaceName string) (string, string) {
 	tlsCommands := []string{
 		"export DEFAULT_PASSWORD='" + SECRET_PASSWORD + "'",
 		"setup-keys.sh",
 	}
-	GenerateTLSConfiguration(t, namespaceName, tlsCommands)
+	podName, keysLocation := GenerateTLSConfiguration(t, namespaceName, tlsCommands)
 	if options.SetValues == nil {
 		options.SetValues = make(map[string]string)
 	}
@@ -186,4 +186,5 @@ func GenerateAndSetTLSKeys(t *testing.T, options *helm.Options, namespaceName st
 	options.SetValues["admin.tlsTrustStore.password"] = SECRET_PASSWORD
 	options.SetValues["admin.tlsClientPEM.secret"] = NUOCMD_SECRET
 	options.SetValues["admin.tlsClientPEM.key"] = NUOCMD_FILE
+	return podName, keysLocation
 }

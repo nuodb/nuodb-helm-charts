@@ -410,6 +410,8 @@ spec:
         - name: journal-volume
           mountPath: /mnt/journal
         {{- end }}
+        - name: backup-volume
+          mountPath: /mnt/backup
         - name: log-volume
           mountPath: /mnt/logdir
         {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDiskAsRoot) "true" }}

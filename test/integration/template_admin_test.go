@@ -633,6 +633,7 @@ func TestAdminSecurityContext(t *testing.T) {
 	t.Run("testContainerEnabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
+				"admin.securityContext.enabled":            "true",
 				"admin.securityContext.enabledOnContainer": "true",
 			},
 		}
@@ -643,6 +644,8 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.NotNil(t, containerSecurityContext)
 			assert.False(t, *containerSecurityContext.Privileged)
 			assert.False(t, *containerSecurityContext.AllowPrivilegeEscalation)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(0), *containerSecurityContext.RunAsGroup)
 		}
 	})
 
@@ -695,6 +698,150 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.NotNil(t, containerSecurityContext)
 			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
 			assert.Nil(t, containerSecurityContext.Capabilities.Add)
+		}
+	})
+
+	t.Run("testContainerRunAsNonRootGroup", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.runAsNonRootGroup":  "true",
+				"admin.securityContext.enabledOnContainer": "true",
+				"admin.securityContext.runAsUser":          "5555",
+				"admin.securityContext.fsGroup":            "1234",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			// runAsUser should be disregarded, since we can only use 1000:1000 or <uid>:0
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsGroup)
+		}
+	})
+
+	t.Run("testContainerEnabledPrecedence", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabled":            "true",
+				"admin.securityContext.runAsNonRootGroup":  "true",
+				"admin.securityContext.enabledOnContainer": "true",
+				"admin.securityContext.runAsUser":          "5555",
+				"admin.securityContext.fsGroup":            "1234",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.Equal(t, int64(5555), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(0), *containerSecurityContext.RunAsGroup)
+		}
+	})
+
+	t.Run("testContainerRunAsNonRootGroupPrecedence", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.runAsNonRootGroup":  "true",
+				"admin.securityContext.fsGroupOnly":        "true",
+				"admin.securityContext.enabledOnContainer": "true",
+				"admin.securityContext.runAsUser":          "5555",
+				"admin.securityContext.fsGroup":            "1234",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			// runAsUser should be disregarded, since we can only use 1000:1000 or <uid>:0
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsUser)
+			assert.Equal(t, int64(1000), *containerSecurityContext.RunAsGroup)
+		}
+	})
+
+	t.Run("testEnabledRunInitAsRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabled": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsNonRoot)
+		}
+	})
+
+	t.Run("testEnabledNotRunInit", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabled":    "true",
+				"admin.initContainers.runInitDisk": "false",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+	})
+
+	t.Run("testEnabledRunInitAsNonRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabled":          "true",
+				"admin.initContainers.runInitDiskAsRoot": "false",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+	})
+
+	t.Run("testRunAsNonRootGroupRunInitAsRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.runAsNonRootGroup": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsNonRoot)
+		}
+	})
+
+	t.Run("testRunAsNonRootRunInitAsNonRoot", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.runAsNonRootGroup": "true",
+				"admin.initContainers.runInitDiskAsRoot":  "false",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
 		}
 	})
 }
@@ -857,5 +1004,63 @@ func TestAdminServiceAccount(t *testing.T) {
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "could not find template templates/serviceaccount.yaml in chart")
 	})
+
+}
+
+func TestAdminIngressRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.ingress.enabled":       "true",
+			"admin.ingress.sql.hostname":  testlib.ADMIN_SQL_INGRESS_HOSTNAME,
+			"admin.ingress.sql.className": "classSQL",
+		},
+	}
+
+	// verify that Ingress resource for SQL clients is created only
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/ingress.yaml"})
+	for _, obj := range testlib.SplitAndRenderIngress(t, output, 1) {
+		assert.Equal(t, "release-name-nuodb-cluster0-admin", obj.Name)
+		assert.Equal(t, options.SetValues["admin.ingress.sql.className"], *obj.Spec.IngressClassName)
+		assert.Equal(t, options.SetValues["admin.ingress.sql.hostname"], obj.Spec.Rules[0].Host)
+		assert.Equal(t, "nuodb-clusterip", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
+		assert.Equal(t, "48004-tcp", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name)
+		assert.Contains(t, obj.Annotations, "ingress.kubernetes.io/ssl-passthrough")
+	}
+
+	options = &helm.Options{
+		SetValues: map[string]string{
+			"admin.ingress.enabled":             "true",
+			"admin.ingress.api.hostname":        testlib.ADMIN_API_INGRESS_HOSTNAME,
+			"admin.ingress.api.className":       "classAPI",
+			"admin.ingress.api.annotations.bar": "bar",
+			"admin.ingress.sql.hostname":        testlib.ADMIN_SQL_INGRESS_HOSTNAME,
+			"admin.ingress.sql.className":       "classSQL",
+			"admin.ingress.sql.annotations.foo": "foo",
+		},
+	}
+
+	// verify that Ingress resource for the REST service and for SQL clients are created
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/ingress.yaml"})
+	for _, obj := range testlib.SplitAndRenderIngress(t, output, 2) {
+		if strings.HasSuffix(obj.Name, "-api") {
+			assert.Equal(t, options.SetValues["admin.ingress.api.className"], *obj.Spec.IngressClassName)
+			assert.Equal(t, options.SetValues["admin.ingress.api.hostname"], obj.Spec.Rules[0].Host)
+			assert.Equal(t, "nuodb-clusterip", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
+			assert.Equal(t, "8888-tcp", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name)
+			assert.Contains(t, obj.Annotations, "bar")
+			assert.Equal(t, "bar", obj.Annotations["bar"])
+		} else {
+			assert.Equal(t, options.SetValues["admin.ingress.sql.className"], *obj.Spec.IngressClassName)
+			assert.Equal(t, options.SetValues["admin.ingress.sql.hostname"], obj.Spec.Rules[0].Host)
+			assert.Equal(t, "nuodb-clusterip", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Name)
+			assert.Equal(t, "48004-tcp", obj.Spec.Rules[0].HTTP.Paths[0].Backend.Service.Port.Name)
+			assert.Contains(t, obj.Annotations, "foo")
+			assert.Equal(t, "foo", obj.Annotations["foo"])
+		}
+		assert.Contains(t, obj.Annotations, "ingress.kubernetes.io/ssl-passthrough")
+	}
 
 }
