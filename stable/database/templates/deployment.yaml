@@ -48,6 +48,10 @@ spec:
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- include "securityContext" . | indent 6 }}
+      {{- if .Values.database.te.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ tpl .Values.database.te.topologySpreadConstraints . | trim | indent 8 }}
+      {{- end }}
       {{- with .Values.database.te.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
