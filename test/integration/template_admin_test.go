@@ -218,8 +218,6 @@ func TestAdminServiceRenders(t *testing.T) {
 		assert.Equal(t, "nuodb-balancer", obj.Name)
 		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
-		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-type"], "external")
-		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-nlb-target-type"], "ip")
 		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-scheme"], "internet-facing")
 	}
 
