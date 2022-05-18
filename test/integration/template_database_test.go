@@ -85,6 +85,7 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 			// This is the cluster IP targeting only TEs in this TE group
 			assert.Equal(t, "te", obj.Spec.Selector["component"])
 			assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
+			assert.True(t, obj.Spec.PublishNotReadyAddresses)
 		}
 	}
 }
@@ -126,6 +127,7 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
 		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.True(t, obj.Spec.PublishNotReadyAddresses)
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")

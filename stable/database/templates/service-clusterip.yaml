@@ -42,6 +42,7 @@ metadata:
     release: {{ .Release.Name | quote }}
   name: {{ template "database.fullname" . }}-{{ default .Values.admin.serviceSuffix.clusterip .Values.database.serviceSuffix.clusterip }}
 spec:
+  publishNotReadyAddresses: true
   ports:
   - { name: 48006-tcp,  port: 48006,  protocol: TCP,  targetPort: 48006 }
   selector:
