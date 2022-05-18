@@ -11,4 +11,4 @@ maintainers:
 - email: support@nuodb.com
   name: NuoDB
 name: backup-mgr
-version: 3.5.0
+version: 3.4.9

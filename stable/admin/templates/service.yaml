@@ -16,7 +16,6 @@ spec:
   ports:
   - { name: 8888-tcp,   port: 8888,   protocol: TCP,  targetPort: 8888  }
   - { name: 48004-tcp,  port: 48004,  protocol: TCP,  targetPort: 48004 }
-  - { name: 48005-tcp,  port: 48005,  protocol: TCP,  targetPort: 48005 }
   selector:
     app: {{ template "admin.fullname" . }}
   sessionAffinity: None
