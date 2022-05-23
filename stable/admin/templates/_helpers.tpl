@@ -347,8 +347,6 @@ Renders the annotations for the LoadBalancer admin service
 service.beta.kubernetes.io/aws-load-balancer-internal: "true"
 service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
           {{- else }}
-service.beta.kubernetes.io/aws-load-balancer-type: "external"
-service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: "ip"
 service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
           {{- end }}
         {{- else if eq .Values.cloud.provider "azure" }}
