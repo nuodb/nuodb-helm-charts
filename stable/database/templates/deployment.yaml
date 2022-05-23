@@ -158,7 +158,7 @@ spec:
           subPath: {{ .Values.admin.tlsKeyStore.key }}
         {{- end }}
         readinessProbe:
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 5
           exec:
             command: [ "readinessprobe" ]

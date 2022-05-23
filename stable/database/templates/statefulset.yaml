@@ -226,7 +226,7 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 15
           exec:
             command: [ "readinessprobe" ]
@@ -605,7 +605,7 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 15
           exec:
             command: [ "readinessprobe" ]
