@@ -33,6 +33,7 @@ metadata:
   annotations:
     description: |
       Cluster IP service targeting specific Helm release permitting us to load balance within the cluster.
+    "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true"
   labels:
     app: {{ template "database.fullname" . }}
     group: nuodb

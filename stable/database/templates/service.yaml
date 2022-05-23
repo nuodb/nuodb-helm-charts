@@ -4,6 +4,7 @@ kind: Service
 metadata:
   annotations:
     description: "Service (and load-balancer) for TE pods."
+    "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true"
 {{- include "database.externalAccessAnnotations" . | indent 4 }}
   labels:
     app: {{ template "database.fullname" . }}
