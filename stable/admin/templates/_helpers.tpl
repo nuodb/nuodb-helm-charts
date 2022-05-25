@@ -325,11 +325,11 @@ Renders the admin service name for external access based on the service type
 {{- define "admin.externalServiceName" -}}
   {{- $serviceType := (default "LoadBalancer" .Values.admin.externalAccess.type) -}}
   {{- if eq $serviceType "LoadBalancer" -}}
-{{ template "admin.fullname" . }}-{{ .Values.admin.serviceSuffix.balancer }}
+{{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.balancer }}
   {{- else if eq $serviceType "NodePort" -}}
-{{ template "admin.fullname" . }}-{{ .Values.admin.serviceSuffix.nodeport }}
+{{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.nodeport }}
   {{- else -}}
-{{ template "admin.fullname" . }}
+{{ .Values.admin.domain }}
   {{- end }}
 {{- end }}
 

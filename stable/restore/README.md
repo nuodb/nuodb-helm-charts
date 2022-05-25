@@ -164,6 +164,7 @@ The following tables list the configurable parameters of the restore chart and t
 | `restore.labels` | Process labels used to filter the complete set of archiveIds that should be restored which then defines the new state of the database upon restore. If multiple labels are defined, _any_ of them have to match so that the archive ID is selected for restore. By default all SM processes in the database are selected. The setting works with NuoDB 4.2+. | `""` |
 | `restore.archiveIds` | Complete set of archiveIds that should be restored which then defines the new state of the database upon restore. Either `restore.labels` or `restore.archiveIds` should be specified. The setting works with NuoDB 4.2+ | `[]` |
 | `restore.manual` | If set to "true", archives restore should be done manually once the SM pod is started. The engine startup will block waiting for the user to complete the archives restore. The setting works with NuoDB 4.2+ | `false` |
+| `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
 
 ## Detailed Steps
 

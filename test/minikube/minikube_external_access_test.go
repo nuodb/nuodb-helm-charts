@@ -238,8 +238,6 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 3)
 
-		verifyService(t, namespaceName, admin0, "demo-clusterip", "ClusterIP", false)
-
 		// get balancer service per database Helm release
 		balancerServices := make(map[string]*corev1.Service)
 		for _, group := range []string{group1ReleaseName, group2ReleaseName} {

@@ -1,3 +1,4 @@
+//go:build short
 // +build short
 
 package minikube
@@ -163,12 +164,11 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-	clusterServiceName := fmt.Sprintf("demo-clusterip")
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{
 				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
@@ -182,6 +182,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 				"database.sm.labels.zone":               LABEL_ZONE,
 			},
 		})
+		clusterServiceName := fmt.Sprintf("%s-nuodb-cluster0-demo-clusterip", databaseReleaseName)
 
 		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
 		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })

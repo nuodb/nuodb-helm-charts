@@ -11,7 +11,7 @@ spec:
   template:
     metadata:
       labels:
-        {{- include "admin.resourceLabels" . | nindent 4 }}
+        {{- include "admin.resourceLabels" . | nindent 8 }}
       name: job-lb-policy-{{ .Values.admin.lbPolicy | lower }}
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}

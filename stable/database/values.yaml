@@ -461,7 +461,7 @@ database:
       annotations: 
         ingress.kubernetes.io/ssl-passthrough: "true"
 
-    ## By default, database clusterip services for direct TE connections are enabled,
+    ## By default, the database clusterip service for direct TE connections is enabled,
     ## but can be optionally disabled here
     dbServices: {}
       # enabled: false

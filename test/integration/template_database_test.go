@@ -72,19 +72,38 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 	// Run RenderTemplate to render the template and capture the output.
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-clusterip.yaml"})
 
+	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
+		// Only the ClusterIP service targeting only TEs in this TE group will
+		// be rendered by default
+		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
+		assert.Empty(t, obj.Spec.ClusterIP)
+		assert.Equal(t, "te", obj.Spec.Selector["component"])
+		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
+	}
+}
+
+func TestDatabaseClusterDirectServiceRenders(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.legacy.directService.enabled": "true",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-clusterip.yaml"})
+
 	for _, obj := range testlib.SplitAndRenderService(t, output, 2) {
 		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
 
 		if obj.Name == "demo-clusterip" {
-			// This is the cluster IP targeting all database TEs
+			// This is the ClusterIP service targeting all database TEs
 			assert.Equal(t, "te", obj.Spec.Selector["component"])
 			assert.Equal(t, "nuodb", obj.Spec.Selector["domain"])
 			assert.Equal(t, "demo", obj.Spec.Selector["database"])
-		} else {
-			// This is the cluster IP targeting only TEs in this TE group
-			assert.Equal(t, "te", obj.Spec.Selector["component"])
-			assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
 		}
 	}
 }
@@ -94,7 +113,9 @@ func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 	helmChartPath := "../../stable/database"
 
 	options := &helm.Options{
-		SetValues: map[string]string{},
+		SetValues: map[string]string{
+			"database.legacy.headlessService.enabled": "true",
+		},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
