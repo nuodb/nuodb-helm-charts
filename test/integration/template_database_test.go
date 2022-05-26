@@ -9,10 +9,38 @@ import (
 	"github.com/stretchr/testify/require"
 
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
+
+func verifyDatabaseResourceLabels(t *testing.T, releaseName string, options *helm.Options, obj metav1.Object) {
+	opt := testlib.GetExtractedOptions(options)
+	labels := obj.GetLabels()
+	app := fmt.Sprintf("%s-%s-%s-%s-database", releaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+	msg, ok := testlib.MapContains(labels, map[string]string{
+		"app":      app,
+		"group":    "nuodb",
+		"domain":   opt.DomainName,
+		"database": opt.DbName,
+		"chart":    "database",
+		"release":  releaseName,
+	})
+	require.Truef(t, ok, "Mandatory labels missing from resource %s: %s", obj.GetName(), msg)
+
+	resourceLabels := make(map[string]string)
+	for k, v := range options.SetValues {
+		if strings.HasPrefix(k, "database.resourceLabels.") {
+			labelKey := strings.TrimPrefix(k, "database.resourceLabels.")
+			resourceLabels[labelKey] = v
+		}
+	}
+	if len(resourceLabels) > 0 {
+		msg, ok := testlib.MapContains(labels, resourceLabels)
+		require.Truef(t, ok, "User supplied labels missing from resource %s: %s", obj.GetName(), msg)
+	}
+}
 
 func TestDatabaseSecretsDefault(t *testing.T) {
 	// Path to the helm chart we will test
@@ -217,6 +245,36 @@ func TestDatabaseStatefulSet(t *testing.T) {
 		assert.Equal(t, "sm", obj.Spec.Selector.MatchLabels["component"])
 		assert.Equal(t, "sm", obj.Spec.Template.ObjectMeta.Labels["component"])
 	}
+}
+
+func TestDatabaseStatefulSetResourceLabels(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.resourceLabels.foo": "foo",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+		verifyDatabaseResourceLabels(t, "release-name", options, &obj)
+		verifyDatabaseResourceLabels(t, "release-name", options, &obj.Spec.Template)
+		for _, volumeClaimTemplate := range obj.Spec.VolumeClaimTemplates {
+			verifyDatabaseResourceLabels(t, "release-name", options, &volumeClaimTemplate)
+		}
+	}
+
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+		verifyDatabaseResourceLabels(t, "release-name", options, &obj)
+		verifyDatabaseResourceLabels(t, "release-name", options, &obj.Spec.Template)
+	}
+
 }
 
 func TestDatabaseStatefulSetVolumes(t *testing.T) {

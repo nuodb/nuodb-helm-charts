@@ -1,14 +1,45 @@
 package integration
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
+
+func verifyRestoreResourceLabels(t *testing.T, releaseName string, options *helm.Options, obj metav1.Object) {
+	opt := testlib.GetExtractedOptions(options)
+	labels := obj.GetLabels()
+	app := fmt.Sprintf("%s-%s-%s-%s-restore", releaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+	msg, ok := testlib.MapContains(labels, map[string]string{
+		"app":      app,
+		"group":    "nuodb",
+		"subgroup": "restore",
+		"domain":   opt.DomainName,
+		"database": opt.DbName,
+		"chart":    "restore",
+		"release":  releaseName,
+	})
+	require.Truef(t, ok, "Mandatory labels missing from resource %s: %s", obj.GetName(), msg)
+
+	resourceLabels := make(map[string]string)
+	for k, v := range options.SetValues {
+		if strings.HasPrefix(k, "restore.resourceLabels.") {
+			labelKey := strings.TrimPrefix(k, "restore.resourceLabels.")
+			resourceLabels[labelKey] = v
+		}
+	}
+	if len(resourceLabels) > 0 {
+		msg, ok := testlib.MapContains(labels, resourceLabels)
+		require.Truef(t, ok, "User supplied labels missing from resource %s: %s", obj.GetName(), msg)
+	}
+}
 
 func TestRestoreDefaults(t *testing.T) {
 	// Path to the helm chart we will test
@@ -245,4 +276,23 @@ func TestRestoreRequestSource(t *testing.T) {
 	// names are also allowed
 	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/job.yaml"})
 	require.Error(t, err)
+}
+
+func TestRestoreResourceLabels(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.RESTORE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"restore.stripLevels": "2",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/job.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderJob(t, output, 1) {
+		verifyRestoreResourceLabels(t, "release-name", options, &obj)
+		verifyRestoreResourceLabels(t, "release-name", options, &obj.Spec.Template)
+	}
 }

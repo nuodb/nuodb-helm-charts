@@ -165,68 +165,28 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
-		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-			SetValues: map[string]string{
-				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.labels.cloud":              LABEL_CLOUD,
-				"database.te.labels.region":             LABEL_REGION,
-				"database.te.labels.zone":               LABEL_ZONE,
-				"database.sm.labels.cloud":              LABEL_CLOUD,
-				"database.sm.labels.region":             LABEL_REGION,
-				"database.sm.labels.zone":               LABEL_ZONE,
-			},
-		})
-		clusterServiceName := fmt.Sprintf("%s-nuodb-cluster0-demo-clusterip", databaseReleaseName)
-
-		t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
-		t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
-		t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
-		t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
+	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.labels.cloud":              LABEL_CLOUD,
+			"database.te.labels.region":             LABEL_REGION,
+			"database.te.labels.zone":               LABEL_ZONE,
+			"database.sm.labels.cloud":              LABEL_CLOUD,
+			"database.sm.labels.region":             LABEL_REGION,
+			"database.sm.labels.zone":               LABEL_ZONE,
+		},
 	})
+	clusterServiceName := fmt.Sprintf("%s-nuodb-cluster0-demo-clusterip", databaseReleaseName)
 
-	t.Run("startDatabaseStatefulSetMultiTenant", func(t *testing.T) {
-		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
-
-		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
-			kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-			k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
-			testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
-		})
-
-		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-			SetValues: map[string]string{
-				"database.name":                         "green",
-				"database.sm.resources.requests.cpu":    "250m",
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    "250m",
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			},
-		})
-
-		t.Run("verifyNuoSQL-green", func(t *testing.T) {
-			verifyNuoSQL(t, namespaceName, admin0, "green")
-		})
-
-		testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-			SetValues: map[string]string{
-				"database.name":                         "blue",
-				"database.sm.resources.requests.cpu":    "250m",
-				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-				"database.te.resources.requests.cpu":    "250m",
-				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			},
-		})
-
-		t.Run("verifyNuoSQL-blue", func(t *testing.T) {
-			verifyNuoSQL(t, namespaceName, admin0, "blue")
-		})
-	})
+	t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
+	t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
+	t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
+	t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
 }
 
 func TestSmVolumePermissionChange(t *testing.T) {

@@ -39,6 +39,7 @@ type ExtractedOptions struct {
 	ClusterName           string
 	EntrypointClusterName string
 	DbPrimaryRelease      bool
+	DomainName            string
 }
 
 func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
@@ -80,6 +81,11 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 		opt.DbPrimaryRelease = false
 	} else {
 		opt.DbPrimaryRelease = true
+	}
+
+	opt.DomainName = options.SetValues["admin.domain"]
+	if opt.DomainName == "" {
+		opt.DomainName = "nuodb"
 	}
 
 	return
@@ -133,8 +139,8 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 	}
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
-	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
-	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	tePodNameTemplate := fmt.Sprintf("te-%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions

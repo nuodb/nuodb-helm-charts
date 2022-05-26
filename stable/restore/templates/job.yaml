@@ -9,6 +9,9 @@ spec:
   completions: 1
   activeDeadlineSeconds: {{ .Values.restore.timeout }}
   template:
+    metadata:
+      labels:
+        {{- include "restore.resourceLabels" . | nindent 8 }}
     spec:
       {{- include "securityContext" . | indent 6 }}
 {{- if .Values.restore.affinity }}
