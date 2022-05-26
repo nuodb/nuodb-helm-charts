@@ -79,7 +79,7 @@ jobs:
         type: string
 
     machine:
-      image: ubuntu-1604:202007-01
+      image: ubuntu-2004:202201-02
 
     resource_class: <<parameters.resource-class>>
 
@@ -87,13 +87,12 @@ jobs:
       HELM_VERSION: "v3.6.3"
       KUBERNETES_VERSION: "1.21.3"
       OPENSHIFT_VERSION: "3.11.0"
-      MINIKUBE_VERSION: "1.22.0"
+      MINIKUBE_VERSION: "1.25.2"
       MINISHIFT_VERSION: "1.34.2"
       GOTESTSUM_VERSION: "1.7.0"
       NUODBCLIENT_VERSION: "20201124"
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
-      CHANGE_MINIKUBE_NONE_USER: true
       AZURE_AKS_RESOURCE_GROUP: "orca-ying-yang"
       AZURE_AKS_CLUSTERS: "yin yang"
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
