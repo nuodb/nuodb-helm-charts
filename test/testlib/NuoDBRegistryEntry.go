@@ -1,21 +1,21 @@
 package testlib
 
 import (
-	"gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v3"
 )
 
 type Registry struct {
 	Nuodb struct {
 		Image struct {
-			Registry string
+			Registry   string
 			Repository string
-			Tag string
+			Tag        string
 		}
 	}
 }
 
 // UnmarshalImageYAML is used to unmarshal into map[string]string
-func UnmarshalImageYAML(s string) (err error, registry Registry){
+func UnmarshalImageYAML(s string) (err error, registry Registry) {
 	registry = Registry{}
 
 	err = yaml.Unmarshal([]byte(s), &registry)
