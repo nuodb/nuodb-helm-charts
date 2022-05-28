@@ -273,12 +273,6 @@ Import user defined ENV vars
 {{- end }}
 {{- end -}}
 
-{{- define "database.sm.env" }}
-{{- if not (empty .Values.database.sm.env) }}
-{{ toYaml .Values.database.env | trim }}
-{{- end }}
-{{- end -}}
-
 {{/*
 Validates parameter that supports bool value only
 */}}
