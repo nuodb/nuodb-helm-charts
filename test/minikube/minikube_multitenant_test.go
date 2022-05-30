@@ -99,14 +99,16 @@ func TestKubernetesNamespaceCoexistence(t *testing.T) {
 
 		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
+		adminSts := fmt.Sprintf("%s-%s-%s", adminReleaseName, opt.DomainName, opt.ClusterName)
+		hcsmSts := fmt.Sprintf("sm-%s-%s-%s-%s-hotcopy", databaseReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+		smSts := fmt.Sprintf("sm-%s-%s-%s-%s", databaseReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+		teDeployment := fmt.Sprintf("te-%s-%s-%s-%s", databaseReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+
 		t.Run(fmt.Sprintf("verifyNuoSQL-%s", project), func(t *testing.T) {
 			verifyNuoSQL(t, namespaceName, admin0, "demo")
 		})
 
 		t.Run(fmt.Sprintf("verifyResourceLabels-%s", project), func(t *testing.T) {
-			adminSts := fmt.Sprintf("%s-%s-%s", adminReleaseName, opt.DomainName, opt.ClusterName)
-			hcsmSts := fmt.Sprintf("sm-%s-%s-%s-%s-hotcopy", databaseReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
-			smSts := fmt.Sprintf("sm-%s-%s-%s-%s", databaseReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
 			for _, stsName := range []string{adminSts, hcsmSts, smSts} {
 				sts := testlib.GetStatefulSet(t, namespaceName, stsName)
 				msg, ok := testlib.MapContains(sts.GetLabels(), map[string]string{"project": project})
@@ -120,6 +122,20 @@ func TestKubernetesNamespaceCoexistence(t *testing.T) {
 				// domain: nearest, green|blue and __default/demo
 				testlib.AwaitNrLoadBalancerPolicies(t, namespaceName, admin0, 3)
 				verifyLoadBalancer(t, namespaceName, admin0, options.SetValues)
+			})
+
+			t.Run(fmt.Sprintf("verifyVisibleKubeResources-%s", project), func(t *testing.T) {
+				config := testlib.GetNuoDBK8sConfigDump(t, namespaceName, admin0)
+				require.Equal(t, len(config.StatefulSets), 3)
+				var stsNames []string
+				for k, _ := range config.StatefulSets {
+					stsNames = append(stsNames, k)
+				}
+				require.Contains(t, stsNames, adminSts)
+				require.Contains(t, stsNames, hcsmSts)
+				require.Contains(t, stsNames, smSts)
+				require.Equal(t, len(config.Deployments), 1)
+				require.Contains(t, config.Deployments, teDeployment)
 			})
 		})
 	}
