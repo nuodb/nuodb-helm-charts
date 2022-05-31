@@ -36,6 +36,7 @@ spec:
         component: admin
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
+      priorityClassName: {{ default "" .Values.admin.priorityClass }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:

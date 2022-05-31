@@ -33,6 +33,9 @@ spec:
         component: te
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
+      {{- if .Values.database.priorityClasses }}
+      priorityClassName: {{ default "" .Values.database.priorityClasses.te }}
+      {{- end }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.te.nodeSelector }}
       nodeSelector:

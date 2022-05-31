@@ -37,6 +37,9 @@ spec:
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
+      {{- if .Values.database.priorityClasses }}
+      priorityClassName: {{ default "" .Values.database.priorityClasses.sm }}
+      {{- end }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.sm.nodeSelector }}
       nodeSelector:
@@ -387,6 +390,9 @@ spec:
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
+      {{- if .Values.database.priorityClasses }}
+      priorityClassName: {{ default "" .Values.database.priorityClasses.sm }}
+      {{- end }}
       {{- include "securityContext" . | indent 6 }}
       {{- with .Values.database.sm.nodeSelector }}
       nodeSelector:

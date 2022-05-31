@@ -133,6 +133,16 @@ database:
   # Database password
   rootPassword: secret
 
+  # The names of the PriorityClasses that database pods should belong to. For
+  # more information on PriorityClasses, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+  priorityClasses:
+    # The priorityClassName for SM pods (both hotcopy and non-hotcopy SMs).
+    sm: ""
+
+    # The priorityClassName for TE pods.
+    te: ""
+
   initContainers:
     # Whether to run init-disk init container to change permissions of mounted
     # volumes. This should not be necessary if fsGroup is being specified in
