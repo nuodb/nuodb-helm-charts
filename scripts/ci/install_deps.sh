@@ -5,12 +5,12 @@
 # See https://github.com/nuodb/nuodb-helm-charts/blob/master/LICENSE
 
 # exit when any command fails
-set -e
+set -ex
 
 # Download kubectl, which is a requirement for using minikube.
 curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${KUBERNETES_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
-# Download Helm and Tiller
+# Download Helm
 wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
 tar xzf /tmp/helm.tar.gz -C /tmp --strip-components=1 && chmod +x /tmp/helm && sudo mv /tmp/helm /usr/local/bin
 
@@ -20,20 +20,19 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   sudo apt-get update
   sudo apt-get install -y conntrack
 
+  # libncurses5 is needed for nuosql
+  sudo apt-get install -y libncurses5 libncursesw5
+
   # Download minikube.
   curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
-  mkdir -p "$HOME"/.kube "$HOME"/.minikube
-  touch "$KUBECONFIG"
 
   # start minikube
-  sudo minikube start --vm-driver=none --kubernetes-version=v"${KUBERNETES_VERSION}"
-  sudo chown -R $USER: $HOME/.minikube/
+  minikube start --vm-driver=none --kubernetes-version=v"${KUBERNETES_VERSION}"
+  minikube status
   kubectl cluster-info
 
-  sudo chmod 700 $HOME/.kube/config
-
   # Configure DNS entries for Ingress testing
-  ip=$(sudo minikube ip)
+  ip=$(minikube ip)
   echo "$ip api.nuodb.local
 $ip sql.nuodb.local
 $ip demo.nuodb.local" | sudo tee -a /etc/hosts
@@ -41,7 +40,7 @@ $ip demo.nuodb.local" | sudo tee -a /etc/hosts
   # Start 'minikube tunnel' so that services with type LoadBalancer are correctly
   # provisioned and routes to the minikube IP are created; 
   # see https://minikube.sigs.k8s.io/docs/handbook/accessing/#using-minikube-tunnel
-  sudo sh -c "nohup minikube tunnel > ${TEST_RESULTS}/minikube_tunnel.log 2>&1 &"
+  nohup minikube tunnel > ${TEST_RESULTS}/minikube_tunnel.log 2>&1 &
   echo "echo \"MINIKUBE_PROCS: <\$(ps aux | grep minikube)>\"" >> $HOME/.nuodbrc
 
   # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 

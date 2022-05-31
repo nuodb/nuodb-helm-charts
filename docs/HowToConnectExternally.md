@@ -218,32 +218,25 @@ For more information, check [Configuring TCP/UDP load balancing](https://cloud.g
 
 ### AWS
 
-By default, the NuoDB Helm Charts 3.4.0 expect that the [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html) is deployed in the Amazon Elastic Kubernetes Service (EKS) and the native CNI plugin is used when provisioning internet-facing load balancer.
-It will automatically provision AWS Network Load Balancer (NLB) for Kubernetes services of type `LoadBalancer`, as described in the [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html) guide.
+Kubernetes load balancer controller will automatically provision AWS Network Load Balancer (NLB) for Kubernetes services of type `LoadBalancer`, as described in the [Network load balancing on Amazon EKS](https://docs.aws.amazon.com/eks/latest/userguide/network-load-balancing.html) guide.
+Amazon Elastic Kubernetes Service (EKS) can be configured with several different load balancer controllers:
+
+- [AWS Load Balancer Controller](https://docs.aws.amazon.com/eks/latest/userguide/aws-load-balancer-controller.html)
+- [legacy AWS cloud provider load balancer controller](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer)
+
+The annotation `service.beta.kubernetes.io/aws-load-balancer-type` is used to determine which controller reconciles the service.
+For more information, check [Legacy Cloud Provider](https://kubernetes-sigs.github.io/aws-load-balancer-controller/v2.4/guide/service/annotations/#legacy-cloud-provider).
+
+The default configuration for external access varies over different versions of NuoDB Helm Charts.
+The below table describes the AWS load balancer controller that will be used by default.
+
+|                     | Helm Charts 3.3.x | Helm Charts 3.4.x | Helm Charts 3.5.x and later |
+|---------------------|-------------------|-------------------|-----------------------------|
+| `internalIP`: true  | Legacy LB         | Legacy LB         | Legacy LB                   |
+| `internalIP`: false | Legacy LB         | AWS LB            | Legacy LB                   |
+
+The default Kubernetes service annotations can be modified using the `admin.externalAccess.annotations` and `database.te.externalAccess.annotations` values.
 For more information on how to customize the provisioned NLB, check [Network Load Balancer](https://kubernetes-sigs.github.io/aws-load-balancer-controller/latest/guide/service/nlb/).
-When the `internalIP` option is set to “true”, no additional configuration is needed.
-
-If the [legacy AWS cloud provider load balancer controller](https://kubernetes.io/docs/concepts/services-networking/service/#loadbalancer) is used the Kubernetes service annotations must be changed. For example:
-
-```yaml
-cloud:
-  provider: aws
-
-admin:
-  externalAccess:
-    enabled: true
-    internalIP: false
-    annotations:
-      service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-
-database:
-  te:
-    externalAccess:
-      enabled: true
-      internalIP: false
-      annotations:
-        service.beta.kubernetes.io/aws-load-balancer-scheme: internet-facing
-```
 
 ### Azure
 

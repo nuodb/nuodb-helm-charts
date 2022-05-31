@@ -148,7 +148,7 @@ spec:
           subPath: readinessprobe
         {{- include "tls.mounts" . | nindent 8 }}
         readinessProbe:
-          initialDelaySeconds: 30
+          initialDelaySeconds: 10
           periodSeconds: 5
           exec:
             command: [ "readinessprobe" ]

@@ -293,23 +293,25 @@ func TestKubernetesIngress(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
 	// install HAProxy Ingress controller
-	haProxyReleaseName := testlib.StartHAProxyIngress(t, &helm.Options{}, namespaceName)
+	haProxyOptions := helm.Options{}
+	haProxyReleaseName := testlib.StartHAProxyIngress(t, &haProxyOptions, namespaceName)
+	ingressClassName := haProxyReleaseName
 	_, ingressPort := findDomainExternalInfo(t, namespaceName, fmt.Sprintf("%s-kubernetes-ingress", haProxyReleaseName), "https")
 
 	options := helm.Options{
 		SetValues: map[string]string{
 			"admin.ingress.enabled":                 "true",
 			"admin.ingress.api.hostname":            testlib.ADMIN_API_INGRESS_HOSTNAME,
-			"admin.ingress.api.className":           "haproxy",
+			"admin.ingress.api.className":           ingressClassName,
 			"admin.ingress.sql.hostname":            testlib.ADMIN_SQL_INGRESS_HOSTNAME,
-			"admin.ingress.sql.className":           "haproxy",
+			"admin.ingress.sql.className":           ingressClassName,
 			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.ingress.enabled":           "true",
 			"database.te.ingress.hostname":          testlib.DATABASE_TE_INGRESS_HOSTNAME,
-			"database.te.ingress.className":         "haproxy",
+			"database.te.ingress.className":         ingressClassName,
 			// The product doesn't support Ingress resource lookup, so define
 			// the port manually; most of the time in production a service of
 			// type=LoadBalancer will be provisioned for the Ingress Controller

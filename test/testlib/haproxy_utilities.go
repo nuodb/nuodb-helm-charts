@@ -21,10 +21,12 @@ func StartHAProxyIngress(t *testing.T, options *helm.Options, namespaceName stri
 
 	defaultOptions := helm.Options{
 		SetValues: map[string]string{
-			"controller.replicaCount":     "1",
-			"controller.service.type":     "NodePort",
-			"defaultBackend.enabled":      "true",
-			"defaultBackend.replicaCount": "1",
+			"controller.replicaCount":              "1",
+			"controller.service.type":              "NodePort",
+			"controller.ingressClass":              helmChartReleaseName,
+			"controller.ingressClassResource.name": helmChartReleaseName,
+			"defaultBackend.enabled":               "true",
+			"defaultBackend.replicaCount":          "1",
 		},
 	}
 
