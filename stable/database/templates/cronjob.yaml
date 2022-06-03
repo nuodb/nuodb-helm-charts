@@ -17,7 +17,7 @@
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: full-hotcopy-{{ .Values.admin.domain }}-{{ .Values.database.name }}-{{ $backupGroup }}
+  name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "full") . ) }}
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
     subgroup: backup
@@ -118,7 +118,7 @@ spec:
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: incremental-hotcopy-{{ .Values.admin.domain }}-{{ .Values.database.name }}-{{ $backupGroup }}
+  name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "incremental") . ) }}
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
     subgroup: backup
@@ -217,7 +217,7 @@ spec:
 apiVersion: batch/v1beta1
 kind: CronJob
 metadata:
-  name: journal-hotcopy-{{ .Values.admin.domain }}-{{ .Values.database.name }}-{{ $backupGroup }}
+  name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "journal") . ) }}
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
     subgroup: backup

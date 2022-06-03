@@ -245,6 +245,12 @@ into account any schedule overrides configured per backup group.
   {{- default $schedule $override }}
 {{- end -}}
 
+{{/*
+Renders the name of the HotCopy CrongJob
+*/}}
+{{- define "hotcopy.cronjob.name" -}}
+{{ printf "%s-hotcopy-%s-%s-%s" .hotCopyType .Values.admin.domain .Values.database.name .backupGroup | trunc 52 | trimSuffix "-" }}
+{{- end -}}
 
 {{/*
 Return labels for a specific backup group. If there is no user-defined backup
