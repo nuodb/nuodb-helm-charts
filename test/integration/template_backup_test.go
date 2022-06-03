@@ -390,3 +390,21 @@ func TestDatabaseBackupResourceLabels(t *testing.T) {
 		verifyBackupResourceLabels(t, "release-name", options, &obj.Spec.JobTemplate)
 	}
 }
+
+func TestDatabaseBackupCronJobLongName(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.name": "really-long-name-xxxxxxxxxxxxxxx",
+			"database.sm.hotCopy.journalBackup.enabled": "true",
+		},
+	}
+
+	// Verify that hotcopy CronJob name doesn't exceed 52 chars
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+	for _, obj := range testlib.SplitAndRenderCronJob(t, output, 3) {
+		assert.LessOrEqual(t, len(obj.Name), 52)
+	}
+}
