@@ -39,6 +39,7 @@ type ExtractedOptions struct {
 	ClusterName           string
 	EntrypointClusterName string
 	DbPrimaryRelease      bool
+	DomainName            string
 }
 
 func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
@@ -80,6 +81,11 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 		opt.DbPrimaryRelease = false
 	} else {
 		opt.DbPrimaryRelease = true
+	}
+
+	opt.DomainName = options.SetValues["admin.domain"]
+	if opt.DomainName == "" {
+		opt.DomainName = "nuodb"
 	}
 
 	return
@@ -133,8 +139,8 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 	}
 
 	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
-	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
-	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	tePodNameTemplate := fmt.Sprintf("te-%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
@@ -316,7 +322,7 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 func BackupDatabase(t *testing.T, namespaceName string, podName string,
 	databaseName string, backupType string, backupGroup string) string {
 
-	cronJobName := fmt.Sprintf("%s-hotcopy-%s-%s", backupType, databaseName, backupGroup)
+	cronJobName := fmt.Sprintf("%s-hotcopy-nuodb-%s-%s", backupType, databaseName, backupGroup)
 	jobName := fmt.Sprintf("backup-database-%s", strings.ToLower(random.UniqueId()))
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.RunKubectl(t, opts, "create", "job", "--from=cronjob/"+cronJobName, jobName)

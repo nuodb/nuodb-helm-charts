@@ -57,7 +57,7 @@ func TestAutoRestoreDefault(t *testing.T) {
 	var found = false
 
 	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
-		if obj.Name == "demo-restore" {
+		if obj.Name == "nuodb-demo-restore" {
 			found = true
 			assert.EqualValues(t, "stream", obj.Data["NUODB_AUTO_RESTORE_TYPE"])
 		}
@@ -82,7 +82,7 @@ func TestAutoRestoreValidValueStream(t *testing.T) {
 	var found = false
 
 	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
-		if obj.Name == "demo-restore" {
+		if obj.Name == "nuodb-demo-restore" {
 			found = true
 			assert.Empty(t, obj.Data["NUODB_AUTO_RESTORE"])
 			assert.EqualValues(t, "stream", obj.Data["NUODB_AUTO_RESTORE_TYPE"])
@@ -108,7 +108,7 @@ func TestAutoRestoreValidValueBackupset(t *testing.T) {
 	var found = false
 
 	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
-		if obj.Name == "demo-restore" {
+		if obj.Name == "nuodb-demo-restore" {
 			found = true
 			assert.Empty(t, obj.Data["NUODB_AUTO_RESTORE"])
 			assert.EqualValues(t, "backupset", obj.Data["NUODB_AUTO_RESTORE_TYPE"])

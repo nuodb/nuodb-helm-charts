@@ -9,11 +9,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "admin.fullname" $ }}
-    group: nuodb
-    domain: {{ $.Values.admin.domain }}
-    chart: {{ template "admin.chart" $ }}
-    release: {{ $.Release.Name | quote }}
+    {{- include "admin.resourceLabels" $ | nindent 4 }}
     "nuodb.com/nuocollector-plugin": {{ template "admin.fullname" $ }}
   name: nuocollector-{{ template "admin.fullname" $ }}-{{ $pluginName }}
 data:

@@ -7,11 +7,7 @@ metadata:
       Headless service permitting us to retrieve DNS A records that point directly to the pods backing the service.
     "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true"
   labels:
-    app: {{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "admin.resourceLabels" . | nindent 4 }}
   name: {{ .Values.admin.domain }}
 spec:
   publishNotReadyAddresses: true

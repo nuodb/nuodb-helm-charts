@@ -6,11 +6,7 @@ metadata:
     description: "Service (and load-balancer) for Admin pods."
 {{- include "admin.externalAccessAnnotations" . | indent 4 }}
   labels:
-    app: {{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "admin.resourceLabels" . | nindent 4 }}
   name: {{ template "admin.externalServiceName" . }}
 spec:
   ports:

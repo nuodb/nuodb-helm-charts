@@ -26,7 +26,6 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", helmChartReleaseName)
 	admin2 := fmt.Sprintf("%s-nuodb-cluster0-2", helmChartReleaseName)
-	headlessServiceName := fmt.Sprintf("nuodb")
 	clusterServiceName := fmt.Sprintf("nuodb-clusterip")
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
@@ -37,7 +36,6 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
 		testlib.VerifyLicensingErrorsInLog(t, namespaceName, admin0, false) // no error
 	})
-	t.Run("verifyAdminHeadlessService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, headlessServiceName, true) })
 	t.Run("verifyAdminClusterService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, clusterServiceName, false) })
 	t.Run("verifyLBPolicy", func(t *testing.T) { verifyLBPolicy(t, namespaceName, admin0) })
 

@@ -10,7 +10,17 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
+
+func verifyBackupResourceLabels(t *testing.T, releaseName string, options *helm.Options, obj metav1.Object) {
+	msg, ok := testlib.MapContains(obj.GetLabels(), map[string]string{
+		"subgroup":     "backup",
+		"backup-group": "cluster0-0",
+	})
+	require.Truef(t, ok, "Backup resource labels do not match for resource %s: %s", obj.GetName(), msg)
+	verifyDatabaseResourceLabels(t, "release-name", options, obj)
+}
 
 func TestDatabaseBackupCronJobRenders(t *testing.T) {
 	// Path to the helm chart we will test
@@ -357,5 +367,44 @@ func TestDatabaseBackupGroupsCustom(t *testing.T) {
 			expectedSchedule = options.SetValues["database.sm.hotCopy.journalBackup.journalSchedule"]
 		}
 		assert.Equal(t, expectedSchedule, obj.Spec.Schedule)
+	}
+}
+
+func TestDatabaseBackupResourceLabels(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.journalBackup.enabled": "true",
+			"database.resourceLabels.foo":               "foo",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+
+	// verify that default value for timeout is rendered
+	for _, obj := range testlib.SplitAndRenderCronJob(t, output, 3) {
+		verifyBackupResourceLabels(t, "release-name", options, &obj)
+		verifyBackupResourceLabels(t, "release-name", options, &obj.Spec.JobTemplate)
+	}
+}
+
+func TestDatabaseBackupCronJobLongName(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.name": "really-long-name-xxxxxxxxxxxxxxx",
+			"database.sm.hotCopy.journalBackup.enabled": "true",
+		},
+	}
+
+	// Verify that hotcopy CronJob name doesn't exceed 52 chars
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+	for _, obj := range testlib.SplitAndRenderCronJob(t, output, 3) {
+		assert.LessOrEqual(t, len(obj.Name), 52)
 	}
 }

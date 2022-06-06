@@ -38,17 +38,17 @@ spec:
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
-              name: "{{ .Values.database.name }}.nuodb.com"
+              name: {{ template "database.secretName" . }}
               key: database-name
         - name: DB_USER
           valueFrom:
             secretKeyRef:
-              name: "{{ .Values.database.name }}.nuodb.com"
+              name: {{ template "database.secretName" . }}
               key: database-username
         - name: DB_PASSWORD
           valueFrom:
             secretKeyRef:
-              name: "{{ .Values.database.name }}.nuodb.com"
+              name: {{ template "database.secretName" . }}
               key: database-password
         - name: NODE_NAME
           valueFrom:

@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
@@ -80,6 +81,22 @@ func VolumesContains(mounts []v1.Volume, expectedName string) bool {
 		}
 	}
 	return false
+}
+
+func MapContains(actual map[string]string, expected map[string]string) (string, bool) {
+	if actual == nil || expected == nil {
+		return fmt.Sprintf("Map not initialized: actual=%#v, expected=%#v", actual, expected), false
+	}
+	for k, v := range expected {
+		if val, ok := actual[k]; ok {
+			if !assert.ObjectsAreEqual(v, val) {
+				return fmt.Sprintf("%#v does not contain %#v: values for key '%s' does not match", actual, expected, k), false
+			}
+		} else {
+			return fmt.Sprintf("%#v does not contain %#v: key '%s' missing", actual, expected, k), false
+		}
+	}
+	return "", true
 }
 
 func GetVolume(volumes []v1.Volume, expectedName string) (*v1.Volume, bool) {

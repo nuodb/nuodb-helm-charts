@@ -1,4 +1,5 @@
 {{- if or (not (hasKey .Values.database.te.dbServices "enabled")) (eq (include "defaultfalse" .Values.database.te.dbServices.enabled) "true") }}
+{{- if eq (include "defaultfalse" .Values.database.legacy.directService.enabled) "true" }}
 {{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 apiVersion: v1
 kind: Service
@@ -7,12 +8,7 @@ metadata:
     description: |
       Cluster IP service permitting us to load balance within the cluster.
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ .Values.database.name }}-{{ default .Values.admin.serviceSuffix.clusterip .Values.database.serviceSuffix.clusterip }}
 spec:
   ports:
@@ -26,6 +22,7 @@ spec:
 status:
   loadBalancer: {}
 {{- end }}
+{{- end }}
 ---
 apiVersion: v1
 kind: Service
@@ -34,12 +31,7 @@ metadata:
     description: |
       Cluster IP service targeting specific Helm release permitting us to load balance within the cluster.
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.fullname" . }}-{{ default .Values.admin.serviceSuffix.clusterip .Values.database.serviceSuffix.clusterip }}
 spec:
   ports:

@@ -8,12 +8,7 @@ metadata:
   annotations:
     {{- toYaml .Values.database.te.ingress.annotations | trim | nindent 4 }}
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
 spec:
   {{- if .Values.database.te.ingress.className }}
   ingressClassName: {{ .Values.database.te.ingress.className | quote }}

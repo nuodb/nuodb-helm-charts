@@ -294,6 +294,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.readinessTimeoutSeconds` | TE readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 | `automaticProtocolUpgrade.enabled` | Enable automatic database protocol upgrade and a Transaction Engine (TE) restart as an upgrade finalization step done by Kubernetes Aware Admin (KAA). Applicable for NuoDB major versions upgrade only. Requires NuoDB 4.2.3+ | `false` |
 | `automaticProtocolUpgrade.tePreferenceQuery` | LBQuery expression to select the TE that will be restarted after a successful database protocol upgrade. Defaults to random Transaction Engine (TE) in MONITORED state | `""` |
+| `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
 
 #### database.configFiles.*
 
@@ -319,6 +320,15 @@ The purpose of this section is to allow customisation of the names of the cluste
 | `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
 | `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
 | `nodeport` | suffix for the nodePort service | .Values.admin.serviceSuffix.nodeport |
+
+#### database.legacy
+
+Features in this section have been deprecated but not yet removed.
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `headlessService.enabled` | Create a headless service for this database. Use the TE group `ClusterIP` service instead. | false |
+| `directService.enabled` | Create a service for direct connections to the database. Use the TE group `ClusterIP` service instead. | false |
 
 #### nuocollector.*
 

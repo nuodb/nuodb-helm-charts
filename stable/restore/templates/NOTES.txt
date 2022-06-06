@@ -4,7 +4,7 @@
 
   kubectl wait --for=condition=complete \
     --namespace "{{ .Release.Namespace }}" \
-    job/restore-{{ include "restore.target" . }}
+    job/{{ include "restore.fullname" . }}
 
 2) Optionally restart NuoDB SM engines which archives are selected to be restored
 
@@ -15,7 +15,7 @@ the database, and the restore will proceed automatically. However, if
 stop and restart the pods you wish. To shutdown all NuoDB processes in database
 {{include "restore.target" . }}, the following command can be used:
 
-  nuocmd shutdown database --db-name {{include "restore.target" . }}
+  nuocmd shutdown database --db-name {{ include "restore.target" . }}
 
 You could shutdown NuoDB engines in any order which will cause Kubernetes to
 automatically restart all TE and SM. Alternatively, you could scale-down TE and

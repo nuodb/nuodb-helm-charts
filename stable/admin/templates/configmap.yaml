@@ -3,12 +3,8 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
-  name: waitscript
+    {{- include "admin.resourceLabels" . | nindent 4 }}
+  name: {{ template "admin.fullname" . }}-waitscript
 data:
 {{ (.Files.Glob "files/waitscript").AsConfig | indent 2 }}
 {{- if .Values.admin.configFiles }}
@@ -17,11 +13,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "admin.resourceLabels" . | nindent 4 }}
   name: {{ template "admin.fullname" . }}-configuration
 data:
 {{- range $key, $val := .Values.admin.configFiles }}
@@ -34,11 +26,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "admin.resourceLabels" . | nindent 4 }}
   name: {{ template "admin.fullname" . }}-nuoadmin
 data:
 {{ (.Files.Glob "files/nuoadmin").AsConfig | indent 2 }}
@@ -47,11 +35,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
-    app: {{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "admin.resourceLabels" . | nindent 4 }}
   name: {{ template "admin.fullname" . }}-readinessprobe
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}

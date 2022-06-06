@@ -208,7 +208,7 @@ Import ENV vars from configMaps
    You Have Been Warned.
 */}}
 {{- define "database.envFrom" }}
-envFrom: [ configMapRef: { name: {{ .Values.database.name }}-restore } {{- range $map := .Values.database.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+envFrom: [ configMapRef: { name: {{ .Values.admin.domain }}-{{ .Values.database.name }}-restore } {{- range $map := .Values.database.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
 {{- end -}}
 
 {{/*
@@ -245,6 +245,12 @@ into account any schedule overrides configured per backup group.
   {{- default $schedule $override }}
 {{- end -}}
 
+{{/*
+Renders the name of the HotCopy CrongJob
+*/}}
+{{- define "hotcopy.cronjob.name" -}}
+{{ printf "%s-hotcopy-%s-%s-%s" .hotCopyType .Values.admin.domain .Values.database.name .backupGroup | trunc 52 | trimSuffix "-" }}
+{{- end -}}
 
 {{/*
 Return labels for a specific backup group. If there is no user-defined backup
@@ -457,4 +463,26 @@ if Ingress is enabled
 - "--labels"
 - "{{ $extraLabels }}{{ include "opt.key-values" .Values.database.te.labels }}"
   {{- end }}
+{{- end -}}
+
+{{/*
+Renders the labels for all resources deployed by this Helm chart
+*/}}
+{{- define "database.resourceLabels" -}}
+app: {{ template "database.fullname" . }}
+group: nuodb
+database: {{ .Values.database.name }}
+domain: {{ .Values.admin.domain }}
+chart: {{ template "database.chart" . }}
+release: {{ .Release.Name | quote }}
+{{- range $k, $v := .Values.database.resourceLabels }}
+"{{ $k }}": "{{ $v }}"
+{{- end }}
+{{- end -}}
+
+{{/*
+Renders the name of the Secret for this database
+*/}}
+{{- define "database.secretName" -}}
+{{ .Values.admin.domain }}-{{ .Values.database.name }}
 {{- end -}}

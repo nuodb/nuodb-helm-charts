@@ -83,9 +83,9 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	if options.SetValues["admin.fullnameOverride"] != "" {
 		adminStatefulSet = fmt.Sprintf("%s", options.SetValues["admin.fullnameOverride"])
 	} else if options.SetValues["admin.nameOverride"] != "" {
-		adminStatefulSet = fmt.Sprintf("%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, options.SetValues["admin.nameOverride"])
+		adminStatefulSet = fmt.Sprintf("%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, options.SetValues["admin.nameOverride"])
 	} else {
-		adminStatefulSet = fmt.Sprintf("%s-nuodb-%s", helmChartReleaseName, opt.ClusterName)
+		adminStatefulSet = fmt.Sprintf("%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName)
 	}
 
 	adminNames := make([]string, replicaCount)

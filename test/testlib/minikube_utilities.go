@@ -1251,6 +1251,17 @@ func GetStatefulSets(t *testing.T, namespaceName string) *v1.StatefulSetList {
 	return statefulSets
 }
 
+func GetStatefulSet(t *testing.T, namespaceName, name string) *v1.StatefulSet {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+	statefulSet, err := clientset.AppsV1().StatefulSets(namespaceName).Get(context.TODO(), name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	return statefulSet
+}
+
 func DeleteStatefulSet(t *testing.T, namespaceName string, name string) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 

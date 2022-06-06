@@ -11,11 +11,7 @@ metadata:
     nuodb.com/bootstrap-servers: {{ default 0 .Values.admin.bootstrapServers | quote }}
     {{- end }}
   labels:
-    app: {{ template "admin.fullname" . }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
+    {{- include "admin.resourceLabels" . | nindent 4 }}
     {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
     bootstrapServers: {{ default 0 .Values.admin.bootstrapServers | quote }}
     {{- end }}
@@ -36,12 +32,8 @@ spec:
 {{ toYaml .Values.admin.podAnnotations | trim | indent 8}}
       {{- end }}
       labels:
-        app: {{ template "admin.fullname" . }}
-        chart: {{ template "admin.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "admin.resourceLabels" . | nindent 8 }}
         component: admin
-        domain: {{ .Values.admin.domain }}
-        group: nuodb
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- include "securityContext" . | indent 6 }}
@@ -258,11 +250,7 @@ spec:
   - metadata:
       name: raftlog
       labels:
-        app: {{ template "admin.fullname" . }}
-        group: nuodb
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "admin.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "admin.resourceLabels" . | nindent 8 }}
     spec:
     {{- if .Values.admin.persistence.storageClass }}
       {{- if (eq "-" .Values.admin.persistence.storageClass) }}
@@ -282,11 +270,7 @@ spec:
   - metadata:
       name: log-volume
       labels:
-        app: {{ template "admin.fullname" . }}
-        group: nuodb
-        domain: {{ .Values.admin.domain }}
-        chart: {{ template "admin.chart" . }}
-        release: {{ .Release.Name | quote }}
+        {{- include "admin.resourceLabels" . | nindent 8 }}
     spec:
     {{- if .Values.admin.logPersistence.storageClass }}
       {{- if (eq "-" .Values.admin.logPersistence.storageClass) }}
