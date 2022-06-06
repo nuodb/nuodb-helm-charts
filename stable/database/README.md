@@ -189,6 +189,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `name` | Database name | `demo` |
 | `rootUser` | Database root user | `dba` |
 | `rootPassword` | Database root password | `secret` |
+| `priorityClasses.sm` | The `priorityClassName` to specify SM pods | `""` |
+| `priorityClasses.te` | The `priorityClassName` to specify TE pods | `""` |
 | `initContainers.runInitDisk` | Whether to run the `init-disk` init container to set volume permissions | `true` |
 | `initContainers.runInitDiskAsRoot` | Whether to run the `init-disk` init container as root | `true` |
 | `initContainers.resources` | Kubernetes resource requests and limits set on the database init containers | `{}` |

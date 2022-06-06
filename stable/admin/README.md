@@ -179,6 +179,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
 | `envFrom` | Import ENV vars from one or more configMaps | `[]` |
 | `options` | Set options to be passed to nuoadmin as arguments | `{}` |
+| `priorityClass` | The `priorityClassName` to specify admin pods | `""` |
 | `initContainers.runInitDisk` | Whether to run the `init-disk` init container to set volume permissions | `true` |
 | `initContainers.runInitDiskAsRoot` | Whether to run the `init-disk` init container as root | `true` |
 | `securityContext.fsGroupOnly` | Creates a security context for Pods containing only the `securityContext.fsGroup` value | `false` |

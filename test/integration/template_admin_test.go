@@ -561,6 +561,47 @@ func TestAdminEvictedServers(t *testing.T) {
 	}
 }
 
+func TestPriorityClass(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testDefault", func(t *testing.T) {
+		output := helm.RenderTemplate(t, &helm.Options{}, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			priorityClass := obj.Spec.Template.Spec.PriorityClassName
+			assert.Equal(t, "", priorityClass)
+		}
+	})
+
+	t.Run("testMissing", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.priorityClass": "null",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			priorityClass := obj.Spec.Template.Spec.PriorityClassName
+			assert.Equal(t, "", priorityClass)
+		}
+	})
+
+	t.Run("testSpecified", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.priorityClass": "high-priority",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			priorityClass := obj.Spec.Template.Spec.PriorityClassName
+			assert.Equal(t, "high-priority", priorityClass)
+		}
+	})
+}
+
 func TestAdminSecurityContext(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH

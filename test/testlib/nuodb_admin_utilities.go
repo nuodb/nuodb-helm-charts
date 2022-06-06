@@ -20,8 +20,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var AdminRolesRequirePatching = false
-
 func getFunctionCallerName() string {
 	pc, _, _, _ := runtime.Caller(3)
 	nameFull := runtime.FuncForPC(pc).Name() // main.foo
@@ -50,7 +48,7 @@ func CreateNamespace(t *testing.T, namespaceName string) {
 
 type AdminInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
 
-func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, namespace string, releaseName string, installStep AdminInstallationStep) (helmChartReleaseName string, namespaceName string) {
+func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, namespace string, releaseName string, installStep AdminInstallationStep, awaitRunning bool) (helmChartReleaseName string, namespaceName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
 	helmChartReleaseName = releaseName
@@ -79,6 +77,10 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		helm.Delete(t, options, helmChartReleaseName, true)
 	})
 
+	if !awaitRunning {
+		return
+	}
+
 	var adminStatefulSet string
 	if options.SetValues["admin.fullnameOverride"] != "" {
 		adminStatefulSet = fmt.Sprintf("%s", options.SetValues["admin.fullnameOverride"])
@@ -100,12 +102,6 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 			_ = k8s.RunKubectlE(t, kubectlOptions, "describe", "statefulset", adminStatefulSet)
 		}
 	}()
-
-	if AdminRolesRequirePatching {
-		// workaround for https://github.com/nuodb/nuodb-helm-charts/issues/140
-		output := helm.RenderTemplate(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName, []string{"templates/role.yaml"})
-		k8s.RunKubectl(t, kubectlOptions, "patch", "role", "nuodb-kube-inspector", "-p", output)
-	}
 
 	AwaitNrReplicasScheduled(t, namespaceName, adminStatefulSet, replicaCount)
 
@@ -149,24 +145,24 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	return
 }
 
+func InstallAdmin(t *testing.T, options *helm.Options, helmChartReleaseName string) {
+	if options.Version == "" {
+		helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
+	} else {
+		helm.Install(t, options, "nuodb/admin ", helmChartReleaseName)
+	}
+}
+
+func StartAdminNoWait(t *testing.T, options *helm.Options, replicaCount int, namespace string) (string, string) {
+	return StartAdminTemplate(t, options, replicaCount, namespace, "", InstallAdmin, false)
+}
+
 func StartAdmin(t *testing.T, options *helm.Options, replicaCount int, namespace string) (string, string) {
-	return StartAdminTemplate(t, options, replicaCount, namespace, "", func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		if options.Version == "" {
-			helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
-		} else {
-			helm.Install(t, options, "nuodb/admin ", helmChartReleaseName)
-		}
-	})
+	return StartAdminTemplate(t, options, replicaCount, namespace, "", InstallAdmin, true)
 }
 
 func StartAdminCustomRelease(t *testing.T, options *helm.Options, replicaCount int, namespace string, releaseName string) (string, string) {
-	return StartAdminTemplate(t, options, replicaCount, namespace, releaseName, func(t *testing.T, options *helm.Options, helmChartReleaseName string) {
-		if options.Version == "" {
-			helm.Install(t, options, ADMIN_HELM_CHART_PATH, helmChartReleaseName)
-		} else {
-			helm.Install(t, options, "nuodb/admin ", helmChartReleaseName)
-		}
-	})
+	return StartAdminTemplate(t, options, replicaCount, namespace, releaseName, InstallAdmin, true)
 }
 
 func GetLoadBalancerPoliciesE(t *testing.T, namespaceName string, adminPod string) (map[string]NuoDBLoadBalancerPolicy, error) {
