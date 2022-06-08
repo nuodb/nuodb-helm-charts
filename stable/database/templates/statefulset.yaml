@@ -184,6 +184,9 @@ spec:
         {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
+        - name: nuomore
+          mountPath: /tmp/nuomore.py
+          subPath: nuomore.py
         - name: nuosm
           mountPath: /usr/local/bin/nuosm
           subPath: nuosm
@@ -237,6 +240,10 @@ spec:
       - name: log-volume
         emptyDir: {}
       {{- end }}
+      - name: nuomore
+        configMap:
+          name: {{ template "database.fullname" . }}-nuomore
+          defaultMode: 0777
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm
@@ -519,6 +526,9 @@ spec:
         {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
+        - name: nuomore
+          mountPath: /tmp/nuomore.py
+          subPath: nuomore.py
         - name: nuosm
           mountPath: /usr/local/bin/nuosm
           subPath: nuosm
@@ -574,6 +584,10 @@ spec:
       - name: log-volume
         emptyDir: {}
       {{- end }}
+      - name: nuomore
+        configMap:
+          name: {{ template "database.fullname" . }}-nuomore
+          defaultMode: 0777
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm

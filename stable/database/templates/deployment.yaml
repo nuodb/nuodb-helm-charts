@@ -140,6 +140,9 @@ spec:
         {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
+        - name: nuomore
+          mountPath: /tmp/nuomore.py
+          subPath: nuomore.py
         - name: nuote
           mountPath: /usr/local/bin/nuote
           subPath: nuote
@@ -172,6 +175,10 @@ spec:
           persistentVolumeClaim:
             claimName: {{ template "database.fullname" . }}-log-te-volume
         {{- end }}
+        - name: nuomore
+          configMap:
+            name: {{ template "database.fullname" . }}-nuomore
+            defaultMode: 0777
         - name: nuote
           configMap:
             name: {{ template "database.fullname" . }}-nuote
