@@ -34,8 +34,15 @@ spec:
   template:
     metadata:
       name: {{ template "admin.fullname" . }}
-      {{- if .Values.admin.podAnnotations }}
       annotations:
+      {{- if .Values.admin.configFiles }}
+        {{- with .Values.admin.configFiles }}
+        checksum/config: {{ toYaml . | sha256sum }}
+        {{- end }}
+      {{- else }}
+        checksum/config: 0
+      {{- end }}
+      {{- if .Values.admin.podAnnotations }}
 {{ toYaml .Values.admin.podAnnotations | trim | indent 8}}
       {{- end }}
       labels:
