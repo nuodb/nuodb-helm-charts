@@ -72,6 +72,15 @@ spec:
         {{- end }}
       {{- end }}
       containers:
+      - name: network-mangler
+        image: {{ template "init.image" . }}
+        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+        command: ["sleep", "8460000"]
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          capabilities:
+            add: ["NET_ADMIN"]
       - name: admin
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}

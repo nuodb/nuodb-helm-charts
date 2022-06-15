@@ -9,7 +9,7 @@
 
 cloud:
   # supported: amazon, azure, google
-  provider:
+  provider: amazon
   # zones:
   #   - us-east-2a
   #   - us-east-2b
@@ -83,7 +83,7 @@ admin:
   # replicas
   # Number of admin service pods. Requires 1 server available for each
   # Admin Service
-  replicas: 1
+  replicas: 2
 
   # If specified and set to a value greater than 0, an initial membership
   # consisting of server IDs <statefulset name>-0, <statefulset name>-1, ...,
@@ -97,8 +97,8 @@ admin:
   # cloud.cluster.entrypointName) can specify bootstrapServers.
   #
   # Changing the value of bootstrapServers on a existing domain, either by
-  # reinstantiating the Helm chart with a new value or by updating the 
-  # corresponding nuodb.com/bootstrap-servers annotation or bootstrapServers label 
+  # reinstantiating the Helm chart with a new value or by updating the
+  # corresponding nuodb.com/bootstrap-servers annotation or bootstrapServers label
   # on an existing Admin StatefulSet, is illegal because
   # the domain can only be bootstrapped once. When upgrading nuodb-helm-charts
   # from a version that does not support bootstrapServers, bootstrapServers
@@ -106,7 +106,7 @@ admin:
   bootstrapServers: 1
 
   ## Global load balancer configuration for NuoAdmin
-  ## Policy names for named policies should contain lowercase alphabetical 
+  ## Policy names for named policies should contain lowercase alphabetical
   ## characters, numbers and hyphens.
   lbConfig:
     prefilter: ""
@@ -141,7 +141,7 @@ admin:
       # specified via the className option instead of using annotation
       className: ""
       # custom annotations that are set on the Ingress resource
-      annotations: 
+      annotations:
         ingress.kubernetes.io/ssl-passthrough: "true"
     sql:
       # the fully qualified domain name (FQDN) of the network host for SQL
@@ -153,14 +153,14 @@ admin:
       # custom annotations that are set on the Ingress resource; SSL passthrough
       # feature should be configured so that SQL clients TLS connections are
       # send directly to the  NuoDB Admin
-      annotations: 
+      annotations:
         ingress.kubernetes.io/ssl-passthrough: "true"
 
   persistence:
     size: 1Gi
     accessModes:
       - ReadWriteOnce
-    # storageClass: "-"
+    storageClass: "standard-storage"
 
   ## Enable persistent volumes to retain logs when an external logging solution is not used.
   logPersistence:
@@ -277,7 +277,8 @@ admin:
   ## nuodb-admin resource requests and limits
   ## Ref: http://kubernetes.io/docs/user-guide/compute-resources/
   ##
-  resources: {}
+  resources:
+    {}
     # limits:
     #   cpu: 10m
     #   memory: 16Mi
@@ -300,7 +301,8 @@ admin:
   #
   # --set admin.configFiles.nuodb\\.lic=<BASE64-TEXT-HERE>
   #
-  configFiles: {}
+  configFiles:
+    {}
     # nuodb.lic: |-
     #   "PUT YOUR BASE64 ENCODED LICENSE CONTENT HERE"
 
@@ -333,12 +335,13 @@ admin:
   readinessTimeoutSeconds: 5
 
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
-  podAnnotations: {}
+  podAnnotations:
+    {}
     # vault.hashicorp.com/agent-inject: true
 
   ## Transparent Data Encryption (TDE) secrets
   # Storage passwords can be managed and stored as Kubernetes
-  # secrets. TDE secrets for all databases should be created and 
+  # secrets. TDE secrets for all databases should be created and
   # provided before deploying NuoDB. For example:
   #   kubectl create secret generic demo-tde-secret -n nuodb \
   #     --from-literal target='topSecret'
@@ -346,16 +349,17 @@ admin:
   # Note: TDE should be enabled on database layer using
   #   SQL> alter database change encryption type AES128;
   #
-  # Storage password rotation is performed by updating the secret and 
-  # providing the new target and historical (optional) passwords. 
-  # The historical passwords are used for restoring old backup sets. 
+  # Storage password rotation is performed by updating the secret and
+  # providing the new target and historical (optional) passwords.
+  # The historical passwords are used for restoring old backup sets.
   # For example:
   #   kubectl create secret generic demo-tde-secret -n nuodb \
   #     --from-literal target='superSecret' \
   #     --from-literal historical-20201110='topSecret' \
   #     --dry-run=client -o yaml | kubectl apply -f -
   tde:
-    secrets: {}
+    secrets:
+      {}
       # demo: demo-tde-secret
     storagePasswordsDir: /etc/nuodb/tde
 
