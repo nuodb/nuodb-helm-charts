@@ -73,8 +73,8 @@ spec:
       {{- end }}
       containers:
       - name: network-mangler
-        image: {{ template "init.image" . }}
-        imagePullPolicy: {{ default "" .Values.busybox.image.pullPolicy }}
+        image: docker.io/centos:7
+        imagePullPolicy: ifNotPresent
         command: ["sleep", "8460000"]
         securityContext:
           runAsUser: 0
