@@ -74,7 +74,7 @@ spec:
       containers:
       - name: network-mangler
         image: docker.io/centos:7
-        imagePullPolicy: ifNotPresent
+        imagePullPolicy: IfNotPresent
         command: ["sleep", "8460000"]
         securityContext:
           runAsUser: 0
