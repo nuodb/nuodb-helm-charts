@@ -219,6 +219,17 @@ Return options as $key $value
 {{- end -}}
 
 {{/*
+Return the API version of the CronJob kind
+*/}}
+{{- define "cronjob.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "batch/v1/CronJob" -}}
+batch/v1
+{{- else -}}
+batch/v1beta1
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return the hotcopy group prefix
 */}}
 {{- define "hotcopy.groupPrefix" -}}
