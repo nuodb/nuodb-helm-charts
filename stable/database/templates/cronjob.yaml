@@ -14,7 +14,7 @@
   {{- with $globalScope }}
     {{ $backupGroupLabels := include "hotcopy.group.labels" (merge (dict "backupGroup" $backupGroup) .) }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: {{ include "cronjob.apiVersion" . }}
 kind: CronJob
 metadata:
   name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "full") . ) }}
@@ -115,7 +115,7 @@ spec:
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: {{ include "cronjob.apiVersion" . }}
 kind: CronJob
 metadata:
   name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "incremental") . ) }}
@@ -214,7 +214,7 @@ spec:
 
 {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true" }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: {{ include "cronjob.apiVersion" . }}
 kind: CronJob
 metadata:
   name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "journal") . ) }}
