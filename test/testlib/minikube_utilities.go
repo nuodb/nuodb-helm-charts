@@ -1370,3 +1370,15 @@ func RemoveOrphanNamespaces(t *testing.T) {
 		}
 	}
 }
+
+func Retry(t *testing.T, fn func() error, attempts int, interval time.Duration) error {
+	if err := fn(); err != nil {
+		t.Logf("Retrying because of error: %s", err.Error())
+		if attempts--; attempts > 0 {
+			time.Sleep(interval)
+			return Retry(t, fn, attempts, 2*interval)
+		}
+		return err
+	}
+	return nil
+}
