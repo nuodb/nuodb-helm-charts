@@ -26,8 +26,15 @@ spec:
   serviceName: {{ .Values.database.name }}
   template:
     metadata:
-      {{- if .Values.database.podAnnotations }}
       annotations:
+      {{- if .Values.database.configFiles }}
+        {{- with .Values.database.configFiles }}
+        checksum/config: {{ toYaml . | sha256sum }}
+        {{- end }}
+      {{- else }}
+        checksum/config: 0
+      {{- end }}
+      {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
@@ -379,8 +386,15 @@ spec:
   serviceName: {{ .Values.database.name }}
   template:
     metadata:
-      {{- if .Values.database.podAnnotations }}
       annotations:
+      {{- if .Values.database.configFiles }}
+        {{- with .Values.database.configFiles }}
+        checksum/config: {{ toYaml . | sha256sum }}
+        {{- end }}
+      {{- else }}
+        checksum/config: 0
+      {{- end }}
+      {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
