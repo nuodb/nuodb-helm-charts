@@ -179,6 +179,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `logPersistence.storageClass` | Storage class for volume backing log storage | `-` |
 | `envFrom` | Import ENV vars from one or more configMaps | `[]` |
 | `options` | Set options to be passed to nuoadmin as arguments | `{}` |
+| `priorityClass` | The `priorityClassName` to specify admin pods | `""` |
 | `initContainers.runInitDisk` | Whether to run the `init-disk` init container to set volume permissions | `true` |
 | `initContainers.runInitDiskAsRoot` | Whether to run the `init-disk` init container as root | `true` |
 | `securityContext.fsGroupOnly` | Creates a security context for Pods containing only the `securityContext.fsGroup` value | `false` |
@@ -208,7 +209,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
 | `tde.storagePasswordsDir` | Transparent Data Encryption storage passwords mount path | `/etc/nuodb/tde` |
 | `evicted.servers` | A list of evicted servers excluded from RAFT consensus. Used during disaster recovery. | `[]` |
-
+| `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 

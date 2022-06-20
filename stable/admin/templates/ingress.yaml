@@ -9,11 +9,7 @@ metadata:
   annotations:
     {{- toYaml .Values.admin.ingress.api.annotations | trim | nindent 4 }}
   labels:
-    app: {{ template "admin.fullname" . }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
-    domain: {{ .Values.admin.domain }}
-    group: nuodb
+    {{- include "admin.resourceLabels" . | nindent 4 }}
 spec:
   {{- if .Values.admin.ingress.api.className }}
   ingressClassName: {{ .Values.admin.ingress.api.className | quote }}
@@ -41,11 +37,7 @@ metadata:
   annotations:
     {{- toYaml .Values.admin.ingress.sql.annotations | trim | nindent 4 }}
   labels:
-    app: {{ template "admin.fullname" . }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
-    domain: {{ .Values.admin.domain }}
-    group: nuodb
+    {{- include "admin.resourceLabels" . | nindent 4 }}
 spec:
   {{- if .Values.admin.ingress.sql.className }}
   ingressClassName: {{ .Values.admin.ingress.sql.className | quote }}

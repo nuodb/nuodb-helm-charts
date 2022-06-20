@@ -133,6 +133,16 @@ database:
   # Database password
   rootPassword: secret
 
+  # The names of the PriorityClasses that database pods should belong to. For
+  # more information on PriorityClasses, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+  priorityClasses:
+    # The priorityClassName for SM pods (both hotcopy and non-hotcopy SMs).
+    sm: ""
+
+    # The priorityClassName for TE pods.
+    te: ""
+
   initContainers:
     # Whether to run init-disk init container to change permissions of mounted
     # volumes. This should not be necessary if fsGroup is being specified in
@@ -462,7 +472,7 @@ database:
       annotations: 
         ingress.kubernetes.io/ssl-passthrough: "true"
 
-    ## By default, database clusterip and headless services for direct TE connections are enabled,
+    ## By default, the database clusterip service for direct TE connections is enabled,
     ## but can be optionally disabled here
     dbServices: {}
       # enabled: false
@@ -533,6 +543,18 @@ database:
     # information, please check LBQuery Expression Syntax
     # (https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#_lbquery_expression_syntax).
     tePreferenceQuery: ""
+
+  # Custom labels attached to the Kubernetes resources installed by this Helm
+  # Chart; the labels are immutable and can't be changed with Helm upgrade; for
+  # allowed syntax and character sets, please check
+  # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+  resourceLabels: {}
+
+  legacy:
+    headlessService: 
+      enabled: false
+    directService:
+      enabled: false
 
 nuocollector:
   # Enable NuoDB Collector by setting nuocollector.enabled=true

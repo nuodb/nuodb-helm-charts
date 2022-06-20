@@ -900,6 +900,16 @@ func shouldGetDiagnose() bool {
 	return exists
 }
 
+func GetEvents(t *testing.T, namespace string, filter metav1.ListOptions) []corev1.Event {
+	options := k8s.NewKubectlOptions("", "", namespace)
+	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+
+	events, err := client.CoreV1().Events(namespace).List(context.TODO(), filter)
+	require.NoError(t, err)
+	return events.Items
+}
+
 func GetK8sEventLog(t *testing.T, namespace string) {
 	dirPath := filepath.Join(RESULT_DIR, namespace)
 	filePath := filepath.Join(dirPath, K8S_EVENT_LOG_FILE)
@@ -1249,6 +1259,17 @@ func GetStatefulSets(t *testing.T, namespaceName string) *v1.StatefulSetList {
 	require.NoError(t, err)
 
 	return statefulSets
+}
+
+func GetStatefulSet(t *testing.T, namespaceName, name string) *v1.StatefulSet {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	require.NoError(t, err)
+	statefulSet, err := clientset.AppsV1().StatefulSets(namespaceName).Get(context.TODO(), name, metav1.GetOptions{})
+	require.NoError(t, err)
+
+	return statefulSet
 }
 
 func DeleteStatefulSet(t *testing.T, namespaceName string, name string) {

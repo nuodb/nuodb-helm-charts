@@ -363,3 +363,17 @@ networking.gke.io/load-balancer-type: "Internal"
     {{- end }}
   {{- end }}
 {{- end -}}
+
+{{/*
+Renders the labels for all resources deployed by this Helm chart
+*/}}
+{{- define "admin.resourceLabels" -}}
+app: {{ template "admin.fullname" . }}
+group: nuodb
+domain: {{ .Values.admin.domain }}
+chart: {{ template "admin.chart" . }}
+release: {{ .Release.Name | quote }}
+{{- range $k, $v := .Values.admin.resourceLabels }}
+"{{ $k }}": "{{ $v }}"
+{{- end }}
+{{- end -}}

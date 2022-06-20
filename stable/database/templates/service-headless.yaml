@@ -1,3 +1,4 @@
+{{- if eq (include "defaultfalse" .Values.database.legacy.headlessService.enabled) "true" }}
 {{- if or (not (hasKey .Values.database.te.dbServices "enabled")) (eq (include "defaultfalse" .Values.database.te.dbServices.enabled) "true") }}
 {{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 apiVersion: v1
@@ -7,12 +8,7 @@ metadata:
     description: |
       Headless service permitting us to retrieve DNS A records that point directly to the pods backing the service.
   labels:
-    app: {{ template "database.fullname" . }}
-    group: nuodb
-    database: {{ .Values.database.name }}
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "database.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ .Values.database.name }}
 spec:
   clusterIP: None
@@ -26,5 +22,6 @@ spec:
   type: ClusterIP
 status:
   loadBalancer: {}
+{{- end }}
 {{- end }}
 {{- end }}

@@ -176,6 +176,11 @@ admin:
       - ReadWriteOnce
     # storageClass: "-"
 
+  # The name of the PriorityClass that admin pods should belong to. For more
+  # information on PriorityClasses, see
+  # https://kubernetes.io/docs/concepts/scheduling-eviction/pod-priority-preemption/
+  priorityClass: ""
+
   initContainers:
     # Whether to run init-disk init container to change permissions of mounted
     # volumes. This should not be necessary if fsGroup is being specified in
@@ -358,6 +363,12 @@ admin:
   # consult https://doc.nuodb.com/nuodb/latest/database-administration/recovering-from-a-lost-majority/
   evicted:
     servers: []
+
+  # Custom labels attached to the Kubernetes resources installed by this Helm
+  # Chart; the labels are immutable and can't be changed with Helm upgrade; for
+  # allowed syntax and character sets, please check
+  # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
+  resourceLabels: {}
 
   legacy:
     loadBalancerJob:

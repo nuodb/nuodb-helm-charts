@@ -200,7 +200,6 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 			serviceSuffix = "balancer"
 		}
 
-		verifyService(t, namespaceName, admin0, "nuodb", "ClusterIP", true)
 		verifyService(t, namespaceName, admin0, "nuodb-clusterip", "ClusterIP", false)
 		verifyService(t, namespaceName, admin0, fmt.Sprintf("nuodb-%s", serviceSuffix), serviceType, false)
 
@@ -238,9 +237,6 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 		opt := testlib.GetExtractedOptions(&databaseOptions)
 
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 3)
-
-		verifyService(t, namespaceName, admin0, "demo", "ClusterIP", true)
-		verifyService(t, namespaceName, admin0, "demo-clusterip", "ClusterIP", false)
 
 		// get balancer service per database Helm release
 		balancerServices := make(map[string]*corev1.Service)

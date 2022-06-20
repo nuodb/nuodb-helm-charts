@@ -6,11 +6,7 @@ metadata:
     description: |
       Cluster IP service permitting us to load balance within the cluster.
   labels:
-    app: {{ template "admin.fullname" . }}
-    group: nuodb
-    domain: {{ .Values.admin.domain }}
-    chart: {{ template "admin.chart" . }}
-    release: {{ .Release.Name | quote }}
+    {{- include "admin.resourceLabels" . | nindent 4 }}
   name: {{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.clusterip }}
 spec:
   ports:

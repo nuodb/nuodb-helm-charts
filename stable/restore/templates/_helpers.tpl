@@ -215,7 +215,7 @@ Import ENV vars from configMaps
    You Have Been Warned.
 */}}
 {{- define "restore.envFrom" }}
-envFrom: [ configMapRef: { name: {{ include "restore.target" . }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+envFrom: [ configMapRef: { name: {{ .Values.admin.domain }}-{{ include "restore.target" . }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
 {{- end -}}
 
 {{/*
@@ -286,4 +286,27 @@ args:
 - "false"
 {{- end }}
 {{ template "restore.archives" . }}
+{{- end -}}
+
+{{/*
+Renders the labels for all resources deployed by this Helm chart
+*/}}
+{{- define "restore.resourceLabels" -}}
+app: {{ template "restore.fullname" . }}
+group: nuodb
+subgroup: restore
+domain: {{ .Values.admin.domain }}
+database: {{ template "restore.target" . }}
+chart: {{ template "nuodb.chart" . }}
+release: {{ .Release.Name | quote }}
+{{- range $k, $v := .Values.restore.resourceLabels }}
+"{{ $k }}": "{{ $v | quote }}"
+{{- end }}
+{{- end -}}
+
+{{/*
+Renders the name of the Secret for the database selected for restore
+*/}}
+{{- define "database.secretName" -}}
+{{ .Values.admin.domain }}-{{ template "restore.target" . }}
 {{- end -}}

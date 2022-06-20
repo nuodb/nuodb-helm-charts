@@ -10,11 +10,38 @@ import (
 	"github.com/stretchr/testify/require"
 
 	v1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
+
+func verifyAdminResourceLabels(t *testing.T, releaseName string, options *helm.Options, obj metav1.Object) {
+	opt := testlib.GetExtractedOptions(options)
+	labels := obj.GetLabels()
+	app := fmt.Sprintf("%s-%s-%s-admin", releaseName, opt.DomainName, opt.ClusterName)
+	msg, ok := testlib.MapContains(labels, map[string]string{
+		"app":     app,
+		"group":   "nuodb",
+		"domain":  opt.DomainName,
+		"chart":   "admin",
+		"release": releaseName,
+	})
+	require.Truef(t, ok, "Mandatory labels missing from resource %s: %s", obj.GetName(), msg)
+
+	resourceLabels := make(map[string]string)
+	for k, v := range options.SetValues {
+		if strings.HasPrefix(k, "admin.resourceLabels.") {
+			labelKey := strings.TrimPrefix(k, "admin.resourceLabels.")
+			resourceLabels[labelKey] = v
+		}
+	}
+	if len(resourceLabels) > 0 {
+		msg, ok := testlib.MapContains(labels, resourceLabels)
+		require.Truef(t, ok, "User supplied labels missing from resource %s: %s", obj.GetName(), msg)
+	}
+}
 
 func TestAdminDefaultLicense(t *testing.T) {
 	// Path to the helm chart we will test
@@ -140,14 +167,32 @@ func TestAdminStatefulSetComponentLabel(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.Equal(t, "admin", obj.Spec.Selector.MatchLabels["component"])
-
-		assert.Contains(t, obj.ObjectMeta.Labels, "chart")
-		assert.Contains(t, obj.ObjectMeta.Labels, "release")
+		verifyAdminResourceLabels(t, "release-name", options, &obj)
 
 		assert.Equal(t, "admin", obj.Spec.Template.ObjectMeta.Labels["component"])
+		verifyAdminResourceLabels(t, "release-name", options, &obj.Spec.Template)
+	}
+}
 
-		assert.Contains(t, obj.Spec.Template.ObjectMeta.Labels, "chart")
-		assert.Contains(t, obj.Spec.Template.ObjectMeta.Labels, "release")
+func TestAdminStatefulSetResourceLabels(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/admin"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.resourceLabels.foo": "foo",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		verifyAdminResourceLabels(t, "release-name", options, &obj)
+		verifyAdminResourceLabels(t, "release-name", options, &obj.Spec.Template)
+		for _, volumeClaimTemplate := range obj.Spec.VolumeClaimTemplates {
+			verifyAdminResourceLabels(t, "release-name", options, &volumeClaimTemplate)
+		}
 	}
 }
 
@@ -514,6 +559,47 @@ func TestAdminEvictedServers(t *testing.T) {
 		assert.Contains(t, container.Args, "--evicted-servers")
 		assert.Contains(t, container.Args, "nuoadmin-1,nuoadmin-2")
 	}
+}
+
+func TestPriorityClass(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testDefault", func(t *testing.T) {
+		output := helm.RenderTemplate(t, &helm.Options{}, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			priorityClass := obj.Spec.Template.Spec.PriorityClassName
+			assert.Equal(t, "", priorityClass)
+		}
+	})
+
+	t.Run("testMissing", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.priorityClass": "null",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			priorityClass := obj.Spec.Template.Spec.PriorityClassName
+			assert.Equal(t, "", priorityClass)
+		}
+	})
+
+	t.Run("testSpecified", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.priorityClass": "high-priority",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			priorityClass := obj.Spec.Template.Spec.PriorityClassName
+			assert.Equal(t, "high-priority", priorityClass)
+		}
+	})
 }
 
 func TestAdminSecurityContext(t *testing.T) {
