@@ -41,6 +41,10 @@ spec:
       priorityClassName: {{ default "" .Values.database.priorityClasses.sm }}
       {{- end }}
       {{- include "securityContext" . | indent 6 }}
+      {{- if .Values.database.sm.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ tpl .Values.database.sm.topologySpreadConstraints . | trim | indent 8 }}
+      {{- end }}
       {{- with .Values.database.sm.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -394,6 +398,10 @@ spec:
       priorityClassName: {{ default "" .Values.database.priorityClasses.sm }}
       {{- end }}
       {{- include "securityContext" . | indent 6 }}
+      {{- if .Values.database.sm.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ tpl .Values.database.sm.topologySpreadConstraints . | trim | indent 8 }}
+      {{- end }}
       {{- with .Values.database.sm.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
