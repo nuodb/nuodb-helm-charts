@@ -268,6 +268,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.affinity` | Affinity rules for NuoDB SM | `{}` |
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
+| `sm.topologySpreadConstraints` | Topology spread constraints for NuoDB SM | `[]` |
 | `sm.readinessTimeoutSeconds` | SM readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
@@ -291,6 +292,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.affinity` | Affinity rules for NuoDB TE | `{}` |
 | `te.nodeSelector` | Node selector rules for NuoDB TE | `{}` |
 | `te.tolerations` | Tolerations for NuoDB TE | `[]` |
+| `te.topologySpreadConstraints` | Topology spread constraints for NuoDB TE | `[]` |
 | `te.otherOptions` | Additional key/value Docker options | `{}` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
 | `te.readinessTimeoutSeconds` | TE readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
