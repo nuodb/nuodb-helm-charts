@@ -24,7 +24,6 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      {{- with .Values.database.te.nodeSelector }}
       annotations:
       {{- if .Values.database.configFiles }}
         {{- with .Values.database.configFiles }}
@@ -45,6 +44,7 @@ spec:
       priorityClassName: {{ default "" .Values.database.priorityClasses.te }}
       {{- end }}
       {{- include "securityContext" . | indent 6 }}
+      {{- with .Values.database.te.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
       {{- end }}
