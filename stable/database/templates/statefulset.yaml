@@ -32,7 +32,7 @@ spec:
         checksum/config: {{ toYaml . | sha256sum }}
         {{- end }}
       {{- else }}
-        checksum/config: 0
+        checksum/config: "0"
       {{- end }}
       {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
@@ -392,7 +392,7 @@ spec:
         checksum/config: {{ toYaml . | sha256sum }}
         {{- end }}
       {{- else }}
-        checksum/config: 0
+        checksum/config: "0"
       {{- end }}
       {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}

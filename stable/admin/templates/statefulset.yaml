@@ -1,4 +1,4 @@
-apiVersion: "apps/v1"
+stable/admin/templates/statefulset.yaml apiVersion: "apps/v1"
 kind: StatefulSet
 metadata:
   annotations:
@@ -33,7 +33,7 @@ spec:
         checksum/config: {{ toYaml . | sha256sum }}
         {{- end }}
       {{- else }}
-        checksum/config: 0
+        checksum/config: "0"
       {{- end }}
       {{- if .Values.admin.podAnnotations }}
 {{ toYaml .Values.admin.podAnnotations | trim | indent 8}}
