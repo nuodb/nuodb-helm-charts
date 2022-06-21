@@ -1,4 +1,4 @@
-apiVersion: "apps/v1"
+admin/templates/statefulset.yamlapiVersion: "apps/v1"
 kind: StatefulSet
 metadata:
   annotations:
@@ -251,6 +251,7 @@ spec:
   - metadata:
       name: raftlog
       labels:
+        use: raftlog-volume
         {{- include "admin.resourceLabels" . | nindent 8 }}
     spec:
     {{- if .Values.admin.persistence.storageClass }}
@@ -271,6 +272,7 @@ spec:
   - metadata:
       name: log-volume
       labels:
+        use: log-volume
         {{- include "admin.resourceLabels" . | nindent 8 }}
     spec:
     {{- if .Values.admin.logPersistence.storageClass }}

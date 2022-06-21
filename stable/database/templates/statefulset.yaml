@@ -287,6 +287,7 @@ spec:
   - metadata:
       name: archive-volume
       labels:
+        use: archive-volume
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -312,6 +313,7 @@ spec:
   - metadata:
       name: journal-volume
       labels:
+        use: journal-volume
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -338,6 +340,7 @@ spec:
   - metadata:
       name: log-volume
       labels:
+        use: log-volume
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -644,6 +647,7 @@ spec:
   - metadata:
       name: archive-volume
       labels:
+        use: archive-volume
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -669,6 +673,7 @@ spec:
   - metadata:
       name: journal-volume
       labels:
+        use: journal-volume
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -694,6 +699,8 @@ spec:
   - metadata:
       name: backup-volume
       labels:
+        use: backup-volume
+        groupPrefix: "{{- include "hotcopy.groupPrefix" . }}"
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -714,6 +721,7 @@ spec:
   - metadata:
       name: log-volume
       labels:
+        use: log-volume
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
       accessModes:
