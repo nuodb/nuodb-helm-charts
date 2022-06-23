@@ -99,12 +99,15 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
-        - { name: NUODB_DOMAIN_ENTRYPOINT, value: "{{ template "nuodb.domainEntrypoint" . }}" }
-        - { name: NUODB_ALT_ADDRESS,       value: "{{ template "nuodb.altAddress" . }}" }
+        - { name: NUODB_DOMAIN_ENTRYPOINT, value: {{ template "nuodb.domainEntrypoint" . }} }
+        - { name: NUODB_ALTERNATIVE_ENTRYPOINT, value: {{ include "admin.joinService" . | quote }} }
+        - { name: NUOADMIN_BOOTSTRAP_TIMEOUT, value: {{ .Values.admin.bootstrapTimeout | quote }} }
+        - { name: NUODB_ALT_ADDRESS,       value: {{ include "nuodb.altAddress" . | quote }} }
         - { name: NUODB_VARDIR,            value: "/var/opt/nuodb/$(POD_NAME).$(NAMESPACE)" }
         - { name: COMPONENT_NAME,          value: "admin" }
-        - { name: OVERWRITE_COPIES,    value: "{{ .Values.admin.logPersistence.overwriteBackoff.copies | default "3" }}" }
-        - { name: OVERWRITE_WINDOW,    value: "{{ .Values.admin.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
+        - { name: OVERWRITE_COPIES,    value: {{ .Values.admin.logPersistence.overwriteBackoff.copies | default "3" | quote }} }
+        - { name: OVERWRITE_WINDOW,    value: {{ .Values.admin.logPersistence.overwriteBackoff.windowMinutes | default "120" | quote }} }
+    {{- include "admin.env" . | indent 8 }}
       {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }

@@ -105,6 +105,19 @@ admin:
   # must be set to 0.
   bootstrapServers: 1
 
+  # Use a service for the non-bootstrap servers to join the domain when bootstrapServers is 0.
+  # (Setting bootstrapServers > 0 causes an initialMembership to be defined - see above).
+  # However, when bootstrapServers is 0, the domain is bootstrapped using a single ENTRY AP (NUODB_DOMAIN_ENTRYPOINT),
+  # and the joinService will be used to ensure the remaining APs do not get into race conditions during the bootstrap process.
+  #
+  # When joinService is unset or empty, the default value is the admin clusterip service.
+  # The service used can be overridden here by setting the name of the chosen service - the value will be converted to an FQDN.
+  # Ex: admin.joinService: "my-service" -> "my-service.nuodb.nuodb.svc.cluster.local" (FQDN)
+  joinService: ""
+
+  # Max time for non-bootstrap APs to wait for the ENTRY AP (NUODB_DOMAIN_ENTRYPOINT) to bootstrap the domain and become ready.
+  bootstrapTimeout: "60"
+
   ## Global load balancer configuration for NuoAdmin
   ## Policy names for named policies should contain lowercase alphabetical 
   ## characters, numbers and hyphens.
@@ -243,6 +256,12 @@ admin:
     # container process
     allowPrivilegeEscalation: false
 
+  ## Import Environment Variables inside containers
+  # List of EnvVar v1 core definitions
+  # ref: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.16/#envvar-v1-core
+  ##
+  env: []
+  
   ## Specify one or more configMaps to import Environment Variables from
   # Ex:  configMapRef: [ myConfigMap, myOtherConfigMap ]
   envFrom:

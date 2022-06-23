@@ -13,20 +13,22 @@ fi
 : ${NUODB_SERVERID:=$(hostname)}
 : ${NUODB_ALT_ADDRESS:=$(hostname --fqdn)}
 : ${NUODB_ADMIN_PORT:="48005"}
+: ${NUOADMIN_BOOTSTRAP_TIMEOUT:=60}
 
-if [ "${NUODB_ALTERNATIVE_ENTRYPOINT}" != "" ] ; then
-    if nuodocker --api-server "${NUODB_ALTERNATIVE_ENTRYPOINT}:8888" check servers ; then
+if [ -n "${NUODB_ALTERNATIVE_ENTRYPOINT}" ] ; then
+    # don't wait for the ALTERNATIVE_ENTRYPOINT to become ready if we are the DOMAIN_ENTRYPOINT server
+    [ "$NUODB_SERVERID" != "$NUODB_DOMAIN_ENTRYPOINT" ] && altTimeout="--timeout ${NUOADMIN_BOOTSTRAP_TIMEOUT}"
+
+    if nuodocker --api-server "${NUODB_ALTERNATIVE_ENTRYPOINT}:8888" check servers $altTimeout ; then
         # Admin server exists at alternative entrypoint. Use it instead
         NUODB_DOMAIN_ENTRYPOINT="${NUODB_ALTERNATIVE_ENTRYPOINT}"
     fi
 fi
 
-# if endpoint is not specified, default to bootstrap server
-if [ "${NUODB_DOMAIN_ENTRYPOINT}" = "" ] ; then
-    NUODB_DOMAIN_ENTRYPOINT="${NUODB_BOOTSTRAP_SERVERID}"
-fi
+# if domain entrypoint is still empty, default to bootstrap server
+: ${NUODB_DOMAIN_ENTRYPOINT:=$NUODB_BOOTSTRAP_SERVERID}
 
-export NUODB_LOGDIR NUODB_CFGDIR NUODB_VARDIR NUODB_BINDIR NUODB_RUNDIR
+export NUODB_LOGDIR NUODB_CFGDIR NUODB_VARDIR NUODB_BINDIR NUODB_RUNDIR NUODB_DOMAIN_ENTRYPOINT
 
 # attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
 crashcount=$(find $NUODB_CRASHDIR/core* -maxdepth 0 ! -type d 2>/dev/null | wc -l)

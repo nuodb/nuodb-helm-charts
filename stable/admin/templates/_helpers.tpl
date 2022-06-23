@@ -220,6 +220,15 @@ envFrom: [{{- range $index, $map := .Values.admin.envFrom.configMapRef }}{{if gt
 {{- end -}}
 
 {{/*
+Import user defined ENV vars
+*/}}
+{{- define "admin.env" }}
+{{- if not (empty .Values.admin.env) }}
+{{ toYaml .Values.admin.env | trim }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Define the cluster domains
 */}}
 {{- define "cluster.domain" -}}
@@ -254,6 +263,15 @@ Define the fully qualified NuoDB Admin address for the domain entrypoint.
 
 {{- define "nuodb.altAddress" -}}
 $(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.domain" . }}
+{{- end -}}
+
+{{/*
+Return the name of the service to use when bootstrapping with a peer
+*/}}
+{{- define "admin.joinService" -}}
+{{- if eq ( .Values.admin.bootstrapServers | toString ) "0" -}}
+  {{- .Values.admin.joinService | default (cat .Values.admin.domain "-" .Values.admin.serviceSuffix.clusterip | nospace ) }}.{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.entrypointDomain" . -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
