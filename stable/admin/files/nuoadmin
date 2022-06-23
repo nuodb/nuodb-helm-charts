@@ -15,6 +15,47 @@ fi
 : ${NUODB_ADMIN_PORT:="48005"}
 : ${NUOADMIN_BOOTSTRAP_TIMEOUT:=60}
 
+########
+#  resolveVar()
+#  resolve an indirect variable reference
+#
+function resolveVar() {
+  local varName=$1
+
+  local val=${!varName}
+  local varRef=
+
+  # if val starts with '$', then it is a variable reference to be resolved locally - ie here and now.
+  if [[ "$val" =~ ^[$] ]]; then
+    echo "$varName contains a variable reference: $val"
+    varRef="${val#[$]}"    # strip off the first '$' prefix
+    echo "$varName refers to $varRef"
+    if [ "$varRef" = "HOSTIP" -o "$varRef" = "HOST_IP" ]; then
+      val=$(grep "$HOSTNAME" /etc/hosts | grep -o "^[0-9.]*")    # resolve host IP from /etc/hosts
+      [ $? -ne 0 ] && echo "Error resolving $varRef (named in $varName) from /etc/hosts file." && exit 1
+    else
+      val="${!varRef}"   # resolve the variable referred to in varRef
+      [ $? -ne 0 ] && echo "Error resolving $varRef (named in $varName)." && exit 1
+    fi
+
+    echo "Resolved $varName -> $varRef -> $val"
+
+    # store the result in the named variable
+    printf -v "${varName}" '%s' "${val}"
+    local retval=$?
+    [ $retval -ne 0 ] && echo "Error setting $varName=$val" && return $retval
+  fi
+
+}
+#########
+
+# resolve var references (in the form $VAR_NAME) to local values.
+resolveVar "NUODB_SERVERID"
+resolveVar "NUODB_ADMIN_PORT"
+resolveVar "NUODB_ALT_ADDRESS"
+resolveVar "NUODB_DOMAIN_ENTRYPOINT"
+resolveVar "NUODB_ALTERNATIVE_ENTRYPOINT"
+
 if [ -n "${NUODB_ALTERNATIVE_ENTRYPOINT}" ] ; then
     # don't wait for the ALTERNATIVE_ENTRYPOINT to become ready if we are the DOMAIN_ENTRYPOINT server
     [ "$NUODB_SERVERID" != "$NUODB_DOMAIN_ENTRYPOINT" ] && altTimeout="--timeout ${NUOADMIN_BOOTSTRAP_TIMEOUT}"
