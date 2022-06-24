@@ -22,12 +22,26 @@ nuodocker_flags=()
 
 nuoserver=()
 if [ -e /usr/local/bin/nuolatency.py ] ; then
-    server_id=$(NUOCMD_PLUGINS=/usr/local/bin/nuolatency.py nuocmd find closest-admin)
-    if [ "${server_id}" != "" ] ; then
-	nuoserver+=("--server-id" $server_id)
-	trace "Use closest admin server: ${server_id}"
-    fi
+    for ((i=1;i<$#;i++)); do
+	if [ "${!i}" == "--admin-distribution-policy" ] ; then
+            j=$((i+1))
+            if [ "${!j}" == "closest" ] ; then
+		server_id=$(NUOCMD_PLUGINS=/usr/local/bin/nuolatency.py nuocmd find closest-admin)
+		if [ "${server_id}" != "" ] ; then
+                    nuoserver+=("--server-id" $server_id)
+                    # when passing server-id to nuodocker admin-distribution-policy is ignored so
+                    # we don't have to remove it from $@.
+		fi
+            fi
+	fi
+	if [ "${!i}" == "--server-id" ] ; then
+            # since server-id passed as argument we don't override it.
+            nuoserver=()
+            break
+	fi
+    done
 fi
+
     
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
