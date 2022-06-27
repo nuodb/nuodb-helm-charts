@@ -26,8 +26,15 @@ spec:
   serviceName: {{ .Values.database.name }}
   template:
     metadata:
-      {{- if .Values.database.podAnnotations }}
       annotations:
+      {{- if .Values.database.configFiles }}
+        {{- with .Values.database.configFiles }}
+        checksum/config: {{ toYaml . | sha256sum }}
+        {{- end }}
+      {{- else }}
+        checksum/config: "0"
+      {{- end }}
+      {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
@@ -41,6 +48,10 @@ spec:
       priorityClassName: {{ default "" .Values.database.priorityClasses.sm }}
       {{- end }}
       {{- include "securityContext" . | indent 6 }}
+      {{- if .Values.database.sm.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ tpl .Values.database.sm.topologySpreadConstraints . | trim | indent 8 }}
+      {{- end }}
       {{- with .Values.database.sm.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -382,8 +393,15 @@ spec:
   serviceName: {{ .Values.database.name }}
   template:
     metadata:
-      {{- if .Values.database.podAnnotations }}
       annotations:
+      {{- if .Values.database.configFiles }}
+        {{- with .Values.database.configFiles }}
+        checksum/config: {{ toYaml . | sha256sum }}
+        {{- end }}
+      {{- else }}
+        checksum/config: "0"
+      {{- end }}
+      {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
@@ -397,6 +415,10 @@ spec:
       priorityClassName: {{ default "" .Values.database.priorityClasses.sm }}
       {{- end }}
       {{- include "securityContext" . | indent 6 }}
+      {{- if .Values.database.sm.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ tpl .Values.database.sm.topologySpreadConstraints . | trim | indent 8 }}
+      {{- end }}
       {{- with .Values.database.sm.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}

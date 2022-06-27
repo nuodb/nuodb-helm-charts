@@ -9,9 +9,9 @@
 
 . ${NUODB_HOME}/etc/nuodb_setup.sh
 
-: ${NUODB_ARCHIVEDIR:=/var/opt/nuodb/archive}
+: ${NUODB_ARCHIVEDIR:=/var/opt/nuodb/archive/${NUODB_DOMAIN}/${DB_NAME}}
 : ${NUODB_BACKUPDIR:=/var/opt/nuodb/backup}
-: ${NUODB_JOURNALDIR:=/var/opt/nuodb/journal}
+: ${NUODB_JOURNALDIR:=/var/opt/nuodb/journal/${NUODB_DOMAIN}/${DB_NAME}}
 : ${NUODB_STORAGE_PASSWORDS_DIR:=/etc/nuodb/tde}
 : ${NUODB_DOMAIN:="nuodb"}
 : ${DB_NAME:="demo"}
@@ -23,11 +23,10 @@ restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
 credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
 strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
 
-DB_PARENTDIR=${NUODB_ARCHIVEDIR}/${NUODB_DOMAIN}
-DB_DIR=${DB_PARENTDIR}/${DB_NAME}
+DB_DIR=${NUODB_ARCHIVEDIR}
+DB_PARENTDIR=$(dirname ${DB_DIR})
 
-JOURNAL_PARENT=${NUODB_JOURNALDIR}/${NUODB_DOMAIN}
-JOURNAL_DIR=${JOURNAL_PARENT}/${DB_NAME}
+JOURNAL_DIR=${NUODB_JOURNALDIR}
 
 LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuosm.log
 # since NuoDB 4.2.3, `nuodocker` has logging facilities to send logging to the
@@ -214,7 +213,7 @@ function perform_restore() {
     fi
   else
     tarfile="${DB_DIR}-$( date +%Y%m%dT%H%M%S ).tar.gz"
-    tar czf $tarfile -C $DB_PARENTDIR $DB_NAME
+    tar czf $tarfile -C $DB_PARENTDIR $(basename $DB_DIR)
 
     retval=$?
     if [ $retval -ne 0 ]; then

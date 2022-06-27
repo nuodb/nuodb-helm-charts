@@ -414,6 +414,7 @@ database:
     affinity: {}
     # nodeSelector: {}
     # tolerations: []
+    # topologySpreadConstraints: []
     
     ## labels
     # Additional Labels given to the SMs started
@@ -495,6 +496,7 @@ database:
     affinity: {}
     # nodeSelector: {}
     # tolerations: []
+    # topologySpreadConstraints: []
 
     # labels
     # Additional Labels given to the TEs started
