@@ -20,7 +20,7 @@ def latency_point(host, port = 48004, timeout = 5):
         s.connect((host, int(port)))
         s.shutdown(socket.SHUT_RD)
     except:
-        return 99999
+        raise ValueError("Connection Timeout")
 
     # Stop Timer
     s_runtime = (time() - s_start) * 1000
@@ -28,9 +28,12 @@ def latency_point(host, port = 48004, timeout = 5):
 
 def measure(host,port=48005,runs=9):
     total = 0
-    for n in range(0,runs):
-        total += latency_point(host)
-    return total / float(runs)
+    try:
+        for n in range(0,runs):
+            total += latency_point(host)
+        return total / float(runs)
+    except Value:
+        return 99999
 
 class LatencyCommands(nuodb_cli.AdminCommands):
 
