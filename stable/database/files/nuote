@@ -21,25 +21,15 @@ nuodocker_flags=()
 [ -n "$NUODB_DEBUG" ] && nuodocker_flags+=("--debug")
 
 nuoserver=()
-if [ -e /usr/local/bin/nuolatency.py ] ; then
-    for ((i=1;i<$#;i++)); do
-	if [ "${!i}" == "--admin-distribution-policy" ] ; then
-            j=$((i+1))
-            if [ "${!j}" == "closest" ] ; then
-		server_id=$(NUOCMD_PLUGINS=/usr/local/bin/nuolatency.py nuocmd find closest-admin)
-		if [ "${server_id}" != "" ] ; then
-                    nuoserver+=("--server-id" $server_id)
-                    # when passing server-id to nuodocker admin-distribution-policy is ignored so
-                    # we don't have to remove it from $@.
-		fi
-            fi
+if [ "${NUOADMIN_DISTRIBUTION_POLICY}" == "nearest" ] ; then
+    if [ -e /usr/local/bin/nuolatency.py ] ; then
+	server_id=$(NUOCMD_PLUGINS=/usr/local/bin/nuolatency.py nuocmd find closest-admin)
+	if [ "${server_id}" != "" ] ; then
+            nuoserver+=("--server-id" $server_id)
 	fi
-	if [ "${!i}" == "--server-id" ] ; then
-            # since server-id passed as argument we don't override it.
-            nuoserver=()
-            break
-	fi
-    done
+    fi
+elif [ "${NUOADMIN_DISTRIBUTION_POLICY}" != "" ] ; then
+    nuoserver = ( "--admin-distribution-policy" "{NUOADMIN_DISTRIBUTION_POLICY}" )
 fi
 
     
