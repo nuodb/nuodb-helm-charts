@@ -25,11 +25,11 @@ if [ "${NUOADMIN_DISTRIBUTION_POLICY}" == "nearest" ] ; then
     if [ -e /usr/local/bin/nuolatency.py ] ; then
 	server_id=$(NUOCMD_PLUGINS=/usr/local/bin/nuolatency.py nuocmd find closest-admin)
 	if [ "${server_id}" != "" ] ; then
-            nuoserver+=("--server-id" $server_id)
+            nuoserver=("--server-id" $server_id)
 	fi
     fi
 elif [ "${NUOADMIN_DISTRIBUTION_POLICY}" != "" ] ; then
-    nuoserver = ( "--admin-distribution-policy" "{NUOADMIN_DISTRIBUTION_POLICY}" )
+    nuoserver=( "--admin-distribution-policy" "{NUOADMIN_DISTRIBUTION_POLICY}" )
 fi
 
     
