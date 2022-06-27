@@ -242,7 +242,6 @@ metadata:
     {{- include "database.resourceLabels" . | nindent 4 }}
     subgroup: backup
     backup-group: {{ $backupGroup }}
-    backup-group-labels: "{{ $backupGroupLabels }}"
 spec:
   schedule: {{ include "hotcopy.group.schedule" (merge (dict "backupGroup" $backupGroup "hotCopyType" "journal") . ) }}
   startingDeadlineSeconds: {{ .Values.database.sm.hotCopy.journalBackup.deadline }}
