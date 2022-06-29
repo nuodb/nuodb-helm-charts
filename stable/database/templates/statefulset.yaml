@@ -184,6 +184,9 @@ spec:
         {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
+        - name: nuolatency
+          mountPath: /usr/local/bin/nuolatency.py
+          subPath: nuolatency.py
         - name: nuosm
           mountPath: /usr/local/bin/nuosm
           subPath: nuosm
@@ -251,6 +254,10 @@ spec:
       - name: log-volume
         emptyDir: {}
       {{- end }}
+      - name: nuolatency
+        configMap:
+          name: {{ template "database.fullname" . }}-nuolatency
+          defaultMode: 0644
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm
@@ -550,6 +557,9 @@ spec:
         {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
+        - name: nuolatency
+          mountPath: /usr/local/bin/nuolatency.py
+          subPath: nuolatency.py
         - name: nuosm
           mountPath: /usr/local/bin/nuosm
           subPath: nuosm
@@ -619,6 +629,10 @@ spec:
       - name: log-volume
         emptyDir: {}
       {{- end }}
+      - name: nuolatency
+        configMap:
+          name: {{ template "database.fullname" . }}-nuolatency
+          defaultMode: 0644
       - name: nuosm
         configMap:
           name: {{ template "database.fullname" . }}-nuosm

@@ -7,6 +7,17 @@ metadata:
   name: {{ template "database.fullname" . }}-nuote
 data:
 {{ (.Files.Glob "files/nuote").AsConfig | indent 2 }}
+{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
+  name: {{ template "database.fullname" . }}-nuolatency
+data:
+{{ (.Files.Glob "files/nuolatency.py").AsConfig | indent 2 }}
+{{- end }}
 {{/* 
   Remove this conditional rendering when support for storage groups is added
 */}}

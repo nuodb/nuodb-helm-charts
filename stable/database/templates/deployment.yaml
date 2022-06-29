@@ -140,6 +140,9 @@ spec:
         {{- end }}
         - name: log-volume
           mountPath: /var/log/nuodb
+        - name: nuolatency
+          mountPath: /usr/local/bin/nuolatency.py
+          subPath: nuolatency.py
         - name: nuote
           mountPath: /usr/local/bin/nuote
           subPath: nuote
@@ -186,6 +189,10 @@ spec:
           persistentVolumeClaim:
             claimName: {{ template "database.fullname" . }}-log-te-volume
         {{- end }}
+        - name: nuolatency
+          configMap:
+            name: {{ template "database.fullname" . }}-nuolatency
+            defaultMode: 0644
         - name: nuote
           configMap:
             name: {{ template "database.fullname" . }}-nuote

@@ -809,9 +809,21 @@ trace "executing nuodocker to start SM"
 nuodocker_flags=()
 [ -n "$NUODB_DEBUG" ] && nuodocker_flags+=("--debug")
 
+nuoserver=()
+if [ "${NUOADMIN_DISTRIBUTION_POLICY}" == "nearest" ] ; then
+    if [ -e /usr/local/bin/nuolatency.py ] ; then
+	server_id=$(NUOCMD_PLUGINS=/usr/local/bin/nuolatency.py nuocmd find closest-admin)
+	if [ "${server_id}" != "" ] ; then
+            nuoserver=("--server-id" $server_id)
+	fi
+    fi
+elif [ "${NUOADMIN_DISTRIBUTION_POLICY}" != "" ] ; then
+    nuoserver=( "--admin-distribution-policy" "{NUOADMIN_DISTRIBUTION_POLICY}" )
+fi
+
 # expects NUOCMD_API_SERVER to be set.
 if [ -n "${NUODB_OPTIONS}" ] ; then
-    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" "${journal_flags[@]}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" "${journal_flags[@]}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" --options "${NUODB_OPTIONS}" "${nuoserver[@]}" "$@"
 else
-    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" "${journal_flags[@]}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "$@"
+    exec nuodocker "${nuodocker_flags[@]}" start sm --archive-dir "${DB_DIR}" "${journal_flags[@]}" --dba-user "${DB_USER}" --dba-password "${DB_PASSWORD}" --db-name "${DB_NAME}" "${nuoserver[@]}"  "$@"
 fi
