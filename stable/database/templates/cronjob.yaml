@@ -29,10 +29,14 @@ spec:
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
   jobTemplate:
     metadata:
+      annotations:
+        operation: full-hotcopy
+        backup-group-labels: "{{ $backupGroupLabels }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
         backup-group: {{ $backupGroup }}
+        
     spec:
       template:
         spec:
@@ -130,6 +134,9 @@ spec:
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
   jobTemplate:
     metadata:
+      annotations:
+        operation: incremental-hotcopy
+        backup-group-labels: "{{ $backupGroupLabels }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
@@ -229,6 +236,9 @@ spec:
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory }}
   jobTemplate:
     metadata:
+      annotations:
+        operation: journal-hotcopy
+        backup-group-labels: "{{ $backupGroupLabels }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
