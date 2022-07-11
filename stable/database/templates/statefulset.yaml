@@ -242,6 +242,17 @@ spec:
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
       {{- include "nuodb.sidecar" . | nindent 6 }}
+      {{- if .Values.nuocollector }}
+      {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
+        - mountPath: /var/opt/nuodb/archive
+          name: archive-volume
+        {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
+        - name: journal-volume
+          mountPath: /var/opt/nuodb/journal
+        {{- end }}
+      shareProcessNamespace: true
+      {{- end }}
+      {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
@@ -617,6 +628,19 @@ spec:
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
       {{- include "nuodb.sidecar" . | nindent 6 }}
+      {{- if .Values.nuocollector }}
+      {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
+        - mountPath: /var/opt/nuodb/archive
+          name: archive-volume
+        {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
+        - name: journal-volume
+          mountPath: /var/opt/nuodb/journal
+        {{- end }}
+        - mountPath: /var/opt/nuodb/backup
+          name: backup-volume
+      shareProcessNamespace: true
+      {{- end }}
+      {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
