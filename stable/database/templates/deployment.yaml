@@ -171,6 +171,11 @@ spec:
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
       {{- include "nuodb.sidecar" . | nindent 6 }}
+      {{- if .Values.nuocollector }}
+      {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
+      shareProcessNamespace: true
+      {{- end }}
+      {{- end }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
         {{- include "nuodb.sidecar.volumes" . | nindent 8 }}

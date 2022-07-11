@@ -1,18 +1,6 @@
 {{- define "nuodb.sidecar" -}}
 {{- if .Values.nuocollector }}
 {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
-- name: nuocollector
-  image: {{ template "nuocollector.image" . }}
-  imagePullPolicy: {{ .Values.nuocollector.image.pullPolicy }}
-  tty: true
-  resources:
-  {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
-  {{- include "sc.containerSecurityContext" . | indent 2 }}
-  volumeMounts:
-  - mountPath: /etc/telegraf/telegraf.d/dynamic/
-    name: nuocollector-config
-  - name: log-volume
-    mountPath: /var/log/nuodb
 - name: nuocollector-config
   image: {{ template "nuocollector.watcher" . }}
   imagePullPolicy: {{ .Values.nuocollector.watcher.pullPolicy }}
@@ -31,7 +19,19 @@
     mountPath: /etc/telegraf/telegraf.d/dynamic/
   - name: log-volume
     mountPath: /var/log/nuodb
-shareProcessNamespace: true
+- name: nuocollector
+  image: {{ template "nuocollector.image" . }}
+  imagePullPolicy: {{ .Values.nuocollector.image.pullPolicy }}
+  tty: true
+  resources:
+  {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
+  {{- include "sc.containerSecurityContext" . | indent 2 }}
+  volumeMounts:
+  - mountPath: /etc/telegraf/telegraf.d/dynamic/
+    name: nuocollector-config
+  - name: log-volume
+    mountPath: /var/log/nuodb
+#shareProcessNamespace: true
 {{- end }}
 {{- end }}
 {{- end -}}
