@@ -268,6 +268,16 @@ function perform_restore() {
 
     # restore data and/or fix the metadata
     log "restoring archive and/or clearing restored archive physical metadata"
+
+    if [ "$download_dir" != "$DB_DIR" ] ; then
+       # if not backup set then rename $download_dir to $DB_DIR.
+       if test -f "$download_dir/1.atm" ; then
+          rm -rf $DB_DIR
+	  mv $download_dir $DB_DIR
+	  download_dir=$DB_DIR
+       fi
+    fi
+
     status="$(nuodocker restore archive \
       --origin-dir $download_dir \
       "${journal_flags[@]}" \
