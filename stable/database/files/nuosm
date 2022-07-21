@@ -272,7 +272,7 @@ function perform_restore() {
     # if download is an archive, and not a backup then rename $download_dir to $DB_DIR
     # as if download was streamed instead.
     if [ "$restore_type" != "stream" ] && [ -f "$download_dir/1.atm" ];
-       rm -rf $DB_DIR
+       rmdir $DB_DIR
        mv $download_dir $DB_DIR
        download_dir=$DB_DIR
     fi
