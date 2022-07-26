@@ -1,3 +1,4 @@
+//go:build upgrade
 // +build upgrade
 
 package minikube
@@ -190,6 +191,12 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 
 	t.Run("NuoDB_From330_ToLocal", func(t *testing.T) {
 		upgradeDatabaseTest(t, "3.3.0", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
+		})
+	})
+
+	t.Run("NuoDB_From340_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "3.4.0", &testlib.UpgradeOptions{
 			AdminPodShouldGetRecreated: true,
 		})
 	})
