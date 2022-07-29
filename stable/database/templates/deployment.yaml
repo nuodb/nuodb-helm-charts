@@ -24,8 +24,15 @@ spec:
     type: RollingUpdate
   template:
     metadata:
-      {{- if .Values.database.podAnnotations }}
       annotations:
+      {{- if .Values.database.configFiles }}
+        {{- with .Values.database.configFiles }}
+        checksum/config: {{ toYaml . | sha256sum }}
+        {{- end }}
+      {{- else }}
+        checksum/config: "0"
+      {{- end }}
+      {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
@@ -37,6 +44,10 @@ spec:
       priorityClassName: {{ default "" .Values.database.priorityClasses.te }}
       {{- end }}
       {{- include "securityContext" . | indent 6 }}
+      {{- if .Values.database.te.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ tpl .Values.database.te.topologySpreadConstraints . | trim | indent 8 }}
+      {{- end }}
       {{- with .Values.database.te.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}

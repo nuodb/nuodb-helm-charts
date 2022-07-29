@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -110,15 +111,27 @@ func verifyDomainProcesses(t *testing.T, api_server string, databaseName string,
 			path.Join(keysPath, testlib.NUOCMD_FILE), path.Join(keysPath, testlib.CA_CERT_FILE))
 	}
 	cmd += fmt.Sprintf(" --show-json get processes --db-name %s", databaseName)
-	t.Logf("Running command: <%s>", cmd)
-	out, err := exec.Command("sh", "-c", cmd).Output()
-	if exiterr, ok := err.(*exec.ExitError); ok {
-		// nuocmd has exited with an non zero exit code; generate better error
-		// message by including the command stderr
-		require.NoError(t, err, string(exiterr.Stderr))
-	} else {
-		require.NoError(t, err)
+
+	var out []byte
+	getProcesses := func() error {
+		var err error
+		t.Logf("Running command: <%s>", cmd)
+		out, err = exec.Command("sh", "-c", cmd).Output()
+		if exiterr, ok := err.(*exec.ExitError); ok {
+			// nuocmd has exited with an non zero exit code; generate better error
+			// message by including the command stderr
+			return fmt.Errorf(string(exiterr.Stderr))
+		} else {
+			return err
+		}
 	}
+
+	// retry the connections that go via Ingress as HAProxy processes may need
+	// to be restarted due to reconfiguration request and nuocmd client will
+	// receive "Connection aborted." error
+	err := testlib.Retry(t, getProcesses, 4, 5*time.Second)
+	require.NoError(t, err)
+
 	err, processes := testlib.Unmarshal(string(out))
 	require.NoError(t, err)
 	require.Equal(t, expectedNrProcesses, len(processes), "Unexpected number of domain processes")

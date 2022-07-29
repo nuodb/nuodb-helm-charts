@@ -14,7 +14,7 @@
   {{- with $globalScope }}
     {{ $backupGroupLabels := include "hotcopy.group.labels" (merge (dict "backupGroup" $backupGroup) .) }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: {{ include "cronjob.apiVersion" . }}
 kind: CronJob
 metadata:
   name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "full") . ) }}
@@ -29,10 +29,14 @@ spec:
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
   jobTemplate:
     metadata:
+      annotations:
+        operation: full-hotcopy
+        backup-group-labels: "{{ $backupGroupLabels }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
         backup-group: {{ $backupGroup }}
+        
     spec:
       template:
         spec:
@@ -115,7 +119,7 @@ spec:
           restartPolicy: {{ .Values.database.sm.hotCopy.restartPolicy }}
 {{- include "nuodb.imagePullSecrets" . | indent 10 }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: {{ include "cronjob.apiVersion" . }}
 kind: CronJob
 metadata:
   name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "incremental") . ) }}
@@ -130,6 +134,9 @@ spec:
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory}}
   jobTemplate:
     metadata:
+      annotations:
+        operation: incremental-hotcopy
+        backup-group-labels: "{{ $backupGroupLabels }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
@@ -214,7 +221,7 @@ spec:
 
 {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true" }}
 ---
-apiVersion: batch/v1beta1
+apiVersion: {{ include "cronjob.apiVersion" . }}
 kind: CronJob
 metadata:
   name: {{ include "hotcopy.cronjob.name" (merge (dict "backupGroup" $backupGroup "hotCopyType" "journal") . ) }}
@@ -229,6 +236,9 @@ spec:
   failedJobsHistoryLimit: {{ .Values.database.sm.hotCopy.failureHistory }}
   jobTemplate:
     metadata:
+      annotations:
+        operation: journal-hotcopy
+        backup-group-labels: "{{ $backupGroupLabels }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
