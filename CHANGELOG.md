@@ -8,16 +8,15 @@
 
 - Allow priorityClassName to be specified for admin, SM, and TE pods [\#287](https://github.com/nuodb/nuodb-helm-charts/pull/287) ([adriansuarez](https://github.com/adriansuarez))
 - Support for multi-tenancy in a single namespace [\#285](https://github.com/nuodb/nuodb-helm-charts/pull/285) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
-- Add runAs in the container security context [\#272](https://github.com/nuodb/nuodb-helm-charts/pull/272) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
 - Support Ingress with SSL passthrough [\#271](https://github.com/nuodb/nuodb-helm-charts/pull/271) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
-- Deploy NuoDB in more restricted environments [\#267](https://github.com/nuodb/nuodb-helm-charts/pull/267) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Deploy NuoDB in security-enhanced environments [\#267](https://github.com/nuodb/nuodb-helm-charts/pull/267) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
 - Backup groups enhancements [\#265](https://github.com/nuodb/nuodb-helm-charts/pull/265) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
 - Allow Pod security context to be specified [\#263](https://github.com/nuodb/nuodb-helm-charts/pull/263) ([adriansuarez](https://github.com/adriansuarez))
 
 **Fixed bugs:**
 
 - Use legacy AWS controller by default for external access [\#279](https://github.com/nuodb/nuodb-helm-charts/pull/279) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
-- Change permissions on backup volume [\#275](https://github.com/nuodb/nuodb-helm-charts/pull/275) ([adriansuarez](https://github.com/adriansuarez))
+- Update init container to set permissions on backup volume [\#275](https://github.com/nuodb/nuodb-helm-charts/pull/275) ([adriansuarez](https://github.com/adriansuarez))
 - Request incremental hot copy if journal hot copy is temporary disabled [\#262](https://github.com/nuodb/nuodb-helm-charts/pull/262) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
 
 **Merged pull requests:**
