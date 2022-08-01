@@ -371,6 +371,47 @@ func TestConfigDoesNotContainEmptyBlocks(t *testing.T) {
 	assert.NotContains(t, output, "---\n---")
 }
 
+func TestAdminConfigChecksum(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+	options := &helm.Options{}
+	var cksum string
+
+	t.Run("testNoConfig", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			cksum = obj.Spec.Template.ObjectMeta.Annotations["checksum/config"]
+			assert.Equal(t, "0", cksum)
+		}
+	})
+
+	t.Run("testWithConfig", func(t *testing.T) {
+		options.SetValues = make(map[string]string)
+		options.SetValues["admin.configFiles.foo\\.conf"] = "foo"
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			cksum = obj.Spec.Template.ObjectMeta.Annotations["checksum/config"]
+			assert.NotEmpty(t, cksum)
+		}
+	})
+
+	t.Run("testConfigContentUpdate", func(t *testing.T) {
+		// change the config file content and render the template again
+		options.SetValues["admin.configFiles.foo\\.conf"] = "bar"
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			newCksum := obj.Spec.Template.ObjectMeta.Annotations["checksum/config"]
+			assert.NotEmpty(t, newCksum)
+			assert.NotEqual(t, newCksum, cksum)
+		}
+	})
+}
+
 func TestBootstrapServersRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
