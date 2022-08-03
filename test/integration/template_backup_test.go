@@ -301,17 +301,25 @@ func TestDatabaseBackupGroupsDefault(t *testing.T) {
 		backupGroup := obj.ObjectMeta.Labels["backup-group"]
 		assert.Contains(t, backupGroup, "cluster0")
 		assert.NotEmpty(t, backupGroup, "Backup group label is empty")
+		expectedBackupLabels := fmt.Sprintf(
+			"pod-name sm-database-nuodb-cluster0-demo-hotcopy-%s",
+			string(backupGroup[len(backupGroup)-1]))
+		backupLabels := obj.Spec.JobTemplate.ObjectMeta.Annotations["backup-group-labels"]
+		assert.Equal(t, expectedBackupLabels, backupLabels)
 		assert.Subset(t, backupContainer.Args, []string{
 			"--labels",
-			fmt.Sprintf("pod-name sm-database-nuodb-cluster0-demo-hotcopy-%s",
-				string(backupGroup[len(backupGroup)-1])),
+			expectedBackupLabels,
 		})
+		expectedOperation := "full-hotcopy"
 		expectedSchedule := options.SetValues["database.sm.hotCopy.fullSchedule"]
 		if strings.Contains(obj.Name, "incremental") {
+			expectedOperation = "incremental-hotcopy"
 			expectedSchedule = options.SetValues["database.sm.hotCopy.incrementalSchedule"]
 		} else if strings.Contains(obj.Name, "journal") {
+			expectedOperation = "journal-hotcopy"
 			expectedSchedule = options.SetValues["database.sm.hotCopy.journalBackup.journalSchedule"]
 		}
+		assert.Equal(t, expectedOperation, obj.Spec.JobTemplate.ObjectMeta.Annotations["operation"])
 		assert.Equal(t, expectedSchedule, obj.Spec.Schedule)
 	}
 }
@@ -344,11 +352,13 @@ func TestDatabaseBackupGroupsCustom(t *testing.T) {
 		backupGroup := obj.ObjectMeta.Labels["backup-group"]
 		assert.NotEmpty(t, backupGroup, "Backup group label is empty")
 		if backupGroup == "aws" {
+			assert.Equal(t, "cloud aws", obj.Spec.JobTemplate.ObjectMeta.Annotations["backup-group-labels"])
 			assert.Subset(t, backupContainer.Args, []string{
 				"--labels",
 				"cloud aws",
 			})
 		} else {
+			assert.Equal(t, "cloud gcp", obj.Spec.JobTemplate.ObjectMeta.Annotations["backup-group-labels"])
 			assert.Subset(t, backupContainer.Args, []string{
 				"--labels",
 				"cloud gcp",

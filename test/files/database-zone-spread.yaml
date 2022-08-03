@@ -1,0 +1,19 @@
+database:
+  sm:
+    topologySpreadConstraints: |
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            group: nuodb
+            component: sm
+  te:
+    topologySpreadConstraints: |
+      - maxSkew: 1
+        topologyKey: topology.kubernetes.io/zone
+        whenUnsatisfiable: DoNotSchedule
+        labelSelector:
+          matchLabels:
+            group: nuodb
+            component: te
