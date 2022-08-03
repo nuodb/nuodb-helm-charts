@@ -396,6 +396,7 @@ func TestAdminConfigChecksum(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			cksum = obj.Spec.Template.ObjectMeta.Annotations["checksum/config"]
 			assert.NotEmpty(t, cksum)
+			assert.NotEqual(t, "0", cksum)
 		}
 	})
 

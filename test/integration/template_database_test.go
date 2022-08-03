@@ -1717,6 +1717,7 @@ func TestDatabaseConfigChecksum(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			cksum[obj.Name] = obj.Spec.Template.ObjectMeta.Annotations["checksum/config"]
 			assert.NotEmpty(t, cksum[obj.Name])
+			assert.NotEqual(t, "0", cksum[obj.Name])
 		}
 
 		// render the TEs and capture the output
