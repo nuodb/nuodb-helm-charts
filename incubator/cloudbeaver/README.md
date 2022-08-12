@@ -14,9 +14,9 @@ See these websites for more detail:
 # Installation
 
 ## Background
-Cloudbeaver is not as dynamic as DBeaver.  With DBeaver, a supported database driver not already present would be downloaded automatically.  This functionality has been removed from Cloudbeaver.
+Cloudbeaver is not as dynamic as DBeaver.  With DBeaver, a supported database driver not already present would be downloaded automatically from Maven Central.  This functionality has been removed from Cloudbeaver.
 
-This guide provided by Cloudbeaver explains how to add a custom driver, which requires rebuilding Cloudbeaver and the docker container to include the driver and configuration changes: [https://cloudbeaver.io/docs/Adding-new-database-drivers/](https://cloudbeaver.io/docs/Adding-new-database-drivers/)
+This guide, provided by Cloudbeaver, explains how to add a custom driver, which requires rebuilding Cloudbeaver and the docker container to include the driver and configuration changes: [https://cloudbeaver.io/docs/Adding-new-database-drivers/](https://cloudbeaver.io/docs/Adding-new-database-drivers/)
 
 This helm chart, however, slides the NuoDB modification in without requiring a rebuild.  This avoids having to maintain a build of Cloudbeaver tied to the NuoDB driver version.  The main changes are:
 
