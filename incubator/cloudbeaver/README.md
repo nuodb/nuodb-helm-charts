@@ -33,20 +33,25 @@ The `values.yaml` file has comments explaining what the different values do.
 Under the `files` directory there are a number of configuration files.  They are described below
 
 `files/cloudbeaver/cloudbeaver.conf`
+
 This contains some initial server configuration for Cloudbeaver.  Some of these entries are configured in the values file, under `cloudbeaver.configs.cloudbeaver`.  Note See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Server-configuration
 
 `files/cloudbeaver/cloudbeaver.auto.conf`
+
 This contains some automatic initial server configuration for Cloudbeaver.  Some of these entries are configured in the values file, under `cloudbeaver.configs`.   The presence of this file causes  Cloudbeaver to skip the initial configuration on first login.  See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Server-configuration#automatic-server-configuration
 
 `files/cloudbeaver/initial-data.conf`
+
 This contains initial configuration for the admin user and roles.  By default, anonymous access is possible, and users can be created by the admin user after first start.  The Cloudbeaver administrator user can also add users after deployment.  These entries are configured in the values file, under `cloudbeaver.configs.initialData`.  See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Users
 
 `files/cloudbeaver/initial-data-sources.conf`
+
 This contains a default template datasource for the chosen NuoDB deployment, which is created using the values provided for the NuoDB admin and database, following the same data as in the NuoDB helm charts.  Users will also be able to add their own additional data sources, for example if more databases are deployed after the initial deployment of Cloudbeaver.  These entries are configured in the values file, under `cloudbeaver.configs.initialDataSources`.  See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Configuring-server-datasources
 
 *NOTE:* *The above 3 configurations can be optionally disabled using `.Values.cloudbeaver.overrideConfigs`.  Setting to false will use all Cloudbeaver default configuration files.*
 
 `files/io.cloudbeaver.resources.drivers.base/plugin.xml`
+
 This file has this 3 additional lines for NuoDB:
 
  - `<resource  name="drivers/nuodb"/>`
@@ -54,6 +59,7 @@ This file has this 3 additional lines for NuoDB:
  - `<driver  id="generic:nuodb"/>`
 
 `files/org.jkiss.dbeaver.ext.generic/plugin.xml`
+
 This file has 1 additional section for NuoDB:
 
     <driver
