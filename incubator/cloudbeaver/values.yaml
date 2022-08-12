@@ -1,0 +1,104 @@
+init:
+  #This image is used by the 2nd init container which relies on the jar binary
+  image:
+    registry: docker.io
+    repository: openjdk
+    tag: 11-jdk
+    pullPolicy: IfNotPresent
+
+cloudbeaver:
+  #Cloudbeaver image details
+  image:
+    registry: docker.io
+    repository: dbeaver/cloudbeaver
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  #Set the driver version to use.
+  #If download is set to false, the nuodb jar is expected to exist in the files directory, then it will be loaded as a configmap
+  #Get it from https://mvnrepository.com/artifact/com.nuodb.jdbc/nuodb-jdbc)
+  nuodbDriver:
+    download: true
+    version: 23.0.0
+    
+  #These values populare the cloudbeaver.conf files in the files directory.
+  #Optionally the overrides can be disbaled, using all cloudbeaver defaults.
+  #Refer to this page for information on what these do: https://github.com/dbeaver/cloudbeaver/wiki/Server-configuration
+  configs:
+    override: true
+
+    serverName: Cloudbeaver
+    serverURL: http://localhost:8978
+    adminName: cbadmin
+    adminPassword: cbadmin
+    
+    cloudbeaver:
+      minIdleConnections: "4"
+      maxIdleConnections: "10"
+      maxConnections: "100"
+      anonymousAccessEnabled: true
+      supportsCustomConnections: true
+      publicCredentialsSaveEnabled: false
+      adminCredentialsSaveEnabled: false
+      resourceManagerEnabled: true
+      dataExportFileSizeLimit: "10000000"
+      resourceManagerFileSizeLimit: "500000"
+      sqlMaxRunningQueries: "10"
+      sqlResultSetRowsLimit: "100000"
+      sqlResultSetMemoryLimit: "2000000"
+      sqlTextPreviewMaxLength: "4096"
+      sqlBinaryPreviewMaxLength: "261120"
+      showSystemObjects: true
+      showUtilityObjects: false
+      showOnlyEntities: false
+      mergeEntities: false
+      hideFolders: false
+      hideSchemas: false
+    initialDataSources:
+      - adminNamespace: nuodb
+        adminDomain: nuodb
+        databaseName: demo
+    initialData:
+      roles:
+        - roleID: admin
+          name: Admin
+          description: "Administrative access. Has all permissions."
+          permissions:
+            - public
+            - admin
+        - roleID: user
+          name: AnonUser
+          description: "Standard user"
+          permissions: 
+            - public
+
+  #The service account to use for the deployment
+  addServiceAccount: true
+  serviceAccount: cloudbeaver
+  #nameOverride: 
+
+  #Configures the service type to be used.  Valid values are ClusterIP, LoadBalancer and NodePort
+  service:
+    type: ClusterIP
+    port: 8978
+
+  #Configures the resources assinged to the cloudbeaver pod
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 1
+      memory: 1Gi
+
+  #Controls whether a persistent volume is created for the workspace directory used by clooudbeaver, allowing configuration to be persistent between restarts
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    # storageClass: "-"
+
+  #nodeSelector:
+  #affinity:
+  #tolerations: 

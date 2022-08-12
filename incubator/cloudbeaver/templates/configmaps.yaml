@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nuodb-scripts
+data:
+{{ (.Files.Glob "files/*.sh").AsConfig | indent 2 }}
+
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nuodb-configs
+data:
+{{ range $path, $_ :=  .Files.Glob  "files/*/*.xml" }}
+{{ dir $path | replace "files/" "" | indent 2 }}.{{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{ end }}
+
+{{- if eq (include "defaulttrue" .Values.cloudbeaver.configs.override) "true" }}
+---
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloudbeaver-configs
+data:
+{{- range $path, $_ :=  .Files.Glob  "files/cloudbeaver/*.conf" }}
+{{ base $path | indent 2 }}: |
+{{ tpl ($.Files.Get $path) $ | replace ",," "" | indent 4 }}
+{{- end }}
+
+{{- end }}
