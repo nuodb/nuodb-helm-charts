@@ -3,7 +3,7 @@
 
 # Cloudbeaver for NuoDB
 
-Cloudbeaver is a web based version of DBeaver, a popular universal GUI SQL tool compatible with NuoDB.  It is probed as a docker container, but has no helm chart.
+Cloudbeaver is a web based version of DBeaver, a popular universal GUI SQL tool compatible with NuoDB.  It is provided as a docker container, but has no helm chart.
 
 See these websites for more detail:
 https://cloudbeaver.io/
