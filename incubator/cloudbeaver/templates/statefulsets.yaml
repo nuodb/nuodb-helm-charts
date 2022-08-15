@@ -59,7 +59,6 @@ spec:
         - name: cloudbeaver
           image: "{{ .Values.cloudbeaver.image.repository }}:{{ .Values.cloudbeaver.image.tag }}"
           imagePullPolicy: {{ .Values.cloudbeaver.image.pullPolicy }}
-          command: [ ./run-server-nuodb.sh ]
           ports:
             - name: tcp-8978
               containerPort: 8978
@@ -67,13 +66,10 @@ spec:
           resources:
             {{- toYaml .Values.cloudbeaver.resources | nindent 12 }}
           volumeMounts:
-            - name: nuodb-scripts-volume
-              mountPath: /opt/cloudbeaver/run-server-nuodb.sh
-              subPath: run-server-nuodb.sh
             - name: nuodb-driver-volume
               mountPath: /opt/cloudbeaver/drivers/nuodb
             - name: cloudbeaver-jars-volume
-              mountPath: /opt/cloudbeaver/cloudbeaver-jars
+              mountPath: /opt/cloudbeaver/server/plugins
             {{- if eq (include "defaulttrue" .Values.cloudbeaver.configs.override) "true" }}
             - name: cloudbeaver-configs-volume
               mountPath: /opt/cloudbeaver/conf/cloudbeaver.conf
