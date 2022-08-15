@@ -56,7 +56,7 @@ This contains initial configuration for the admin user and roles.  By default, a
 
 This contains a default template datasource for each of the chosen NuoDB deployments, which is created using the values provided for the existing or expected NuoDB deployments.  Users will also be able to add their own additional data sources, for example if more databases are deployed after the initial deployment of Cloudbeaver.  These entries are configured in the values file, under `cloudbeaver.configs.initialDataSources`.  See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Configuring-server-datasources
 
-*NOTE: The above 3 configurations can be optionally disabled using `.Values.cloudbeaver.overrideConfigs`.  Setting to false will use all Cloudbeaver default configuration files.*
+*NOTE: The above 3 configurations can be optionally disabled using `.Values.cloudbeaver.configs.override`.  Setting to false will use all Cloudbeaver default configuration files.*
 
 
 **`files/io.cloudbeaver.resources.drivers.base/plugin.xml`**
@@ -97,9 +97,16 @@ After deployment, connect to the Cloudbeaver service in the appropriate way depe
 
     kubectl port-forward -n cloudbeaver service/cloudbeaver 8978:8978
 
-On first start, if `.Values.cloudbeaver.override` was set  to `false`, Cloudbeaver will ask for an admin username and password to be configured.  If it was set to `true` you can log in using the configured username and password in the values file.  
+On first start, if `.Values.cloudbeaver.override` was set  to `false`, Cloudbeaver will ask for an admin username and password to be configured.  If it was set to `true` it will take you directly to a query winodw with the anoymous user.  You can log in as the admin user with the username and password set in the values file.  Using an anonymous user will not save any connections created.
+
+Create a new connection using the template, provide a username / password, and start to query... remember to set the query to use the connection.
 
 *NOTE: The password is not stored as a kubernetes secret, because Cloudbeaver manages the password internally and any changes would not be reflected.*
+
+![](images/example-connection-1.png)
+![](images/example-connection-2.png)
+![](images/example-connection-3.png)
+![](images/example-connection-4.png)
 
 Refer to the Cloudbeaver documentation linked above to understand more about how to operate Cloudbeaver.
 
@@ -107,14 +114,14 @@ Refer to the Cloudbeaver documentation linked above to understand more about how
 ## Air Gapped Environments
 If the deployment environment will not have access to the internet, it is possible to instead pre-load the NuoDB driver jar as a config map.  It cannot be done by helm because it exceeds the maximum annotation size of 262144 bytes.
 
-To do this, first `create` the driver (not apply):
+To do this, first `create` the driver (*not apply*):
 
     kubectl -n cloudbeaver create configmap kubectl create configmap nuodb-jdbc-jar --from-file=nuodb-jdbc-23.0.0.jar=nuodb-jdbc-23.0.0.jar
 
-Set the correct `.Values.cloudbeaver.nuodbDriver.version` and `.Values.cloudbeaver.nuodbDriver.download` to `false`.  This will cause the statefulset to source the driver from the configmap (as a base64 encoded file) instead of the downloading it.
+Set the correct `.Values.cloudbeaver.nuodbDriver.version` and `.Values.cloudbeaver.nuodbDriver.download` to `false`.  This will cause the statefulset to source the driver from the configmap instead of downloading it.
 
 
 # Query Example
 This image shows an example connection and query:
 
-![](images/example.png)
+![](images/example-query.png)
