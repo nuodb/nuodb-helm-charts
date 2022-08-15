@@ -54,7 +54,7 @@ This contains initial configuration for the admin user and roles.  By default, a
 
 **`files/cloudbeaver/initial-data-sources.conf`**
 
-This contains a default template datasource for the chosen NuoDB deployment, which is created using the values provided for the NuoDB admin and database, following the same data as in the NuoDB helm charts.  Users will also be able to add their own additional data sources, for example if more databases are deployed after the initial deployment of Cloudbeaver.  These entries are configured in the values file, under `cloudbeaver.configs.initialDataSources`.  See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Configuring-server-datasources
+This contains a default template datasource for each of the chosen NuoDB deployments, which is created using the values provided for the existing or expected NuoDB deployments.  Users will also be able to add their own additional data sources, for example if more databases are deployed after the initial deployment of Cloudbeaver.  These entries are configured in the values file, under `cloudbeaver.configs.initialDataSources`.  See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Configuring-server-datasources
 
 *NOTE: The above 3 configurations can be optionally disabled using `.Values.cloudbeaver.overrideConfigs`.  Setting to false will use all Cloudbeaver default configuration files.*
 
