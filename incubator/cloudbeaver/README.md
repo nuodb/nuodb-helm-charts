@@ -112,3 +112,8 @@ To do this, first `create` the driver (not apply):
     kubectl -n cloudbeaver create configmap kubectl create configmap nuodb-jdbc-jar --from-file=nuodb-jdbc-23.0.0.jar=nuodb-jdbc-23.0.0.jar
 
 Set the correct `.Values.cloudbeaver.nuodbDriver.version` and `.Values.cloudbeaver.nuodbDriver.download` to `false`.  This will cause the statefulset to source the driver from the configmap (as a base64 encoded file) instead of the downloading it.
+
+
+# Query Example
+This image shows an example connection and query:
+![](images/example.png)
