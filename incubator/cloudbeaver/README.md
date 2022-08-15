@@ -116,4 +116,5 @@ Set the correct `.Values.cloudbeaver.nuodbDriver.version` and `.Values.cloudbeav
 
 # Query Example
 This image shows an example connection and query:
+
 ![](images/example.png)
