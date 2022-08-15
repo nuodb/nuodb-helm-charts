@@ -2,7 +2,7 @@ apiVersion: v2
 name: cloudbeaver
 description: A web based SQL GUI tool for running queries against NuoDB.
 type: application
-version: 3.5.0
+version: 3.6.0
 keywords:
 - nuodb
 - database
@@ -13,5 +13,6 @@ maintainers:
   email: support@nuodb.com
 engine: gotpl
 icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
-appVersion: 4.2.4.vee
+appVersion: 4.3.2
 tillerVersion: ">=2.9"
+ 
