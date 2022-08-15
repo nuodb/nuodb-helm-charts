@@ -112,9 +112,9 @@ Refer to the Cloudbeaver documentation linked above to understand more about how
 
 
 ## Air Gapped Environments
-If the deployment environment will not have access to the internet, it is possible to instead pre-load the NuoDB driver jar as a config map.  It cannot be done by helm because it exceeds the maximum annotation size of 262144 bytes.
+If the deployment environment will not have access to the internet, it is possible to instead pre-load the NuoDB driver jar as a config map.  It cannot be done by helm because it exceeds the maximum annotation size of 262144 bytes used by the *managedFields* feature of *apply*.
 
-To do this, first `create` the driver (*not apply*):
+To do this, first `create` the driver (it is also possible to use `kubectl apply ... --server-side`):
 
     kubectl -n cloudbeaver create configmap kubectl create configmap nuodb-jdbc-jar --from-file=nuodb-jdbc-23.0.0.jar=nuodb-jdbc-23.0.0.jar
 
