@@ -118,12 +118,15 @@ Create a new connection using the template, provide a username / password, and s
 _Figure 1: Create connection from Template._
 
 ![](images/create-connection-2.png)
+
 _Figure 2: Create connection - Select NuoDB._
 
 ![](images/create-connection-3.png)
+
 _Figure 3: Create connection - Credentials._
 
 ![](images/create-connection-4.png)
+
 _Figure 4: Create connection - Select new connection._
 
 Refer to the Cloudbeaver documentation linked above to understand more about how to operate Cloudbeaver.
@@ -147,5 +150,6 @@ Set the correct `.Values.cloudbeaver.nuodbDriver.version` and set `.Values.cloud
 This image shows an example connection and query.   This web-based interface mimics the DBeaver client closely.
 
 ![](images/example-query.png)
+
 _Figure 5: Cloudbeaver Interface_
 
