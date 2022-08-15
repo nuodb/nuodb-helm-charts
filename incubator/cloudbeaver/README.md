@@ -4,7 +4,7 @@ A helm chart to configure and install Cloudbeaver to work with NuoDB.
 
 ## Overview
 
-Cloudbeaver is a web based version of DBeaver, a popular universal GUI SQL tool compatible with NuoDB.  It is provided as a docker container, but has no helm chart.
+Cloudbeaver is a web based version of DBeaver, a popular universal GUI SQL tool compatible with NuoDB.  It is provided as a docker container, but has no Helm chart.
 
 See these websites for more detail:
  - https://cloudbeaver.io/
@@ -21,10 +21,10 @@ Cloudbeaver is not as dynamic as DBeaver.  With DBeaver, a supported database dr
 
 A guide, provided by Cloudbeaver, explains how to add a custom driver, but requires rebuilding Cloudbeaver and the docker container to include the driver and configuration changes. See [https://cloudbeaver.io/docs/Adding-new-database-drivers/](https://cloudbeaver.io/docs/Adding-new-database-drivers).
 
-This helm chart, however, slides the NuoDB changes in without requiring a rebuild.  This avoids having to maintain a build of Cloudbeaver tied to the NuoDB driver version.  It should also reduce the need to update anything when the version of Cloudbeaver changes.   The main modifications are:
+This Helm chart, however, slides the NuoDB changes in without requiring a rebuild.  This avoids having to maintain a build of Cloudbeaver tied to the NuoDB driver version.  It should also reduce the need to update anything when the version of Cloudbeaver changes.   The main modifications are:
 
  - Mounting the `/opt/Cloudbeaver/workspace` directory as a persistent volume, so that configuration changes are retained after restarts.  Cloudbeaver is deployed as a statefulSet fixed to one replica, because it does not use a distributed database for its metadata.
- - Adding the NuoDB driver under `/opt/cloudbeaver/drivers/nuodb/`.  By default this is downloaded from maven by the 2nd init container called `nuodb-config`, to avoid having the binary in git.  You can choose the driver version by setting .`Values.cloudbeaver.nuodbDriverVersion`.  There is also an air gapped install option described later.
+ - Adding the NuoDB driver under `/opt/cloudbeaver/drivers/nuodb/`.  By default this is downloaded from maven by the 2nd init container called `nuodb-config`, to avoid having the binary in git.  You can choose the driver version by setting `.Values.cloudbeaver.nuodbDriverVersion`.  There is also an air gapped install option described later.
  - Replacing two `plugin.xml` files with versions that include additions for NuoDB, which are inside jars in `/opt/cloudbeaver/server/plugins`.  The details of the changes they contain are shown later, should they need to be recreated in the future.  This replacement is done in 3 parts:
 	 - The 1st init container `source-jars` uses the Cloudbeaver image and copies the cloudbeaver jars to a shared volume location `/opt/cloudbeaver/cloudbeaver-jars`.    The script it runs is `source-jars.sh`.
 	 - The 2nd init container `nuodb-config` replaces the relevant `plugin.xml` file in these jars.  The script it runs is `nuodb-config.sh`.
@@ -114,10 +114,35 @@ Create a new connection using the template, provide a username / password, and s
 
 **NOTE:** *The password is not stored as a kubernetes secret, because Cloudbeaver manages the password internally and any changes would not be reflected.*
 
-![](images/create-connection-1.png)
-![](images/create-connection-2.png)
-![](images/create-connection-3.png)
-![](images/create-connection-4.png)
+<p align="center">
+<img src="images/create-connection-1.png"/>
+</p>
+
+_Figure 1: Create connection from Template._
+
+<hr/>
+
+<p align="center">
+<img src="images/create-connection-2.png"/>
+</p>
+
+_Figure 2: Create connection - Select NuoDB._
+
+<hr/>
+
+<p align="center">
+<img src="images/create-connection-3.png"/>
+</p>
+
+_Figure 3: Create connection - Credentials._
+
+<hr/>
+	
+<p align="center">
+<img src="images/create-connection-4.png"/>
+</p>
+
+_Figure 4: Create connection - Select new connection._
 
 Refer to the Cloudbeaver documentation linked above to understand more about how to operate Cloudbeaver.
 
@@ -139,4 +164,9 @@ Set the correct `.Values.cloudbeaver.nuodbDriver.version` and set `.Values.cloud
 
 This image shows an example connection and query.   This web-based interface mimics the DBeaver client closely.
 
-![](images/example-query.png)
+<p align="center">
+    <img src="images/example-query.png"/>
+</p>
+
+_Figure 5: Cloudbeaver Interface_
+
