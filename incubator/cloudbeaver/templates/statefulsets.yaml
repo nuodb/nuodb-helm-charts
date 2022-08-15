@@ -54,13 +54,14 @@ spec:
               mountPath: /opt/cloudbeaver/config/nuodb/nuodb-jdbc-{{ .Values.cloudbeaver.nuodbDriver.version }}.jar
               subPath: nuodb-jdbc-{{ .Values.cloudbeaver.nuodbDriver.version }}.jar
             {{- end }}
+      restartPolicy: Always
       containers:
         - name: cloudbeaver
           image: "{{ .Values.cloudbeaver.image.repository }}:{{ .Values.cloudbeaver.image.tag }}"
           imagePullPolicy: {{ .Values.cloudbeaver.image.pullPolicy }}
           command: [ ./run-server-nuodb.sh ]
           ports:
-            - name: http
+            - name: tcp-8978
               containerPort: 8978
               protocol: TCP
           resources:
@@ -91,6 +92,23 @@ spec:
             - name: workspace
               mountPath: /opt/cloudbeaver/workspace
             {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: tcp-8978
+            initialDelaySeconds: 5
+            periodSeconds: 1
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: tcp-8978
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 5
       volumes:
         - name: nuodb-scripts-volume
           configMap:

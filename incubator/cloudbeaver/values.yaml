@@ -1,5 +1,5 @@
 init:
-  #This image is used by the 2nd init container which relies on the jar binary
+  #This image is used by the 2nd init container which relies on the jar binary to inject the xml files
   image:
     registry: docker.io
     repository: openjdk
@@ -14,24 +14,31 @@ cloudbeaver:
     tag: latest
     pullPolicy: IfNotPresent
 
+  #Override dynamic name creation
+  #nameOverride: 
+
   #Set the driver version to use.
-  #If download is set to false, the nuodb jar is expected to exist in the files directory, then it will be loaded as a configmap
-  #Get it from https://mvnrepository.com/artifact/com.nuodb.jdbc/nuodb-jdbc)
+  #If download is set to false, the nuodb jar is expected to exist in the files directory, then it will be loaded as a configmap.
+  #Get it from https://mvnrepository.com/artifact/com.nuodb.jdbc/nuodb-jdbc) and load it with:
+  #kubectl -n cloudbeaver create configmap kubectl create configmap nuodb-jdbc-jar --from-file=nuodb-jdbc-23.0.0.jar=nuodb-jdbc-23.0.0.jar
   nuodbDriver:
     download: true
     version: 23.0.0
     
-  #These values populare the cloudbeaver.conf files in the files directory.
-  #Optionally the overrides can be disbaled, using all cloudbeaver defaults.
+  #These values populate the files in files/cloudbeaver/*
   #Refer to this page for information on what these do: https://github.com/dbeaver/cloudbeaver/wiki/Server-configuration
   configs:
+
+    #Optionally the overrides can be disbaled, instead using all cloudbeaver defaults.
     override: true
 
+    #If any of these sections are not set, Cloudbeaver will take you through the setup on the first start.
     serverName: Cloudbeaver
     serverURL: http://localhost:8978
     adminName: cbadmin
     adminPassword: cbadmin
     
+    #files/cloudbeaver/cloudbeaver.conf
     cloudbeaver:
       minIdleConnections: "4"
       maxIdleConnections: "10"
@@ -54,10 +61,21 @@ cloudbeaver:
       mergeEntities: false
       hideFolders: false
       hideSchemas: false
+
+    #files/cloudbeaver/initial-data-sources.conf
+    #These are created as template connections which users can use to connect with, providing their own database credentials.
+    #By default, users can also create their own connections without a template.
     initialDataSources:
       - adminNamespace: nuodb
         adminDomain: nuodb
         databaseName: demo
+      # - adminNamespace: another-nuodb
+      #   adminDomain: another-nuodb
+      #   databaseName: another-demo
+
+    #files/cloudbeaver/initial-data.conf
+    #There are only two built in permission sets in CloudBeaver - "public" and "admin".
+    #After deployment, it is possible to configure specific pre-defined connections limited to specifc roles.
     initialData:
       roles:
         - roleID: admin
@@ -75,7 +93,6 @@ cloudbeaver:
   #The service account to use for the deployment
   addServiceAccount: true
   serviceAccount: cloudbeaver
-  #nameOverride: 
 
   #Configures the service type to be used.  Valid values are ClusterIP, LoadBalancer and NodePort
   service:

@@ -5,9 +5,9 @@
 
 #Move the two jars that need modifying onto the shared volume, so that they can be managed in the next init container without having to install more sofware
 CLOUDBEAVER_BUNDLE_NAME=$(find /opt/cloudbeaver/server/plugins -name "io.cloudbeaver.resources.drivers.base*");
-mv $CLOUDBEAVER_BUNDLE_NAME /opt/cloudbeaver/cloudbeaver-jars/;
+cp $CLOUDBEAVER_BUNDLE_NAME /opt/cloudbeaver/cloudbeaver-jars/;
 echo "$CLOUDBEAVER_BUNDLE_NAME copied to /opt/cloudbeaver/cloudbeaver-jars";
 
 JKISS_BUNDLE_NAME=$(find /opt/cloudbeaver/server/plugins -name "org.jkiss.dbeaver.ext.generic*");
-mv $JKISS_BUNDLE_NAME /opt/cloudbeaver/cloudbeaver-jars/;
+cp $JKISS_BUNDLE_NAME /opt/cloudbeaver/cloudbeaver-jars/;
 echo "$JKISS_BUNDLE_NAME copied to /opt/cloudbeaver/cloudbeaver-jars";

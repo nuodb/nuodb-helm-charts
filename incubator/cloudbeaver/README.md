@@ -39,7 +39,7 @@ Under the `files` directory there are a number of configuration files.  They are
 
 **`files/cloudbeaver/cloudbeaver.conf`**
 
-This contains some initial server configuration for Cloudbeaver.  Some of these entries are configured in the values file, under `cloudbeaver.configs.cloudbeaver`.  Note See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Server-configuration
+This contains some initial server configuration for Cloudbeaver.  Some of these entries are configured in the values file, under `cloudbeaver.configs.cloudbeaver`.  Default Changes include disabling the ability to save passwords for connections and allowing anonymous users to create connections.  These can also be changed adter deployment.  Note See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Server-configuration
 
 
 **`files/cloudbeaver/cloudbeaver.auto.conf`**
