@@ -59,7 +59,7 @@ Under the `files` directory there are a number of configuration files.  They are
 
    * Contains a default template datasource for each of the chosen NuoDB deployments, which is created using the values provided for the existing or expected NuoDB deployments.  Users will also be able to add their own additional data sources, for example if more databases are deployed after the initial deployment of Cloudbeaver.  These entries are configured in the values file, under `cloudbeaver.configs.initialDataSources`.  See this page for more information: https://github.com/dbeaver/cloudbeaver/wiki/Configuring-server-datasources
 
-**NOTE:** The above 3 configurations can be optionally disabled using `.Values.cloudbeaver.configs.override`.  Setting to false will use all Cloudbeaver default configuration files.
+**NOTE:** The above 4 configurations can be optionally disabled using `.Values.cloudbeaver.configs.override`.  Setting to false will use all Cloudbeaver default configuration files.
 
 
 * **`files/io.cloudbeaver.resources.drivers.base/plugin.xml`**
@@ -114,34 +114,16 @@ Create a new connection using the template, provide a username / password, and s
 
 **NOTE:** *The password is not stored as a kubernetes secret, because Cloudbeaver manages the password internally and any changes would not be reflected.*
 
-<p align="center">
-<img src="images/create-connection-1.png"/>
-</p>
-
+![](images/create-connection-1.png)
 _Figure 1: Create connection from Template._
 
-<hr/>
-
-<p align="center">
-<img src="images/create-connection-2.png"/>
-</p>
-
+![](images/create-connection-2.png)
 _Figure 2: Create connection - Select NuoDB._
 
-<hr/>
-
-<p align="center">
-<img src="images/create-connection-3.png"/>
-</p>
-
+![](images/create-connection-3.png)
 _Figure 3: Create connection - Credentials._
 
-<hr/>
-	
-<p align="center">
-<img src="images/create-connection-4.png"/>
-</p>
-
+![](images/create-connection-4.png)
 _Figure 4: Create connection - Select new connection._
 
 Refer to the Cloudbeaver documentation linked above to understand more about how to operate Cloudbeaver.
@@ -164,9 +146,6 @@ Set the correct `.Values.cloudbeaver.nuodbDriver.version` and set `.Values.cloud
 
 This image shows an example connection and query.   This web-based interface mimics the DBeaver client closely.
 
-<p align="center">
-    <img src="images/example-query.png"/>
-</p>
-
+![](images/example-query.png)
 _Figure 5: Cloudbeaver Interface_
 
