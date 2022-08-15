@@ -103,10 +103,10 @@ Create a new connection using the template, provide a username / password, and s
 
 *NOTE: The password is not stored as a kubernetes secret, because Cloudbeaver manages the password internally and any changes would not be reflected.*
 
-![](images/example-connection-1.png)
-![](images/example-connection-2.png)
-![](images/example-connection-3.png)
-![](images/example-connection-4.png)
+![](images/create-connection-1.png)
+![](images/create-connection-2.png)
+![](images/create-connection-3.png)
+![](images/create-connection-4.png)
 
 Refer to the Cloudbeaver documentation linked above to understand more about how to operate Cloudbeaver.
 
