@@ -3,21 +3,31 @@ kind: StatefulSet
 metadata:
   name: {{ include "cloudbeaver.fullname" . }}
 spec:
-  serviceName: cloudbeaver
+  serviceName: {{ include "cloudbeaver.fullname" . }}
   replicas: 1
   selector:
     matchLabels:
-      app: cloudbeaver
+      app: {{ include "cloudbeaver.fullname" . }}
   template:
     metadata:
+      name: {{ include "cloudbeaver.fullname" . }}
+      annotations:
+        {{- if .Values.cloudbeaver.configs }}
+          {{- with .Values.cloudbeaver.configs }}
+          checksum/config: {{ toYaml . | sha256sum }}
+          {{- end }}
+        {{- else }}
+          checksum/config: "0"
+        {{- end }}
       labels:
-        app: cloudbeaver
+        app: {{ include "cloudbeaver.fullname" . }}
     spec:
       serviceAccountName: {{ include "cloudbeaver.serviceAccountName" . }}
       initContainers:
         - name: source-jars
           image: "{{ .Values.cloudbeaver.image.repository }}:{{ .Values.cloudbeaver.image.tag }}"
           imagePullPolicy: {{ .Values.cloudbeaver.image.pullPolicy }}
+          workingDir: /opt/cloudbeaver
           command: [ ./source-jars.sh ]
           volumeMounts:
             - name: nuodb-scripts-volume

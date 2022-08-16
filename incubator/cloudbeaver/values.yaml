@@ -11,7 +11,7 @@ cloudbeaver:
   image:
     registry: docker.io
     repository: dbeaver/cloudbeaver
-    tag: latest
+    tag: 22.1.4
     pullPolicy: IfNotPresent
 
   #Override dynamic name creation
@@ -26,15 +26,16 @@ cloudbeaver:
     version: 23.0.0
     
   #These values populate the files in files/cloudbeaver/*
+  #They are used only on first start of cloudbeaver. When persistence is enabled, changes will not have any effect.
+  #All settings can also be changed via the Cloudbeaver admin console after deployment.
   #Refer to this page for information on what these do: https://github.com/dbeaver/cloudbeaver/wiki/Server-configuration
   configs:
 
     #Optionally the overrides can be disbaled, instead using all cloudbeaver defaults.
     override: true
 
-    #If any of these sections are not set, Cloudbeaver will take you through the setup on the first start.
+    #If any of these 3 values are not set, Cloudbeaver will take you through the setup on the first start.
     serverName: Cloudbeaver
-    serverURL: http://localhost:8978
     adminName: cbadmin
     adminPassword: cbadmin
     
@@ -98,6 +99,20 @@ cloudbeaver:
   service:
     type: ClusterIP
     port: 8978
+    annotations:
+      #AWS Internal IP
+      #service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+      #service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+      
+      #AWS External IP
+      #service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      
+      #Azure Internal IP (Noting needed for external):
+      #service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      
+      #Google (Noting needed for external):
+      #cloud.google.com/load-balancer-type: "Internal"
+      #networking.gke.io/load-balancer-type: "Internal"
 
   #Configures the resources assinged to the cloudbeaver pod
   resources:

@@ -8,8 +8,8 @@ Connect to Cloudbeaver:
   kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "cloudbeaver.fullname" . }}
 
 {{- else if contains "LoadBalancer" .Values.cloudbeaver.service.type }}
-  Discover your service address with:
-  kubectl get svc --namespace {{ .Release.Namespace }} {{ include "cloudbeaver.fullname" . }} --template "{{"{{ range (index .status.loadBalancer.ingress 0) }}{{.}}{{ end }}"}}"
+  Discover your service address/port with:
+  kubectl get svc --namespace {{ .Release.Namespace }} {{ include "cloudbeaver.fullname" . }}
   
 {{- else if contains "ClusterIP" .Values.cloudbeaver.service.type }}
   Execute:

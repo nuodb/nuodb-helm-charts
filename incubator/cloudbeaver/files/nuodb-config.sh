@@ -21,11 +21,23 @@ fi;
 
 #Replace the two plugin.xml files containing the additional NuoDB config
 CLOUDBEAVER_BUNDLE_NAME=$(find /opt/cloudbeaver/cloudbeaver-jars/ -name "io.cloudbeaver.resources.drivers.base*");
-jar -uf $CLOUDBEAVER_BUNDLE_NAME -C /opt/cloudbeaver/config/nuodb/io.cloudbeaver.resources.drivers.base plugin.xml;
-echo "$CLOUDBEAVER_BUNDLE_NAME updated.";
+if [ -z  $CLOUDBEAVER_BUNDLE_NAME ]
+then
+  echo "Jar path matching io.cloudbeaver.resources.drivers.base was not found."
+  return 1;
+else
+  jar -uf $CLOUDBEAVER_BUNDLE_NAME -C /opt/cloudbeaver/config/nuodb/io.cloudbeaver.resources.drivers.base plugin.xml;
+  echo "$CLOUDBEAVER_BUNDLE_NAME updated.";
+fi
 
 JKISS_BUNDLE_NAME=$(find /opt/cloudbeaver/cloudbeaver-jars/ -name "org.jkiss.dbeaver.ext.generic*");
-jar -uf $JKISS_BUNDLE_NAME -C /opt/cloudbeaver/config/nuodb/org.jkiss.dbeaver.ext.generic plugin.xml;
-echo "$JKISS_BUNDLE_NAME updated.";
+if [ -z  $JKISS_BUNDLE_NAME ]
+then
+  echo "Jar path matching org.jkiss.dbeaver.ext.generic";
+  return 1;
+else
+  jar -uf $JKISS_BUNDLE_NAME -C /opt/cloudbeaver/config/nuodb/org.jkiss.dbeaver.ext.generic plugin.xml;
+  echo "$JKISS_BUNDLE_NAME updated.";
+fi
 
 

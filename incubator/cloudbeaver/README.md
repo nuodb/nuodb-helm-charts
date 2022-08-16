@@ -61,6 +61,8 @@ Under the `files` directory there are a number of configuration files.  They are
 
 **NOTE:** The above 4 configurations can be optionally disabled using `.Values.cloudbeaver.configs.override`.  Setting to false will use all Cloudbeaver default configuration files.
 
+**NOTE:** The `workspace/.data/.cloudbeaver.runtime.conf` file is not used to override configurations.  This way all configs are kept consistently for "initial" configuration only.  Instead, all runtime configuration changes can be made in the Cloudbeaver admin interface.
+
 
 * **`files/io.cloudbeaver.resources.drivers.base/plugin.xml`**
 
@@ -69,6 +71,7 @@ Under the `files` directory there are a number of configuration files.  They are
      - `<resource  name="drivers/nuodb"/>`
      - `<bundle  id="drivers.nuodb"  label="NuoDB drivers"/>`
      - `<driver  id="generic:nuodb"/>`
+
 
 * **`files/org.jkiss.dbeaver.ext.generic/plugin.xml`**
 
@@ -95,7 +98,7 @@ Under the `files` directory there are a number of configuration files.  They are
 Install the chart with helm, for example:
 
 ```sh
-helm upgrade cloudbeaver ~/git/nuodb-helm-charts/incubator/cloudbeaver/ --namespace cloudbeaver --install --create-namespace
+helm upgrade cloudbeaver incubator/cloudbeaver/ --namespace cloudbeaver --install --create-namespace
 ```
 
 ### First Start Up
