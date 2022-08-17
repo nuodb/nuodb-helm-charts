@@ -41,10 +41,12 @@ cloudbeaver:
     
     #files/cloudbeaver/cloudbeaver.conf
     cloudbeaver:
+      expireSessionAfterPeriod: "3600000"
       minIdleConnections: "4"
       maxIdleConnections: "10"
       maxConnections: "100"
       anonymousAccessEnabled: true
+      authenticationEnabled: true
       supportsCustomConnections: true
       publicCredentialsSaveEnabled: false
       adminCredentialsSaveEnabled: false
@@ -62,6 +64,23 @@ cloudbeaver:
       mergeEntities: false
       hideFolders: false
       hideSchemas: false
+      enabledDrivers:
+        - generic:nuodb
+      disabledDrivers:
+        - db2:db2
+        - db2_i:db2_iseries
+        - mysql:mysql8
+        - mysql:mariaDB
+        - oracle:oracle_thin
+        - postgresql:postgres-jdbc
+        - jaybird:jaybird
+        - clickhouse:yandex_clickhouse
+        - clickhouse:com_clickhouse
+        - generic:derby_server
+        - h2:h2_embedded
+        - sqlite:sqlite_jdbc
+        - sqlserver:microsoft
+        - generic:trino_jdbc
 
     #files/cloudbeaver/initial-data-sources.conf
     #These are created as template connections which users can use to connect with, providing their own database credentials.
