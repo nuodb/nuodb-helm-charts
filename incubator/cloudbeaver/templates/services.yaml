@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "cloudbeaver.fullname" . }}
+{{- if .Values.cloudbeaver.service.annotations }}
+  annotations:
+{{ toYaml .Values.cloudbeaver.service.annotations | indent 4 }}
+{{- end }}
+spec:
+  type: {{ .Values.cloudbeaver.service.type }}
+  ports:
+    - port: {{ .Values.cloudbeaver.service.port }}
+      targetPort: 8978
+      protocol: TCP
+      name: http
+  selector:
+    app: {{ include "cloudbeaver.fullname" . }}

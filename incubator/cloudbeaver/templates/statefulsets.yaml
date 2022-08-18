@@ -1,0 +1,169 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "cloudbeaver.fullname" . }}
+spec:
+  serviceName: {{ include "cloudbeaver.fullname" . }}
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ include "cloudbeaver.fullname" . }}
+  template:
+    metadata:
+      name: {{ include "cloudbeaver.fullname" . }}
+      annotations:
+        {{- if .Values.cloudbeaver.configs }}
+          {{- with .Values.cloudbeaver.configs }}
+          checksum/config: {{ toYaml . | sha256sum }}
+          {{- end }}
+        {{- else }}
+          checksum/config: "0"
+        {{- end }}
+      labels:
+        app: {{ include "cloudbeaver.fullname" . }}
+    spec:
+      serviceAccountName: {{ include "cloudbeaver.serviceAccountName" . }}
+      initContainers:
+        - name: source-jars
+          image: "{{ .Values.cloudbeaver.image.repository }}:{{ .Values.cloudbeaver.image.tag }}"
+          imagePullPolicy: {{ .Values.cloudbeaver.image.pullPolicy }}
+          workingDir: /opt/cloudbeaver
+          command: [ ./source-jars.sh ]
+          volumeMounts:
+            - name: nuodb-scripts-volume
+              mountPath: /opt/cloudbeaver/source-jars.sh
+              subPath: source-jars.sh
+            - name: cloudbeaver-jars-volume
+              mountPath: /opt/cloudbeaver/cloudbeaver-jars
+        - name: nuodb-config
+          image: "{{ .Values.init.image.repository }}:{{ .Values.init.image.tag }}"
+          imagePullPolicy: {{ .Values.init.image.pullPolicy }}
+          workingDir: /opt/cloudbeaver
+          command: [ ./nuodb-config.sh ]
+          env:
+            - name: NUODB_DRIVER_VERSION
+              value: "{{ .Values.cloudbeaver.nuodbDriver.version }}"
+            - name: DOWNLOAD_DRIVER
+              value: "{{ .Values.cloudbeaver.nuodbDriver.download }}"
+          volumeMounts:
+            - name: nuodb-scripts-volume
+              mountPath: /opt/cloudbeaver/nuodb-config.sh
+              subPath: nuodb-config.sh
+            - name: cloudbeaver-jars-volume
+              mountPath: /opt/cloudbeaver/cloudbeaver-jars
+            - name: nuodb-configs-volume
+              mountPath: /opt/cloudbeaver/config/nuodb/io.cloudbeaver.resources.drivers.base/plugin.xml
+              subPath: io.cloudbeaver.resources.drivers.base.plugin.xml
+            - name: nuodb-configs-volume
+              mountPath: /opt/cloudbeaver/config/nuodb/org.jkiss.dbeaver.ext.generic/plugin.xml
+              subPath: org.jkiss.dbeaver.ext.generic.plugin.xml
+            - name: nuodb-driver-volume
+              mountPath: /opt/cloudbeaver/drivers/nuodb
+            {{- if eq (include "defaulttrue" .Values.cloudbeaver.nuodbDriver.download) "false" }}
+            - name: nuodb-jdbc-jar-volume
+              mountPath: /opt/cloudbeaver/config/nuodb/nuodb-jdbc-{{ .Values.cloudbeaver.nuodbDriver.version }}.jar
+              subPath: nuodb-jdbc-{{ .Values.cloudbeaver.nuodbDriver.version }}.jar
+            {{- end }}
+      restartPolicy: Always
+      containers:
+        - name: cloudbeaver
+          image: "{{ .Values.cloudbeaver.image.repository }}:{{ .Values.cloudbeaver.image.tag }}"
+          imagePullPolicy: {{ .Values.cloudbeaver.image.pullPolicy }}
+          ports:
+            - name: tcp-8978
+              containerPort: 8978
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.cloudbeaver.resources | nindent 12 }}
+          volumeMounts:
+            - name: nuodb-driver-volume
+              mountPath: /opt/cloudbeaver/drivers/nuodb
+            - name: cloudbeaver-jars-volume
+              mountPath: /opt/cloudbeaver/server/plugins
+            {{- if eq (include "defaulttrue" .Values.cloudbeaver.configs.override) "true" }}
+            - name: cloudbeaver-configs-volume
+              mountPath: /opt/cloudbeaver/conf/cloudbeaver.conf
+              subPath: cloudbeaver.conf
+            - name: cloudbeaver-configs-volume
+              mountPath: /opt/cloudbeaver/conf/.cloudbeaver.auto.conf
+              subPath: cloudbeaver.auto.conf
+            - name: cloudbeaver-configs-volume
+              mountPath: /opt/cloudbeaver/conf/initial-data-sources.conf
+              subPath: initial-data-sources.conf
+            - name: cloudbeaver-configs-volume
+              mountPath: /opt/cloudbeaver/conf/initial-data.conf
+              subPath: initial-data.conf
+            {{- end }}
+            {{- if eq (include "defaulttrue" .Values.cloudbeaver.persistence.enabled) "true" }}
+            - name: workspace
+              mountPath: /opt/cloudbeaver/workspace
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: tcp-8978
+            initialDelaySeconds: 5
+            periodSeconds: 1
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: tcp-8978
+            periodSeconds: 5
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 5
+      volumes:
+        - name: nuodb-scripts-volume
+          configMap:
+            name: nuodb-scripts
+            defaultMode: 0777
+        - name: nuodb-driver-volume
+          emptyDir: {}
+        {{- if eq (include "defaulttrue" .Values.cloudbeaver.nuodbDriver.download) "false" }}
+        - name: nuodb-jdbc-jar-volume
+          configMap:
+            name: nuodb-jdbc-jar
+        {{- end }}
+        - name: cloudbeaver-jars-volume
+          emptyDir: {}
+        - name: nuodb-configs-volume
+          configMap:
+            name: nuodb-configs
+        - name: cloudbeaver-configs-volume
+          configMap:
+            name: cloudbeaver-configs
+      {{- with .Values.cloudbeaver.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cloudbeaver.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.cloudbeaver.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- if eq (include "defaulttrue" .Values.cloudbeaver.persistence.enabled) "true" }}
+  volumeClaimTemplates:
+  - metadata:
+      name: workspace
+    spec:
+    {{- if .Values.cloudbeaver.persistence.storageClass }}
+      {{- if (eq "-" .Values.cloudbeaver.persistence.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.cloudbeaver.persistence.storageClass }}
+      {{- end }}
+    {{- end }}
+      accessModes:
+      {{- range .Values.cloudbeaver.persistence.accessModes }}
+        - {{ . }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.cloudbeaver.persistence.size }}
+{{- end }}

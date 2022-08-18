@@ -1,0 +1,155 @@
+init:
+  #This image is used by the 2nd init container which relies on the jar binary to inject the xml files
+  image:
+    registry: docker.io
+    repository: openjdk
+    tag: 11-jdk
+    pullPolicy: IfNotPresent
+
+cloudbeaver:
+  #Cloudbeaver image details
+  image:
+    registry: docker.io
+    repository: dbeaver/cloudbeaver
+    tag: 22.1.4
+    pullPolicy: IfNotPresent
+
+  #Override dynamic name creation
+  #nameOverride: 
+
+  #Set the driver version to use.
+  #If download is set to false, the nuodb jar is expected to exist in the files directory, then it will be loaded as a configmap.
+  #Get it from https://mvnrepository.com/artifact/com.nuodb.jdbc/nuodb-jdbc) and load it with:
+  #kubectl -n cloudbeaver create configmap kubectl create configmap nuodb-jdbc-jar --from-file=nuodb-jdbc-23.0.0.jar=nuodb-jdbc-23.0.0.jar
+  nuodbDriver:
+    download: true
+    version: 23.0.0
+    
+  #These values populate the files in files/cloudbeaver/*
+  #They are used only on first start of cloudbeaver. When persistence is enabled, changes will not have any effect.
+  #All settings can also be changed via the Cloudbeaver admin console after deployment.
+  #Refer to this page for information on what these do: https://github.com/dbeaver/cloudbeaver/wiki/Server-configuration
+  configs:
+
+    #Optionally the overrides can be disbaled, instead using all cloudbeaver defaults.
+    override: true
+
+    #If any of these 3 values are not set, Cloudbeaver will take you through the setup on the first start.
+    serverName: Cloudbeaver
+    adminName: cbadmin
+    adminPassword: cbadmin
+    
+    #files/cloudbeaver/cloudbeaver.conf
+    cloudbeaver:
+      expireSessionAfterPeriod: "3600000"
+      minIdleConnections: "4"
+      maxIdleConnections: "10"
+      maxConnections: "100"
+      anonymousAccessEnabled: true
+      authenticationEnabled: true
+      supportsCustomConnections: true
+      publicCredentialsSaveEnabled: false
+      adminCredentialsSaveEnabled: false
+      resourceManagerEnabled: true
+      dataExportFileSizeLimit: "10000000"
+      resourceManagerFileSizeLimit: "500000"
+      sqlMaxRunningQueries: "10"
+      sqlResultSetRowsLimit: "100000"
+      sqlResultSetMemoryLimit: "2000000"
+      sqlTextPreviewMaxLength: "4096"
+      sqlBinaryPreviewMaxLength: "261120"
+      showSystemObjects: true
+      showUtilityObjects: false
+      showOnlyEntities: false
+      mergeEntities: false
+      hideFolders: false
+      hideSchemas: false
+      enabledDrivers:
+        - generic:nuodb
+      disabledDrivers:
+        - db2:db2
+        - db2_i:db2_iseries
+        - mysql:mysql8
+        - mysql:mariaDB
+        - oracle:oracle_thin
+        - postgresql:postgres-jdbc
+        - jaybird:jaybird
+        - clickhouse:yandex_clickhouse
+        - clickhouse:com_clickhouse
+        - generic:derby_server
+        - h2:h2_embedded
+        - sqlite:sqlite_jdbc
+        - sqlserver:microsoft
+        - generic:trino_jdbc
+
+    #files/cloudbeaver/initial-data-sources.conf
+    #These are created as template connections which users can use to connect with, providing their own database credentials.
+    #By default, users can also create their own connections without a template.
+    initialDataSources:
+      - adminNamespace: nuodb
+        adminDomain: nuodb
+        databaseName: demo
+      # - adminNamespace: another-nuodb
+      #   adminDomain: another-nuodb
+      #   databaseName: another-demo
+
+    #files/cloudbeaver/initial-data.conf
+    #There are only two built in permission sets in CloudBeaver - "public" and "admin".
+    #After deployment, it is possible to configure specific pre-defined connections limited to specifc roles.
+    initialData:
+      roles:
+        - roleID: admin
+          name: Admin
+          description: "Administrative access. Has all permissions."
+          permissions:
+            - public
+            - admin
+        - roleID: user
+          name: AnonUser
+          description: "Standard user"
+          permissions: 
+            - public
+
+  #The service account to use for the deployment
+  addServiceAccount: true
+  serviceAccount: cloudbeaver
+
+  #Configures the service type to be used.  Valid values are ClusterIP, LoadBalancer and NodePort
+  service:
+    type: ClusterIP
+    port: 8978
+    annotations:
+      #AWS Internal IP
+      #service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+      #service.beta.kubernetes.io/aws-load-balancer-scheme: "internal"
+      
+      #AWS External IP
+      #service.beta.kubernetes.io/aws-load-balancer-scheme: "internet-facing"
+      
+      #Azure Internal IP (Noting needed for external):
+      #service.beta.kubernetes.io/azure-load-balancer-internal: "true"
+      
+      #Google (Noting needed for external):
+      #cloud.google.com/load-balancer-type: "Internal"
+      #networking.gke.io/load-balancer-type: "Internal"
+
+  #Configures the resources assinged to the cloudbeaver pod
+  resources:
+    limits:
+      cpu: 1
+      memory: 1Gi
+    requests:
+      cpu: 1
+      memory: 1Gi
+
+  #Controls whether a persistent volume is created for the workspace directory used by clooudbeaver, allowing configuration to be persistent between restarts
+  persistence:
+    enabled: true
+    size: 1Gi
+    accessModes:
+      - ReadWriteOnce
+    # storageClass: "-"
+
+  #nodeSelector:
+  #affinity:
+  #tolerations: 

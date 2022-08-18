@@ -1,0 +1,20 @@
+Connect to Cloudbeaver:
+
+{{- if contains "NodePort" .Values.cloudbeaver.service.type }}
+  Discover the Node IP with:
+  kubectl get nodes --namespace {{ .Release.Namespace }} -o jsonpath="{.items[0].status.addresses[0].address}"
+
+  Discover the Node Port with:
+  kubectl get --namespace {{ .Release.Namespace }} -o jsonpath="{.spec.ports[0].nodePort}" services {{ include "cloudbeaver.fullname" . }}
+
+{{- else if contains "LoadBalancer" .Values.cloudbeaver.service.type }}
+  Discover your service address/port with:
+  kubectl get svc --namespace {{ .Release.Namespace }} {{ include "cloudbeaver.fullname" . }}
+  
+{{- else if contains "ClusterIP" .Values.cloudbeaver.service.type }}
+  Execute:
+  kubectl port-forward --namespace {{ .Release.Namespace }} service/{{ include "cloudbeaver.fullname" . }} 8978:8978
+  
+  And then open http://localhost:8978 
+
+{{- end }}
