@@ -1,3 +1,4 @@
+//go:build upgrade
 // +build upgrade
 
 package minikube
@@ -202,6 +203,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
+	options.ValuesFiles = []string{"../files/database-env.yaml"}
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
 
 	testlib.AwaitPodHasVersion(t, namespaceName, admin0, expectedNewVersion, 300*time.Second)
