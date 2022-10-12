@@ -4,14 +4,14 @@
 version: 2.1
 parameters:
   run_build:
-    default: true
+    default: false
     type: boolean
   # it's not possible to trigger a single job using API 2.1 so use pipeline
   # parameters and conditional workflow -
   # https://discuss.circleci.com/t/how-to-trigger-the-single-job-in-circleci-2-1/27238
   # https://support.circleci.com/hc/en-us/articles/360050351292-How-to-trigger-a-workflow-via-CircleCI-API-v2
   run_single_test:
-    default: ''
+    default: 'TestKubernetesIngress'
     type: string
   run_single_test_suite:
     default: './test/minikube/*'

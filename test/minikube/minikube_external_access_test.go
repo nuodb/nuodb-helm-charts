@@ -67,13 +67,14 @@ func verifyNuoSQLEngine(t *testing.T, address string, port int32, databaseName s
 	if !ok {
 		pathToNuoSQL = "nuosql"
 	}
-	cmd := fmt.Sprintf("echo \"select GETNODEID() as NODEID from dual;\" | %s %s@%s:%d --user dba --password secret --vertical-output",
+	cmd := fmt.Sprintf("echo \"select GETNODEID() as NODEID from dual;\" | %s %s@%s:%d --user dba --password secret --vertical-output --verbose net,security",
 		pathToNuoSQL, databaseName, address, port)
 	for key, value := range properties {
 		cmd += fmt.Sprintf(" --connection-property %s='%s'", key, value)
 	}
 	t.Logf("Running command: <%s>", cmd)
 	out, err := exec.Command("sh", "-c", cmd).Output()
+	t.Log(string(out))
 	if exiterr, ok := err.(*exec.ExitError); ok {
 		// nuosql has exited with an non zero exit code; generate better error
 		// message by including the command stderr
@@ -358,8 +359,7 @@ func TestKubernetesIngress(t *testing.T) {
 	// no straightforward way to make this logic conditional because in internal
 	// CI we use the nuosql from the package installation but in CircleCI, we
 	// use the client package
-	// TODO: Change the version once DB-34466 is fixed
-	testlib.RunOnNuoDBVersionCondition(t, ">=5.1", func(version *semver.Version) {
+	testlib.RunOnNuoDBVersionCondition(t, ">=4.3.1", func(version *semver.Version) {
 		var expectedNodeIds []int32
 		for _, process := range processes {
 			if process.Type == "TE" {
