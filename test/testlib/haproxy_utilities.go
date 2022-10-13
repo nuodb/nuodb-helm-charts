@@ -25,6 +25,7 @@ func StartHAProxyIngress(t *testing.T, options *helm.Options, namespaceName stri
 			"controller.service.type":              "NodePort",
 			"controller.ingressClass":              helmChartReleaseName,
 			"controller.ingressClassResource.name": helmChartReleaseName,
+			"controller.resources.requests.cpu":    "150m",
 			"defaultBackend.enabled":               "true",
 			"defaultBackend.replicaCount":          "1",
 		},
