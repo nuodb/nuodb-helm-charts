@@ -369,8 +369,9 @@ func TestKubernetesAutoRestore(t *testing.T) {
 		// Move the archive data which will cause the SM to ASSERT when an atom needs to be loaded
 		k8s.RunKubectl(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
 			"mv", "-f", "/var/opt/nuodb/archive/nuodb/demo", "/var/opt/nuodb/archive/nuodb/demo-moved")
-		testlib.RunSQL(t, namespaceName, admin0, "demo", "select * from system.nodes")
-		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 30*time.Second)
+		testlib.RunSQL(t, namespaceName, admin0, "demo", "delete from hockey.hockey")
+		// in cases where core file is generated, wait until it is dumped and processed
+		testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, podName, 0, 120*time.Second)
 		testlib.AwaitPodUp(t, namespaceName, podName, 90*time.Second)
 		testlib.AwaitPodLog(t, namespaceName, podName, "_post-restart")
 	}
