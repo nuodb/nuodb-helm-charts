@@ -1787,3 +1787,100 @@ func TestDatabaseTopologyConstraints(t *testing.T) {
 		verifyTopologyConstraints(obj.Name, obj.Spec.Template.Spec, expectedLabels)
 	}
 }
+
+func TestDatabaseStorageGroups(t *testing.T) {
+	t.Run("testStorageGroupEnabled", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.nohotCopy.replicas":   "1",
+				"database.sm.storageGroup.enabled": "true",
+			},
+		}
+
+		// SGs are passed to nuosm
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"SG1", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			args := obj.Spec.Template.Spec.Containers[0].Args
+			assert.True(t, testlib.ArgContains(args, "--storage-groups"))
+			assert.True(t, testlib.ArgContains(args, "SG1"))
+		}
+	})
+
+	t.Run("testStorageGroupWithName", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.nohotCopy.replicas":   "1",
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "SG1",
+			},
+		}
+
+		// SGs are passed to nuosm
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			args := obj.Spec.Template.Spec.Containers[0].Args
+			assert.True(t, testlib.ArgContains(args, "--storage-groups"))
+			assert.True(t, testlib.ArgContains(args, "SG1"))
+		}
+	})
+
+	t.Run("testStorageGroupUnpartitioned", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "unpartitioned",
+			},
+		}
+
+		// rendering fails
+		_, err := helm.RenderTemplateE(t, options, helmChartPath,
+			"SG1", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Invalid storage group name: unpartitioned")
+	})
+
+	t.Run("testStorageGroupALL", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "all",
+			},
+		}
+
+		// rendering fails
+		_, err := helm.RenderTemplateE(t, options, helmChartPath,
+			"SG1", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Invalid storage group name: all")
+	})
+
+	t.Run("testStorageGroupLabel", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.nohotCopy.replicas":   "1",
+				"database.sm.storageGroup.enabled": "true",
+			},
+		}
+
+		// sg process label is passed to nuosm
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"SG1", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			args := obj.Spec.Template.Spec.Containers[0].Args
+			assert.True(t, testlib.ArgContains(args, "--labels"))
+			assert.True(t, testlib.ArgContains(args, "sg SG1"))
+		}
+	})
+}

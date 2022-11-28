@@ -7,10 +7,6 @@ metadata:
   name: {{ template "database.fullname" . }}-nuote
 data:
 {{ (.Files.Glob "files/nuote").AsConfig | indent 2 }}
-{{/* 
-  Remove this conditional rendering when support for storage groups is added
-*/}}
-{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -29,7 +25,6 @@ metadata:
   name: {{ template "database.fullname" . }}-nuobackup
 data:
 {{ (.Files.Glob "files/nuobackup").AsConfig | indent 2 }}
-{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap

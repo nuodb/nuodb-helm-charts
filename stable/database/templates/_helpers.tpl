@@ -497,3 +497,32 @@ Renders the name of the Secret for this database
 {{- define "database.secretName" -}}
 {{ .Values.admin.domain }}-{{ .Values.database.name }}
 {{- end -}}
+
+{{/*
+Renders the storage groups option for nuosm script
+*/}}
+{{- define "database.storageGroup.args" -}}
+{{- if .Values.database.sm.storageGroup }}
+{{- if .Values.database.sm.storageGroup.enabled }}
+{{- with .Values.database.sm.storageGroup.name }}
+{{- $invalid := list "ALL" "UNPARTITIONED" }}
+{{- if has (upper .) $invalid }}
+{{- fail (printf "Invalid storage group name: %s" .) }}
+{{- end }}
+{{- end }}
+- "--storage-groups"
+- {{ .Values.database.sm.storageGroup.name | default .Release.Name | trim | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Renders the storage group domain process label
+*/}}
+{{- define "database.storageGroup.label" -}}
+{{- if .Values.database.sm.storageGroup }}
+{{- if .Values.database.sm.storageGroup.enabled }}
+{{- printf "sg %s" (.Values.database.sm.storageGroup.name | default .Release.Name | trim) -}}
+{{- end }}
+{{- end }}
+{{- end -}}

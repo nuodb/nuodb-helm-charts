@@ -1,7 +1,3 @@
-{{/* 
-  Remove this conditional rendering when support for storage groups is added
-*/}}
-{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 {{- if eq (include "defaulttrue" .Values.database.sm.noHotCopy.enablePod) "true" }}
 ---
 apiVersion: apps/v1
@@ -103,14 +99,16 @@ spec:
     {{- end }}
           - "--options"
           - "mem {{ .Values.database.sm.resources.requests.memory}} {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
-    {{- with .Values.database.sm.labels }}
+    {{- $labels := printf "%s %s" (include "database.storageGroup.label" .)  (include "opt.key-values" .Values.database.sm.labels) -}}
+    {{- if trim $labels }}
           - "--labels"
-          - "{{- include "opt.key-values" . }}"
+          - "{{ $labels }}"
     {{- end }}
     {{- with .Values.database.options }}
           - "--database-options"
           - "{{- include "opt.key-values" . }}"
     {{- end }}
+    {{- include "database.storageGroup.args" . | indent 10 }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
     {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
@@ -467,11 +465,12 @@ spec:
           - "--options"
           - "mem {{ .Values.database.sm.resources.requests.memory}} {{- if and (eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true") (eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true") }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
           - "--labels"
-          - "role hotcopy backup {{ include "hotcopy.groupPrefix" . }} {{- include "opt.key-values" .Values.database.sm.labels }}"
+          - "role hotcopy backup {{ include "hotcopy.groupPrefix" . }} {{ include "database.storageGroup.label" . }} {{- include "opt.key-values" .Values.database.sm.labels }}"
 {{- with .Values.database.options}}
           - "--database-options"
           - "{{- range $opt, $val := . -}} {{$opt}} {{$val}} {{ end}}"
 {{- end}}
+    {{- include "database.storageGroup.args" . | indent 10 }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
     {{- include "sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
@@ -753,5 +752,4 @@ spec:
         requests:
           storage: {{ .Values.database.sm.logPersistence.size }}
   {{- end }}
-{{- end }}
 {{- end }}
