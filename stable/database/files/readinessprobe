@@ -38,6 +38,12 @@ parse_fields() {
 pgrep -xa nuodb | (
     n=0
     while read pid argv; do
+        # skip zombie processes
+        if [ "$(ps -o stat= -p "$pid")" = Z ]; then
+            echo "Skipping zombie process with pid=$pid: $argv"
+            continue
+        fi
+
         # parse start ID and state from argument list; starting with 4.1, argv
         # is re-written to contain information about the engine process
         parse_fields $argv
@@ -46,9 +52,10 @@ pgrep -xa nuodb | (
         else
             # argv does not contain process info; use 'nuocmd show domain' to
             # obtain start ID and 'nuocmd check process' to check process
-            # health; this does not scale well as the number of processes
-            # becomes very large, but we have no choice
-            start_id="$(nuocmd show domain --process-format "==={hostname}:{pid} {start_id}" | sed -n "s/ *===$(hostname):$pid //p")"
+            # health; if multiple start IDs are returned, check the largest
+            # one, which has to be the current one; this does not scale well as
+            # the number of processes becomes very large, but we have no choice
+            start_id="$(nuocmd show domain --process-format "==={hostname}:{pid} {start_id}" | sed -n "s/ *===$(hostname):$pid //p" | sort -n | tail -n1)"
             [ "$start_id" != "" ] && nuocmd check process --check-running --start-id "$start_id" \
                 || die 1 "Process reported not ready"
         fi
