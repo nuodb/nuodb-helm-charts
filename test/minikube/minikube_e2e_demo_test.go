@@ -1,10 +1,10 @@
+//go:build long
 // +build long
 
 package minikube
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	v12 "k8s.io/api/core/v1"
 	"testing"
@@ -12,18 +12,6 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 )
-
-const YCSB_CONTROLLER_NAME = "ycsb-load"
-
-func scaleYCSB(t *testing.T, namespaceName string) {
-	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-
-	k8s.RunKubectl(t, kubectlOptions, "scale", "replicationcontroller", YCSB_CONTROLLER_NAME, "--replicas=1")
-
-	testlib.AwaitNrReplicasScheduled(t, namespaceName, YCSB_CONTROLLER_NAME, 1)
-	testlib.AwaitNrReplicasReady(t, namespaceName, YCSB_CONTROLLER_NAME, 1)
-
-}
 
 func TestKubernetesYCSB(t *testing.T) {
 	testlib.AwaitTillerUp(t)
@@ -51,10 +39,9 @@ func TestKubernetesYCSB(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_YCSB)
 
 	testlib.StartYCSBWorkload(t, namespaceName, &helm.Options{})
+	testlib.ScaleYCSB(t, namespaceName, 1)
 
-	scaleYCSB(t, namespaceName)
-
-	ycsbPodName := testlib.GetPodName(t, namespaceName, YCSB_CONTROLLER_NAME)
+	ycsbPodName := testlib.GetPodName(t, namespaceName, testlib.YCSB_CONTROLLER_NAME)
 	go testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb", &v12.PodLogOptions{Follow: true})
 
 	// let YCSB run for a couple of seconds
