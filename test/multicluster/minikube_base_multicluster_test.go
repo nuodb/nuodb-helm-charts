@@ -6,12 +6,15 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/stretchr/testify/require"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
@@ -74,6 +77,9 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 		},
 	}
 
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = kubectlOptions
+
 	context := context.Background()
 	cluster1Context := testlib.NewClusterDeploymentContext(context,
 		&options, testlib.MULTI_CLUSTER_1, testlib.MULTI_CLUSTER_1)
@@ -132,6 +138,75 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 		testlib.ExecuteInAllClusters(t, func(context *testlib.ClusterDeploymentContext) {
 			admin0 := fmt.Sprintf("%s-nuodb-%s-0", context.AdminReleaseName, context.ThisCluster.Name)
 			verifyNuoSQL(t, context.Namespace, admin0, "demo")
+		})
+	})
+
+	testlib.RunOnNuoDBVersionCondition(t, ">=5.0.2", func(version *semver.Version) {
+		t.Run("testDatabaseResync", func(t *testing.T) {
+			testlib.DeployWithContext(t,
+				cluster1Context,
+				func(context *testlib.ClusterDeploymentContext, options *helm.Options) {
+					// delete database controllers and PVCs
+					helm.Delete(t, options, context.DatabaseReleaseName, true)
+					testlib.AwaitNoPods(t, namespaceName, context.DatabaseReleaseName)
+					smHCPvcName := fmt.Sprintf("archive-volume-sm-%s-nuodb-%s-demo-hotcopy-0",
+						context.DatabaseReleaseName, context.ThisCluster.Name)
+					k8s.RunKubectl(t, kubectlOptions, "delete", "pvc", smHCPvcName)
+				},
+			)
+			// negative test: check that the database is not deleted
+			testlib.ExecuteInAllClusters(t, func(context *testlib.ClusterDeploymentContext) {
+				admin0 := fmt.Sprintf("%s-nuodb-%s-0", context.AdminReleaseName, context.ThisCluster.Name)
+				testlib.AwaitDatabaseUp(t, context.Namespace, admin0, "demo", 2)
+				testlib.CheckArchives(t, namespaceName, admin0, "demo", 1, 0)
+				db, err := testlib.GetDatabaseE(t, namespaceName, admin0, "demo")
+				require.NoError(t, err)
+				require.NotEqual(t, "TOMBSTONE", db.State)
+			})
+
+			testlib.DeployWithContext(t,
+				cluster2Context,
+				func(context *testlib.ClusterDeploymentContext, options *helm.Options) {
+					admin0 := fmt.Sprintf("%s-nuodb-%s-0", context.AdminReleaseName, context.ThisCluster.Name)
+					// delete the database controllers
+					helm.Delete(t, options, context.DatabaseReleaseName, true)
+					testlib.AwaitNoPods(t, namespaceName, context.DatabaseReleaseName)
+
+					// check that database is NOT_RUNNING
+					testlib.Await(t, func() bool {
+						db, err := testlib.GetDatabaseE(t, namespaceName, admin0, "demo")
+						require.NoError(t, err)
+						return db.State == "NOT_RUNNING"
+					}, 30*time.Second)
+				},
+			)
+			// negative test: check that the database is not deleted
+			testlib.ExecuteInAllClusters(t, func(context *testlib.ClusterDeploymentContext) {
+				admin0 := fmt.Sprintf("%s-nuodb-%s-0", context.AdminReleaseName, context.ThisCluster.Name)
+				testlib.CheckArchives(t, namespaceName, admin0, "demo", 1, 0)
+				db, err := testlib.GetDatabaseE(t, namespaceName, admin0, "demo")
+				require.NoError(t, err)
+				require.NotEqual(t, "TOMBSTONE", db.State)
+			})
+
+			testlib.DeployWithContext(t,
+				cluster2Context,
+				func(context *testlib.ClusterDeploymentContext, options *helm.Options) {
+					admin0 := fmt.Sprintf("%s-nuodb-%s-0", context.AdminReleaseName, context.ThisCluster.Name)
+					// delete all database PVCs
+					smHCPvcName := fmt.Sprintf("archive-volume-sm-%s-nuodb-%s-demo-hotcopy-0",
+						context.DatabaseReleaseName, context.ThisCluster.Name)
+					k8s.RunKubectl(t, kubectlOptions, "delete", "pvc", smHCPvcName)
+
+					// check that database is deleted
+					testlib.Await(t, func() bool {
+						db, err := testlib.GetDatabaseE(t, namespaceName, admin0, "demo")
+						require.NoError(t, err)
+						return db.State == "TOMBSTONE"
+					}, 30*time.Second)
+					testlib.CheckArchives(t, namespaceName, admin0, "demo", 0, 0)
+				},
+			)
 		})
 	})
 }

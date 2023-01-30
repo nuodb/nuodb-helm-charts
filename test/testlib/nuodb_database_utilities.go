@@ -147,16 +147,21 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 
 	// with Async actions which do not return a cleanup method, create the teardown(s) first
 	AddTeardown(TEARDOWN_DATABASE, func() {
-		helm.Delete(t, options, helmChartReleaseName, true)
+		// suppress error as the helm release might be already deleted
+		helm.DeleteE(t, options, helmChartReleaseName, true)
 		AwaitNoPods(t, namespaceName, helmChartReleaseName)
 		// Delete database only if admin pod exists and tearing down the entrypoint cluster
 		_, err := findPod(t, namespaceName, adminPod)
 		if err == nil && opt.ClusterName == opt.EntrypointClusterName && opt.DbPrimaryRelease {
-			EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
-			DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
-			// purge all database archives so that multiple database tests can
-			// be executed with a single admin deployment
-			PurgeDatabaseArchives(t, namespaceName, adminPod, opt.DbName)
+			db, err := GetDatabaseE(t, namespaceName, adminPod, opt.DbName)
+			// delete the database if it is not deleted already
+			if err == nil && db.State != "TOMBSTONE" {
+				EnsureDatabaseNotRunning(t, adminPod, opt, kubectlOptions)
+				DeleteDatabase(t, namespaceName, opt.DbName, adminPod)
+				// purge all database archives so that multiple database tests can
+				// be executed with a single admin deployment
+				PurgeDatabaseArchives(t, namespaceName, adminPod, opt.DbName)
+			}
 		}
 	})
 
@@ -176,9 +181,13 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 
 		AddTeardown(TEARDOWN_DATABASE, func() {
-			for _, tePod := range GetPodNames(t, namespaceName, tePodNameTemplate) {
-				t.Logf("Getting log from TE pod: %s", tePod)
-				go GetAppLog(t, namespaceName, tePod, "", &v12.PodLogOptions{Follow: true})
+			pods, err := findPods(t, namespaceName, tePodNameTemplate)
+			if err != nil {
+				return
+			}
+			for _, tePod := range pods {
+				t.Logf("Getting log from TE pod: %s", tePod.Name)
+				go GetAppLog(t, namespaceName, tePod.Name, "", &v12.PodLogOptions{Follow: true})
 			}
 		})
 		// the TEs will become RUNNING after the SMs as they need an entry node
@@ -190,9 +199,13 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		if opt.DbPrimaryRelease {
 			smPodName0 := GetPodName(t, namespaceName, smPodNameTemplate)
 			AddTeardown(TEARDOWN_DATABASE, func() {
-				for _, smPod := range GetPodNames(t, namespaceName, smPodNameTemplate) {
-					t.Logf("Getting log from SM pod: %s", smPod)
-					go GetAppLog(t, namespaceName, smPod, "", &v12.PodLogOptions{Follow: true})
+				pods, err := findPods(t, namespaceName, smPodNameTemplate)
+				if err != nil {
+					return
+				}
+				for _, smPod := range pods {
+					t.Logf("Getting log from SM pod: %s", smPod.Name)
+					go GetAppLog(t, namespaceName, smPod.Name, "", &v12.PodLogOptions{Follow: true})
 				}
 			})
 			AwaitPodUp(t, namespaceName, smPodName0, readyTimeout)

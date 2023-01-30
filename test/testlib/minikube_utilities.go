@@ -742,24 +742,30 @@ func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
 	}
 }
 
-func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) *DBVersion {
+func GetDatabaseE(t *testing.T, namespace string, podName string, databaseName string) (*NuoDBDatabase, error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", "admin", "--", "nuocmd", "--show-json", "get", "databases")
-	require.NoError(t, err)
-
-	err, databases := UnmarshalDatabase(output)
-	require.NoError(t, err)
-
-	for _, db := range databases {
-		if db.Name == databaseName {
-			return &db.Incarnation
-		}
+	if err != nil {
+		return nil, err
 	}
 
-	t.Logf("GetDatabaseIncarnation did not find DB name: %s", databaseName)
-	t.FailNow()
-	return nil
+	err, databases := UnmarshalDatabase(output)
+	if err != nil {
+		return nil, err
+	}
+	for _, db := range databases {
+		if db.Name == databaseName {
+			return &db, nil
+		}
+	}
+	return nil, fmt.Errorf("GetDatabase did not find DB name: %s", databaseName)
+}
+
+func GetDatabaseIncarnation(t *testing.T, namespace string, podName string, databaseName string) *DBVersion {
+	db, err := GetDatabaseE(t, namespace, podName, databaseName)
+	require.NoError(t, err)
+	return &db.Incarnation
 }
 
 func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databaseName string, databaseOptions *helm.Options, restart func()) {
