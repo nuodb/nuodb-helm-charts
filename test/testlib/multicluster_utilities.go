@@ -185,7 +185,8 @@ func DeployWithContext(t *testing.T, context context.Context, deployFunc func(co
 
 	// Set all variables needed by NuoDB Helm Charts in multi-cluster mode
 	optionsCopy := &helm.Options{
-		SetValues: CopyMap(options.SetValues),
+		SetValues:      CopyMap(options.SetValues),
+		KubectlOptions: options.KubectlOptions,
 	}
 	optionsCopy.SetValues["cloud.cluster.name"] = thisCluster.Name
 	optionsCopy.SetValues["cloud.cluster.entrypointName"] = entrypointCluster.Name
