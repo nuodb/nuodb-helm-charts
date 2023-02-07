@@ -141,7 +141,7 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 		})
 	})
 
-	testlib.RunOnNuoDBVersionCondition(t, ">=5.0.2", func(version *semver.Version) {
+	testlib.RunOnNuoDBVersionCondition(t, ">=5.0.3", func(version *semver.Version) {
 		t.Run("testDatabaseResync", func(t *testing.T) {
 			testlib.DeployWithContext(t,
 				cluster1Context,
@@ -154,7 +154,7 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 					k8s.RunKubectl(t, kubectlOptions, "delete", "pvc", smHCPvcName)
 				},
 			)
-			// negative test: check that the database is not deleted
+			// check that the database is not deleted
 			testlib.ExecuteInAllClusters(t, func(context *testlib.ClusterDeploymentContext) {
 				admin0 := fmt.Sprintf("%s-nuodb-%s-0", context.AdminReleaseName, context.ThisCluster.Name)
 				testlib.AwaitDatabaseUp(t, context.Namespace, admin0, "demo", 2)
@@ -180,7 +180,7 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 					}, 30*time.Second)
 				},
 			)
-			// negative test: check that the database is not deleted
+			// check that the database is not deleted
 			testlib.ExecuteInAllClusters(t, func(context *testlib.ClusterDeploymentContext) {
 				admin0 := fmt.Sprintf("%s-nuodb-%s-0", context.AdminReleaseName, context.ThisCluster.Name)
 				testlib.CheckArchives(t, namespaceName, admin0, "demo", 1, 0)

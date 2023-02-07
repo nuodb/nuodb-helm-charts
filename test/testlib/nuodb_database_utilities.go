@@ -181,10 +181,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 
 		AddTeardown(TEARDOWN_DATABASE, func() {
-			pods, err := findPods(t, namespaceName, tePodNameTemplate)
-			if err != nil {
-				return
-			}
+			pods, _ := findPods(t, namespaceName, tePodNameTemplate)
 			for _, tePod := range pods {
 				t.Logf("Getting log from TE pod: %s", tePod.Name)
 				go GetAppLog(t, namespaceName, tePod.Name, "", &v12.PodLogOptions{Follow: true})
@@ -199,10 +196,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		if opt.DbPrimaryRelease {
 			smPodName0 := GetPodName(t, namespaceName, smPodNameTemplate)
 			AddTeardown(TEARDOWN_DATABASE, func() {
-				pods, err := findPods(t, namespaceName, smPodNameTemplate)
-				if err != nil {
-					return
-				}
+				pods, _ := findPods(t, namespaceName, smPodNameTemplate)
 				for _, smPod := range pods {
 					t.Logf("Getting log from SM pod: %s", smPod.Name)
 					go GetAppLog(t, namespaceName, smPod.Name, "", &v12.PodLogOptions{Follow: true})
