@@ -225,6 +225,9 @@ database:
     size: 20Gi
     accessModes:
       - ReadWriteOnce
+    # archive and journalSnapshotDataSource are used to specify a volume snapshots to restore
+    archiveSnapshotDataSource: ""
+    journalSnapshotDataSource: ""
     # storageClass: "-"
 
   ## database-wide options.

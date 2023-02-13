@@ -300,6 +300,12 @@ spec:
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
+      {{- if .Values.database.persistence.archiveSnapshotDataSource }}
+      dataSource:
+        name: {{ .Values.database.persistence.archiveSnapshotDataSource }}
+        kind: VolumeSnapshot
+        apiGroup: snapshot.storage.k8s.io
+      {{- end }}
       accessModes:
       {{- range .Values.database.persistence.accessModes }}
         - {{ . }}
@@ -325,6 +331,12 @@ spec:
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
     spec:
+      {{- if .Values.database.persistence.journalSnapshotDataSource }}
+      dataSource:
+        name: {{ .Values.database.persistence.journalSnapshotDataSource }}
+        kind: VolumeSnapshot
+        apiGroup: snapshot.storage.k8s.io
+      {{- end }}
       accessModes:
       {{- range .Values.database.sm.noHotCopy.journalPath.persistence.accessModes }}
         - {{ . }}
