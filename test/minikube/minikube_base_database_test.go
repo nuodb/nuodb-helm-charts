@@ -338,7 +338,7 @@ func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
 	k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", admin, "--replicas=2")
 	admin2 := admin + "-2"
 	testlib.AwaitServerState(
-		t, namespaceName, admin0, admin2, "Disconnected", true, 60*time.Second)
+		t, namespaceName, admin0, admin2, "Disconnected", 60*time.Second)
 	k8s.RunKubectl(t, kubectlOptions, "delete", "pvc", "raftlog-"+admin2)
 
 	testlib.AwaitNrReplicasReady(t, namespaceName, admin, 2)
