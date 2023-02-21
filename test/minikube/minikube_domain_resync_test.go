@@ -189,31 +189,24 @@ func TestAdminScaleDown(t *testing.T) {
 	require.Error(t, err, output)
 	require.Contains(t, output, fmt.Sprintf("Servers not CONNECTED to %s: %s", admin0, admin1))
 
-	// if 'nuocmd check server' (singular) is supported, check that
-	// readiness probe still passes; TODO: perform this check
-	// unconditionally whenever the image tested in nuodb-helm-charts CI
-	// is bumped to >4.1.1
-	if os.Getenv("NUODB_DEV") == "true" {
-		// admin0 should still show as "Ready"
-		testlib.AwaitPodUp(t, namespaceName, admin0, 30*time.Second)
-
-		// invoke 'nuocmd check server' directly
-		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--",
-			"nuocmd", "check", "server", "--check-active", "--check-connected", "--check-converged")
-		require.NoError(t, err, output)
-		require.Empty(t, strings.TrimSpace(output))
-	}
-
-	// commit a Raft command to confirm that remaining Admin has consensus
-	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
-		"nuocmd", "set", "value", "--key", "testKey", "--value", "testValue", "--unconditional")
-
-	// admin1 is still in membership, though it is excluded from consensus;
 	// delete PVC to cause it to be completely removed from the membership;
 	// this should allow the Admin health-check to succeed
 	k8s.RunKubectl(t, options, "delete", "pvc", "raftlog-"+admin1)
 	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
 		"nuocmd", "check", "servers", "--check-connected", "--num-servers", "1", "--check-leader", "--timeout", "300")
+
+	// admin0 should show as "Ready"
+	testlib.AwaitPodUp(t, namespaceName, admin0, 30*time.Second)
+
+	// invoke 'nuocmd check server' directly
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--",
+		"nuocmd", "check", "server", "--check-active", "--check-connected", "--check-converged")
+	require.NoError(t, err, output)
+	require.Empty(t, strings.TrimSpace(output))
+
+	// commit a Raft command to confirm that remaining Admin has consensus
+	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--",
+		"nuocmd", "set", "value", "--key", "testKey", "--value", "testValue", "--unconditional")
 
 	// scale up Admin StatefulSet and make sure admin1 rejoins
 	k8s.RunKubectl(t, options, "scale", "statefulset", adminStatefulSet, "--replicas=2")
