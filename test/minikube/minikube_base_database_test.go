@@ -334,10 +334,13 @@ func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
 		testlib.DescribePods(t, namespaceName, admin)
 	})
 
-	// scale down the APs to 2; KAA will automatically evict the shut down AP
+	// scale down the APs to 2 and delete PVC for scaled down AP; KAA will automatically shrink membership to 2
 	k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", admin, "--replicas=2")
+	admin2 := admin + "-2"
 	testlib.AwaitServerState(
-		t, namespaceName, admin0, fmt.Sprintf("%s-2", admin), "Disconnected", true, 60*time.Second)
+		t, namespaceName, admin0, admin2, "Disconnected", 60*time.Second)
+	k8s.RunKubectl(t, kubectlOptions, "delete", "pvc", "raftlog-"+admin2)
+
 	testlib.AwaitNrReplicasReady(t, namespaceName, admin, 2)
 	// restart the current leader to bounce it
 	leader := testlib.AwaitDomainLeader(t, namespaceName, admin0, 60*time.Second)

@@ -251,15 +251,14 @@ func AwaitDomainLeader(t *testing.T, namespace string, adminPod string, timeout 
 }
 
 func AwaitServerState(t *testing.T, namespace string, adminPod string,
-	serverId string, expectedState string, evicted bool, timeout time.Duration) {
+	serverId string, expectedState string, timeout time.Duration) {
 	Await(t, func() bool {
 		servers, err := GetDomainServersE(t, namespace, adminPod)
 		if err != nil {
 			return false
 		}
 		if server, ok := servers[serverId]; ok &&
-			server.ConnectedState.State == expectedState &&
-			server.IsEvicted == evicted {
+			server.ConnectedState.State == expectedState {
 			return true
 		}
 		return false
