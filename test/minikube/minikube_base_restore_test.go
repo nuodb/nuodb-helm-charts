@@ -141,8 +141,11 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 	testlib.AwaitJobSucceeded(t, namespaceName, "journal-hotcopy-nuodb-demo-cluster0-0", 120*time.Second)
 	// verify that the journal backup fails and it's retried after requesting incremental
 	podName := testlib.GetPodName(t, namespaceName, "journal-hotcopy-nuodb-demo-cluster0-0")
-	require.Equal(t, testlib.GetStringOccurrenceInLog(t, namespaceName, podName,
-		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}), 1,
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
+	})
+	require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, podName,
+		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}),
 		"Incremental hot copy not requested to enable journal after sync")
 	verifyBackup(t, namespaceName, admin0, "demo", &options)
 }
