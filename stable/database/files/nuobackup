@@ -254,7 +254,7 @@ do
            backup_root="$1"; shift;;
         "--backup-root="* )
            backup_root="${opt#*=}";;
-        *) echo >&2 "Invalid nuobackup option: $opt ($@)"; exit 1;;
+        *) echo >&2 "Invalid nuobackup option: $opt ($*)"; exit 1;;
    esac
 done
 
