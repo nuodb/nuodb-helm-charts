@@ -41,7 +41,6 @@ backup_group=""
 labels=""
 timeout=""
 backup_root=$BACKUP_DIR
-retry_failed="True"
 backup_database_output=""
 
 function get_current_backup() {
@@ -207,19 +206,25 @@ function execute_incremental() {
 }
 
 function execute_journal() {
+   local rc 
+
    if ! full_exist; then
       echo "Executing full hotcopy as a prerequisite for journal hotcopy"
       execute_full
    else 
       execute_backup "journal"
-      if [ -n "$retry_failed" ] && echo "$backup_database_output" | grep -q "Full or incremental hot copy must be completed before journal hot copy"; then
-         # journal hot copy has been temporarly suspended due to archive sync;
-         # perform incremental hot copy first
-         retry_failed=""
-         echo "Executing incremental hot copy as journal hot copy is temporarily suspended"
-         execute_incremental || return $?
-         # retry the journal backup which should succeed now
-         execute_journal
+      rc=$?
+      if [ $rc -ne 0 ]; then
+         if echo "$backup_database_output" | grep -q "Full or incremental hot copy must be completed before journal hot copy"; then
+            # journal hot copy has been temporarly suspended due to archive sync;
+            # perform incremental hot copy first
+            echo "Executing incremental hot copy as journal hot copy is temporarily suspended"
+            execute_incremental || return $?
+            # retry the journal backup which should succeed now
+            execute_backup "journal"
+         else
+            return $rc
+         fi
       fi
    fi
 }
