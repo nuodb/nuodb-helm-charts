@@ -157,7 +157,7 @@ function full_exist() {
       --labels "${labels}" 2>&1)"
    if [ $? -ne 0 ] && echo "$error" | grep -q "No existing backup path found"; then
       # Check if full backup has been started already for all archiveIds. It
-      # won't be the case in the following scenarious:
+      # won't be the case in the following scenarios:
       # * initial database backup request
       # * backup request after the database have been restored
       # * new HC SM has been started in the backup group since the last full
