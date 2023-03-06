@@ -41,7 +41,7 @@ backup_group=""
 labels=""
 timeout=""
 backup_root=$BACKUP_DIR
-retry_failed="True"
+backup_database_output=""
 
 function get_current_backup() {
    output=$( nuodocker get current-backup \
@@ -56,7 +56,6 @@ function execute_backup() {
    local current
    local next
    local backupset
-   local output
    local failed
    local pods
 
@@ -65,7 +64,7 @@ function execute_backup() {
 
    # call nuodocker to perform the actual backup
    echo "Starting ${type} backup for database ${db_name} on processes with labels '${labels}' ..."
-   output=$(nuodocker backup database \
+   backup_database_output=$(nuodocker backup database \
       --db-name "${db_name}" \
       --type "${type}" \
       --backup-root "${backup_root}" \
@@ -73,7 +72,7 @@ function execute_backup() {
       "${extra_flags[@]}" 2>&1)
 
    retval=$?
-   echo "$output"
+   echo "$backup_database_output"
    if [ $retval != 0 ]; then
       echo >&2 "Error running hotcopy $retval"
       # Store failed backupset in KV store
@@ -85,17 +84,6 @@ function execute_backup() {
                --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed" \
                --value "${failed} ${backupset}" --expected-value "${failed}"
          fi
-      fi
-      if [ -n "$retry_failed" ] && [ "$type" = "journal" ] && echo "$output" | grep -q "Full or incremental hot copy must be completed before journal hot copy"; then
-         # journal hot copy has been temporarly suspended due to archive sync;
-         # perform incremental first and once completed retry the journal hot
-         # copy
-         retry_failed=""
-         echo "Executing incremental hot copy as journal hot copy is temporarily suspended"
-         execute_backup "incremental" || return $?
-         # retry the journal backup which should succeed now
-         execute_backup "journal"
-         retval=$?
       fi
       return $retval
    fi
@@ -161,6 +149,86 @@ function execute_backup() {
    fi
 }
 
+function full_exist() {
+   local error
+
+   error="$( nuodocker get current-backup \
+      --db-name "${db_name}" \
+      --labels "${labels}" 2>&1)"
+   if [ $? -ne 0 ] && echo "$error" | grep -q "No existing backup path found"; then
+      # Check if full backup has been started already for all archiveIds. It
+      # won't be the case in the following scenarios:
+      # * initial database backup request
+      # * backup request after the database have been restored
+      # * new HC SM has been started in the backup group since the last full
+      #   backup
+      # * the backup group selection has been changed
+      return 1
+   fi
+   return 0
+}
+
+function last_full_failed() {
+   local backupset
+   local failed
+
+   backupset=$(get_current_backup)
+   failed=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed")
+   if [ -n "$backupset" ] && echo "$failed" | grep -q "${backupset}"; then
+      return 0
+   fi
+   return 1
+}
+
+function execute_full() {
+   execute_backup "full"
+}
+
+function execute_incremental() {
+   local backupset
+
+   if ! full_exist; then
+      echo "Executing full hotcopy as a prerequisite for incremental hotcopy"
+      execute_full
+   elif last_full_failed; then
+      # Incremental hotcopy requires a full hotcopy element in the backupset;
+      # in case the full hotcopy has failed, all incrementals using that
+      # backupset will fail until next full hotcopy is scheduled; if the
+      # failure is transient or user corrected the problem (like freeing some
+      # disk space), then executing another full will have a great chance to
+      # finish
+      backupset=$(get_current_backup)
+      echo "Executing full hotcopy as a prerequisite for incremental hotcopy: full hotcopy in backupset ${backupset} has failed"
+      execute_full
+   else
+      execute_backup "incremental"
+   fi
+}
+
+function execute_journal() {
+   local rc 
+
+   if ! full_exist; then
+      echo "Executing full hotcopy as a prerequisite for journal hotcopy"
+      execute_full
+   else 
+      execute_backup "journal"
+      rc=$?
+      if [ $rc -ne 0 ]; then
+         if echo "$backup_database_output" | grep -q "Full or incremental hot copy must be completed before journal hot copy"; then
+            # journal hot copy has been temporarly suspended due to archive sync;
+            # perform incremental hot copy first
+            echo "Executing incremental hot copy as journal hot copy is temporarily suspended"
+            execute_incremental || return $?
+            # retry the journal backup which should succeed now
+            execute_backup "journal"
+         else
+            return $rc
+         fi
+      fi
+   fi
+}
+
 while [ $# -gt 0 ];
 do
     opt="$1";
@@ -191,7 +259,7 @@ do
            backup_root="$1"; shift;;
         "--backup-root="* )
            backup_root="${opt#*=}";;
-        *) echo >&2 "Invalid nuobackup option: $opt ($@)"; exit 1;;
+        *) echo >&2 "Invalid nuobackup option: $opt ($*)"; exit 1;;
    esac
 done
 
@@ -241,35 +309,10 @@ elif [ "$backup_type" = "report-backups" ]; then
    exit 0
 fi
 
-if [ "$backup_type" != "full" ]; then
-   error="$( nuodocker get current-backup \
-      --db-name "${db_name}" \
-      --labels "${labels}" 2>&1)"
-   if [ $? -ne 0 ] && echo "$error" | grep -q "No existing backup path found"; then
-      # Check if full backup has been started already for all archiveIds
-      # This will most likely execute in the following scenarious:
-      # * initial database backup request
-      # * backup request after the database have been restored
-      # * new HC SM has been started since the last full backup
-      echo "Executing full hotcopy as a prerequisite for ${backup_type} hotcopy: ${error}"
-      execute_backup "full"
-   fi
-
-   if [ "$backup_type" == "incremental" ] && [ -n "$backup_group" ]; then
-      backupset=$(get_current_backup)
-      failed=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/failed")
-      if [ -n "$backupset" ] && echo "$failed" | grep -q "${backupset}"; then
-         # Incremental hotcopy requires a full hotcopy element in the backupset;
-         # in case the full hotcopy has failed, all incrementals using that
-         # backupset will fail until next full hotcopy is scheduled; if the
-         # failure is transient or user corrected the problem (like freeing some
-         # disk space), then executing another full will have a great chance to
-         # finish
-         error="full hotcopy in backupset ${backupset} has failed"
-         echo "Executing full hotcopy as a prerequisite for ${backup_type} hotcopy: ${error}"
-         execute_backup "full"
-      fi
-   fi
+if [ "$backup_type" == "full" ]; then
+   execute_full
+elif [ "$backup_type" == "incremental" ]; then
+   execute_incremental
+elif [ "$backup_type" == "journal" ]; then
+   execute_journal
 fi
-
-execute_backup "$backup_type"

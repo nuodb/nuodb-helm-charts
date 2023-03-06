@@ -1313,6 +1313,12 @@ func ScaleStatefulSet(t *testing.T, namespaceName string, name string, replicas 
 	k8s.RunKubectl(t, options, "scale", "statefulset", name, fmt.Sprintf("--replicas=%d", replicas))
 }
 
+func ScaleDeployment(t *testing.T, namespaceName string, name string, replicas int) {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+
+	k8s.RunKubectl(t, options, "scale", "deployment", name, fmt.Sprintf("--replicas=%d", replicas))
+}
+
 func GetGlobalLoadBalancerConfigE(t *testing.T, loadBalancerConfigs []NuoDBLoadBalancerConfig) (*NuoDBLoadBalancerConfig, error) {
 	for _, config := range loadBalancerConfigs {
 		if config.IsGlobal {

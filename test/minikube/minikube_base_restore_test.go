@@ -99,6 +99,7 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 			"database.sm.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":        "250m",
 			"database.te.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.replicas":                      "0",
 			"database.sm.hotCopy.replicas":              "2",
 			"database.sm.hotCopy.journalBackup.enabled": "true",
 		},
@@ -106,44 +107,81 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 
 	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
-	// Get logs from journal backup job in case this test fails
-	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
-		podName := testlib.GetPodName(t, namespaceName, "journal-hotcopy-nuodb-demo-cluster0-0")
-		testlib.AwaitPodPhase(t, namespaceName, podName, corev1.PodFailed, 20*time.Second)
-		testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
-	})
-
-	testlib.CreateQuickstartSchema(t, namespaceName, admin0)
-
 	opt := testlib.GetExtractedOptions(&options)
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	teDeployment := fmt.Sprintf("te-%s-%s-%s-%s", databaseReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
 	smPodName0 := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy-0", databaseReleaseName, opt.ClusterName, opt.DbName)
+	smPodName1 := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy-1", databaseReleaseName, opt.ClusterName, opt.DbName)
 	// suspend full and incremental backup jobs
 	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "full-hotcopy-nuodb-demo-cluster0-0",
 		"-p", "{\"spec\" : {\"suspend\" : true }}")
 	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "incremental-hotcopy-nuodb-demo-cluster0-0",
 		"-p", "{\"spec\" : {\"suspend\" : true }}")
-	// Execute initial backup for all backup groups
-	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "full-hotcopy-nuodb-demo-cluster0-1",
+		"-p", "{\"spec\" : {\"suspend\" : true }}")
+	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "incremental-hotcopy-nuodb-demo-cluster0-1",
+		"-p", "{\"spec\" : {\"suspend\" : true }}")
+
+	// execute initial backup for backup group 1 which should fail as the
+	// database is not initialized yet
 	backupGroup1 := fmt.Sprintf("%s-1", opt.ClusterName)
+	err := testlib.BackupDatabaseE(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup1)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Database not fully initialized by a Transaction Engine")
+
+	// start the TE
+	testlib.ScaleDeployment(t, namespaceName, teDeployment, 1)
+	testlib.AwaitNrReplicasScheduled(t, namespaceName, teDeployment, 1)
+	tePodName := testlib.GetPodName(t, namespaceName, teDeployment)
+	testlib.AwaitPodUp(t, namespaceName, tePodName, 120*time.Second)
+
+	testlib.CreateQuickstartSchema(t, namespaceName, admin0)
+
+	// Execute initial backup for backup group 0
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
 	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
-	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup1)
-	// restarting one of the SMs will disable journal backup temporary until
-	// full or incremental are requested and complete
-	smPod0 := testlib.GetPod(t, namespaceName, smPodName0)
-	testlib.DeletePod(t, namespaceName, "pod/"+smPodName0)
-	testlib.AwaitPodObjectRecreated(t, namespaceName, smPod0, 30*time.Second)
-	testlib.DeleteJobPods(t, namespaceName, "journal-hotcopy-nuodb-demo-cluster0-0")
-	testlib.AwaitPodUp(t, namespaceName, smPodName0, 120*time.Second)
-	// schedule the journal backup job in the next munute
-	k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", "journal-hotcopy-nuodb-demo-cluster0-0",
-		"-p", "{\"spec\" : {\"schedule\" : \"?/1 * * * *\" }}")
-	testlib.AwaitJobSucceeded(t, namespaceName, "journal-hotcopy-nuodb-demo-cluster0-0", 120*time.Second)
-	// verify that the journal backup fails and it's retried after requesting incremental
-	podName := testlib.GetPodName(t, namespaceName, "journal-hotcopy-nuodb-demo-cluster0-0")
-	require.Equal(t, testlib.GetStringOccurrenceInLog(t, namespaceName, podName,
-		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}), 1,
+
+	restartSmAndExecuteJournalBackup := func(name string, backupGroup string) string {
+		// restarting an SM will disable journal backup temporary until full or
+		// incremental are requested and complete
+		pod := testlib.GetPod(t, namespaceName, name)
+		testlib.DeletePod(t, namespaceName, "pod/"+name)
+		testlib.AwaitPodObjectRecreated(t, namespaceName, pod, 30*time.Second)
+		testlib.AwaitPodUp(t, namespaceName, name, 120*time.Second)
+		cronJobName := fmt.Sprintf("journal-hotcopy-%s-%s-%s", opt.DomainName, opt.DbName, backupGroup)
+		testlib.DeleteJobPods(t, namespaceName, cronJobName)
+
+		// Get logs from journal backup job in case it fails
+		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+			podName := testlib.GetPodName(t, namespaceName, cronJobName)
+			testlib.AwaitPodPhase(t, namespaceName, podName, corev1.PodFailed, 20*time.Second)
+			testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
+		})
+
+		// schedule the journal backup job in the next minute
+		k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", cronJobName,
+			"-p", "{\"spec\" : {\"schedule\" : \"?/1 * * * *\" }}")
+		testlib.AwaitJobSucceeded(t, namespaceName, cronJobName, 120*time.Second)
+		return testlib.GetPodName(t, namespaceName, cronJobName)
+	}
+
+	backupJobName := restartSmAndExecuteJournalBackup(smPodName0, backupGroup0)
+	// verify that the journal backup fails and it's retried after requesting
+	// incremental
+	require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, backupJobName,
+		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}),
 		"Incremental hot copy not requested to enable journal after sync")
+
+	backupJobName = restartSmAndExecuteJournalBackup(smPodName1, backupGroup1)
+	// verify that the journal backup fails and another full backup is requested
+	// because the last full hot copy failed
+	require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, backupJobName,
+		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}),
+		"Incremental hot copy not requested to enable journal after sync")
+	require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, backupJobName,
+		"Executing full hotcopy as a prerequisite for incremental hotcopy", &corev1.PodLogOptions{}),
+		"Full hot copy should be requested as previous full have failed")
+
 	verifyBackup(t, namespaceName, admin0, "demo", &options)
 }
 

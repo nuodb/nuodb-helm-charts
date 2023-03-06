@@ -177,9 +177,6 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 
 		// NOTE: the Teardown logic will pick a TE/SM that is running during teardown time. Not the TE/SM that was running originally
 		// this is relevant for any tests that restart TEs/SMs
-
-		tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
-
 		AddTeardown(TEARDOWN_DATABASE, func() {
 			pods, _ := findPods(t, namespaceName, tePodNameTemplate)
 			for _, tePod := range pods {
@@ -189,8 +186,11 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		})
 		// the TEs will become RUNNING after the SMs as they need an entry node
 		// so use the same ready timeout for both
-		readyTimeout := AdjustPodTimeout(tePodName, 300*time.Second)
-		AwaitPodUp(t, namespaceName, tePodName, readyTimeout)
+		readyTimeout := AdjustPodTimeout(tePodNameTemplate, 300*time.Second)
+		if opt.NrTePods > 0 {
+			tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
+			AwaitPodUp(t, namespaceName, tePodName, readyTimeout)
+		}
 
 		// currently we don't render SM pods in the secondary releases
 		if opt.DbPrimaryRelease {
@@ -327,23 +327,66 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 	}
 }
 
-func BackupDatabase(t *testing.T, namespaceName string, podName string,
-	databaseName string, backupType string, backupGroup string) string {
+func BackupDatabase(
+	t *testing.T,
+	namespaceName string,
+	podName string,
+	databaseName string,
+	backupType string,
+	backupGroup string,
+) string {
+	err := BackupDatabaseE(t, namespaceName, podName, databaseName, backupType, backupGroup)
+	require.NoError(t, err)
+	return GetLatestBackup(t, namespaceName, podName, databaseName, backupGroup)
+}
 
+func BackupDatabaseE(
+	t *testing.T,
+	namespaceName string,
+	podName string,
+	databaseName string,
+	backupType string,
+	backupGroup string,
+) error {
 	cronJobName := fmt.Sprintf("%s-hotcopy-nuodb-%s-%s", backupType, databaseName, backupGroup)
 	jobName := fmt.Sprintf("backup-database-%s", strings.ToLower(random.UniqueId()))
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
-	k8s.RunKubectl(t, opts, "create", "job", "--from=cronjob/"+cronJobName, jobName)
+	if err := k8s.RunKubectlE(t, opts, "create", "job", "--from=cronjob/"+cronJobName, jobName); err != nil {
+		return err
+	}
 	defer func() {
-		if t.Failed() {
-			DescribePods(t, namespaceName, jobName)
-			podName := GetPodName(t, namespaceName, jobName)
-			GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
-		}
 		k8s.RunKubectl(t, opts, "delete", "job", jobName)
 	}()
-	AwaitJobSucceeded(t, namespaceName, jobName, 120*time.Second)
-	return GetLatestBackup(t, namespaceName, podName, databaseName, backupGroup)
+	var backupErr error
+	if err := AwaitE(t, func() bool {
+		pod, err := findPod(t, namespaceName, jobName)
+		if err != nil {
+			return false
+		}
+		if pod.Status.Phase == corev1.PodSucceeded {
+			return true
+		}
+		var restartCount int32
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			restartCount += containerStatus.RestartCount
+		}
+		if restartCount > 0 {
+			// some of the containers failed and was restarted; stop waiting
+			buf, err := ioutil.ReadAll(getAppLogStream(
+				t, namespaceName, pod.Name,
+				&corev1.PodLogOptions{Previous: true, Container: "nuodb"}))
+			if err != nil {
+				backupErr = err
+			} else {
+				backupErr = fmt.Errorf("database backup failed: %s", string(buf))
+			}
+			return true
+		}
+		return false
+	}, 120*time.Second); err != nil {
+		return fmt.Errorf("database backup exceed 120 sec: %w", err)
+	}
+	return backupErr
 }
 
 func GetLatestBackup(t *testing.T, namespaceName string, podName string,
