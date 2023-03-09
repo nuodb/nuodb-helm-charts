@@ -270,6 +270,9 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
 | `sm.topologySpreadConstraints` | Topology spread constraints for NuoDB SM | `[]` |
 | `sm.readinessTimeoutSeconds` | SM readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
+| `sm.storageGroup.enabled` | Enable Table Partitions and Storage Groups (TPSG) for all SMs in this database Helm release | `false` |
+| `sm.storageGroup.name` | The name of the storage group. Only alphanumeric and underscore ('_') characters are allowed. By default the Helm release name is used | `.Release.Name` |
+| `te.enablePod` | Create deployment for TEs | `true` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
 | `te.externalAccess.type` | The service type used to enable external database access. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |

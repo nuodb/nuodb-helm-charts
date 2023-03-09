@@ -50,13 +50,25 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 		opt.NrTePods = 1
 	}
 
+	if options.SetValues["database.te.enablePod"] == "false" {
+		opt.NrTePods = 0
+	}
+
 	opt.NrSmHotCopyPods, err = strconv.Atoi(options.SetValues["database.sm.hotCopy.replicas"])
 	if err != nil {
 		opt.NrSmHotCopyPods = 1
 	}
 
+	if options.SetValues["database.sm.hotCopy.enablePod"] == "false" {
+		opt.NrSmHotCopyPods = 0
+	}
+
 	opt.NrSmNoHotCopyPods, err = strconv.Atoi(options.SetValues["database.sm.noHotCopy.replicas"])
 	if err != nil {
+		opt.NrSmNoHotCopyPods = 0
+	}
+
+	if options.SetValues["database.sm.noHotCopy.enablePod"] == "false" {
 		opt.NrSmNoHotCopyPods = 0
 	}
 
@@ -192,8 +204,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 			AwaitPodUp(t, namespaceName, tePodName, readyTimeout)
 		}
 
-		// currently we don't render SM pods in the secondary releases
-		if opt.DbPrimaryRelease {
+		if opt.NrSmPods > 0 {
 			smPodName0 := GetPodName(t, namespaceName, smPodNameTemplate)
 			AddTeardown(TEARDOWN_DATABASE, func() {
 				pods, _ := findPods(t, namespaceName, smPodNameTemplate)
@@ -423,6 +434,27 @@ func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName s
 	require.NoError(t, err)
 	require.Equal(t, numExpectedRemoved, len(removedArchives), output)
 	return
+}
+
+func CheckStorageGroup(t *testing.T, namespaceName, adminPod, dbName, sgName, expectedState string) *NuoDBStorageGroup {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
+		"nuocmd", "--show-json", "get", "storage-groups", "--db-name", dbName)
+	require.NoError(t, err, output)
+	err, sgs := UnmarshalStorageGroups(output)
+	require.NoError(t, err)
+	// the admin convert all storage group names to upper case
+	expectedSgName := strings.ToUpper(sgName)
+	var found *NuoDBStorageGroup
+	for _, sg := range sgs {
+		if sg.Name == expectedSgName {
+			found = &sg
+			break
+		}
+	}
+	require.NotNil(t, found, "Storage group sgName=%s, dbName=%s not found", sgName, dbName)
+	require.Equal(t, expectedState, found.State)
+	return found
 }
 
 func CreateQuickstartSchema(t *testing.T, namespaceName string, adminPod string) {

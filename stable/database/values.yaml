@@ -441,7 +441,8 @@ database:
     # initially configured SG and the currently served SGs.
     storageGroup: 
       enabled: false
-      # The name of the storage group. By default the Helm release name is used.
+      # The name of the storage group. Only alphanumeric and underscore ('_')
+      # characters are allowed. By default the Helm release name is used.
       name: ""
 
   te:
