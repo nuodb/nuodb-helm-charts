@@ -625,14 +625,18 @@ func PurgeDatabaseArchives(t *testing.T, namespaceName string, adminPod string, 
 	}
 }
 
-func SuspendDatabaseBackupJobs(t *testing.T, namespaceName string, dbName string, backupGroup string) {
+func SuspendDatabaseBackupJobs(t *testing.T, namespaceName string, domain, dbName string, backupGroup string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	cronJobs := ListCronJobs(t, namespaceName)
-	expectedSuffix := fmt.Sprintf("-hotcopy-%s-%s", dbName, backupGroup)
+	// the CronJob apiVersion may be different depending on the Kubernetes version
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "cronjobs", "-oname")
+	require.NoError(t, err)
+	cronJobs := strings.Split(strings.ReplaceAll(output, "\r\n", "\n"), "\n")
+	expectedSuffix := fmt.Sprintf("-hotcopy-%s-%s-%s", domain, dbName, backupGroup)
 	for _, cronJob := range cronJobs {
-		if strings.HasSuffix(cronJob.Name, expectedSuffix) {
-			t.Logf("Suspending cronjob/%s", cronJob.Name)
-			k8s.RunKubectl(t, kubectlOptions, "patch", "cronjob", cronJob.Name,
+		cronJob = strings.TrimSpace(cronJob)
+		if strings.HasSuffix(cronJob, expectedSuffix) {
+			t.Logf("Suspending %s", cronJob)
+			k8s.RunKubectl(t, kubectlOptions, "patch", cronJob,
 				"-p", "{\"spec\" : {\"suspend\" : true }}")
 		}
 	}

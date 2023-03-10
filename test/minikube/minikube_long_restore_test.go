@@ -1,3 +1,4 @@
+//go:build long
 // +build long
 
 package minikube
@@ -239,8 +240,8 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 	backupGroup1 := fmt.Sprintf("%s-1", opt.ClusterName)
 
 	// Suspend backup jobs for all backup groups
-	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup0)
-	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup1)
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DomainName, opt.DbName, backupGroup0)
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DomainName, opt.DbName, backupGroup1)
 
 	t.Run("restoreToLatest", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
@@ -400,7 +401,7 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 
 	// Suspend the backup jobs and perform a backup
 	backupGroup0 := "group0"
-	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup0)
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DomainName, opt.DbName, backupGroup0)
 	testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
 
 	// Insert more rows

@@ -116,8 +116,8 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 	// suspend all backup jobs
 	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
 	backupGroup1 := fmt.Sprintf("%s-1", opt.ClusterName)
-	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup0)
-	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DbName, backupGroup1)
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DomainName, opt.DbName, backupGroup0)
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DomainName, opt.DbName, backupGroup1)
 
 	// execute initial backup for backup group 1 which should fail as the
 	// database is not initialized yet
