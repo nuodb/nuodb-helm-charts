@@ -670,6 +670,7 @@ func SuspendDatabaseBackupJobs(t *testing.T, namespaceName string, domain, dbNam
 			t.Logf("Suspending %s", cronJob)
 			k8s.RunKubectl(t, kubectlOptions, "patch", cronJob,
 				"-p", "{\"spec\" : {\"suspend\" : true }}")
+			DeleteJobPods(t, namespaceName, cronJob)
 		}
 	}
 }
