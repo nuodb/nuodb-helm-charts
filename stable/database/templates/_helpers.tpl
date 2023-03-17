@@ -509,6 +509,9 @@ Renders the storage groups option for nuosm script
 {{- if has (upper .) $invalid }}
 {{- fail (printf "Invalid storage group name: %s" .) }}
 {{- end }}
+{{- if contains " " (trim .) }}
+{{- fail (printf "Multiple storage group names provided: %s" .) }}
+{{- end }}
 {{- end }}
 - "--storage-groups"
 - {{ .Values.database.sm.storageGroup.name | default .Release.Name | trim | quote }}

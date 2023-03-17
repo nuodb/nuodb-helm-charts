@@ -436,14 +436,40 @@ func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName s
 	return
 }
 
-func CheckStorageGroup(t *testing.T, namespaceName, adminPod, dbName, sgName, expectedState string) *NuoDBStorageGroup {
+func AwaitStorageGroup(t *testing.T, namespaceName, adminPod, dbName, sgName string, timeout time.Duration) *NuoDBStorageGroup {
+	var sg *NuoDBStorageGroup
+	Await(t, func() bool {
+		sg = GetStorageGroup(t, namespaceName, adminPod, dbName, sgName)
+		if len(sg.ArchiveStates) == 0 {
+			return false
+		}
+		for archiveId, state := range sg.ArchiveStates {
+			if state != "ADDED" {
+				t.Logf("Waiting for storage group sg=%s, archiveId=%s, state=%s",
+					sgName, archiveId, state)
+				return false
+			}
+		}
+		for nodeId, state := range sg.ProcessStates {
+			if state != "RUNNING" {
+				t.Logf("Waiting for process in storage group sg=%s, nodeId=%s, state=%s",
+					sgName, nodeId, state)
+				return false
+			}
+		}
+		return true
+	}, timeout)
+	return sg
+}
+
+func GetStorageGroup(t *testing.T, namespaceName, adminPod, dbName, sgName string) *NuoDBStorageGroup {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "storage-groups", "--db-name", dbName)
 	require.NoError(t, err, output)
 	err, sgs := UnmarshalStorageGroups(output)
 	require.NoError(t, err)
-	// the admin convert all storage group names to upper case
+	// the admin converts all storage group names to upper case
 	expectedSgName := strings.ToUpper(sgName)
 	var found *NuoDBStorageGroup
 	for _, sg := range sgs {
@@ -453,7 +479,6 @@ func CheckStorageGroup(t *testing.T, namespaceName, adminPod, dbName, sgName, ex
 		}
 	}
 	require.NotNil(t, found, "Storage group sgName=%s, dbName=%s not found", sgName, dbName)
-	require.Equal(t, expectedState, found.State)
 	return found
 }
 

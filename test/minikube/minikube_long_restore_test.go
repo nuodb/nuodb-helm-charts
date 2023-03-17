@@ -396,16 +396,12 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
 	verifyStorageGroup := func(sgName string) {
-		sg := testlib.CheckStorageGroup(t, namespaceName, admin0, opt.DbName, sgName, "Available")
+		// wait for archives to be added to the storage group
+		sg := testlib.AwaitStorageGroup(t, namespaceName, admin0, opt.DbName, sgName, 30*time.Second)
+		require.Equal(t, sg.State, "Available")
 		require.GreaterOrEqual(t, len(sg.ArchiveStates), 1)
 		require.GreaterOrEqual(t, len(sg.ProcessStates), 1)
 		require.GreaterOrEqual(t, len(sg.LeaderCandidates), 1)
-		for archiveId, state := range sg.ArchiveStates {
-			require.Equal(t, "ADDED", state, "Unexpected state for archiveId=%s", archiveId)
-		}
-		for nodeId, state := range sg.ProcessStates {
-			require.Equal(t, "RUNNING", state, "Unexpected state for nodeId=%s", nodeId)
-		}
 	}
 	verifyStorageGroup("sg0")
 	verifyStorageGroup("sg1")

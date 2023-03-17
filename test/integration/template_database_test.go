@@ -1903,6 +1903,23 @@ func TestDatabaseStorageGroups(t *testing.T) {
 		assert.Contains(t, err.Error(), "Invalid storage group name: ALL")
 	})
 
+	t.Run("testMultipleStorageGroupNames", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "sg1 sg2",
+			},
+		}
+
+		// rendering fails
+		_, err := helm.RenderTemplateE(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Multiple storage group names provided: sg1 sg2")
+	})
+
 	t.Run("testStorageGroupLabel", func(t *testing.T) {
 		// Path to the helm chart we will test
 		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
