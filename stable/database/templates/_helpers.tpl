@@ -529,3 +529,19 @@ Renders the storage group domain process label
 {{- end }}
 {{- end }}
 {{- end -}}
+
+{{/*
+Checks if the TE Deployment should be enabled. If the default value is absent,
+the TE Deployment is disabled if TPSG is enabled and this is a secondary release.
+*/}}
+{{- define "database.te.enablePod" -}}
+  {{- if kindIs "invalid" .Values.database.te.enablePod -}}
+    {{- if and (eq (include "defaultfalse" .Values.database.sm.storageGroup.enabled) "true") (eq (include "defaulttrue" .Values.database.primaryRelease) "false") -}}
+      {{- false -}}
+    {{- else -}}
+      {{- true -}}
+    {{- end -}}
+  {{- else -}}
+    {{- include "defaulttrue" .Values.database.te.enablePod -}}
+  {{- end -}}
+{{- end -}}

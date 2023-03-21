@@ -1,4 +1,4 @@
-{{- if eq (include "defaulttrue" .Values.database.te.enablePod) "true" }}
+{{- if eq (include "database.te.enablePod" .) "true" }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:

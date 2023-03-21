@@ -328,7 +328,38 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 
 		// Run RenderTemplate to render the template and capture the output.
 		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		assert.NotNil(t, err, "template should have failed")
 		assert.Contains(t, err.Error(), "could not find template templates/deployment.yaml in chart")
+	})
+
+	t.Run("testTePodDisabledWithStorageGroupSecondary", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.primaryRelease":          "false",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		assert.NotNil(t, err, "template should have failed")
+		assert.Contains(t, err.Error(), "could not find template templates/deployment.yaml in chart")
+	})
+
+	t.Run("testTePodDisabledWithStorageGroupPrimary", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
+			assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
+		}
 	})
 }
 

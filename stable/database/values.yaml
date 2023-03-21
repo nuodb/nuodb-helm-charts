@@ -447,7 +447,7 @@ database:
 
   te:
     # Provision Transaction Engine (TE) Deployment.
-    enablePod: true
+    # enablePod: true
 
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
     logPersistence:
