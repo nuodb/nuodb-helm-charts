@@ -361,6 +361,35 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 			assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
 		}
 	})
+
+	t.Run("testTePodDisabledWithoutStorageGroupsSecondary", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.primaryRelease": "false",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
+			assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
+		}
+	})
+
+	t.Run("testTePodBogus", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.te.enablePod": "foo",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		assert.NotNil(t, err, "template should have failed")
+		assert.Contains(t, err.Error(), "Invalid boolean value: foo")
+	})
 }
 
 func TestDatabaseOtherOptions(t *testing.T) {
