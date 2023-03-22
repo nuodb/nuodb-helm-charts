@@ -430,7 +430,7 @@ database:
     #Some clusters require longer readiness probe timeouts
     readinessTimeoutSeconds: 5
 
-    # Table Partitions and Storage Groups (TPSG) is the mechanism by which a
+    # Table Partitions and Storage Groups (TP/SG) is the mechanism by which a
     # version of an SQL table row is stored only on a subset of Storage Managers
     # (SMs). The "storageGroup" section configures the named Storage Group (SG)
     # which the SMs installed with this Helm release will initially serve when
@@ -446,7 +446,10 @@ database:
       name: ""
 
   te:
-    # Provision Transaction Engine (TE) Deployment.
+    # Provision Transaction Engine (TE) Deployment. By default, the TE
+    # Deployment is disabled if TP/SG is enabled and this is a "secondary"
+    # release.
+    #
     # enablePod: true
 
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
