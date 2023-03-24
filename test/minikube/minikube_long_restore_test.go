@@ -333,7 +333,7 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
-	testlib.SkipTestOnNuoDBVersionCondition(t, "< 4.2")
+	testlib.SkipTestOnNuoDBVersionCondition(t, "< 5.0.3")
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -351,38 +351,60 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.sm.hotCopy.replicas":          "2",
 			"database.te.logPersistence.enabled":    "true",
+			"database.sm.storageGroup.enabled":      "true",
 			"database.env[0].name":                  "NUODB_DEBUG",
 			"database.env[0].value":                 "debug",
 			// include both HCSMs as each of them is serving separate storage group
-			"database.sm.hotCopy.backupGroups.group0.labels": "role hotcopy",
+			"database.sm.hotCopy.backupGroups.all-sg.labels": "role hotcopy",
 		},
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 	// Generate diagnose in case this test fails
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
 		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
 	})
 
+	// install database primary release which serves sg0
+	databaseOptions.SetValues["database.sm.storageGroup.name"] = "sg0"
+	sg0ReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// install database secondary release which serves sg1
+	databaseOptions.SetValues["database.primaryRelease"] = "false"
+	databaseOptions.SetValues["database.te.enablePod"] = "false"
+	databaseOptions.SetValues["database.sm.storageGroup.name"] = "sg1"
+	sg1ReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// set the total number of engines as in the test utilities they are
+	// inferred from the values
+	databaseOptions.SetValues["database.te.enablePod"] = "true"
+	databaseOptions.SetValues["database.te.replicas"] = "1"
+	databaseOptions.SetValues["database.sm.hotCopy.replicas"] = "2"
+
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	databaseOptions.KubectlOptions = kubectlOptions
 
 	opt := testlib.GetExtractedOptions(&databaseOptions)
-	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
-	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
-	hcSmPodNameTemplate := fmt.Sprintf("%s-hotcopy", smPodNameTemplate)
-	hcSmPodName0 := fmt.Sprintf("%s-0", hcSmPodNameTemplate)
-	hcSmPodName1 := fmt.Sprintf("%s-1", hcSmPodNameTemplate)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", sg0ReleaseName, opt.ClusterName, opt.DbName)
+	sg0HcSmPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", sg0ReleaseName, opt.ClusterName, opt.DbName)
+	sg1HcSmPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", sg1ReleaseName, opt.ClusterName, opt.DbName)
+	sg0HcSmPodName0 := fmt.Sprintf("%s-hotcopy-0", sg0HcSmPodTemplate)
+	sg1HcSmPodName0 := fmt.Sprintf("%s-hotcopy-0", sg1HcSmPodTemplate)
 
-	// Create 2 storage groups, each served by only one archive
-	k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "--",
-		"nuocmd", "add", "storage-group", "--db-name", opt.DbName, "--sg-name", "sg0", "--archive-id", "0")
-	k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "--",
-		"nuocmd", "add", "storage-group", "--db-name", opt.DbName, "--sg-name", "sg1", "--archive-id", "1")
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+
+	verifyStorageGroup := func(sgName string) {
+		// wait for archives to be added to the storage group
+		sg := testlib.AwaitStorageGroup(t, namespaceName, admin0, opt.DbName, sgName, 30*time.Second)
+		require.Equal(t, sg.State, "Available")
+		require.GreaterOrEqual(t, len(sg.ArchiveStates), 1)
+		require.GreaterOrEqual(t, len(sg.ProcessStates), 1)
+		require.GreaterOrEqual(t, len(sg.LeaderCandidates), 1)
+	}
+	verifyStorageGroup("sg0")
+	verifyStorageGroup("sg1")
 
 	// Populate some data partitioned and stored in each storage group
 	testlib.RunSQL(t, namespaceName, admin0, opt.DbName,
@@ -400,9 +422,8 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 		"INSERT INTO codes VALUES ('sg1', '2001')")
 
 	// Suspend the backup jobs and perform a backup
-	backupGroup0 := "group0"
-	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DomainName, opt.DbName, backupGroup0)
-	testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
+	testlib.SuspendDatabaseBackupJobs(t, namespaceName, opt.DomainName, opt.DbName, "all-sg")
+	testlib.BackupDatabase(t, namespaceName, sg0HcSmPodName0, opt.DbName, "full", "all-sg")
 
 	// Insert more rows
 	testlib.RunSQL(t, namespaceName, admin0, opt.DbName,
@@ -412,21 +433,21 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 
 	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 	go testlib.GetAppLog(t, namespaceName, tePodName, "_pre-restart", &corev1.PodLogOptions{Follow: true})
-	go testlib.GetAppLog(t, namespaceName, hcSmPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
-	go testlib.GetAppLog(t, namespaceName, hcSmPodName1, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, sg0HcSmPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, sg1HcSmPodName0, "_pre-restart", &corev1.PodLogOptions{Follow: true})
 
 	defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 
 	// Get SM pod logs if the test fails
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
-		testlib.GetAppLog(t, namespaceName, hcSmPodName0, "_post-restore", &corev1.PodLogOptions{})
-		testlib.GetAppLog(t, namespaceName, hcSmPodName1, "_post-restore", &corev1.PodLogOptions{})
+		testlib.GetAppLog(t, namespaceName, sg0HcSmPodName0, "_post-restore", &corev1.PodLogOptions{})
+		testlib.GetAppLog(t, namespaceName, sg1HcSmPodName0, "_post-restore", &corev1.PodLogOptions{})
 	})
 
 	// restore database to the latest backup
 	testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
-	testlib.AwaitPodLog(t, namespaceName, hcSmPodName0, "_post-restart")
-	testlib.AwaitPodLog(t, namespaceName, hcSmPodName1, "_post-restart")
+	testlib.AwaitPodLog(t, namespaceName, sg0HcSmPodName0, "_post-restart")
+	testlib.AwaitPodLog(t, namespaceName, sg1HcSmPodName0, "_post-restart")
 
 	// verify that the database does NOT contain the data from AFTER the backup
 	output, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "select sg, count(*) from codes group by sg")

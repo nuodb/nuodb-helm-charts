@@ -136,7 +136,7 @@ function execute_backup() {
 
       # update the list of known backup groups for this database
       group_list="$(nuocmd get value --key $NUODB_BACKUP_KEY/$db_name/backup-groups)"
-      if [ -z "$(echo "$group_list" | grep -o $backup_group)" ]; then
+      if [ -z "$(echo "$group_list" | grep -wo "$backup_group")" ]; then
          new_list="$group_list $backup_group"
 
          echo "$NUODB_BACKUP_KEY/$db_name/backup-groups = $new_list"

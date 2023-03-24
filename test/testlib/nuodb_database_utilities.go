@@ -50,13 +50,25 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 		opt.NrTePods = 1
 	}
 
+	if options.SetValues["database.te.enablePod"] == "false" {
+		opt.NrTePods = 0
+	}
+
 	opt.NrSmHotCopyPods, err = strconv.Atoi(options.SetValues["database.sm.hotCopy.replicas"])
 	if err != nil {
 		opt.NrSmHotCopyPods = 1
 	}
 
+	if options.SetValues["database.sm.hotCopy.enablePod"] == "false" {
+		opt.NrSmHotCopyPods = 0
+	}
+
 	opt.NrSmNoHotCopyPods, err = strconv.Atoi(options.SetValues["database.sm.noHotCopy.replicas"])
 	if err != nil {
+		opt.NrSmNoHotCopyPods = 0
+	}
+
+	if options.SetValues["database.sm.noHotCopy.enablePod"] == "false" {
 		opt.NrSmNoHotCopyPods = 0
 	}
 
@@ -192,8 +204,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 			AwaitPodUp(t, namespaceName, tePodName, readyTimeout)
 		}
 
-		// currently we don't render SM pods in the secondary releases
-		if opt.DbPrimaryRelease {
+		if opt.NrSmPods > 0 {
 			smPodName0 := GetPodName(t, namespaceName, smPodNameTemplate)
 			AddTeardown(TEARDOWN_DATABASE, func() {
 				pods, _ := findPods(t, namespaceName, smPodNameTemplate)
@@ -425,6 +436,52 @@ func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName s
 	return
 }
 
+func AwaitStorageGroup(t *testing.T, namespaceName, adminPod, dbName, sgName string, timeout time.Duration) *NuoDBStorageGroup {
+	var sg *NuoDBStorageGroup
+	Await(t, func() bool {
+		sg = GetStorageGroup(t, namespaceName, adminPod, dbName, sgName)
+		if len(sg.ArchiveStates) == 0 {
+			return false
+		}
+		for archiveId, state := range sg.ArchiveStates {
+			if state != "ADDED" {
+				t.Logf("Waiting for storage group sg=%s, archiveId=%s, state=%s",
+					sgName, archiveId, state)
+				return false
+			}
+		}
+		for nodeId, state := range sg.ProcessStates {
+			if state != "RUNNING" {
+				t.Logf("Waiting for process in storage group sg=%s, nodeId=%s, state=%s",
+					sgName, nodeId, state)
+				return false
+			}
+		}
+		return true
+	}, timeout)
+	return sg
+}
+
+func GetStorageGroup(t *testing.T, namespaceName, adminPod, dbName, sgName string) *NuoDBStorageGroup {
+	options := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
+		"nuocmd", "--show-json", "get", "storage-groups", "--db-name", dbName)
+	require.NoError(t, err, output)
+	err, sgs := UnmarshalStorageGroups(output)
+	require.NoError(t, err)
+	// the admin converts all storage group names to upper case
+	expectedSgName := strings.ToUpper(sgName)
+	var found *NuoDBStorageGroup
+	for _, sg := range sgs {
+		if sg.Name == expectedSgName {
+			found = &sg
+			break
+		}
+	}
+	require.NotNil(t, found, "Storage group sgName=%s, dbName=%s not found", sgName, dbName)
+	return found
+}
+
 func CreateQuickstartSchema(t *testing.T, namespaceName string, adminPod string) {
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 
@@ -638,6 +695,7 @@ func SuspendDatabaseBackupJobs(t *testing.T, namespaceName string, domain, dbNam
 			t.Logf("Suspending %s", cronJob)
 			k8s.RunKubectl(t, kubectlOptions, "patch", cronJob,
 				"-p", "{\"spec\" : {\"suspend\" : true }}")
+			DeleteJobPods(t, namespaceName, cronJob)
 		}
 	}
 }

@@ -243,8 +243,8 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 		group1ReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 		// all other Helm releases will be secondary releases with TEs only
 		databaseOptions.SetValues["database.primaryRelease"] = "false"
-		databaseOptions.SetValues["database.sm.hotCopy.replicas"] = "0"
-		databaseOptions.SetValues["database.sm.noHotCopy.replicas"] = "0"
+		databaseOptions.SetValues["database.sm.hotCopy.enablePod"] = "false"
+		databaseOptions.SetValues["database.sm.noHotCopy.enablePod"] = "false"
 		databaseOptions.SetValues["database.te.labels.tx-type"] = "TAP"
 		group2ReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 		opt := testlib.GetExtractedOptions(&databaseOptions)

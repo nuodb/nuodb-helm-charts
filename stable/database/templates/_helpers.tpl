@@ -497,3 +497,51 @@ Renders the name of the Secret for this database
 {{- define "database.secretName" -}}
 {{ .Values.admin.domain }}-{{ .Values.database.name }}
 {{- end -}}
+
+{{/*
+Renders the storage groups option for nuosm script
+*/}}
+{{- define "database.storageGroup.args" -}}
+{{- if .Values.database.sm.storageGroup }}
+{{- if .Values.database.sm.storageGroup.enabled }}
+{{- with .Values.database.sm.storageGroup.name }}
+{{- $invalid := list "ALL" "UNPARTITIONED" }}
+{{- if has (upper .) $invalid }}
+{{- fail (printf "Invalid storage group name: %s" .) }}
+{{- end }}
+{{- if contains " " (trim .) }}
+{{- fail (printf "Multiple storage group names provided: %s" .) }}
+{{- end }}
+{{- end }}
+- "--storage-groups"
+- {{ .Values.database.sm.storageGroup.name | default .Release.Name | trim | quote }}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Renders the storage group domain process label
+*/}}
+{{- define "database.storageGroup.label" -}}
+{{- if .Values.database.sm.storageGroup }}
+{{- if .Values.database.sm.storageGroup.enabled }}
+{{- printf "sg %s" (.Values.database.sm.storageGroup.name | default .Release.Name | trim) -}}
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Checks if the TE Deployment should be enabled. If the default value is absent,
+the TE Deployment is disabled if TPSG is enabled and this is a secondary release.
+*/}}
+{{- define "database.te.enablePod" -}}
+  {{- if kindIs "invalid" .Values.database.te.enablePod -}}
+    {{- if and (eq (include "defaultfalse" .Values.database.sm.storageGroup.enabled) "true") (eq (include "defaulttrue" .Values.database.primaryRelease) "false") -}}
+      {{- false -}}
+    {{- else -}}
+      {{- true -}}
+    {{- end -}}
+  {{- else -}}
+    {{- include "defaulttrue" .Values.database.te.enablePod -}}
+  {{- end -}}
+{{- end -}}

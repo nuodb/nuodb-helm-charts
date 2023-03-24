@@ -430,7 +430,28 @@ database:
     #Some clusters require longer readiness probe timeouts
     readinessTimeoutSeconds: 5
 
+    # Table Partitions and Storage Groups (TP/SG) is the mechanism by which a
+    # version of an SQL table row is stored only on a subset of Storage Managers
+    # (SMs). The "storageGroup" section configures the named Storage Group (SG)
+    # which the SMs installed with this Helm release will initially serve when
+    # their archives are created. The "UNPARTITIONED" storage group is
+    # implicitly added as it is served by every SM in the database. The
+    # information about served SGs is stored in the archive and may change over
+    # time. The SM will emit warning messages if there is a mismatch between the
+    # initially configured SG and the currently served SGs.
+    storageGroup: 
+      enabled: false
+      # The name of the storage group. Only alphanumeric and underscore ('_')
+      # characters are allowed. By default the Helm release name is used.
+      name: ""
+
   te:
+    # Provision Transaction Engine (TE) Deployment. By default, the TE
+    # Deployment is disabled if TP/SG is enabled and this is a "secondary"
+    # release.
+    #
+    # enablePod: true
+
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
     logPersistence:
       enabled: false

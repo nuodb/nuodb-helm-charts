@@ -305,18 +305,91 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
 
-	options := &helm.Options{
-		SetValues: map[string]string{},
-	}
+	t.Run("testTePodEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{},
+		}
 
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 
-	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
-		assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
-		assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
-	}
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
+			assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
+		}
+	})
 
+	t.Run("testTePodDisabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.te.enablePod": "false",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		assert.NotNil(t, err, "template should have failed")
+		assert.Contains(t, err.Error(), "could not find template templates/deployment.yaml in chart")
+	})
+
+	t.Run("testTePodDisabledWithStorageGroupSecondary", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.primaryRelease":          "false",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		assert.NotNil(t, err, "template should have failed")
+		assert.Contains(t, err.Error(), "could not find template templates/deployment.yaml in chart")
+	})
+
+	t.Run("testTePodDisabledWithStorageGroupPrimary", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
+			assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
+		}
+	})
+
+	t.Run("testTePodDisabledWithoutStorageGroupsSecondary", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.primaryRelease": "false",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Equal(t, "te", obj.Spec.Selector.MatchLabels["component"])
+			assert.Equal(t, "te", obj.Spec.Template.ObjectMeta.Labels["component"])
+		}
+	})
+
+	t.Run("testTePodBogus", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.te.enablePod": "foo",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		assert.NotNil(t, err, "template should have failed")
+		assert.Contains(t, err.Error(), "Invalid boolean value: foo")
+	})
 }
 
 func TestDatabaseOtherOptions(t *testing.T) {
@@ -1786,4 +1859,144 @@ func TestDatabaseTopologyConstraints(t *testing.T) {
 		expectedLabels := map[string]string{"group": "nuodb", "component": "te"}
 		verifyTopologyConstraints(obj.Name, obj.Spec.Template.Spec, expectedLabels)
 	}
+}
+
+func TestDatabaseStorageGroups(t *testing.T) {
+	t.Run("testStorageGroupEnabled", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.nohotCopy.replicas":   "1",
+				"database.sm.storageGroup.enabled": "true",
+			},
+		}
+
+		// SGs are passed to nuosm
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"SG1", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			args := obj.Spec.Template.Spec.Containers[0].Args
+			assert.True(t, testlib.ArgContains(args, "--storage-groups"))
+			assert.True(t, testlib.ArgContains(args, "SG1"))
+		}
+	})
+
+	t.Run("testStorageGroupWithName", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.nohotCopy.replicas":   "1",
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "SG1",
+			},
+		}
+
+		// SGs are passed to nuosm
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			args := obj.Spec.Template.Spec.Containers[0].Args
+			assert.True(t, testlib.ArgContains(args, "--storage-groups"))
+			assert.True(t, testlib.ArgContains(args, "SG1"))
+		}
+	})
+
+	t.Run("testStorageGroupUnpartitioned", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "unpartitioned",
+			},
+		}
+
+		// rendering fails
+		_, err := helm.RenderTemplateE(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Invalid storage group name: unpartitioned")
+
+		options = &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "UNPARTITIONED",
+			},
+		}
+
+		// rendering fails
+		_, err = helm.RenderTemplateE(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Invalid storage group name: UNPARTITIONED")
+	})
+
+	t.Run("testStorageGroupALL", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "all",
+			},
+		}
+
+		// rendering fails
+		_, err := helm.RenderTemplateE(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Invalid storage group name: all")
+
+		options = &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "ALL",
+			},
+		}
+
+		// rendering fails
+		_, err = helm.RenderTemplateE(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Invalid storage group name: ALL")
+	})
+
+	t.Run("testMultipleStorageGroupNames", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.storageGroup.enabled": "true",
+				"database.sm.storageGroup.name":    "sg1 sg2",
+			},
+		}
+
+		// rendering fails
+		_, err := helm.RenderTemplateE(t, options, helmChartPath,
+			"release-name", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Multiple storage group names provided: sg1 sg2")
+	})
+
+	t.Run("testStorageGroupLabel", func(t *testing.T) {
+		// Path to the helm chart we will test
+		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.noHotCopy.replicas":   "1",
+				"database.sm.storageGroup.enabled": "true",
+			},
+		}
+
+		// sg process label is passed to nuosm
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"SG1", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			args := obj.Spec.Template.Spec.Containers[0].Args
+			assert.True(t, testlib.ArgContains(args, "--labels"))
+			assert.True(t, testlib.ArgContains(args, "sg SG1"))
+		}
+	})
 }
