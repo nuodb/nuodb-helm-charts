@@ -257,6 +257,9 @@ selector. If archiveIds are specified, they take precedence over labels.
 {{- else }}
 - {{ range $opt, $val := .Values.restore.labels }} {{$opt}} {{$val}} {{- end}}
 {{- end -}}
+{{- else if .Values.restore.processFilter }}
+- "--process-filter"
+- {{ .Values.restore.processFilter | quote }}
 {{- end -}}
 {{- end -}}
 

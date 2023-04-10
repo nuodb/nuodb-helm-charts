@@ -334,6 +334,7 @@ database:
       backupGroups: {}
       #  cluster0-0:
       #    labels: "pod-name sm-database-nuodb-cluster0-demo-hotcopy-0"
+      #    processFilter: "label(pod-name sm-database-nuodb-cluster0-demo-hotcopy-0)"
       #    fullSchedule: "35 22 * * 6"
       #    incrementalSchedule: "35 22 * * 0-5"
       #    journalSchedule: "?/15 * * * *"

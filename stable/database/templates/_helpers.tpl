@@ -282,6 +282,18 @@ backup group labels or empty value (representing all HCSMs in the database).
 {{- end -}}
 
 {{/*
+Return process filter for a specific backup if one is defined.
+*/}}
+{{- define "hotcopy.group.processFilter" -}}
+  {{- if .Values.database.sm.hotCopy.backupGroups -}}
+    {{- $group := index .Values.database.sm.hotCopy.backupGroups (print .backupGroup) -}}
+    {{- if $group -}}
+    {{- default "" $group.processFilter -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
 Import user defined ENV vars
 */}}
 {{- define "database.env" }}

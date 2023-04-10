@@ -14,6 +14,7 @@
 #   --auto      - automatically start the restore operation ( true | false )
 #   --labels         - additional arbitrary labels to select the SMs for restore
 #   --archive-ids    - set of archive ids which will be restored
+#   --process-filter - LBQuery expression to filter the set of archive ids which will be restored
 #   --manual         - request manual archives restore ( true | false )
 
 [ "$NUODB_DEBUG" = "verbose" ] && set -X
@@ -96,6 +97,7 @@ restore_source=":latest"
 auto="false"
 labels=""
 archive_ids=""
+process_filter=""
 backup_group=""
 backup_index=""
 
@@ -133,11 +135,15 @@ do
            archive_ids="$1"; shift;;
         "--archive-ids="* )
            archive_ids="${opt#*=}";;
+        "--process-filter" )
+           process_filter="$1"; shift;;
+        "--process-filter="* )
+           process_filter="${opt#*=}";;
         "--manual" )
            manual="$1"; shift;;
         "--manual="* )
            manual="${opt#*=}";;
-        *) echo >&2 "Invalid nuorestore option: $opt ($@)"; exit 1;;
+        *) echo >&2 "Invalid nuorestore option: $opt ($*)"; exit 1;;
    esac
 done
 
@@ -177,10 +183,10 @@ fi
 
 if isRestoreRequestSupported; then
    # Use nuodocker to place restore request
-   additional_args=""
+   additional_args=()
    restore_source_encoded="$(printf "%s" "${restore_source}" | base64 -w 0)"
    user_data="restore_source_encoded='${restore_source_encoded}'"
-   if [ -z "$labels" ] && [ -z "$archive_ids" ]; then
+   if [ -z "$labels" ] && [ -z "$archive_ids" ] && [ -z "$process_filter" ]; then
       if [ -n "$backup_group" ] && [ -n "$backup_index" ]; then
          # no archive selection was provided by the user but a special restore
          # source has been used; fetch the pods participated in the backup and
@@ -195,12 +201,13 @@ if isRestoreRequestSupported; then
          fi
       fi
       if [ -z "$labels" ] && ! isUrl "$restore_source"; then
-         die 1 "Please select the SMs to be restored using either --labels or --archive-ids"
+         die 1 "Please select the SMs to be restored using one of '--labels', '--archive-ids' or '--process-filter'"
       fi
    fi
-   [ -n "$labels" ] && additional_args="${additional_args} --labels ${labels}"
-   [ -n "$archive_ids" ] && additional_args="${additional_args} --archive-ids ${archive_ids}"
-   [ "$manual" == "true" ] && additional_args="${additional_args} --manual"
+   [ -n "$labels" ] && IFS=" " read -r -a label_args <<< "--labels ${labels}" && additional_args+=("${label_args[@]}")
+   [ -n "$archive_ids" ] && IFS=" " read -r -a archive_args <<< "--archive-ids ${archive_ids}" && additional_args+=("${archive_args[@]}")
+   [ -n "$process_filter" ] && additional_args+=("--process-filter" "$process_filter")
+   [ "$manual" == "true" ] && additional_args+=("--manual")
    if [ -n "$restore_credentials" ]; then
       restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64 -w 0)"
       user_data="${user_data};restore_credentials_encoded='${restore_credentials_encoded}'"
@@ -209,11 +216,11 @@ if isRestoreRequestSupported; then
       user_data="${user_data};strip_levels='${strip_levels}'"
    fi
 
-   log "restore_type=${restore_type}; restore_source=${restore_source}; arguments=${additional_args}"
+   log "restore_type=${restore_type}; restore_source=${restore_source}; arguments=${additional_args[*]}"
    nuodocker request restore \
       --db-name "$db_name" \
       --type "$restore_type" \
-      --user-data "${user_data}" $additional_args
+      --user-data "${user_data}" "${additional_args[@]}"
    rc=$?
    if [ $rc -ne 0 ]; then
       die $rc "Restore request failed"

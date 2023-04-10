@@ -1874,11 +1874,11 @@ func TestDatabaseStorageGroups(t *testing.T) {
 
 		// SGs are passed to nuosm
 		output := helm.RenderTemplate(t, options, helmChartPath,
-			"SG1", []string{"templates/statefulset.yaml"})
+			"sg1", []string{"templates/statefulset.yaml"})
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			args := obj.Spec.Template.Spec.Containers[0].Args
 			assert.True(t, testlib.ArgContains(args, "--storage-groups"))
-			assert.True(t, testlib.ArgContains(args, "SG1"))
+			assert.True(t, testlib.ArgContains(args, "sg1"))
 		}
 	})
 
@@ -1889,7 +1889,7 @@ func TestDatabaseStorageGroups(t *testing.T) {
 			SetValues: map[string]string{
 				"database.sm.nohotCopy.replicas":   "1",
 				"database.sm.storageGroup.enabled": "true",
-				"database.sm.storageGroup.name":    "SG1",
+				"database.sm.storageGroup.name":    "sg1",
 			},
 		}
 
@@ -1899,7 +1899,7 @@ func TestDatabaseStorageGroups(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			args := obj.Spec.Template.Spec.Containers[0].Args
 			assert.True(t, testlib.ArgContains(args, "--storage-groups"))
-			assert.True(t, testlib.ArgContains(args, "SG1"))
+			assert.True(t, testlib.ArgContains(args, "sg1"))
 		}
 	})
 
@@ -1992,11 +1992,11 @@ func TestDatabaseStorageGroups(t *testing.T) {
 
 		// sg process label is passed to nuosm
 		output := helm.RenderTemplate(t, options, helmChartPath,
-			"SG1", []string{"templates/statefulset.yaml"})
+			"sg1", []string{"templates/statefulset.yaml"})
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			args := obj.Spec.Template.Spec.Containers[0].Args
 			assert.True(t, testlib.ArgContains(args, "--labels"))
-			assert.True(t, testlib.ArgContains(args, "sg SG1"))
+			assert.True(t, testlib.ArgContains(args, "sg sg1"))
 		}
 	})
 }
