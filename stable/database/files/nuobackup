@@ -274,9 +274,11 @@ backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
 # determine the HCSMs selector based on the input
 if [ -n "$labels" ]; then
    selector+=("--labels" "$labels")
-elif [ -n "$process_filter" ]; then
+fi
+if [ -n "$process_filter" ]; then
    selector+=("--process-filter" "$process_filter")
-else
+fi
+if [ "${#selector[@]}" -eq 0 ]; then
    # include all HCSMs if no explicit selection is provided
    selector+=("--labels" "role hotcopy")
 fi

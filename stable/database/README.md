@@ -238,7 +238,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.backupGroupPrefix` | Prefix for the automatically generated backup groups | `{{ .Values.cloud.cluster.name }}` |
 | `sm.hotCopy.backupGroups` | Backup groups configuration. By default a backup group per HCSM is created automatically | `{}` |
 | `sm.hotCopy.backupGroups.<name>.labels` | Space separated process labels used to select the Storage Managers which are part of this backup group. _Any_ label key and value should match for the SM to be selected | `nil` |
-| `sm.hotCopy.backupGroups.<name>.processFilter` | LBQuery expression used to select the Storage Managers which are part of this backup group. For more information on LBQuery expression syntax, see <https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#lbquery-expression-syntax>. | `nil` |
+| `sm.hotCopy.backupGroups.<name>.processFilter` | [LBQuery expression](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#lbquery-expression-syntax) used to select the Storage Managers which are part of this backup group. | `nil` |
 | `sm.hotCopy.backupGroups.<name>.fullSchedule` | cron schedule for _FULL_ hot copy performed by this backup group. If not defined the `sm.hotCopy.fullSchedule` setting will be used | `nil` |
 | `sm.hotCopy.backupGroups.<name>.incrementalSchedule` | cron schedule for _INCREMENTAL_ hot copy performed by this backup group. If not defined the `sm.hotCopy.incrementalSchedule` setting will be used | `nil` |
 | `sm.hotCopy.backupGroups.<name>.journalSchedule` | cron schedule for _JOURNAL_ hot copy performed by this backup group. If not defined the `sm.hotCopy.journalBackup.journalSchedule` setting will be used | `nil` |
