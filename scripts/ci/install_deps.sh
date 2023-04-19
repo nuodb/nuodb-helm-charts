@@ -20,6 +20,34 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   sudo apt-get update
   sudo apt-get install -y conntrack
 
+  # Install crictl required by Kubernetes v1.26.3 and above
+  : "${CRICTL_VERSION:=$KUBERNETES_VERSION}"
+  wget "https://github.com/kubernetes-sigs/cri-tools/releases/download/v${CRICTL_VERSION}/crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz"
+  sudo tar zxvf "crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz" -C /usr/local/bin
+  rm -f "crictl-v${CRICTL_VERSION}-linux-amd64.tar.gz"
+
+  # Install latest Golang to compile cri-dockerd
+  wget https://storage.googleapis.com/golang/getgo/installer_linux
+  chmod +x ./installer_linux
+  ./installer_linux
+  export PATH=$HOME/.go/bin:$PATH
+  export PATH=$HOME/.go_workspace:/usr/local/go_workspace/bin:$PATH
+
+  # Install cri-dockerd shim required by Kubernetes v1.24 and above
+  : "${CRIDOCKERD_VERSION:="0.3.2"}"
+  git clone -b "v${CRIDOCKERD_VERSION}" https://github.com/Mirantis/cri-dockerd.git
+  cd cri-dockerd
+  mkdir -p bin
+  go build -o bin/cri-dockerd
+  mkdir -p /usr/local/bin
+  sudo install -o root -g root -m 0755 bin/cri-dockerd /usr/local/bin/cri-dockerd
+  sudo cp -a packaging/systemd/* /etc/systemd/system
+  sudo sed -i -e 's,/usr/bin/cri-dockerd,/usr/local/bin/cri-dockerd,' /etc/systemd/system/cri-docker.service
+  sudo systemctl daemon-reload
+  sudo systemctl enable cri-docker.service
+  sudo systemctl enable --now cri-docker.socket
+  cd ..
+
   # libncurses5 is needed for nuosql
   sudo apt-get install -y libncurses5 libncursesw5
 
@@ -27,7 +55,10 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
 
   # start minikube
-  minikube start --vm-driver=none --kubernetes-version=v"${KUBERNETES_VERSION}"
+  minikube start \
+    --vm-driver=none \
+    --kubernetes-version=v"${KUBERNETES_VERSION}" \
+    --network-plugin=cni --cni=calico
   minikube status
   kubectl cluster-info
 
