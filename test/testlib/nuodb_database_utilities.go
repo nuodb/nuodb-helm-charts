@@ -275,7 +275,13 @@ func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName st
 	if upgradeOptions.TePodShouldGetRecreated {
 		AwaitPodObjectRecreated(t, namespaceName, tePod, 30*time.Second)
 	}
-	AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
+	// the TE ReplicaSet can be recreated with a different name so fetch the pod
+	// using a template continuously
+	Await(t, func() bool {
+		pod, err := findPod(t, namespaceName, tePodNameTemplate)
+		require.NoError(t, err, tePodNameTemplate)
+		return arePodConditionsMet(pod, corev1.PodReady, corev1.ConditionTrue)
+	}, 180*time.Second)
 
 	if upgradeOptions.SmPodShouldGetRecreated {
 		AwaitPodObjectRecreated(t, namespaceName, smPod0, 30*time.Second)
