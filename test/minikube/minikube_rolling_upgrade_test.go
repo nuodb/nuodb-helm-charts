@@ -25,7 +25,7 @@ import (
 	v12 "k8s.io/api/core/v1"
 )
 
-const OLD_RELEASE = "4.1.1"
+const OLD_RELEASE = "4.2"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {
@@ -94,16 +94,16 @@ func TestAdminReadinessProbe(t *testing.T) {
 func TestAdminReadinessProbeFallback(t *testing.T) {
 	// 'nuomcd check server' (singular) is unsupported for versions <=4.1.1;
 	// this test verifies the fallback behavior of the readiness probe
+	tag := "4.1.1"
 
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
-	// this test uses OLD_RELEASE, but any version <=4.1.1 will do
 	helmOptions := helm.Options{
 		SetValues: map[string]string{
 			"nuodb.image.registry":   "docker.io",
 			"nuodb.image.repository": "nuodb/nuodb-ce",
-			"nuodb.image.tag":        OLD_RELEASE,
+			"nuodb.image.tag":        tag,
 			"admin.bootstrapServers": "0",
 		},
 	}
@@ -117,7 +117,7 @@ func TestAdminReadinessProbeFallback(t *testing.T) {
 	// make sure 'nuocmd check server' fails
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "-c", "admin", "--", "nuocmd", "check", "server")
-	require.Error(t, err, "Expected 'nuocmd check server' to fail on %s: %s", OLD_RELEASE, output)
+	require.Error(t, err, "Expected 'nuocmd check server' to fail on %s: %s", tag, output)
 	// make sure exit code is 2 to indicate parse error
 	code, err := shell.GetExitCodeForRunCommandError(err)
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestAdminReadinessProbeFallback(t *testing.T) {
 
 	// make sure readinessprobe is successful
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "-c", "admin", "--", "readinessprobe")
-	require.NoError(t, err, "readinessprobe failed on %s: %s", OLD_RELEASE, output)
+	require.NoError(t, err, "readinessprobe failed on %s: %s", tag, output)
 }
 
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {

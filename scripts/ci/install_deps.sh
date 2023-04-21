@@ -18,7 +18,6 @@ mkdir -p $TEST_RESULTS # create the test results directory
 
 if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   sudo apt-get update
-  sudo apt-get install -y conntrack
 
   # libncurses5 is needed for nuosql
   sudo apt-get install -y libncurses5 libncursesw5
@@ -27,9 +26,25 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
 
   # start minikube
-  minikube start --vm-driver=none --kubernetes-version=v"${KUBERNETES_VERSION}"
+  minikube start --vm-driver=docker --kubernetes-version=v"${KUBERNETES_VERSION}" --cpus=max --memory=max
   minikube status
   kubectl cluster-info
+
+  # Inject database limits as the default CPUs limit of 8 is too big and causes
+  # problems with minikube docker driver
+  cat <<EOF > valuesInject.yaml
+database:
+  te:
+    resources:
+      limits:
+        cpu: 2
+        memory: 2Gi
+  sm:
+    resources:
+      limits:
+        cpu: 2
+        memory: 2Gi
+EOF
 
   # Configure DNS entries for Ingress testing
   ip=$(minikube ip)
