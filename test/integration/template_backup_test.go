@@ -13,13 +13,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func verifyBackupResourceLabels(t *testing.T, releaseName string, options *helm.Options, obj metav1.Object) {
+func verifyBackupResourceLabels(t *testing.T, options *helm.Options, obj metav1.Object) {
 	msg, ok := testlib.MapContains(obj.GetLabels(), map[string]string{
 		"subgroup":     "backup",
 		"backup-group": "cluster0-0",
 	})
 	require.Truef(t, ok, "Backup resource labels do not match for resource %s: %s", obj.GetName(), msg)
-	verifyDatabaseResourceLabels(t, "release-name", options, obj)
 }
 
 func TestDatabaseBackupCronJobRenders(t *testing.T) {
@@ -310,6 +309,7 @@ func TestDatabaseBackupGroupsDefault(t *testing.T) {
 			"--labels",
 			expectedBackupLabels,
 		})
+		assert.Empty(t, obj.Spec.JobTemplate.ObjectMeta.Annotations["backup-group-process-filter"])
 		expectedOperation := "full-hotcopy"
 		expectedSchedule := options.SetValues["database.sm.hotCopy.fullSchedule"]
 		if strings.Contains(obj.Name, "incremental") {
@@ -338,7 +338,7 @@ func TestDatabaseBackupGroupsCustom(t *testing.T) {
 			"database.sm.hotCopy.backupGroups.aws.labels":              "cloud aws",
 			"database.sm.hotCopy.backupGroups.aws.fullSchedule":        "35 22 * * 1",
 			"database.sm.hotCopy.backupGroups.aws.incrementalSchedule": "35 22 * * 2-7",
-			"database.sm.hotCopy.backupGroups.gcp.labels":              "cloud gcp",
+			"database.sm.hotCopy.backupGroups.gcp.processFilter":       "label(cloud gcp)",
 		},
 	}
 
@@ -358,11 +358,12 @@ func TestDatabaseBackupGroupsCustom(t *testing.T) {
 				"cloud aws",
 			})
 		} else {
-			assert.Equal(t, "cloud gcp", obj.Spec.JobTemplate.ObjectMeta.Annotations["backup-group-labels"])
+			assert.Equal(t, "label(cloud gcp)", obj.Spec.JobTemplate.ObjectMeta.Annotations["backup-group-process-filter"])
 			assert.Subset(t, backupContainer.Args, []string{
-				"--labels",
-				"cloud gcp",
+				"--process-filter",
+				"label(cloud gcp)",
 			})
+			assert.Empty(t, obj.Spec.JobTemplate.ObjectMeta.Annotations["backup-group-labels"])
 		}
 		expectedSchedule := options.SetValues["database.sm.hotCopy.fullSchedule"]
 		if backupGroup == "aws" {
@@ -396,8 +397,10 @@ func TestDatabaseBackupResourceLabels(t *testing.T) {
 
 	// verify that default value for timeout is rendered
 	for _, obj := range testlib.SplitAndRenderCronJob(t, output, 3) {
-		verifyBackupResourceLabels(t, "release-name", options, &obj)
-		verifyBackupResourceLabels(t, "release-name", options, &obj.Spec.JobTemplate)
+		verifyDatabaseResourceLabels(t, "release-name", options, &obj)
+		verifyBackupResourceLabels(t, options, &obj)
+		verifyDatabaseResourceLabels(t, "release-name", options, &obj.Spec.JobTemplate)
+		verifyBackupResourceLabels(t, options, &obj.Spec.JobTemplate)
 	}
 }
 

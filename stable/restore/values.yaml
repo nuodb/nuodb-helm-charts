@@ -153,15 +153,24 @@ restore:
 
   # Complete set of archiveIds that should be restored which then defines the
   # new state of the database upon restore. By default all archive IDs are
-  # selected. Either `labels` or `archiveIds` should be specified. The setting
-  # works with NuoDB 4.2+.
+  # selected. One of `labels`, `archiveIds` or `processFilter` should be
+  # specified. The setting works with NuoDB 4.2+.
   archiveIds: []
 
   # Process labels used to filter the complete set of archiveIds that should be
   # restored which then defines the new state of the database upon restore. By
-  # default all SM processes in the database are selected. Either `labels` or
-  # `archiveIds` should be specified. The setting works with NuoDB 4.2+.
+  # default all SM processes in the database are selected. One of `labels`,
+  # `archiveIds` or `processFilter` should be specified. The setting works with
+  # NuoDB 4.2+.
   labels: ""
+
+  # LBQuery expression used to filter the complete set of archiveIds that should
+  # be restored which then defines the new state of the database upon restore.
+  # By default all SM processes in the database are selected. One of `labels`,
+  # `archiveIds` or `processFilter` should be specified. The setting works with
+  # NuoDB 4.2.5+. For more information on LBQuery expression syntax, see
+  # https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/#lbquery-expression-syntax
+  processFilter: ""
 
   # If set to "true", archives restore should be done manually once the SM pod
   # is started. The engine startup will block waiting for the user to complete

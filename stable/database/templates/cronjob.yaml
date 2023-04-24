@@ -13,6 +13,7 @@
 {{- range $i, $backupGroup := $backupGroups -}}
   {{- with $globalScope }}
     {{ $backupGroupLabels := include "hotcopy.group.labels" (merge (dict "backupGroup" $backupGroup) .) }}
+    {{ $backupGroupProcessFilter := include "hotcopy.group.processFilter" (merge (dict "backupGroup" $backupGroup) .) }}
 ---
 apiVersion: {{ include "cronjob.apiVersion" . }}
 kind: CronJob
@@ -32,6 +33,7 @@ spec:
       annotations:
         operation: full-hotcopy
         backup-group-labels: "{{ $backupGroupLabels }}"
+        backup-group-process-filter: "{{ $backupGroupProcessFilter }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
@@ -60,6 +62,9 @@ spec:
             {{- if $backupGroupLabels }}
             - "--labels"
             - "{{ $backupGroupLabels }}"
+            {{- else if $backupGroupProcessFilter }}
+            - "--process-filter"
+            - "{{ $backupGroupProcessFilter }}"
             {{- end }}
             env:
             - name: NODE_NAME
@@ -137,6 +142,7 @@ spec:
       annotations:
         operation: incremental-hotcopy
         backup-group-labels: "{{ $backupGroupLabels }}"
+        backup-group-process-filter: "{{ $backupGroupProcessFilter }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
@@ -164,6 +170,9 @@ spec:
             {{- if $backupGroupLabels }}
             - "--labels"
             - "{{ $backupGroupLabels }}"
+            {{- else if $backupGroupProcessFilter }}
+            - "--process-filter"
+            - "{{ $backupGroupProcessFilter }}"
             {{- end }}
             env:
             - name: NODE_NAME
@@ -239,6 +248,7 @@ spec:
       annotations:
         operation: journal-hotcopy
         backup-group-labels: "{{ $backupGroupLabels }}"
+        backup-group-process-filter: "{{ $backupGroupProcessFilter }}"
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
         subgroup: backup
@@ -266,6 +276,9 @@ spec:
             {{- if $backupGroupLabels }}
             - "--labels"
             - "{{ $backupGroupLabels }}"
+            {{- else if $backupGroupProcessFilter }}
+            - "--process-filter"
+            - "{{ $backupGroupProcessFilter }}"
             {{- end }}
             env:
             - name: NODE_NAME

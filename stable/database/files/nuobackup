@@ -22,12 +22,13 @@
 #
 
 # args are:
-#   --type     - backup type: ( full | incremental | journal | report-latest | report-groups | report-backups )
-#   --db-name  - name of the database to backup
-#   --group    - backup group name for the selected the SMs to backup. Often the datacentre or cloud name
-#   --labels   - process labels to select the SMs to backup
-#   --timeout  - timeout (in seconds) to synchronously wait for the backup to complete. 0 => wait forever.
-#   --backup-root - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
+#   --type           - backup type: ( full | incremental | journal | report-latest | report-groups | report-backups )
+#   --db-name        - name of the database to backup
+#   --group          - backup group name for the selected the SMs to backup. Often the datacentre or cloud name
+#   --labels         - process labels to select the SMs to backup
+#   --process-filter - LBQuery expression used to select the SMs to backup
+#   --timeout        - timeout (in seconds) to synchronously wait for the backup to complete. 0 => wait forever.
+#   --backup-root    - directory tree to create the backupsets inside - eg /var/opt/nuodb/backup
 
 # for debugging...
 [ "$NUODB_DEBUG" = "verbose" ] && set -x 
@@ -39,6 +40,8 @@ backup_type="full"
 db_name=$DB_NAME
 backup_group=""
 labels=""
+process_filter=""
+selector=()
 timeout=""
 backup_root=$BACKUP_DIR
 backup_database_output=""
@@ -46,7 +49,7 @@ backup_database_output=""
 function get_current_backup() {
    output=$( nuodocker get current-backup \
       --db-name "${db_name}" \
-      --labels "${labels}" 2>/dev/null)
+      "${selector[@]}" 2>/dev/null)
    echo "$output" | head -1 | awk '{print $2}'
 }
 
@@ -68,7 +71,7 @@ function execute_backup() {
       --db-name "${db_name}" \
       --type "${type}" \
       --backup-root "${backup_root}" \
-      --labels "${labels}" \
+      "${selector[@]}" \
       "${extra_flags[@]}" 2>&1)
 
    retval=$?
@@ -91,7 +94,7 @@ function execute_backup() {
    if [ "$type" = "full" ] && [ -n "$backup_group" ]; then
       current_backup=$(nuodocker get current-backup \
          --db-name "${db_name}" \
-         --labels "${labels}" 2>/dev/null)
+         "${selector[@]}" 2>/dev/null)
       processes=$(nuocmd get processes --db-name "${db_name}")
       exited_processes=$(nuocmd get processes --db-name "${db_name}" --exited)
 
@@ -154,7 +157,7 @@ function full_exist() {
 
    error="$( nuodocker get current-backup \
       --db-name "${db_name}" \
-      --labels "${labels}" 2>&1)"
+      "${selector[@]}" 2>&1)"
    if [ $? -ne 0 ] && echo "$error" | grep -q "No existing backup path found"; then
       # Check if full backup has been started already for all archiveIds. It
       # won't be the case in the following scenarios:
@@ -251,6 +254,10 @@ do
            labels="$1"; shift;;
         "--labels="* )
            labels="${opt#*=}";;
+        "--process-filter" )
+           process_filter="$1"; shift;;
+        "--process-filter="* )
+           process_filter="${opt#*=}";;
         "--timeout" )
            timeout="$1"; shift;;
         "--timeout="* )
@@ -264,8 +271,17 @@ do
 done
 
 backup_type=$(echo $backup_type | tr '[:upper:]' '[:lower:]')
-# include all HCSMs if no labels are provided
-[ -z "$labels" ] && labels="role hotcopy"
+# determine the HCSMs selector based on the input
+if [ -n "$labels" ]; then
+   selector+=("--labels" "$labels")
+fi
+if [ -n "$process_filter" ]; then
+   selector+=("--process-filter" "$process_filter")
+fi
+if [ "${#selector[@]}" -eq 0 ]; then
+   # include all HCSMs if no explicit selection is provided
+   selector+=("--labels" "role hotcopy")
+fi
 # Wait forever for a backup to complete if timeout is set to 0
 [ "$timeout" == "0" ] && timeout="525600"
 
