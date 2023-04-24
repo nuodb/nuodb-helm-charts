@@ -279,7 +279,10 @@ func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName st
 	// using a template continuously
 	Await(t, func() bool {
 		pod, err := findPod(t, namespaceName, tePodNameTemplate)
-		require.NoError(t, err, tePodNameTemplate)
+		if err != nil {
+			t.Logf("%s: %s", err.Error(), tePodNameTemplate)
+			return false
+		}
 		return arePodConditionsMet(pod, corev1.PodReady, corev1.ConditionTrue)
 	}, 180*time.Second)
 
