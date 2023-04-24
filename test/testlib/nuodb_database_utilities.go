@@ -275,7 +275,16 @@ func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName st
 	if upgradeOptions.TePodShouldGetRecreated {
 		AwaitPodObjectRecreated(t, namespaceName, tePod, 30*time.Second)
 	}
-	AwaitPodUp(t, namespaceName, tePodName, 180*time.Second)
+	// the TE ReplicaSet can be recreated with a different name so fetch the pod
+	// using a template continuously
+	Await(t, func() bool {
+		pod, err := findPod(t, namespaceName, tePodNameTemplate)
+		if err != nil {
+			t.Logf("%s: %s", err.Error(), tePodNameTemplate)
+			return false
+		}
+		return arePodConditionsMet(pod, corev1.PodReady, corev1.ConditionTrue)
+	}, 180*time.Second)
 
 	if upgradeOptions.SmPodShouldGetRecreated {
 		AwaitPodObjectRecreated(t, namespaceName, smPod0, 30*time.Second)
@@ -413,26 +422,29 @@ func GetLatestBackup(t *testing.T, namespaceName string, podName string,
 	return backupset
 }
 
-func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName string, numExpected int, numExpectedRemoved int) (archives []NuoDBArchive, removedArchives []NuoDBArchive) {
+func GetArchives(t *testing.T, namespaceName string, adminPod string, dbName string) (archives []NuoDBArchive, removedArchives []NuoDBArchive) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
-	// check archives
+	// get archives
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName)
 	require.NoError(t, err, output)
-
 	err, archives = UnmarshalArchives(output)
 	require.NoError(t, err)
-	require.Equal(t, numExpected, len(archives), output)
 
-	// check removed archives
+	// get removed archives
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "-c", "admin", "--",
 		"nuocmd", "--show-json", "get", "archives", "--db-name", dbName, "--removed")
 	require.NoError(t, err, output)
-
 	err, removedArchives = UnmarshalArchives(output)
 	require.NoError(t, err)
-	require.Equal(t, numExpectedRemoved, len(removedArchives), output)
+	return
+}
+
+func CheckArchives(t *testing.T, namespaceName string, adminPod string, dbName string, numExpected int, numExpectedRemoved int) (archives []NuoDBArchive, removedArchives []NuoDBArchive) {
+	archives, removedArchives = GetArchives(t, namespaceName, adminPod, dbName)
+	require.Equal(t, numExpected, len(archives), archives)
+	require.Equal(t, numExpectedRemoved, len(removedArchives), removedArchives)
 	return
 }
 

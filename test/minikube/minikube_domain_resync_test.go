@@ -296,9 +296,9 @@ func TestDomainResync(t *testing.T) {
 		testlib.DeletePVC(t, namespaceName, claimName)
 	}
 	testlib.Await(t, func() bool {
-		testlib.CheckArchives(t, namespaceName, admin0, "demo", 1, 0)
-		return true
-	}, 300*time.Second)
+		archives, removedArchives := testlib.GetArchives(t, namespaceName, admin0, "demo")
+		return len(archives) == 1 && len(removedArchives) == 0
+	}, 120*time.Second)
 }
 
 func TestLoadBalancerConfigurationFullResync(t *testing.T) {
