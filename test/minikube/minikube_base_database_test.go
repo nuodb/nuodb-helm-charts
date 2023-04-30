@@ -13,7 +13,6 @@ import (
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 
-	"github.com/Masterminds/semver"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
@@ -402,15 +401,19 @@ func TestKubernetesRestrictedDatabase(t *testing.T) {
 	options := helm.Options{
 		SetValues: map[string]string{
 			"admin.initContainers.runInitDisk":                 "false",
-			"admin.resources.requests.cpu":                     "256m",
-			"admin.resources.requests.memory":                  "512Mi",
 			"admin.securityContext.enabledOnContainer":         "true",
+			"admin.securityContext.readOnlyRootFilesystem":     "true",
 			"admin.securityContext.capabilities.drop[0]":       "CAP_NET_RAW",
 			"admin.securityContext.capabilities.drop[1]":       "ALL",
+			"admin.securityContext.runAsNonRootGroup":          "true",
+			"admin.resources.requests.cpu":                     "256m",
+			"admin.resources.requests.memory":                  "512Mi",
 			"database.initContainers.runInitDisk":              "false",
 			"database.securityContext.enabledOnContainer":      "true",
+			"database.securityContext.readOnlyRootFilesystem":  "true",
 			"database.securityContext.capabilities.drop[0]":    "CAP_NET_RAW",
 			"database.securityContext.capabilities.drop[1]":    "ALL",
+			"database.securityContext.runAsNonRootGroup":       "true",
 			"database.sm.resources.requests.cpu":               "256m",
 			"database.sm.resources.requests.memory":            testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":               "256m",
@@ -420,17 +423,31 @@ func TestKubernetesRestrictedDatabase(t *testing.T) {
 		},
 	}
 
-	testlib.RunOnNuoDBVersionCondition(t, ">4.2.3", func(version *semver.Version) {
-		options.SetValues["admin.securityContext.runAsNonRootGroup"] = "true"
-		options.SetValues["database.securityContext.runAsNonRootGroup"] = "true"
-	})
-
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+	adminStatefulSet := helmChartReleaseName + "-nuodb-cluster0"
+	admin0 := adminStatefulSet + "-0"
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-	testlib.StartDatabase(t, namespaceName, admin0, &options)
+	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
+	smPodNameTemplate := fmt.Sprintf("sm-%s", databaseReleaseName)
+	tePodNameTemplate := fmt.Sprintf("te-%s", databaseReleaseName)
+
+	// Check that root filesystem is read-only for all pods
+	for _, pod := range testlib.FindAllPodsInSchema(t, namespaceName) {
+		var container string
+		if strings.Contains(pod.Name, adminStatefulSet) {
+			container = "admin"
+		} else if strings.Contains(pod.Name, smPodNameTemplate) || strings.Contains(pod.Name, tePodNameTemplate) {
+			container = "engine"
+		}
+
+		// Try to remove nuodb executable and check that this fails
+		k8sOptions := &k8s.KubectlOptions{Namespace: namespaceName}
+		output, err := k8s.RunKubectlAndGetOutputE(t, k8sOptions, "exec", pod.Name, "-c", container, "--", "rm", "-f", "/opt/nuodb/bin/nuodb")
+		require.Error(t, err, "Expected error, but found output:\n---\n%s", output)
+		require.Contains(t, err.Error(), "rm: cannot remove '/opt/nuodb/bin/nuodb': Read-only file system")
+	}
 
 	t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 }

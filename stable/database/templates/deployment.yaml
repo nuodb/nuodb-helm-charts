@@ -71,8 +71,14 @@ spec:
           - -c
           - find /mnt/* -maxdepth 1 -not \( -perm -0770 -user 1000 \) -exec chmod -R ug+rwx {} \; -exec chown -R 1000 {} \; -exec echo {} \;
         volumeMounts:
+        {{- if eq (include "defaultfalse" .Values.database.te.logPersistence.enabled) "true" }}
         - name: log-volume
           mountPath: /mnt/logdir
+        {{- end }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.te)) "true" }}
+        - name: eph-volume
+          mountPath: /mnt/eph
+        {{- end }}
         {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDiskAsRoot) "true" }}
         securityContext:
           runAsUser: 0
@@ -139,8 +145,18 @@ spec:
           subPath: {{ $key }}
         {{- end -}}
         {{- end }}
-        - name: log-volume
-          mountPath: /var/log/nuodb
+        - mountPath: /var/log/nuodb
+          {{- if eq (include "defaultfalse" .Values.database.te.logPersistence.enabled) "true" }}
+          name: log-volume
+          {{- else }}
+          name: eph-volume
+          subPath: log
+          {{- end }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.te)) "true" }}
+        - name: eph-volume
+          mountPath: /tmp
+          subPath: tmp
+        {{- end }}
         - name: nuote
           mountPath: /usr/local/bin/nuote
           subPath: nuote
@@ -171,7 +187,7 @@ spec:
           # the TE becomes unready if it does not start within 5 minutes = 30s + 5s*54
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
-      {{- include "nuodb.sidecar" . | nindent 6 }}
+      {{- include "nuodb.sidecar" (list . .Values.database.te) | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
         {{- include "nuodb.sidecar.volumes" . | nindent 8 }}
@@ -180,12 +196,14 @@ spec:
           configMap:
             name: {{ template "database.fullname" . }}-configuration
         {{- end }}
+        {{- if eq (include "defaultfalse" .Values.database.te.logPersistence.enabled) "true" }}
         - name: log-volume
-        {{- if eq (include "defaultfalse" .Values.database.te.logPersistence.enabled) "false" }}
-          emptyDir: {}
-        {{- else }}
           persistentVolumeClaim:
             claimName: {{ template "database.fullname" . }}-log-te-volume
+        {{- end }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.te)) "true" }}
+        - name: eph-volume
+          {{- include "database.ephemeralVolume" (list . .Values.database.te) | indent 10 }}
         {{- end }}
         - name: nuote
           configMap:

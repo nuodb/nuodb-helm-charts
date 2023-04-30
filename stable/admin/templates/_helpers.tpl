@@ -179,6 +179,7 @@ Get the Container securityContext (core/v1/SecurityContext)
 securityContext:
   privileged: {{ include "defaultfalse" .Values.admin.securityContext.privileged }}
   allowPrivilegeEscalation: {{ include "defaultfalse" .Values.admin.securityContext.allowPrivilegeEscalation }}
+  readOnlyRootFilesystem: {{ include "defaultfalse" .Values.admin.securityContext.readOnlyRootFilesystem }}
   {{- include "sc.capabilities" . | indent 2 }}
   {{- include "sc.runAs" . | indent 2 }}
   {{- end }}
@@ -376,4 +377,49 @@ release: {{ .Release.Name | quote }}
 {{- range $k, $v := .Values.admin.resourceLabels }}
 "{{ $k }}": "{{ $v }}"
 {{- end }}
+{{- end -}}
+
+{{/*
+Renders an ephemeral volume for an AP.
+*/}}
+{{- define "admin.ephemeralVolume" -}}
+{{- if eq (include "defaultfalse" .Values.admin.ephemeralVolume.enabled) "true" }}
+ephemeral:
+  volumeClaimTemplate:
+    metadata:
+      labels:
+        {{- include "admin.resourceLabels" . | nindent 8 }}
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      {{- if .Values.admin.ephemeralVolume.storageClass }}
+      {{- if (eq "-" .Values.admin.ephemeralVolume.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.admin.ephemeralVolume.storageClass }}
+      {{- end }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.admin.ephemeralVolume.size }}
+{{- else }}
+emptyDir: {}
+{{- end }}
+{{- end -}}
+
+{{/*
+Returns true or false based on whether the ephemeral or emptyDir volume should be rendered.
+*/}}
+{{- define "admin.enableEphemeralVolume" -}}
+{{- $ret := false -}}
+{{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "false" -}}
+  {{- $ret = true -}}
+{{- else -}}
+  {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabledOnContainer) "true" -}}
+  {{- if eq (include "defaultfalse" .Values.admin.securityContext.readOnlyRootFilesystem) "true" -}}
+    {{- $ret = true -}}
+  {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{ $ret }}
 {{- end -}}

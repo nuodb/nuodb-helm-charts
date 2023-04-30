@@ -1,24 +1,31 @@
 {{- define "nuodb.sidecar" -}}
-{{- if .Values.nuocollector }}
-{{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
+{{- $ := index . 0 -}}
+{{- $engine := index . 1 -}}
+{{- if $.Values.nuocollector }}
+{{- if eq (include "defaultfalse" $.Values.nuocollector.enabled) "true" }}
 - name: nuocollector
-  image: {{ template "nuocollector.image" . }}
-  imagePullPolicy: {{ .Values.nuocollector.image.pullPolicy }}
+  image: {{ template "nuocollector.image" $ }}
+  imagePullPolicy: {{ $.Values.nuocollector.image.pullPolicy }}
   tty: true
   resources:
-  {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
-  {{- include "sc.containerSecurityContext" . | indent 2 }}
+  {{- toYaml $.Values.nuocollector.resources | trim | nindent 4 }}
+  {{- include "sc.containerSecurityContext" $ | indent 2 }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
     name: nuocollector-config
-  - name: log-volume
-    mountPath: /var/log/nuodb
+  - mountPath: /var/log/nuodb
+    {{- if eq (include "defaultfalse" $engine.logPersistence.enabled) "true" }}
+    name: log-volume
+    {{- else }}
+    name: eph-volume
+    subPath: log
+    {{- end }}
 - name: nuocollector-config
-  image: {{ template "nuocollector.watcher" . }}
-  imagePullPolicy: {{ .Values.nuocollector.watcher.pullPolicy }}
+  image: {{ template "nuocollector.watcher" $ }}
+  imagePullPolicy: {{ $.Values.nuocollector.watcher.pullPolicy }}
   resources:
-  {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
-  {{- include "sc.containerSecurityContext" . | indent 2 }}
+  {{- toYaml $.Values.nuocollector.resources | trim | nindent 4 }}
+  {{- include "sc.containerSecurityContext" $ | indent 2 }}
   env:
   - name: LABEL
     value: "nuodb.com/nuocollector-plugin in ({{ template "database.fullname" $ }}, insights)"
@@ -29,8 +36,13 @@
   volumeMounts:
   - name: nuocollector-config
     mountPath: /etc/telegraf/telegraf.d/dynamic/
-  - name: log-volume
-    mountPath: /var/log/nuodb
+  - mountPath: /var/log/nuodb
+    {{- if eq (include "defaultfalse" $engine.logPersistence.enabled) "true" }}
+    name: log-volume
+    {{- else }}
+    name: eph-volume
+    subPath: log
+    {{- end }}
 shareProcessNamespace: true
 {{- end }}
 {{- end }}

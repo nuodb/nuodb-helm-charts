@@ -20,6 +20,9 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 	found := 0
 	securityContextEnabled := options.SetValues["admin.securityContext.enabledOnContainer"] == "true" ||
 		options.SetValues["database.securityContext.enabledOnContainer"] == "true"
+	logPersistenceEnabled := options.SetValues["admin.logPersistence.enabled"] == "true" ||
+		options.SetValues["database.sm.logPersistence.enabled"] == "true" ||
+		options.SetValues["database.te.logPersistence.enabled"] == "true"
 
 	for _, container := range containers {
 		t.Logf("Inspecting container %s in chart %s", container.Name, chartPath)
@@ -62,10 +65,18 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 			Name:      "nuocollector-config",
 			MountPath: "/etc/telegraf/telegraf.d/dynamic/",
 		})
-		assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
-			Name:      "log-volume",
-			MountPath: "/var/log/nuodb",
-		})
+		if logPersistenceEnabled {
+			assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
+				Name:      "log-volume",
+				MountPath: "/var/log/nuodb",
+			})
+		} else {
+			assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
+				Name:      "eph-volume",
+				MountPath: "/var/log/nuodb",
+				SubPath:   "log",
+			})
+		}
 		if securityContextEnabled {
 			assert.NotNil(t, container.SecurityContext)
 		} else {

@@ -78,8 +78,14 @@ spec:
         - name: journal-volume
           mountPath: /mnt/journal
         {{- end }}
+        {{- if eq (include "defaultfalse" .Values.database.sm.logPersistence.enabled) "true" }}
         - name: log-volume
           mountPath: /mnt/logdir
+        {{- end }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
+        - name: eph-volume
+          mountPath: /mnt/eph
+        {{- end }}
         {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDiskAsRoot) "true" }}
         securityContext:
           runAsUser: 0
@@ -180,8 +186,18 @@ spec:
           subPath: {{ $key }}
         {{- end -}}
         {{- end }}
-        - name: log-volume
-          mountPath: /var/log/nuodb
+        - mountPath: /var/log/nuodb
+          {{- if eq (include "defaultfalse" .Values.database.sm.logPersistence.enabled) "true" }}
+          name: log-volume
+          {{- else }}
+          name: eph-volume
+          subPath: log
+          {{- end }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
+        - name: eph-volume
+          mountPath: /tmp
+          subPath: tmp
+        {{- end }}
         - name: nuosm
           mountPath: /usr/local/bin/nuosm
           subPath: nuosm
@@ -236,7 +252,7 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
-      {{- include "nuodb.sidecar" . | nindent 6 }}
+      {{- include "nuodb.sidecar" (list . .Values.database.sm) | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
@@ -245,9 +261,9 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-configuration
       {{- end }}
-      {{- if eq (include "defaultfalse" .Values.database.sm.logPersistence.enabled) "false" }}
-      - name: log-volume
-        emptyDir: {}
+      {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
+      - name: eph-volume
+        {{- include "database.ephemeralVolume" (list . .Values.database.sm) | indent 8 }}
       {{- end }}
       - name: nuosm
         configMap:
@@ -446,8 +462,14 @@ spec:
         {{- end }}
         - name: backup-volume
           mountPath: /mnt/backup
+        {{- if eq (include "defaultfalse" .Values.database.sm.logPersistence.enabled) "true" }}
         - name: log-volume
           mountPath: /mnt/logdir
+        {{- end }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
+        - name: eph-volume
+          mountPath: /mnt/eph
+        {{- end }}
         {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDiskAsRoot) "true" }}
         securityContext:
           runAsUser: 0
@@ -547,8 +569,18 @@ spec:
           subPath: {{ $key }}
         {{- end -}}
         {{- end }}
-        - name: log-volume
-          mountPath: /var/log/nuodb
+        - mountPath: /var/log/nuodb
+          {{- if eq (include "defaultfalse" .Values.database.sm.logPersistence.enabled) "true" }}
+          name: log-volume
+          {{- else }}
+          name: eph-volume
+          subPath: log
+          {{- end }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
+        - name: eph-volume
+          mountPath: /tmp
+          subPath: tmp
+        {{- end }}
         - name: nuosm
           mountPath: /usr/local/bin/nuosm
           subPath: nuosm
@@ -605,7 +637,7 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
-      {{- include "nuodb.sidecar" . | nindent 6 }}
+      {{- include "nuodb.sidecar" (list . .Values.database.sm) | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
@@ -614,9 +646,9 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-configuration
       {{- end }}
-      {{- if eq (include "defaultfalse" .Values.database.sm.logPersistence.enabled) "false" }}
-      - name: log-volume
-        emptyDir: {}
+      {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
+      - name: eph-volume
+        {{- include "database.ephemeralVolume" (list . .Values.database.sm) | indent 8 }}
       {{- end }}
       - name: nuosm
         configMap:

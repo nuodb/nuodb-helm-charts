@@ -42,7 +42,7 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.3.2
+    tag: 5.0.3
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -209,6 +209,9 @@ database:
     # container process
     allowPrivilegeEscalation: false
 
+    # Whether to mount the root filesystem as read-only.
+    readOnlyRootFilesystem: false
+
   ## Import Environment Variables inside containers
   # List of EnvVar v1 core definitions
   # ref: https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.16/#envvar-v1-core
@@ -275,6 +278,25 @@ database:
   # database name may be deployed into the same Kubernetes namespace. Set to
   # `false` to deploy secondary database Helm releases.
   primaryRelease: true
+
+  ephemeralVolume:
+    # Whether to enable generic ephemeral volumes, rather than using emptyDir
+    # for data that does not have to outlive the pod.
+    # ref: https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes
+    enabled: false
+
+    # The size of the generic ephemeral volume.
+    size: 1Gi
+
+    # Whether to size the volume according to the resources.limits.memory
+    # setting of the process, to guarantee that we have enough space to store
+    # at least one core file. Since core files are compressed before they hit
+    # the disk, it is likely that this setting is sufficient to retain many
+    # core files.
+    sizeToMemory: false
+
+    # The storage class to use for the generic ephemeral volume.
+    # storageClass: "-"
 
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
