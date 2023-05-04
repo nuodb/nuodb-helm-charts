@@ -224,7 +224,6 @@ spec:
       {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
-      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}
       {{- range $dbName, $secret := .Values.admin.tde.secrets }}

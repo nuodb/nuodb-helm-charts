@@ -255,7 +255,6 @@ spec:
       {{- include "nuodb.sidecar" (list . .Values.database.sm) | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
-      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.database.configFiles }}
       - name: configurations
         configMap:
@@ -640,7 +639,6 @@ spec:
       {{- include "nuodb.sidecar" (list . .Values.database.sm) | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
-      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.database.configFiles }}
       - name: configurations
         configMap:

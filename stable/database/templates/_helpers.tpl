@@ -603,12 +603,16 @@ rendered, false otherwise.
 {{- $ret := false -}}
 {{- if eq (include "defaultfalse" $engine.logPersistence.enabled) "false" -}}
   {{- $ret = true -}}
-{{- else -}}
-  {{- if eq (include "defaultfalse" $.Values.database.securityContext.enabledOnContainer) "true" -}}
-  {{- if eq (include "defaultfalse" $.Values.database.securityContext.readOnlyRootFilesystem) "true" -}}
-    {{- $ret = true -}}
-  {{- end -}}
-  {{- end -}}
+{{- end -}}
+{{- if eq (include "defaultfalse" $.Values.database.securityContext.enabledOnContainer) "true" -}}
+{{- if eq (include "defaultfalse" $.Values.database.securityContext.readOnlyRootFilesystem) "true" -}}
+  {{- $ret = true -}}
+{{- end -}}
+{{- end -}}
+{{- if $.Values.nuocollector }}
+{{- if eq (include "defaultfalse" $.Values.nuocollector.enabled) "true" }}
+  {{- $ret = true -}}
+{{- end -}}
 {{- end -}}
 {{ $ret }}
 {{- end -}}

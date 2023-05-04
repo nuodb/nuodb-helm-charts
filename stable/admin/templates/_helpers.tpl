@@ -415,12 +415,16 @@ rendered, false otherwise.
 {{- $ret := false -}}
 {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "false" -}}
   {{- $ret = true -}}
-{{- else -}}
-  {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabledOnContainer) "true" -}}
-  {{- if eq (include "defaultfalse" .Values.admin.securityContext.readOnlyRootFilesystem) "true" -}}
-    {{- $ret = true -}}
-  {{- end -}}
-  {{- end -}}
+{{- end -}}
+{{- if eq (include "defaultfalse" .Values.admin.securityContext.enabledOnContainer) "true" -}}
+{{- if eq (include "defaultfalse" .Values.admin.securityContext.readOnlyRootFilesystem) "true" -}}
+  {{- $ret = true -}}
+{{- end -}}
+{{- end -}}
+{{- if .Values.nuocollector }}
+{{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
+  {{- $ret = true -}}
+{{- end -}}
 {{- end -}}
 {{ $ret }}
 {{- end -}}
