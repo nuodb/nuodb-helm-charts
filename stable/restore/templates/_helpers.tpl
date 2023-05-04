@@ -313,3 +313,31 @@ Renders the name of the Secret for the database selected for restore
 {{- define "database.secretName" -}}
 {{ .Values.admin.domain }}-{{ template "restore.target" . }}
 {{- end -}}
+
+{{/*
+Renders an ephemeral volume.
+*/}}
+{{- define "database.ephemeralVolume" -}}
+{{- if eq (include "defaultfalse" .Values.database.ephemeralVolume.enabled) "true" }}
+ephemeral:
+  volumeClaimTemplate:
+    metadata:
+      labels:
+        {{- include "restore.resourceLabels" . | nindent 8 }}
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      {{- if .Values.database.ephemeralVolume.storageClass }}
+      {{- if (eq "-" .Values.database.ephemeralVolume.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ .Values.database.ephemeralVolume.storageClass }}
+      {{- end }}
+      {{- end }}
+      resources:
+        requests:
+          storage: {{ .Values.database.ephemeralVolume.size }}
+{{- else }}
+emptyDir: {}
+{{- end }}
+{{- end -}}

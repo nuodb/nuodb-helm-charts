@@ -103,6 +103,21 @@ database:
     # container process
     allowPrivilegeEscalation: false
 
+    # Whether to mount the root filesystem as read-only.
+    readOnlyRootFilesystem: false
+
+  ephemeralVolume:
+    # Whether to enable generic ephemeral volumes, rather than using emptyDir
+    # for data that does not have to outlive the pod.
+    # ref: https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes
+    enabled: false
+
+    # The size of the generic ephemeral volume.
+    size: 1Gi
+
+    # The storage class to use for the generic ephemeral volume.
+    # storageClass: "-"
+
 restore:
 
   ## Provide a name in place of the chart name for `app:` labels

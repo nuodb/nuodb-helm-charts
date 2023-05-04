@@ -111,6 +111,10 @@ The following tables list the configurable parameters of the database chart and 
 | `securityContext.enabled` | Creates a security context for Pods containing the `securityContext.runAsUser` and `securityContext.fsGroup` values | `false` |
 | `securityContext.runAsUser` | The user ID for the Pod security context created if `securityContext.enabled` is `true`. | `1000` |
 | `securityContext.fsGroup` | The `fsGroup` for the Pod security context created if any of `securityContext.fsGroupOnly`, `securityContext.runAsNonRootGroup`, or `securityContext.enabled` are `true`. | `1000` |
+| `securityContext.readOnlyRootFilesystem` | Whether to mount the root filesystem as read-only | `false` |
+| `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |
+| `ephemeralVolume.size` | The size of the generic ephemeral volume to create | `1Gi` |
+| `ephemeralVolume.storageClass` | The storage class to use for the generic ephemeral volume | `nil` |
 
 #### nuodb.*
 

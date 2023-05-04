@@ -81,7 +81,7 @@ spec:
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       - name: log-volume
-        emptyDir: {}
+        {{- include "database.ephemeralVolume" . | indent 8 }}
       - name: nuorestore
         configMap:
           name: {{ template "restore.fullname" . }}-nuorestore
