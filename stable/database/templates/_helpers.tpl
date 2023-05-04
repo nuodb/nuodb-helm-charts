@@ -594,7 +594,8 @@ emptyDir: {}
 {{- end -}}
 
 {{/*
-Returns true or false based on whether the ephemeral or emptyDir volume should be rendered.
+Returns true if either a generic ephemeral volume or emptyDir volume should be
+rendered, false otherwise.
 */}}
 {{- define "database.enableEphemeralVolume" -}}
 {{- $ := index . 0 -}}
