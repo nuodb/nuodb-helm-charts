@@ -70,7 +70,7 @@ spec:
         volumeMounts:
         - name: raftlog
           mountPath: /mnt/vardir
-        {{- if eq (include "defaulttrue" .Values.admin.logPersistence.enabled) "true" }}
+        {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
         - name: log-volume
           mountPath: /mnt/logdir
         {{- end }}
@@ -166,7 +166,7 @@ spec:
           timeoutSeconds: {{ default 5 .Values.admin.readinessTimeoutSeconds }}
         volumeMounts:
         - mountPath: /var/log/nuodb
-          {{- if eq (include "defaulttrue" .Values.admin.logPersistence.enabled) "true" }}
+          {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
           name: log-volume
           {{- else }}
           name: eph-volume
