@@ -1438,7 +1438,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 			assert.True(t, *containerSecurityContext.ReadOnlyRootFilesystem)
 
 			// Check that /tmp directory has ephemeral volume mounted to it
-			var tmpVolumeMount *v1.VolumeMount = nil
+			var tmpVolumeMount *v1.VolumeMount
 			for _, volumeMount := range container.VolumeMounts {
 				if volumeMount.MountPath == "/tmp" {
 					tmpVolumeMount = volumeMount.DeepCopy()

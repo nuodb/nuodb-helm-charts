@@ -888,7 +888,7 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.True(t, *containerSecurityContext.ReadOnlyRootFilesystem)
 
 			// Check that /tmp directory has ephemeral volume mounted to it
-			var tmpVolumeMount *v1.VolumeMount = nil
+			var tmpVolumeMount *v1.VolumeMount
 			for _, volumeMount := range container.VolumeMounts {
 				if volumeMount.MountPath == "/tmp" {
 					tmpVolumeMount = volumeMount.DeepCopy()
@@ -899,7 +899,7 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.Equal(t, "tmp", tmpVolumeMount.SubPath)
 
 			// Check that NUODOCKER_CONF_DIR=/tmp for generated nuoadmin.conf
-			var confDirEnv *v1.EnvVar = nil
+			var confDirEnv *v1.EnvVar
 			for _, env := range container.Env {
 				if env.Name == "NUODOCKER_CONF_DIR" {
 					confDirEnv = env.DeepCopy()
