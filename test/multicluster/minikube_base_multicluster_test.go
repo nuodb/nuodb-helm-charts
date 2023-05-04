@@ -74,9 +74,6 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			// K8s version of AKS cluster does not support generic ephemeral volumes
-			"admin.ephemeralVolume.enabled":    "false",
-			"database.ephemeralVolume.enabled": "false",
 		},
 	}
 
