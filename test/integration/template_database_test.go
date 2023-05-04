@@ -291,6 +291,17 @@ func TestDatabaseVolumes(t *testing.T) {
 		return nil
 	}
 
+	// Returns a map of mount point to subpath for all eph-volume mounts
+	findEphemeralVolumeMounts := func(mounts []v1.VolumeMount) map[string]string {
+		ret := make(map[string]string)
+		for _, mount := range mounts {
+			if mount.Name == "eph-volume" {
+				ret[mount.MountPath] = mount.SubPath
+			}
+		}
+		return ret
+	}
+
 	assertStorageEquals := func(t *testing.T, volume *v1.Volume, size string) {
 		quantity, err := resource.ParseQuantity(size)
 		assert.NoError(t, err)
@@ -317,6 +328,13 @@ func TestDatabaseVolumes(t *testing.T) {
 			assert.NotNil(t, ephemeralVolume, "Expected to find eph-volume")
 			assert.NotNil(t, ephemeralVolume.EmptyDir, "Expected emptyDir volume")
 			assert.Nil(t, ephemeralVolume.Ephemeral, "Did not expect ephemeral volume")
+
+			// Expect volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{
+				"/tmp":           "tmp",
+				"/var/log/nuodb": "log",
+			})
 		}
 
 		// Render and decode Deployments
@@ -327,6 +345,13 @@ func TestDatabaseVolumes(t *testing.T) {
 			assert.NotNil(t, ephemeralVolume, "Expected to find eph-volume")
 			assert.NotNil(t, ephemeralVolume.EmptyDir, "Expected emptyDir volume")
 			assert.Nil(t, ephemeralVolume.Ephemeral, "Did not expect ephemeral volume")
+
+			// Expect volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{
+				"/tmp":           "tmp",
+				"/var/log/nuodb": "log",
+			})
 		}
 	})
 
@@ -353,6 +378,13 @@ func TestDatabaseVolumes(t *testing.T) {
 			assert.Nil(t, ephemeralVolume.EmptyDir, "Did not expect emptyDir volume")
 			assert.NotNil(t, ephemeralVolume.Ephemeral, "Expected ephemeral volume")
 			assertStorageEquals(t, ephemeralVolume, "1Gi")
+
+			// Expect volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{
+				"/tmp":           "tmp",
+				"/var/log/nuodb": "log",
+			})
 		}
 
 		// Render and decode Deployments
@@ -364,6 +396,13 @@ func TestDatabaseVolumes(t *testing.T) {
 			assert.Nil(t, ephemeralVolume.EmptyDir, "Did not expect emptyDir volume")
 			assert.NotNil(t, ephemeralVolume.Ephemeral, "Expected ephemeral volume")
 			assertStorageEquals(t, ephemeralVolume, "1Gi")
+
+			// Expect volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{
+				"/tmp":           "tmp",
+				"/var/log/nuodb": "log",
+			})
 		}
 	})
 
@@ -395,6 +434,13 @@ func TestDatabaseVolumes(t *testing.T) {
 			assert.Nil(t, ephemeralVolume.EmptyDir, "Did not expect emptyDir volume")
 			assert.NotNil(t, ephemeralVolume.Ephemeral, "Expected ephemeral volume")
 			assertStorageEquals(t, ephemeralVolume, "5Gi")
+
+			// Expect volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{
+				"/tmp":           "tmp",
+				"/var/log/nuodb": "log",
+			})
 		}
 
 		// Render and decode Deployments
@@ -406,6 +452,13 @@ func TestDatabaseVolumes(t *testing.T) {
 			assert.Nil(t, ephemeralVolume.EmptyDir, "Did not expect emptyDir volume")
 			assert.NotNil(t, ephemeralVolume.Ephemeral, "Expected ephemeral volume")
 			assertStorageEquals(t, ephemeralVolume, "10Gi")
+
+			// Expect volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{
+				"/tmp":           "tmp",
+				"/var/log/nuodb": "log",
+			})
 		}
 	})
 
@@ -434,6 +487,10 @@ func TestDatabaseVolumes(t *testing.T) {
 			// Expect no ephemeral volume
 			ephemeralVolume := findEphemeralVolume(obj.Spec.Template.Spec.Volumes)
 			assert.Nil(t, ephemeralVolume, "Did not expect to find eph-volume")
+
+			// Expect no volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{})
 		}
 
 		// Render and decode Deployments
@@ -442,6 +499,10 @@ func TestDatabaseVolumes(t *testing.T) {
 			// Expect no ephemeral volume
 			ephemeralVolume := findEphemeralVolume(obj.Spec.Template.Spec.Volumes)
 			assert.Nil(t, ephemeralVolume, "Did not expect to find eph-volume")
+
+			// Expect no volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{})
 		}
 	})
 
@@ -477,6 +538,10 @@ func TestDatabaseVolumes(t *testing.T) {
 			assert.Nil(t, ephemeralVolume.EmptyDir, "Did not expect emptyDir volume")
 			assert.NotNil(t, ephemeralVolume.Ephemeral, "Expected ephemeral volume")
 			assertStorageEquals(t, ephemeralVolume, "5Gi")
+
+			// Expect only /tmp volume mount for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{"/tmp": "tmp"})
 		}
 
 		// Render and decode Deployments
@@ -488,6 +553,10 @@ func TestDatabaseVolumes(t *testing.T) {
 			assert.Nil(t, ephemeralVolume.EmptyDir, "Did not expect emptyDir volume")
 			assert.NotNil(t, ephemeralVolume.Ephemeral, "Expected ephemeral volume")
 			assertStorageEquals(t, ephemeralVolume, "5Gi")
+
+			// Expect only /tmp volume mount for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{"/tmp": "tmp"})
 		}
 	})
 }
