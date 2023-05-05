@@ -70,8 +70,14 @@ spec:
         volumeMounts:
         - name: raftlog
           mountPath: /mnt/vardir
+        {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
         - name: log-volume
           mountPath: /mnt/logdir
+        {{- end }}
+        {{- if eq (include "admin.enableEphemeralVolume" .) "true" }}
+        - name: eph-volume
+          mountPath: /mnt/eph
+        {{- end }}
         {{- if eq (include "defaulttrue" .Values.admin.initContainers.runInitDiskAsRoot) "true" }}
         securityContext:
           runAsUser: 0
@@ -112,16 +118,21 @@ spec:
         - { name: COMPONENT_NAME,          value: "admin" }
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.admin.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.admin.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
-      {{- if .Values.admin.tlsKeyStore }}
+        {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
         {{- end }}
-      {{- end }}
-      {{- if .Values.admin.tlsTrustStore }}
+        {{- end }}
+        {{- if .Values.admin.tlsTrustStore }}
         {{- if .Values.admin.tlsTrustStore.password }}
         - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
         {{- end }}
-      {{- end }}
+        {{- end }}
+        {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabledOnContainer) "true" }}
+        {{- if eq (include "defaultfalse" .Values.admin.securityContext.readOnlyRootFilesystem) "true" }}
+        - { name: NUODOCKER_CONF_DIR, value: "/tmp"}
+        {{- end }}
+        {{- end }}
         args:
           - "nuoadmin"
           {{- if .Values.admin.evicted}}
@@ -154,8 +165,18 @@ spec:
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.admin.readinessTimeoutSeconds }}
         volumeMounts:
-        - name: log-volume
-          mountPath: /var/log/nuodb
+        - mountPath: /var/log/nuodb
+          {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
+          name: log-volume
+          {{- else }}
+          name: eph-volume
+          subPath: log
+          {{- end }}
+        {{- if eq (include "admin.enableEphemeralVolume" .) "true" }}
+        - mountPath: /tmp
+          name: eph-volume
+          subPath: tmp
+        {{- end }}
         {{- with .Values.admin.configFiles }}
         {{- range $key, $val := . }}
         - name: configurations
@@ -203,7 +224,6 @@ spec:
       {{- include "nuodb.sidecar" . | nindent 6 }}
 {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
-      {{- include "nuodb.sidecar.volumes" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}
       {{- range $dbName, $secret := .Values.admin.tde.secrets }}
@@ -237,9 +257,9 @@ spec:
           secretName: {{ .Values.admin.tlsClientPEM.secret }}
           defaultMode: 0440
       {{- end }}
-      {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "false" }}
-      - name: log-volume
-        emptyDir: {}
+      {{- if eq (include "admin.enableEphemeralVolume" .) "true" }}
+      - name: eph-volume
+        {{- include "admin.ephemeralVolume" . | indent 8 }}
       {{- end }}
       {{- if .Values.admin.configFiles }}
       - name: configurations

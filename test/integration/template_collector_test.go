@@ -20,6 +20,9 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 	found := 0
 	securityContextEnabled := options.SetValues["admin.securityContext.enabledOnContainer"] == "true" ||
 		options.SetValues["database.securityContext.enabledOnContainer"] == "true"
+	logPersistenceEnabled := options.SetValues["admin.logPersistence.enabled"] == "true" ||
+		options.SetValues["database.sm.logPersistence.enabled"] == "true" ||
+		options.SetValues["database.te.logPersistence.enabled"] == "true"
 
 	for _, container := range containers {
 		t.Logf("Inspecting container %s in chart %s", container.Name, chartPath)
@@ -59,13 +62,22 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 			continue
 		}
 		assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
-			Name:      "nuocollector-config",
+			Name:      "eph-volume",
 			MountPath: "/etc/telegraf/telegraf.d/dynamic/",
+			SubPath:   "telegraf",
 		})
-		assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
-			Name:      "log-volume",
-			MountPath: "/var/log/nuodb",
-		})
+		if logPersistenceEnabled {
+			assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
+				Name:      "log-volume",
+				MountPath: "/var/log/nuodb",
+			})
+		} else {
+			assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
+				Name:      "eph-volume",
+				MountPath: "/var/log/nuodb",
+				SubPath:   "log",
+			})
+		}
 		if securityContextEnabled {
 			assert.NotNil(t, container.SecurityContext)
 		} else {
@@ -85,20 +97,16 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 }
 
 func checkSpecVolumes(t *testing.T, volumes []v1.Volume, options *helm.Options, chartPath string) {
-	require.NotEmpty(t, volumes)
-	found := false
+	if options.SetValues["nuocollector.enabled"] == "false" {
+		return
+	}
+	// Check that ephemeral volume is enabled. This is needed to share telegraf config.
 	for _, volume := range volumes {
-		if volume.Name == "nuocollector-config" {
-			found = true
-			// Check that empty dir is mounted
-			assert.NotNil(t, volume.EmptyDir)
+		if volume.Name == "eph-volume" {
+			return
 		}
 	}
-	if options.SetValues["nuocollector.enabled"] == "true" {
-		assert.True(t, found, "nuocollector-config should be declared as volume")
-	} else {
-		assert.False(t, found, "nuocollector-config is declared as volume with nuocollector disabled")
-	}
+	assert.Fail(t, "eph-volume should be declared as volume")
 }
 
 func checkPluginsRendered(t *testing.T, configMaps []v1.ConfigMap, options *helm.Options, chartPath string, expectedNrPlugins int) {
@@ -196,6 +204,25 @@ func TestNuoDBCollectorSidecarsDisabled(t *testing.T) {
 			"nuocollector.watcher.registry":   "docker.io",
 			"nuocollector.watcher.repository": "kiwigrid/k8s-sidecar",
 			"nuocollector.watcher.tag":        "latest",
+		},
+	}
+	executeSidecarTests(t, options)
+}
+
+func TestNuoDBCollectorSidecarsLogPersistence(t *testing.T) {
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.logPersistence.enabled":       "true",
+			"database.sm.logPersistence.enabled": "true",
+			"database.te.logPersistence.enabled": "true",
+			"nuocollector.enabled":               "true",
+			"nuocollector.image.registry":        "docker.io",
+			"nuocollector.image.repository":      "nuodb/nuocd",
+			"nuocollector.image.tag":             "1.0.0",
+			"nuocollector.watcher.registry":      "docker.io",
+			"nuocollector.watcher.repository":    "kiwigrid/k8s-sidecar",
+			"nuocollector.watcher.tag":           "latest",
 		},
 	}
 	executeSidecarTests(t, options)

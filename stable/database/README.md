@@ -99,7 +99,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | ----- | ----------- | ------ |
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
-| `image.tag` | NuoDB container image tag | `4.0.8` |
+| `image.tag` | NuoDB container image tag | `5.0.3` |
 | `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
@@ -203,6 +203,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `securityContext.capabilities` | Capabilities for to engine container security context | `{ add: [], drop: [] }` |
 | `securityContext.privileged` | Run the NuoDB database containers in privileged mode. Processes in privileged containers are essentially equivalent to root on the host | `false` |
 | `securityContext.allowPrivilegeEscalation` | Whether a process can gain more privileges than its parent process. This boolean directly controls if the `no_new_privs` flag will be set on the container process | `false` |
+| `securityContext.readOnlyRootFilesystem` | Whether to mount the root filesystem as read-only | `false` |
 | `env` | Import ENV vars inside containers | `[]` |
 | `envFrom` | Import ENV vars from configMap(s) | `[]` |
 | `lbConfig.prefilter` | Database load balancer prefilter expression | `nil` |
@@ -220,6 +221,10 @@ The following tables list the configurable parameters of the `database` chart an
 | `autoImport.stripLevels` | The number of levels to strip off pathnames when unpacking a TAR file of an archive | `1` |
 | `autoImport.type` | Type of content in `source`. One of `stream` -> exact copy of an archive; or `backupset` -> a NuoDB hotcopy backupset | 'backupset' |
 | `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
+| `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |
+| `ephemeralVolume.size` | The size of the generic ephemeral volume to create | `1Gi` |
+| `ephemeralVolume.sizeToMemory` | Whether to size the generic ephemeral volume based on the `resources.limits.memory` setting of the process so that at least one core file is retained for the lifetime of the pod | `false` |
+| `ephemeralVolume.storageClass` | The storage class to use for the generic ephemeral volume | `nil` |
 | `sm.logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `sm.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |

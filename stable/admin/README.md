@@ -102,7 +102,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | ----- | ----------- | ------ |
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
-| `image.tag` | NuoDB container image tag | `4.0.8` |
+| `image.tag` | NuoDB container image tag | `5.0.3` |
 | `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
@@ -171,6 +171,9 @@ The following tables list the configurable parameters for the `admin` option of 
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteMany` |
 | `persistence.size` | Amount of disk space allocated for admin RAFT state | `10Gi` |
 | `persistence.storageClass` | Storage class for volume backing admin RAFT state | `-` |
+| `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |
+| `ephemeralVolume.size` | The size of the generic ephemeral volume to create | `1Gi` |
+| `ephemeralVolume.storageClass` | The storage class to use for the generic ephemeral volume | `nil` |
 | `logPersistence.enabled` | Whether to enable persistent storage for logs | `false` |
 | `logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
@@ -191,6 +194,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `securityContext.capabilities` | Capabilities for to admin container security context | `{ add: [], drop: [] }` |
 | `securityContext.privileged` | Run the NuoDB Admin containers in privileged mode. Processes in privileged containers are essentially equivalent to root on the host | `false` |
 | `securityContext.allowPrivilegeEscalation` | Whether a process can gain more privileges than its parent process. This boolean directly controls if the `no_new_privs` flag will be set on the container process | `false` |
+| `securityContext.readOnlyRootFilesystem` | Whether to mount the root filesystem as read-only. This is supported for versions of the NuoDB image >=4.3.3 and 4.2.x versions >=4.2.5. | `false` |
 | `tlsCACert.secret` | TLS CA certificate secret name | `nil` |
 | `tlsCACert.key` | TLS CA certificate secret key | `nil` |
 | `tlsKeyStore.secret` | TLS keystore secret name | `nil` |

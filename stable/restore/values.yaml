@@ -32,7 +32,7 @@ nuodb:
   image:
     registry: docker.io
     repository: nuodb/nuodb-ce
-    tag: 4.3.2
+    tag: 5.0.3
     pullPolicy: IfNotPresent
     ## Optionally specify an array of imagePullSecrets.
     ## Secrets must be manually created in the namespace.
@@ -102,6 +102,21 @@ database:
     # bool directly controls if the "no_new_privs" flag will be set on the
     # container process
     allowPrivilegeEscalation: false
+
+    # Whether to mount the root filesystem as read-only.
+    readOnlyRootFilesystem: false
+
+  ephemeralVolume:
+    # Whether to enable generic ephemeral volumes, rather than using emptyDir
+    # for data that does not have to outlive the pod.
+    # ref: https://kubernetes.io/docs/concepts/storage/ephemeral-volumes/#generic-ephemeral-volumes
+    enabled: false
+
+    # The size of the generic ephemeral volume.
+    size: 1Gi
+
+    # The storage class to use for the generic ephemeral volume.
+    # storageClass: "-"
 
 restore:
 

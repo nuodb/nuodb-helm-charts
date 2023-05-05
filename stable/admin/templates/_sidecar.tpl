@@ -56,9 +56,15 @@ Also, we can't use a single if because lazy evaluation is not an option
   {{- include "sc.containerSecurityContext" . | indent 2 }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
-    name: nuocollector-config
-  - name: log-volume
-    mountPath: /var/log/nuodb
+    name: eph-volume
+    subPath: telegraf
+  - mountPath: /var/log/nuodb
+    {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
+    name: log-volume
+    {{- else }}
+    name: eph-volume
+    subPath: log
+    {{- end }}
 - name: nuocollector-config
   image: {{ template "nuocollector.watcher" . }}
   imagePullPolicy: {{ $.Values.nuocollector.watcher.pullPolicy }}
@@ -73,20 +79,17 @@ Also, we can't use a single if because lazy evaluation is not an option
   - name: REQ_URL
     value: http://127.0.0.1:5000/reload
   volumeMounts:
-  - name: nuocollector-config
-    mountPath: /etc/telegraf/telegraf.d/dynamic/
-  - name: log-volume
-    mountPath: /var/log/nuodb
+  - mountPath: /etc/telegraf/telegraf.d/dynamic/
+    name: eph-volume
+    subPath: telegraf
+  - mountPath: /var/log/nuodb
+    {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
+    name: log-volume
+    {{- else }}
+    name: eph-volume
+    subPath: log
+    {{- end }}
 shareProcessNamespace: true
-{{- end }}
-{{- end }}
-{{- end -}}
-
-{{- define "nuodb.sidecar.volumes" -}}
-{{- if .Values.nuocollector }}
-{{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
-- name: nuocollector-config
-  emptyDir: {}
 {{- end }}
 {{- end }}
 {{- end -}}

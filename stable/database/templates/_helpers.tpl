@@ -171,6 +171,7 @@ Get the Container securityContext (core/v1/SecurityContext)
 securityContext:
   privileged: {{ include "defaultfalse" .Values.database.securityContext.privileged }}
   allowPrivilegeEscalation: {{ include "defaultfalse" .Values.database.securityContext.allowPrivilegeEscalation }}
+  readOnlyRootFilesystem: {{ include "defaultfalse" .Values.database.securityContext.readOnlyRootFilesystem }}
   {{- include "sc.capabilities" . | indent 2 }}
   {{- include "sc.runAs" . | indent 2 }}
   {{- end }}
@@ -257,7 +258,7 @@ into account any schedule overrides configured per backup group.
 {{- end -}}
 
 {{/*
-Renders the name of the HotCopy CrongJob
+Renders the name of the HotCopy CronJob
 */}}
 {{- define "hotcopy.cronjob.name" -}}
 {{ printf "%s-hotcopy-%s-%s-%s" .hotCopyType .Values.admin.domain .Values.database.name .backupGroup | trunc 52 | trimSuffix "-" }}
@@ -556,4 +557,62 @@ the TE Deployment is disabled if TPSG is enabled and this is a secondary release
   {{- else -}}
     {{- include "defaulttrue" .Values.database.te.enablePod -}}
   {{- end -}}
+{{- end -}}
+
+{{/*
+Renders an ephemeral volume for an engine process.
+*/}}
+{{- define "database.ephemeralVolume" -}}
+{{- $ := index . 0 -}}
+{{- $engine := index . 1 -}}
+{{- if eq (include "defaultfalse" $.Values.database.ephemeralVolume.enabled) "true" }}
+ephemeral:
+  volumeClaimTemplate:
+    metadata:
+      labels:
+        {{- include "database.resourceLabels" $ | nindent 10 }}
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      {{- if $.Values.database.ephemeralVolume.storageClass }}
+      {{- if (eq "-" $.Values.database.ephemeralVolume.storageClass) }}
+      storageClassName: ""
+      {{- else }}
+      storageClassName: {{ $.Values.database.ephemeralVolume.storageClass }}
+      {{- end }}
+      {{- end }}
+      resources:
+        requests:
+          {{- if eq (include "defaultfalse" $.Values.database.ephemeralVolume.sizeToMemory) "true" }}
+          storage: {{ $engine.resources.limits.memory }}
+          {{- else }}
+          storage: {{ $.Values.database.ephemeralVolume.size }}
+          {{- end }}
+{{- else }}
+emptyDir: {}
+{{- end }}
+{{- end -}}
+
+{{/*
+Returns true if either a generic ephemeral volume or emptyDir volume should be
+rendered, false otherwise.
+*/}}
+{{- define "database.enableEphemeralVolume" -}}
+{{- $ := index . 0 -}}
+{{- $engine := index . 1 -}}
+{{- $ret := false -}}
+{{- if eq (include "defaultfalse" $engine.logPersistence.enabled) "false" -}}
+  {{- $ret = true -}}
+{{- end -}}
+{{- if eq (include "defaultfalse" $.Values.database.securityContext.enabledOnContainer) "true" -}}
+{{- if eq (include "defaultfalse" $.Values.database.securityContext.readOnlyRootFilesystem) "true" -}}
+  {{- $ret = true -}}
+{{- end -}}
+{{- end -}}
+{{- if $.Values.nuocollector }}
+{{- if eq (include "defaultfalse" $.Values.nuocollector.enabled) "true" }}
+  {{- $ret = true -}}
+{{- end -}}
+{{- end -}}
+{{ $ret }}
 {{- end -}}

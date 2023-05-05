@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -305,24 +306,135 @@ func TestAdminStatefulSetVolumes(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/admin"
 
-	options := &helm.Options{
-		SetValues: map[string]string{"admin.logPersistence.enabled": "true"},
+	findEphemeralVolume := func(volumes []v1.Volume) *v1.Volume {
+		for _, volume := range volumes {
+			if volume.Name == "eph-volume" {
+				return &volume
+			}
+		}
+		return nil
 	}
 
-	// Run RenderTemplate to render the template and capture the output.
-	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	// Returns a map of mount point to subpath for all eph-volume mounts
+	findEphemeralVolumeMounts := func(mounts []v1.VolumeMount) map[string]string {
+		ret := make(map[string]string)
+		for _, mount := range mounts {
+			if mount.Name == "eph-volume" {
+				ret[mount.MountPath] = mount.SubPath
+			}
+		}
+		return ret
+	}
 
-	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
-		vcts := make(map[string]bool)
+	assertStorageEquals := func(t *testing.T, volume *v1.Volume, size string) {
+		quantity, err := resource.ParseQuantity(size)
+		assert.NoError(t, err)
+		assert.Equal(t, volume.Ephemeral.VolumeClaimTemplate.Spec.Resources.Requests.Storage(), &quantity)
+	}
 
-		for _, val := range obj.Spec.VolumeClaimTemplates {
-			vcts[val.ObjectMeta.Name] = true
+	t.Run("testDefault", func(t *testing.T) {
+		options := &helm.Options{}
+
+		// Render and decode StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "raftlog"))
+			assert.Equal(t, 1, len(obj.Spec.VolumeClaimTemplates))
+
+			// Expect an emptyDir volume
+			ephemeralVolume := findEphemeralVolume(obj.Spec.Template.Spec.Volumes)
+			assert.NotNil(t, ephemeralVolume, "Expected to find eph-volume")
+			assert.NotNil(t, ephemeralVolume.EmptyDir, "Expected emptyDir volume")
+			assert.Nil(t, ephemeralVolume.Ephemeral, "Did not expect ephemeral volume")
+
+			// Expect volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{
+				"/tmp":           "tmp",
+				"/var/log/nuodb": "log",
+			})
+		}
+	})
+
+	t.Run("testEphemeralVolume", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{"admin.ephemeralVolume.enabled": "true"},
 		}
 
-		assert.Contains(t, vcts, "raftlog")
-		assert.Contains(t, vcts, "log-volume")
+		// Render and decode StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "raftlog"))
+			assert.Equal(t, 1, len(obj.Spec.VolumeClaimTemplates))
 
-	}
+			// Expect an ephemeral volume
+			ephemeralVolume := findEphemeralVolume(obj.Spec.Template.Spec.Volumes)
+			assert.NotNil(t, ephemeralVolume, "Expected to find eph-volume")
+			assert.Nil(t, ephemeralVolume.EmptyDir, "Did not expect emptyDir volume")
+			assert.NotNil(t, ephemeralVolume.Ephemeral, "Expected ephemeral volume")
+			assertStorageEquals(t, ephemeralVolume, "1Gi")
+
+			// Expect volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{
+				"/tmp":           "tmp",
+				"/var/log/nuodb": "log",
+			})
+		}
+	})
+
+	t.Run("testLogPersistenceEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{"admin.logPersistence.enabled": "true"},
+		}
+
+		// Render and decode StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "raftlog"))
+			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
+			assert.Equal(t, 2, len(obj.Spec.VolumeClaimTemplates))
+
+			// Expect no ephemeral volume
+			ephemeralVolume := findEphemeralVolume(obj.Spec.Template.Spec.Volumes)
+			assert.Nil(t, ephemeralVolume, "Did not expect to find eph-volume")
+
+			// Expect no volume mounts for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{})
+		}
+	})
+
+	t.Run("testLogPersistenceEnabledWithReadOnlyRootFilesystem", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.ephemeralVolume.enabled":                "true",
+				"admin.ephemeralVolume.size":                   "5Gi",
+				"admin.securityContext.enabledOnContainer":     "true",
+				"admin.securityContext.readOnlyRootFilesystem": "true",
+				"admin.logPersistence.enabled":                 "true",
+			},
+		}
+
+		// Render and decode StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[0].ObjectMeta.Name, "raftlog"))
+			assert.True(t, strings.Contains(obj.Spec.VolumeClaimTemplates[1].ObjectMeta.Name, "log-volume"))
+			assert.Equal(t, 2, len(obj.Spec.VolumeClaimTemplates))
+
+			// Expect an ephemeral volume
+			ephemeralVolume := findEphemeralVolume(obj.Spec.Template.Spec.Volumes)
+			assert.NotNil(t, ephemeralVolume, "Expected to find eph-volume")
+			assert.Nil(t, ephemeralVolume.EmptyDir, "Did not expect emptyDir volume")
+			assert.NotNil(t, ephemeralVolume.Ephemeral, "Expected ephemeral volume")
+			assertStorageEquals(t, ephemeralVolume, "5Gi")
+
+			// Expect only /tmp volume mount for eph-volume
+			mounts := findEphemeralVolumeMounts(obj.Spec.Template.Spec.Containers[0].VolumeMounts)
+			assert.Equal(t, mounts, map[string]string{"/tmp": "tmp"})
+		}
+	})
 }
 
 func TestAdminMultiClusterEnvVars(t *testing.T) {
@@ -790,6 +902,44 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.NotNil(t, containerSecurityContext)
 			assert.True(t, *containerSecurityContext.Privileged)
 			assert.True(t, *containerSecurityContext.AllowPrivilegeEscalation)
+		}
+	})
+
+	t.Run("testReadOnlyRootFilesystem", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.securityContext.enabledOnContainer":     "true",
+				"admin.securityContext.readOnlyRootFilesystem": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			container := obj.Spec.Template.Spec.Containers[0]
+			containerSecurityContext := container.SecurityContext
+			assert.NotNil(t, containerSecurityContext)
+			assert.True(t, *containerSecurityContext.ReadOnlyRootFilesystem)
+
+			// Check that /tmp directory has ephemeral volume mounted to it
+			var tmpVolumeMount *v1.VolumeMount
+			for _, volumeMount := range container.VolumeMounts {
+				if volumeMount.MountPath == "/tmp" {
+					tmpVolumeMount = volumeMount.DeepCopy()
+				}
+			}
+			assert.NotNil(t, tmpVolumeMount, "Expected /tmp volume mount")
+			assert.Equal(t, "eph-volume", tmpVolumeMount.Name)
+			assert.Equal(t, "tmp", tmpVolumeMount.SubPath)
+
+			// Check that NUODOCKER_CONF_DIR=/tmp for generated nuoadmin.conf
+			var confDirEnv *v1.EnvVar
+			for _, env := range container.Env {
+				if env.Name == "NUODOCKER_CONF_DIR" {
+					confDirEnv = env.DeepCopy()
+				}
+			}
+			assert.NotNil(t, confDirEnv, "Expected to find NUODOCKER_CONF_DIR environment variable")
+			assert.Equal(t, "/tmp", confDirEnv.Value)
 		}
 	})
 
