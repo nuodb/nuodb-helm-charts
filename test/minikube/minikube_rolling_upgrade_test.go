@@ -38,7 +38,7 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 	}, 30*time.Second)
 }
 
-func TestAdminReadinessProbe(t *testing.T) {
+func TestAdminProbes(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -48,7 +48,11 @@ func TestAdminReadinessProbe(t *testing.T) {
 	// --check-converged' to fail
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{
 		SetValues: map[string]string{
-			"admin.replicas": "2",
+			"admin.livenessProbe.initialDelaySeconds": "30",
+			"admin.livenessProbe.periodSeconds":       "15",
+			"admin.livenessProbe.failureThreshold":    "1",
+			"admin.readinessProbe.failureThreshold":   "1",
+			"admin.replicas":                          "2",
 		},
 	}, 2, "")
 	adminStatefulSet := helmChartReleaseName + "-nuodb-cluster0"
@@ -67,28 +71,74 @@ func TestAdminReadinessProbe(t *testing.T) {
 	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--", "readinessprobe")
 	require.NoError(t, err, "readinessprobe failed: %s", output)
 
-	// delete Raft log on admin-0 and kill admin-0 so that it bootstraps a
+	// make sure direct invocation of livenessprobe script succeeds on both
+	// Admin processes
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin0, "-c", "admin", "--", "livenessprobe")
+	require.NoError(t, err, "livenessprobe failed: %s", output)
+	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--", "livenessprobe")
+	require.NoError(t, err, "livenessprobe failed: %s", output)
+
+	// get restart count for admin-1
+	pod, err := testlib.FindPod(t, namespaceName, admin1)
+	require.NoError(t, err)
+	var restartCountBefore int32 = -1
+	for _, containerStatus := range pod.Status.ContainerStatuses {
+		if containerStatus.Name == "admin" {
+			restartCountBefore = containerStatus.RestartCount
+		}
+	}
+	require.NotEqual(t, -1, restartCountBefore, "Unable to get restart count for admin container")
+
+	// delete raftlog PVC and pod for admin-0 so that it bootstraps a
 	// disjoint domain when it is restarted and refuses messages from
 	// admin-1
-	k8s.RunKubectl(t, options, "exec", admin0, "-c", "admin", "--", "rm", "-f", "/var/opt/nuodb/raftlog")
-	k8s.RunKubectl(t, options, "delete", "pod", admin0)
+	k8s.RunKubectl(t, options, "delete", "pvc/raftlog-"+admin0, "pod/"+admin0)
 
 	// make sure readinessprobe on admin-1 eventually fails, either because
 	// there is no leader for it to converge with or because it thinks it is
 	// the leader but is not connected to a quorum
 	testlib.Await(t, func() bool {
-		// make sure readinessprobe fails
-		output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--", "readinessprobe")
-		code, err := shell.GetExitCodeForRunCommandError(err)
-		require.NoError(t, err)
-		if code == 0 {
-			return false
+		// make sure readinessprobe and livenessprobe fail by invoking
+		// them directly
+		for _, probe := range []string{"readinessprobe", "livenessprobe"} {
+			output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--", probe)
+			code, err := shell.GetExitCodeForRunCommandError(err)
+			require.NoError(t, err)
+			if code == 0 {
+				return false
+			}
+			// make sure exit code is 1 to indicate non-parse error
+			require.Equal(t, 1, code)
+			require.Contains(t, output, "'check server' failed:")
 		}
-		// make sure exit code is 1 to indicate non-parse error
-		require.Equal(t, 1, code)
-		require.Contains(t, output, "'check server' failed:")
 		return true
 	}, 60*time.Second)
+
+	// check status for admin-1 pod
+	testlib.Await(t, func() bool {
+		pod, err := testlib.FindPod(t, namespaceName, admin1)
+		require.NoError(t, err)
+		var foundReadyCondition, foundRestartCount bool
+		// check that Ready status condition is false
+		for _, condition := range pod.Status.Conditions {
+			if condition.Type == "Ready" {
+				if condition.Status != corev1.ConditionFalse {
+					return false
+				}
+				foundReadyCondition = true
+			}
+		}
+		// check that restart count for admin container has increased
+		for _, containerStatus := range pod.Status.ContainerStatuses {
+			if containerStatus.Name == "admin" {
+				if restartCountBefore >= containerStatus.RestartCount {
+					return false
+				}
+				foundRestartCount = true
+			}
+		}
+		return foundReadyCondition && foundRestartCount
+	}, 120*time.Second)
 }
 
 func TestAdminReadinessProbeFallback(t *testing.T) {
