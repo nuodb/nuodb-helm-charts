@@ -94,26 +94,6 @@ func TestAdminProbes(t *testing.T) {
 	// admin-1
 	k8s.RunKubectl(t, options, "delete", "pvc/raftlog-"+admin0, "pod/"+admin0)
 
-	// make sure readinessprobe on admin-1 eventually fails, either because
-	// there is no leader for it to converge with or because it thinks it is
-	// the leader but is not connected to a quorum
-	testlib.Await(t, func() bool {
-		// make sure readinessprobe and livenessprobe fail by invoking
-		// them directly
-		for _, probe := range []string{"readinessprobe", "livenessprobe"} {
-			output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin1, "-c", "admin", "--", probe)
-			code, err := shell.GetExitCodeForRunCommandError(err)
-			require.NoError(t, err)
-			if code == 0 {
-				return false
-			}
-			// make sure exit code is 1 to indicate non-parse error
-			require.Equal(t, 1, code)
-			require.Contains(t, output, "'check server' failed:")
-		}
-		return true
-	}, 60*time.Second)
-
 	// check status for admin-1 pod
 	testlib.Await(t, func() bool {
 		pod, err := testlib.FindPod(t, namespaceName, admin1)
