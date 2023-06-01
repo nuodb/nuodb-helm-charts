@@ -26,6 +26,13 @@ and we have to allow for added suffixes including "-hotcopy" and "-NN" where NN 
 {{- end -}}
 
 {{/*
+The StatefulSet name is limited to 52 charts (https://github.com/kubernetes/kubernetes/issues/64023).
+*/}}
+{{- define "database.statefulset.name" -}}
+{{ template "truncWithHash" (list . 52) }}
+{{- end -}}
+
+{{/*
 Create chart name as used by the chart label.
 */}}
 {{- define "database.chart" -}}

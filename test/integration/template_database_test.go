@@ -278,6 +278,27 @@ func TestDatabaseStatefulSetResourceLabels(t *testing.T) {
 
 }
 
+func TestDatabaseStatefulSetLongName(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.domain":  "superlongadmindomainname",
+			"database.name": "superlongdatabasename",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+		assert.LessOrEqual(t, len(obj.Name), 52, obj.Name)
+		assert.Equal(t, "sm", obj.Spec.Selector.MatchLabels["component"])
+		assert.Equal(t, "sm", obj.Spec.Template.ObjectMeta.Labels["component"])
+	}
+}
+
 func TestDatabaseVolumes(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"

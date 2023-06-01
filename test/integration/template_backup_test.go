@@ -46,7 +46,7 @@ func TestDatabaseCronJobNames(t *testing.T) {
 		backupGroupPrefix := options.SetValues["database.sm.hotCopy.backupGroupPrefix"]
 		if backupGroupPrefix == "" {
 			// use the cluster name by default
-			backupGroupPrefix = options.SetValues["cluster.name"]
+			backupGroupPrefix = options.SetValues["cloud.cluster.name"]
 		}
 		backupGroupTemplate := fmt.Sprintf("%s-%%d", backupGroupPrefix)
 		var hasBackupGroups bool
@@ -76,7 +76,7 @@ func TestDatabaseCronJobNames(t *testing.T) {
 	t.Run("testDefault", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"cluster.name":                              "cluster0",
+				"cloud.cluster.name":                        "cluster0",
 				"admin.domain":                              "nuodb",
 				"database.name":                             "demo",
 				"database.sm.hotCopy.replicas":              "2",
@@ -101,9 +101,9 @@ func TestDatabaseCronJobNames(t *testing.T) {
 	t.Run("testBackupGroups", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"cluster.name":  "cluster0",
-				"admin.domain":  "nuodb",
-				"database.name": "demo",
+				"cloud.cluster.name": "cluster0",
+				"admin.domain":       "nuodb",
+				"database.name":      "demo",
 				"database.sm.hotCopy.journalBackup.enabled":          "true",
 				"database.sm.hotCopy.backupGroups.aws.labels":        "cloud aws",
 				"database.sm.hotCopy.backupGroups.gcp.processFilter": "label(cloud gcp)",
@@ -127,9 +127,9 @@ func TestDatabaseCronJobNames(t *testing.T) {
 	t.Run("testLongDatabaseName", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"cluster.name":                              "cluster0",
+				"cloud.cluster.name":                        "cluster0",
 				"admin.domain":                              "nuodb",
-				"database.name":                             "superLongDatabaseName",
+				"database.name":                             "superlongdatabasename",
 				"database.sm.hotCopy.replicas":              "2",
 				"database.sm.hotCopy.journalBackup.enabled": "true",
 			},

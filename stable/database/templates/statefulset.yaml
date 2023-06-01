@@ -10,7 +10,9 @@ metadata:
     kubectl.kubernetes.io/default-logs-container: engine
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
-  name: sm-{{ template "database.fullname" . }}
+    component: sm
+    role: nohotcopy
+  name: {{ include "database.statefulset.name" (printf "sm-%s" (include "database.fullname" .)) }}
 spec:
   replicas: {{ .Values.database.sm.noHotCopy.replicas }}
   selector:
@@ -391,7 +393,9 @@ metadata:
       Database deployment resource for NuoDB Storage Engines (SM).
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
-  name: sm-{{ template "database.fullname" . }}-hotcopy
+    component: sm
+    role: hotcopy
+  name: {{ include "database.statefulset.name" (printf "sm-%s-hotcopy" (include "database.fullname" .)) }}
 spec:
   replicas: {{ .Values.database.sm.hotCopy.replicas }}
   selector:
