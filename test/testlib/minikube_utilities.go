@@ -504,7 +504,7 @@ func AwaitNoPods(t *testing.T, namespace string, expectedName string) {
 	}, 180*time.Second)
 }
 
-func findPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, error) {
+func FindPod(t *testing.T, namespace string, expectedName string) (*corev1.Pod, error) {
 	for _, pod := range FindAllPodsInSchema(t, namespace) {
 		if strings.Contains(pod.Name, expectedName) {
 			return &pod, nil
@@ -542,7 +542,7 @@ func GetPod(t *testing.T, namespace string, podName string) *corev1.Pod {
 }
 
 func GetPodName(t *testing.T, namespaceName string, expectedName string) string {
-	tePod, err := findPod(t, namespaceName, expectedName)
+	tePod, err := FindPod(t, namespaceName, expectedName)
 	require.NoError(t, err, "No pod found with name ", expectedName)
 
 	return tePod.Name
@@ -592,7 +592,7 @@ func AwaitPodStatus(t *testing.T, namespace string, podName string, condition co
 
 func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.PodPhase, timeout time.Duration) {
 	Await(t, func() bool {
-		pod, err := findPod(t, namespace, podName)
+		pod, err := FindPod(t, namespace, podName)
 		require.NoError(t, err, "awaitPodPhase: could not find pod with name matching ", podName)
 
 		return pod.Status.Phase == phase
@@ -601,7 +601,7 @@ func AwaitPodPhase(t *testing.T, namespace string, podName string, phase corev1.
 
 func AwaitJobSucceeded(t *testing.T, namespace string, jobName string, timeout time.Duration) {
 	Await(t, func() bool {
-		pod, err := findPod(t, namespace, jobName)
+		pod, err := FindPod(t, namespace, jobName)
 		if err != nil {
 			return false
 		}
@@ -630,7 +630,7 @@ func AwaitPodObjectRecreated(t *testing.T, namespace string, pod *corev1.Pod, ti
 
 func AwaitPodTemplateHasVersion(t *testing.T, namespace string, podNameTemplate string, expectedVersion string, timeout time.Duration) {
 	Await(t, func() bool {
-		pod, err := findPod(t, namespace, podNameTemplate)
+		pod, err := FindPod(t, namespace, podNameTemplate)
 
 		if err != nil {
 			t.Logf("No pod found with name %s", podNameTemplate)

@@ -163,7 +163,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		helm.DeleteE(t, options, helmChartReleaseName, true)
 		AwaitNoPods(t, namespaceName, helmChartReleaseName)
 		// Delete database only if admin pod exists and tearing down the entrypoint cluster
-		_, err := findPod(t, namespaceName, adminPod)
+		_, err := FindPod(t, namespaceName, adminPod)
 		if err == nil && opt.ClusterName == opt.EntrypointClusterName && opt.DbPrimaryRelease {
 			db, err := GetDatabaseE(t, namespaceName, adminPod, opt.DbName)
 			// delete the database if it is not deleted already
@@ -278,7 +278,7 @@ func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName st
 	// the TE ReplicaSet can be recreated with a different name so fetch the pod
 	// using a template continuously
 	Await(t, func() bool {
-		pod, err := findPod(t, namespaceName, tePodNameTemplate)
+		pod, err := FindPod(t, namespaceName, tePodNameTemplate)
 		if err != nil {
 			t.Logf("%s: %s", err.Error(), tePodNameTemplate)
 			return false
@@ -379,7 +379,7 @@ func BackupDatabaseE(
 	}()
 	var backupErr error
 	if err := AwaitE(t, func() bool {
-		pod, err := findPod(t, namespaceName, jobName)
+		pod, err := FindPod(t, namespaceName, jobName)
 		if err != nil {
 			return false
 		}
