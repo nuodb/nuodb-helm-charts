@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,13 +23,17 @@ func verifyAdminResourceLabels(t *testing.T, releaseName string, options *helm.O
 	opt := testlib.GetExtractedOptions(options)
 	labels := obj.GetLabels()
 	app := fmt.Sprintf("%s-%s-%s-admin", releaseName, opt.DomainName, opt.ClusterName)
-	msg, ok := testlib.MapContains(labels, map[string]string{
+	expectedLabels := map[string]string{
 		"app":     app,
 		"group":   "nuodb",
 		"domain":  opt.DomainName,
 		"chart":   "admin",
 		"release": releaseName,
-	})
+	}
+	if _, ok := obj.(*appsv1.StatefulSet); ok {
+		expectedLabels["component"] = "admin"
+	}
+	msg, ok := testlib.MapContains(labels, expectedLabels)
 	require.Truef(t, ok, "Mandatory labels missing from resource %s: %s", obj.GetName(), msg)
 
 	resourceLabels := make(map[string]string)

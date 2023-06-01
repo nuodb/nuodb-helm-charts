@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -20,14 +21,26 @@ func verifyDatabaseResourceLabels(t *testing.T, releaseName string, options *hel
 	opt := testlib.GetExtractedOptions(options)
 	labels := obj.GetLabels()
 	app := fmt.Sprintf("%s-%s-%s-%s-database", releaseName, opt.DomainName, opt.ClusterName, opt.DbName)
-	msg, ok := testlib.MapContains(labels, map[string]string{
+	expectedLabels := map[string]string{
 		"app":      app,
 		"group":    "nuodb",
 		"domain":   opt.DomainName,
 		"database": opt.DbName,
 		"chart":    "database",
 		"release":  releaseName,
-	})
+	}
+	if _, ok := obj.(*appsv1.StatefulSet); ok {
+		expectedLabels["component"] = "sm"
+		if strings.HasSuffix(obj.GetName(), "-hotcopy") {
+			expectedLabels["role"] = "hotcopy"
+		} else {
+			expectedLabels["role"] = "nohotcopy"
+		}
+	} else if _, ok := obj.(*appsv1.Deployment); ok {
+		expectedLabels["component"] = "te"
+	}
+
+	msg, ok := testlib.MapContains(labels, expectedLabels)
 	require.Truef(t, ok, "Mandatory labels missing from resource %s: %s", obj.GetName(), msg)
 
 	resourceLabels := make(map[string]string)

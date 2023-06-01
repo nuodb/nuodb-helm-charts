@@ -51,7 +51,7 @@ func TestDatabaseCronJobNames(t *testing.T) {
 		backupGroupTemplate := fmt.Sprintf("%s-%%d", backupGroupPrefix)
 		var hasBackupGroups bool
 		for k := range options.SetValues {
-			if strings.HasPrefix(k, "database.sm.hotCopy.backupGroups") {
+			if strings.HasPrefix(k, "database.sm.hotCopy.backupGroups.") {
 				hasBackupGroups = true
 				break
 			}
