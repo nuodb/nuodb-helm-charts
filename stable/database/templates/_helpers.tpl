@@ -636,6 +636,12 @@ calculated and appended to the truncated string to make it unique.
 {{- if not (typeIs "string" $s) -}}
 {{- fail (printf "truncWithHash template failed: not supported type '%s'" (typeOf $s)) -}}
 {{- end -}}
+{{- if not (typeIs "int" $max) -}}
+{{- fail (printf "truncWithHash template failed: not supported type '%s' for max length" (typeOf $max)) -}}
+{{- end -}}
+{{- if lt $max 15 -}}
+{{- fail (printf "truncWithHash template failed: max string length %d is too small; must be at lest 15 chars" $max) -}}
+{{- end -}}
 {{- if gt (len $s) $max -}}
 {{- $hash := sha256sum $s | trunc 7 -}}
 {{- $truncated := $s | trunc (int (sub $max 8)) | trimSuffix "-" -}}
