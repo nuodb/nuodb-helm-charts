@@ -345,8 +345,38 @@ admin:
     balancer: balancer
     nodeport: nodeport
 
-  # Some clusters require longer readiness probe timeouts
-  readinessTimeoutSeconds: 5
+  # Configuration for liveness probe, which causes nuoadmin container to be
+  # restarted after some number of failures.
+  livenessProbe:
+    enabled: true
+
+    # By default, use 1-minute delay/period and restart after 10 failures. This
+    # will cause the nuoadmin container to be restarted after 10-11 minutes of
+    # probe failures.
+    initialDelaySeconds: 60
+    periodSeconds: 60
+    failureThreshold: 10
+
+    # The liveness probe has an internal timeout of 10 seconds to allow the AP
+    # to converge with the Raft leader. Specify double this value for the
+    # timeout used by the kubelet invoking the liveness probe.
+    timeoutSeconds: 20
+
+  # Configuration for readiness probe, which controls ready status and whether
+  # the pod has traffic from Services dispatched to it.
+  readinessProbe:
+
+    # By default, use 10/15-second delay/period and mark container as not ready
+    # after four failures, i.e. one minute of probe failures.
+    initialDelaySeconds: 10
+    periodSeconds: 15
+    failureThreshold: 4
+    successThreshold: 1
+
+    # The readiness probe has an internal timeout of 5 seconds to allow the AP
+    # to converge with the Raft leader. Specify double this value for the
+    # timeout used by the kubelet invoking the readiness probe.
+    timeoutSeconds: 10
 
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}

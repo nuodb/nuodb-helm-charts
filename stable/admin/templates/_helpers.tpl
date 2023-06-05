@@ -428,3 +428,19 @@ rendered, false otherwise.
 {{- end -}}
 {{ $ret }}
 {{- end -}}
+
+{{/*
+Returns timeout for readiness probe. admin.readinessTimeoutSeconds no longer
+appears in values.yaml because it is deprecated and has been replaced by
+admin.readinessProbe.timeoutSeconds. Since there is no default value for
+admin.readinessTimeoutSeconds, it can only be set if the user explicitly
+specified it, so give it precedence over admin.readinessProbe.timeoutSeconds in
+that case.
+*/}}
+{{- define "admin.readinessTimeoutSeconds" -}}
+{{- if .Values.admin.readinessTimeoutSeconds -}}
+{{ .Values.admin.readinessTimeoutSeconds }}
+{{- else -}}
+{{ default 10 .Values.admin.readinessProbe.timeoutSeconds }}
+{{- end -}}
+{{- end -}}

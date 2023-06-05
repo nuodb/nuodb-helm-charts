@@ -150,21 +150,25 @@ spec:
           {{- end }}
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
-          {{- end}}
+          {{- end }}
         {{- include "sc.containerSecurityContext" . | indent 8 }}
+        {{- if eq (include "defaulttrue" .Values.admin.livenessProbe.enabled) "true" }}
         livenessProbe:
-          initialDelaySeconds: 30
-          periodSeconds: 15
-          tcpSocket:
-            port: 8888
+          initialDelaySeconds: {{ default 60 .Values.admin.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ default 60 .Values.admin.livenessProbe.periodSeconds }}
+          failureThreshold: {{ default 10 .Values.admin.livenessProbe.failureThreshold }}
+          exec:
+            command: [ "livenessprobe" ]
+          timeoutSeconds: {{ default 20 .Values.admin.livenessProbe.timeoutSeconds }}
+        {{- end }}
         readinessProbe:
-          initialDelaySeconds: 10
-          periodSeconds: 15
+          initialDelaySeconds: {{ default 10 .Values.admin.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ default 15 .Values.admin.readinessProbe.periodSeconds }}
+          failureThreshold: {{ default 4 .Values.admin.readinessProbe.failureThreshold }}
+          successThreshold: {{ default 1 .Values.admin.readinessProbe.successThreshold }}
           exec:
             command: [ "readinessprobe" ]
-          failureThreshold: 30
-          successThreshold: 2
-          timeoutSeconds: {{ default 5 .Values.admin.readinessTimeoutSeconds }}
+          timeoutSeconds: {{ include "admin.readinessTimeoutSeconds" . }}
         volumeMounts:
         - mountPath: /var/log/nuodb
           {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
@@ -193,6 +197,11 @@ spec:
         - name: readinessprobe
           mountPath: /usr/local/bin/readinessprobe
           subPath: readinessprobe
+        {{- if eq (include "defaulttrue" .Values.admin.livenessProbe.enabled) "true" }}
+        - name: livenessprobe
+          mountPath: /usr/local/bin/livenessprobe
+          subPath: livenessprobe
+        {{- end }}
         {{- if .Values.admin.tlsCACert }}
         - name: tls-ca-cert
           mountPath: /etc/nuodb/keys/ca.cert
@@ -275,6 +284,12 @@ spec:
         configMap:
           name: {{ template "admin.fullname" . }}-readinessprobe
           defaultMode: 0755
+      {{- if eq (include "defaulttrue" .Values.admin.livenessProbe.enabled) "true" }}
+      - name: livenessprobe
+        configMap:
+          name: {{ template "admin.fullname" . }}-livenessprobe
+          defaultMode: 0755
+      {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: raftlog

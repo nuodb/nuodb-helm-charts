@@ -1,0 +1,22 @@
+#!/bin/sh
+
+# (C) Copyright NuoDB, Inc. 2023  All Rights Reserved
+# This file is licensed under the BSD 3-Clause License.
+# See https://github.com/nuodb/nuodb-helm-charts/blob/master/LICENSE
+
+# use 'nuocmd check server' (singular) to check that the local AP is caught up
+# with the Raft leader; specify a timeout to avoid failures due to concurrent
+# Raft commits
+out="$(nuocmd check server --check-converged --timeout 10 2>&1)"
+ret=$?
+
+# nuocmd returns exit code 2 if there is a parse error due to unrecognized
+# subcommand or arguments; avoid non-0 exit code due to parse error, which
+# could be due to the 'nuocmd check server' (singular) subcommand not being
+# supported by the version of NuoDB being used
+if [ $ret != 2 ]; then
+    # the command succeeded or failed with a non-parse error; emit command
+    # output and exit
+    echo "$out"
+    exit $ret
+fi

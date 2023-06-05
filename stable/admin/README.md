@@ -208,7 +208,17 @@ The following tables list the configurable parameters for the `admin` option of 
 | `serviceSuffix.balancer` | The suffix to use for the LoadBalancer service name | `balancer` |
 | `serviceSuffix.clusterip` | The suffix to use for the ClusterIP service name | `clusterip` |
 | `serviceSuffix.nodeport` | The suffix to use for the NodePort service name | `nodeport` |
-| `readinessTimeoutSeconds` | Admin readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `1` |
+| `livenessProbe.enabled` | Whether to enable the liveness probe for the nuoadmin container | `true` |
+| `livenessProbe.initialDelaySeconds` | The initial delay for the liveness probe | `60` |
+| `livenessProbe.periodSeconds` | The period at which the liveness probe is invoked | `60` |
+| `livenessProbe.failureThreshold` | The number of times that the liveness probe must fail consecutively before the nuoadmin container is restarted | `10` |
+| `livenessProbe.timeoutSeconds` | The timeout for liveness probe invocations | `20` |
+| `readinessProbe.initialDelaySeconds` | The initial delay for the readiness probe | `10` |
+| `readinessProbe.periodSeconds` | The period at which the readiness probe is invoked | `15` |
+| `readinessProbe.failureThreshold` | The number of times that the readiness probe must fail consecutively before the nuoadmin container is considered not ready | `4` |
+| `readinessProbe.successThreshold` | The number of times that the readiness probe must succeed consecutively before the nuoadmin container is considered ready | `1` |
+| `readinessProbe.timeoutSeconds` | The timeout for readiness probe invocations | `10` |
+| `readinessTimeoutSeconds` | The timeout for readiness probe invocations. This is a deprecated alias for `readinessProbe.timeoutSeconds` that will become unsupported in some future release. | `nil` |
 | `podAnnotations` | Annotations to pass through to the Admin pod | `nil` |
 | `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
 | `tde.storagePasswordsDir` | Transparent Data Encryption storage passwords mount path | `/etc/nuodb/tde` |
@@ -252,7 +262,7 @@ Features in this section have been deprecated but not yet removed.
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
-| `loadBalancerJob.enabled` | Create a job that sets the default load balancer policy for the admin tier. Replaced by Kubernetes Aware Admin. | false |
+| `loadBalancerJob.enabled` | Create a job that sets the default load balancer policy for the admin tier. Replaced by Kubernetes Aware Admin. | `false` |
 
 
 #### nuocollector.*

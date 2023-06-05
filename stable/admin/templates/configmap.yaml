@@ -39,3 +39,14 @@ metadata:
   name: {{ template "admin.fullname" . }}-readinessprobe
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}
+---
+{{- if eq (include "defaulttrue" .Values.admin.livenessProbe.enabled) "true" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "admin.resourceLabels" . | nindent 4 }}
+  name: {{ template "admin.fullname" . }}-livenessprobe
+data:
+{{ (.Files.Glob "files/livenessprobe").AsConfig | indent 2 }}
+{{- end }}

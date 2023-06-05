@@ -33,7 +33,10 @@ nuocmd_fallback() {
 #      for the nuoadmin entrypoint script.
 #   3. It has the same commit index as the current Raft leader, which means
 #      that its Raft state is up-to-date.
-nuocmd_fallback check server --check-active --check-connected --check-converged
+#
+# specify a small timeout to avoid failing when check is performed concurrently
+# with Raft commit, which can cause indexes to temporarily be stale
+nuocmd_fallback check server --check-active --check-connected --check-converged --timeout 5
 
 # 'nuocmd check server' is unsupported; use the 'nuocmd check servers' (plural)
 # subcommand, which was used as the readiness probe in releases of
