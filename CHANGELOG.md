@@ -1,5 +1,22 @@
 # Changelog
 
+## [v3.6.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.6.0) (2023-06-21)
+
+[Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.5.0...v3.6.0)
+
+**Fixed bugs:**
+
+- Limit CronJob and StatefulSet name length [\#320](https://github.com/nuodb/nuodb-helm-charts/pull/320) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Incremental backup after SM restart fails if the previous full was unsuccessful [\#311](https://github.com/nuodb/nuodb-helm-charts/pull/311) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+
+**Merged pull requests:**
+
+- Add liveness probe and improve readiness probe plumbing [\#319](https://github.com/nuodb/nuodb-helm-charts/pull/319) ([adriansuarez](https://github.com/adriansuarez))
+- Support readOnlyRootFilesystem and generic ephemeral volumes [\#318](https://github.com/nuodb/nuodb-helm-charts/pull/318) ([adriansuarez](https://github.com/adriansuarez))
+- Expose process filter for database and restore charts [\#315](https://github.com/nuodb/nuodb-helm-charts/pull/315) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Storage groups support [\#314](https://github.com/nuodb/nuodb-helm-charts/pull/314) ([sivanov-nuodb](https://github.com/sivanov-nuodb))
+- Account for zombie processes and defunct domain state entries [\#306](https://github.com/nuodb/nuodb-helm-charts/pull/306) ([adriansuarez](https://github.com/adriansuarez))
+
 ## [v3.5.0](https://github.com/nuodb/nuodb-helm-charts/tree/v3.5.0) (2022-07-25)
 
 [Full Changelog](https://github.com/nuodb/nuodb-helm-charts/compare/v3.4.0...v3.5.0)
