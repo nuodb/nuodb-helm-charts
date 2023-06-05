@@ -21,6 +21,10 @@ func verifyBackupResourceLabels(t *testing.T, options *helm.Options, obj metav1.
 	require.Truef(t, ok, "Backup resource labels do not match for resource %s: %s", obj.GetName(), msg)
 }
 
+func truncate(s string, max int) string {
+	return s[:max]
+}
+
 func TestDatabaseBackupCronJobRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
@@ -33,6 +37,123 @@ func TestDatabaseBackupCronJobRenders(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
 
 	testlib.SplitAndRenderCronJob(t, output, 2)
+}
+
+func TestDatabaseCronJobNames(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+	templateFn := func(options *helm.Options) string {
+		backupGroupPrefix := options.SetValues["database.sm.hotCopy.backupGroupPrefix"]
+		if backupGroupPrefix == "" {
+			// use the cluster name by default
+			backupGroupPrefix = options.SetValues["cloud.cluster.name"]
+		}
+		backupGroupTemplate := fmt.Sprintf("%s-%%d", backupGroupPrefix)
+		var hasBackupGroups bool
+		for k := range options.SetValues {
+			if strings.HasPrefix(k, "database.sm.hotCopy.backupGroups.") {
+				hasBackupGroups = true
+				break
+			}
+		}
+		if hasBackupGroups {
+			// leave the caller to specify the full backup group name
+			backupGroupTemplate = "%s"
+		}
+		return fmt.Sprintf("%%s-hotcopy-%s-%s-%s",
+			options.SetValues["admin.domain"],
+			options.SetValues["database.name"],
+			backupGroupTemplate)
+	}
+	assertContainsPrefix := func(t *testing.T, list map[string]interface{}, prefix string) {
+		for k := range list {
+			if strings.HasPrefix(k, prefix) {
+				return
+			}
+		}
+		assert.Fail(t, "%v does not contain element with prefix %q", list, prefix)
+	}
+	t.Run("testDefault", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"cloud.cluster.name":                        "cluster0",
+				"admin.domain":                              "nuodb",
+				"database.name":                             "demo",
+				"database.sm.hotCopy.replicas":              "2",
+				"database.sm.hotCopy.journalBackup.enabled": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/cronjob.yaml"})
+		actual := make(map[string]interface{})
+		for _, obj := range testlib.SplitAndRenderCronJob(t, output, 2) {
+			actual[obj.Name] = struct{}{}
+		}
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "full", 0))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "full", 1))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "incremental", 0))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "incremental", 1))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "journal", 0))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "journal", 1))
+	})
+
+	t.Run("testBackupGroups", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"cloud.cluster.name": "cluster0",
+				"admin.domain":       "nuodb",
+				"database.name":      "demo",
+				"database.sm.hotCopy.journalBackup.enabled":          "true",
+				"database.sm.hotCopy.backupGroups.aws.labels":        "cloud aws",
+				"database.sm.hotCopy.backupGroups.gcp.processFilter": "label(cloud gcp)",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/cronjob.yaml"})
+		actual := make(map[string]interface{})
+		for _, obj := range testlib.SplitAndRenderCronJob(t, output, 2) {
+			actual[obj.Name] = struct{}{}
+		}
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "full", "aws"))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "full", "gcp"))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "incremental", "aws"))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "incremental", "gcp"))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "journal", "aws"))
+		assert.Contains(t, actual, fmt.Sprintf(templateFn(options), "journal", "gcp"))
+	})
+
+	t.Run("testLongDatabaseName", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"cloud.cluster.name":                        "cluster0",
+				"admin.domain":                              "nuodb",
+				"database.name":                             "superlongdatabasename",
+				"database.sm.hotCopy.replicas":              "2",
+				"database.sm.hotCopy.journalBackup.enabled": "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath,
+			"release-name", []string{"templates/cronjob.yaml"})
+		actual := make(map[string]interface{})
+		for _, obj := range testlib.SplitAndRenderCronJob(t, output, 2) {
+			actual[obj.Name] = struct{}{}
+		}
+		// verify that unique names are generated for all CronJobs
+		assert.Equal(t, 6, len(actual))
+		for k := range actual {
+			// verify that all CronJob names are less than 52 characters
+			assert.LessOrEqual(t, len(k), 52, k)
+		}
+		assertContainsPrefix(t, actual, truncate(fmt.Sprintf(templateFn(options), "full", 0), 44))
+		assertContainsPrefix(t, actual, truncate(fmt.Sprintf(templateFn(options), "full", 1), 44))
+		assertContainsPrefix(t, actual, truncate(fmt.Sprintf(templateFn(options), "incremental", 0), 44))
+		assertContainsPrefix(t, actual, truncate(fmt.Sprintf(templateFn(options), "incremental", 1), 44))
+		assertContainsPrefix(t, actual, truncate(fmt.Sprintf(templateFn(options), "journal", 0), 44))
+		assertContainsPrefix(t, actual, truncate(fmt.Sprintf(templateFn(options), "journal", 1), 44))
+	})
 }
 
 func TestDatabaseBackupCronJobDisabled(t *testing.T) {

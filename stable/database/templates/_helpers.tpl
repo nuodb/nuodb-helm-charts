@@ -26,6 +26,13 @@ and we have to allow for added suffixes including "-hotcopy" and "-NN" where NN 
 {{- end -}}
 
 {{/*
+The StatefulSet name is limited to 52 charts (https://github.com/kubernetes/kubernetes/issues/64023).
+*/}}
+{{- define "database.statefulset.name" -}}
+{{ template "truncWithHash" (list . 52) }}
+{{- end -}}
+
+{{/*
 Create chart name as used by the chart label.
 */}}
 {{- define "database.chart" -}}
@@ -261,7 +268,8 @@ into account any schedule overrides configured per backup group.
 Renders the name of the HotCopy CronJob
 */}}
 {{- define "hotcopy.cronjob.name" -}}
-{{ printf "%s-hotcopy-%s-%s-%s" .hotCopyType .Values.admin.domain .Values.database.name .backupGroup | trunc 52 | trimSuffix "-" }}
+{{- $name := printf "%s-hotcopy-%s-%s-%s" .hotCopyType .Values.admin.domain .Values.database.name .backupGroup -}}
+{{ template "truncWithHash" (list $name 52) }}
 {{- end -}}
 
 {{/*
@@ -615,4 +623,30 @@ rendered, false otherwise.
 {{- end -}}
 {{- end -}}
 {{ $ret }}
+{{- end -}}
+
+{{/*
+Truncates a string to the max length of characters. If the original string
+length exceeds the supplied max length, a 7 characters SHA256 hash is
+calculated and appended to the truncated string to make it unique.
+*/}}
+{{- define "truncWithHash" -}}
+{{- $s := index . 0 -}}
+{{- $max := index . 1 -}}
+{{- if not (typeIs "string" $s) -}}
+{{- fail (printf "truncWithHash template failed: not supported type '%s'" (typeOf $s)) -}}
+{{- end -}}
+{{- if not (typeIs "int" $max) -}}
+{{- fail (printf "truncWithHash template failed: not supported type '%s' for max length" (typeOf $max)) -}}
+{{- end -}}
+{{- if lt $max 15 -}}
+{{- fail (printf "truncWithHash template failed: max string length %d is too small; must be at lest 15 chars" $max) -}}
+{{- end -}}
+{{- if gt (len $s) $max -}}
+{{- $hash := sha256sum $s | trunc 7 -}}
+{{- $truncated := $s | trunc (int (sub $max 8)) | trimSuffix "-" -}}
+{{ printf "%s-%s" $truncated $hash }}
+{{- else -}}
+{{ $s }}
+{{- end -}}
 {{- end -}}
