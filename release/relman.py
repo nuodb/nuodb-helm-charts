@@ -50,7 +50,7 @@ class GitRepo(object):
 
     @classmethod
     def get_tags(cls, ref):
-        return run('git', 'tag', '--sort=committerdate', '--merged', ref).split()
+        return run('git', 'tag', '--sort=version:refname', '--merged', ref).split()
 
     @classmethod
     def get_tags_on(cls, ref='HEAD'):
@@ -136,7 +136,7 @@ class GitRepo(object):
             if check_all:
                 # check that tag matches branch conventions
                 release_branch.check_release(release)
-                # check that release tags are in ascending order
+                # check that release tags are in ascending order in commit history
                 if previous is not None:
                     previous.check_before(release)
                 previous = release
@@ -415,9 +415,9 @@ class ReleaseTag(object):
             raise RuntimeError('Release tag {} has later version than current version {}'.format(self.tag, self.releasable.version))
 
     def check_before(self, release_after):
-        # check that self is less than release tag on later commit
-        if self.semver > release_after.semver:
-            raise RuntimeError('Release tag {} has later version than subsequent release tag {}'.format(self.tag, release_after.tag))
+        # check that self is before release tag in commit history
+        if self.tag not in GitRepo.get_tags(release_after.tag):
+            raise RuntimeError('Release tag {} appears after {} in commit history'.format(self.tag, release_after.tag))
 
 
 class ReleaseBranch(object):

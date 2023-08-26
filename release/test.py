@@ -285,7 +285,7 @@ directory = {}
         self.runcmd('git', 'tag', 'v0.9.0', 'HEAD~')
         self.check_negative(
                 lambda: self.relman('--check-tags'),
-                'Release tag v1.0.0 has later version than subsequent release tag v0.9.0')
+                'Release tag v0.9.0 appears after v1.0.0 in commit history')
 
     def testBranchConventions(self):
         # negative test: release tag to non-0 patch version on main branch
