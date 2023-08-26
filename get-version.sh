@@ -5,7 +5,7 @@ fail() {
     exit 1
 }
 
-# Change to charts/ directory
+# Change to root directory
 cd "$(dirname "$0")"
 
 # Scrape version from all Chart.yaml files at second level of directory hierarchy
