@@ -28,8 +28,6 @@ jobs:
             exit 1
           fi
           echo "tag=v$VERSION" >> $GITHUB_OUTPUT
-      - name: Install Helm
-        uses: azure/setup-helm@v3
       - name: Package Helm charts
         run: ./scripts/package.sh
       - name: Publish GitHub release
