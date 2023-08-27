@@ -2,11 +2,12 @@
 
 NuoDB Helm Charts releases are delivered as follows:
 
-1. First a changelog is generated that lists the commits in a release.
+1. A changelog is generated that lists the commits in the release.
 2. The changelog is committed to version control.
-3. The commit is tagged with a release, and for `<major>.<minor>.0` releases (i.e. off of master), a branch is created for patch releases for that `<major>.<minor>` version.
-4. A GitHub release is created that includes the changelog and release artifacts, which are the packaged Helm charts.
-5. A publishing step is performed to make the new release artifacts downloadable using `helm`.
+3. The commit is tagged with the semantic version of the release, e.g. `v3.5.0`.
+4. For `<major>.<minor>.0` releases (i.e. off of master), a branch is created for patch releases for the `<major>.<minor>` version.
+5. A GitHub release is created that includes the changelog and release artifacts, which are the packaged Helm charts.
+6. A publishing step is performed to make the new release artifacts downloadable using `helm`.
 
 ## Branching and tagging conventions
 
@@ -25,7 +26,7 @@ Branches of the form `v<major>.<minor>-dev` are used to create patch releases fo
 
 ## `relman.py` usage
 
-The `relman.py` tool can be used to perform steps 1, 2, and 3 of the release process described above.
+The `relman.py` tool can be used to perform steps 1 through 4 of the release process described above.
 
 1. Switch to the `master` branch:
 ```sh
