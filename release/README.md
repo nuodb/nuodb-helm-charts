@@ -1,12 +1,12 @@
-# The `relman.py` tool
+# NuoDB Helm Charts release process
 
-`relman.py` is a tool for managing releases from Git repositories.
-It imposes branching and tagging conventions for associating releases with Git commits, can generate changelogs for releases, and can be used to manage releases for multiple deliverables out of the same repository.
+NuoDB Helm Charts releases are delivered as follows:
 
-## Deliverables
-
-`relman.py` can be used to manage releases for multiple _deliverables_ out of the same Git repository (monorepo).
-A deliverable is associated with a subdirectory within the Git repository that contains a `get-version.sh` script to obtain the current version.
+1. First a changelog is generated that lists the commits in a release.
+2. The changelog is committed to version control.
+3. The commit is tagged with a release, and for `<major>.<minor>.0` releases (i.e. off of master), a branch is created for patch releases for that `<major>.<minor>` version.
+4. A GitHub release is created that includes the changelog and release artifacts, which are the packaged Helm charts.
+5. A publishing step is performed to make the new release artifacts downloadable using `helm`.
 
 ## Branching and tagging conventions
 
@@ -18,27 +18,18 @@ To summarize semver conventions:
 - Minor version releases can introduce backwards-compatible enhancements.
 - Major version releases can introduce backwards-incompatible enhancements.
 
-The tag format `v<major>.<minor>.<patch>` is used to denote a release of the root deliverable.
-The tag format `<deliverable>/v<major>.<minor>.<patch>` is used to denote a release of a non-root deliverable with path `<deliverable>`.
+The tag format `v<major>.<minor>.<patch>` is used to denote a release.
 
-Major and minor releases are created from the `main` branch, while patch releases are created from release branches.
-Branches of the form `v<major>.<minor>-dev` are used to create patch releases for the root deliverable, for a particular major and minor version.
-Branches of the form `<deliverable>/v<major>.<minor>-dev` are used to create patch releases for non-root deliverables with path `<deliverable>`, for a particular major and minor version.
+Major and minor releases are created from the `master` branch, while patch releases are created from release branches.
+Branches of the form `v<major>.<minor>-dev` are used to create patch releases for a particular major and minor version.
 
 ## `relman.py` usage
 
-The `relman.py` tool can be used to prepare a release.
-Currently it is capable of checking that the current branch follows the tagging conventions using `--check-current` or `--check-tags`, and it can also generate a changelog by scraping commit messages since the last commit using `--create-changelog`.
-The changelog files for all releases are stored in `changelog` for the root deliverable and `<deliverable>/changelog` for non-root deliverables.
-These files should be checked into version control, perhaps after some manual editing, and can be used to describe the release in GitHub.
+The `relman.py` tool can be used to perform steps 1, 2, and 3 of the release process described above.
 
-## Example: Creating a minor release
-
-To create a minor release of the root deliverable, `relman.py` can be used to create the commit, tag, and release branch as follows:
-
-1. Switch to the `main` branch:
+1. Switch to the `master` branch:
 ```sh
-git checkout main
+git checkout master
 ```
 2. Use the `relman.py` tool to check that the current development version is larger than the last release tag, commit the changelog, tag the commit, and create release branch:
 ```sh
