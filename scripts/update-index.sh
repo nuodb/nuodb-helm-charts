@@ -22,3 +22,11 @@ git merge --ff-only origin/gh-pages
 # Update index with new Helm charts
 : ${GH_RELEASES_URL:="https://github.com/nuodb/nuodb-helm-charts/releases/download"}
 helm repo index package --merge index.yaml --url "$GH_RELEASES_URL"
+
+# Commit and push change if PUSH_UPDATE=true
+if [ "$PUSH_UPDATE" = true ]; then
+    mv package/index.yaml .
+    git add index.yaml
+    git commit -m "Adding $(ls package | sed 's|/||') charts to index"
+    git push
+fi
