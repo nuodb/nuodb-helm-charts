@@ -10,6 +10,7 @@ jobs:
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          submodules: true
       - name: Check version tag and changelog
         id: vars
         run: |
