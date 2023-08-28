@@ -27,11 +27,14 @@ jobs:
             echo "No changelog found for $VERSION" 2>&1
             exit 1
           fi
-          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
       - name: Package Helm charts
         run: ./scripts/package.sh
       - name: Publish GitHub release
-        run: gh release create ${{ steps.vars.outputs.tag }} -F changelogs/${{ steps.vars.outputs.tag }}.md package/${{ steps.vars.outputs.tag }}/*
+        run: gh release create v${{ steps.vars.outputs.version }} \
+          -t "NuoDB Helm Charts Release ${{ steps.vars.outputs.version }}" \
+          -F changelogs/v${{ steps.vars.outputs.version }}.md \
+          package/v${{ steps.vars.outputs.version }}/*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Helm index
