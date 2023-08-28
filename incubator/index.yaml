@@ -1,0 +1,298 @@
+apiVersion: v1
+entries:
+  backup:
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.851043-05:00"
+    description: Scheduled and on-demand backup for NuoDB.
+    digest: 8d6a3dccb7a726996ba37e7f3d705ad68f2e5d36870f02ce1f70781e9f43a4d1
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/backup
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    - backup
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: backup
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.3.1/backup-2.3.1.tgz
+    version: 2.3.1
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.850515-05:00"
+    description: Scheduled and on-demand backup for NuoDB.
+    digest: 31cae70403692ab3c10965bacba7a6a6ce2de9bebd2f4637b3ec280a269d2b44
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/backup
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    - backup
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: backup
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.3.0/backup-2.3.0.tgz
+    version: 2.3.0
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.849959-05:00"
+    description: Scheduled and on-demand backup for NuoDB.
+    digest: cea0562ebf26feb89af809c7addab948dcdef08818ccf92bf2306bc966c439c3
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/backup
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    - backup
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: backup
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.2/backup-2.2.tgz
+    version: "2.2"
+  cloudbeaver:
+  - apiVersion: v2
+    appVersion: 22.1.4
+    created: "2023-06-22T04:42:55.34402709-04:00"
+    description: A web based SQL GUI tool for running queries against NuoDB.
+    digest: bc0054359f6758ac6d26d8f8f3145998de1e4f281af6847ac51b83c8710e1cf9
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/incubator/cloudbeaver
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: cloudbeaver
+    type: application
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.6.0/cloudbeaver-3.6.0.tgz
+    version: 3.6.0
+  demo-ycsb:
+  - apiVersion: v1
+    appVersion: 5.0.3
+    created: "2023-06-22T04:42:55.345645511-04:00"
+    description: Load YCSB for NuoDB
+    digest: 63376ad1f820aa87f2248786964d62deba702c6ea67e1d007454d908c9ace80e
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.6.0/demo-ycsb-3.6.0.tgz
+    version: 3.6.0
+  - apiVersion: v1
+    appVersion: 4.3.2
+    created: "2023-06-22T04:42:55.34500933-04:00"
+    description: Load YCSB for NuoDB
+    digest: c302558ae98ec56402eac8e5ff1311e969977e89991f179cc5a6b936e79736b3
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.5.0/demo-ycsb-3.5.0.tgz
+    version: 3.5.0
+  - apiVersion: v1
+    appVersion: 4.2.1
+    created: "2021-12-08T05:06:42.420302628-05:00"
+    description: Load YCSB for NuoDB
+    digest: 7d9b19aa6b250fddfec3f60ad3e33123e31f3b9e9ed65780ec1cfffa70cac8f3
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.4.0/demo-ycsb-3.4.0.tgz
+    version: 3.4.0
+  - apiVersion: v1
+    appVersion: 4.2.1
+    created: "2021-12-08T05:06:42.419714987-05:00"
+    description: Load YCSB for NuoDB
+    digest: 14b0cc6b507f38d26de453bb38bc9b6aa530f09efa0d92fd420d9703f5e81f75
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.3.0/demo-ycsb-3.3.0.tgz
+    version: 3.3.0
+  - apiVersion: v1
+    appVersion: 4.2.1
+    created: "2021-12-08T05:06:42.418961219-05:00"
+    description: Load YCSB for NuoDB
+    digest: f29a2c62abec3596a3d2504d865e1dac72b9da44600a7c79c95b426fda4db21b
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.2.0/demo-ycsb-3.2.0.tgz
+    version: 3.2.0
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2021-02-08T15:17:06.727168-05:00"
+    description: Load YCSB for NuoDB
+    digest: 47babada5c77b6353d0ab273d5e921603cba74023daf56fa979992678bfd2632
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.1.0/demo-ycsb-3.1.0.tgz
+    version: 3.1.0
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.854998-05:00"
+    description: Load YCSB for NuoDB
+    digest: 1ad3d40afefe4dded486b055eca906e9e881d5e326e2906b27e1fe1a08b217d9
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.0.0/demo-ycsb-3.0.0.tgz
+    version: 3.0.0
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.854305-05:00"
+    description: Load YCSB for NuoDB
+    digest: ed94b740f58343fdcc84a79cad6be5d0e0ca9c2654756bcf6d90a64bf06284ec
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.4.1/demo-ycsb-2.4.1.tgz
+    version: 2.4.1
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.853644-05:00"
+    description: Load YCSB for NuoDB
+    digest: 733badeb1650551b3845248caa79d032c3f42fa9ce9a710916ce42c6b48ea262
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.4.0/demo-ycsb-2.4.0.tgz
+    version: 2.4.0
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.852992-05:00"
+    description: Load YCSB for NuoDB
+    digest: 9f4ba70e2f22a773f86808e3fecc44dbd95fb62dd5c5c1cc2d42a0a82820e9cc
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.3.1/demo-ycsb-2.3.1.tgz
+    version: 2.3.1
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.852325-05:00"
+    description: Load YCSB for NuoDB
+    digest: 079831a325cb36055cc6655bd435febaf856c712fe1f4650ec401830cb81d909
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.3.0/demo-ycsb-2.3.0.tgz
+    version: 2.3.0
+  - apiVersion: v1
+    appVersion: 4.0.0
+    created: "2020-11-23T10:41:45.851678-05:00"
+    description: Load YCSB for NuoDB
+    digest: 4ebf67aa4b9fb3a08cd5fce239737eee8cc434d2d1c6a7226c183b16cdfbc078
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://www.nuodb.com/sites/all/themes/nuodb/logo.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.2/demo-ycsb-2.2.tgz
+    version: "2.2"
+generated: "2023-06-22T04:42:55.340017301-04:00"
