@@ -31,7 +31,7 @@ Helm 2 has reached it's end of life. The last Helm 2 security patch was released
 To add the NuoDB charts to your local helm repository, run:
 
 ```
-helm repo add nuodb https://storage.googleapis.com/nuodb-charts
+helm repo add nuodb https://nuodb.github.io/nuodb-helm-charts
 "nuodb" has been added to your repositories
 ```
 

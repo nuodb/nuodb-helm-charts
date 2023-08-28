@@ -1,0 +1,47 @@
+name: Create GitHub release for NuoDB Helm Charts and add to index
+on:
+  push:
+    tags:
+      - v*
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check version tag and changelog
+        id: vars
+        run: |
+          set -e
+          VERSION="$(./release/relman.py --check-current --show-head-version)"
+          if [ -z "$VERSION" ]; then
+            echo "No version tag found" 2>&1
+            exit 1
+          fi
+          if [ "refs/tags/v$VERSION" != "$GITHUB_REF" ]; then
+            echo "Unexpected version tag: \"refs/tags/v$VERSION\" != \"$GITHUB_REF\"" 2>&1
+            exit 1
+          fi
+          if [ ! -f "changelogs/v${VERSION}.md" ]; then
+            echo "No changelog found for $VERSION" 2>&1
+            exit 1
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+      - name: Package Helm charts
+        run: ./scripts/package.sh
+      - name: Publish GitHub release
+        run: |
+          gh release create v${{ steps.vars.outputs.version }} \
+            -t "NuoDB Helm Charts ${{ steps.vars.outputs.version }}" \
+            -F changelogs/v${{ steps.vars.outputs.version }}.md \
+            package/v${{ steps.vars.outputs.version }}/*.tgz
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Update Helm index
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+          ./scripts/update-index.sh
+        env:
+          PUSH_UPDATE: "true"
