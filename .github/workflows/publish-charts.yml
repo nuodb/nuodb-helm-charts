@@ -31,10 +31,11 @@ jobs:
       - name: Package Helm charts
         run: ./scripts/package.sh
       - name: Publish GitHub release
-        run: gh release create v${{ steps.vars.outputs.version }} \
-          -t "NuoDB Helm Charts Release ${{ steps.vars.outputs.version }}" \
-          -F changelogs/v${{ steps.vars.outputs.version }}.md \
-          package/v${{ steps.vars.outputs.version }}/*.tgz
+        run: |
+          gh release create v${{ steps.vars.outputs.version }} \
+            -t "NuoDB Helm Charts ${{ steps.vars.outputs.version }}" \
+            -F changelogs/v${{ steps.vars.outputs.version }}.md \
+            package/v${{ steps.vars.outputs.version }}/*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Helm index
