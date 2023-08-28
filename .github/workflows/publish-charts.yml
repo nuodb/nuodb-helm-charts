@@ -16,15 +16,15 @@ jobs:
           set -e
           VERSION="$(./release/relman.py --check-current --show-head-version)"
           if [ -z "$VERSION" ]; then
-            echo "No version tag found" 2>&1
+            echo "No version tag found" >&2
             exit 1
           fi
           if [ "refs/tags/v$VERSION" != "$GITHUB_REF" ]; then
-            echo "Unexpected version tag: \"refs/tags/v$VERSION\" != \"$GITHUB_REF\"" 2>&1
+            echo "Unexpected version tag: \"refs/tags/v$VERSION\" != \"$GITHUB_REF\"" >&2
             exit 1
           fi
           if [ ! -f "changelogs/v${VERSION}.md" ]; then
-            echo "No changelog found for $VERSION" 2>&1
+            echo "No changelog found for $VERSION" >&2
             exit 1
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
@@ -35,7 +35,8 @@ jobs:
           gh release create v${{ steps.vars.outputs.version }} \
             -t "NuoDB Helm Charts ${{ steps.vars.outputs.version }}" \
             -F changelogs/v${{ steps.vars.outputs.version }}.md \
-            package/v${{ steps.vars.outputs.version }}/*.tgz
+            package/stable/v${{ steps.vars.outputs.version }}/*.tgz \
+            package/incubator/v${{ steps.vars.outputs.version }}/*.tgz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Update Helm index
