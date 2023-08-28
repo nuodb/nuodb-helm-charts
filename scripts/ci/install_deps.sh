@@ -116,7 +116,7 @@ elif [[ "$REQUIRES_MINISHIFT" == "true" ]]; then
   helm install stable/transparent-hugepage/ --namespace nuodb
 
   # get the helm repo for upgrade testing
-  helm repo add nuodb https://storage.googleapis.com/nuodb-charts
+  helm repo add nuodb https://nuodb.github.io/nuodb-helm-charts
   helm repo add nuodb-incubator https://storage.googleapis.com/nuodb-charts-incubator
 elif [[ "$REQUIRES_AKS" == "true" ]]; then
   if ! command -v az &> /dev/null; then
