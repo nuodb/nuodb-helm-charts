@@ -69,8 +69,8 @@ $ip demo.nuodb.local" | sudo tee -a /etc/hosts
   kubectl version
 
   # get the helm repo for upgrade testing
-  helm repo add nuodb https://storage.googleapis.com/nuodb-charts
-  helm repo add nuodb-incubator https://storage.googleapis.com/nuodb-charts-incubator
+  helm repo add nuodb https://nuodb.github.io/nuodb-helm-charts
+  helm repo add nuodb-incubator https://nuodb.github.io/nuodb-helm-charts/incubator
 
   # get HC Vault for testing
   helm repo add hashicorp https://helm.releases.hashicorp.com
@@ -117,7 +117,7 @@ elif [[ "$REQUIRES_MINISHIFT" == "true" ]]; then
 
   # get the helm repo for upgrade testing
   helm repo add nuodb https://nuodb.github.io/nuodb-helm-charts
-  helm repo add nuodb-incubator https://storage.googleapis.com/nuodb-charts-incubator
+  helm repo add nuodb-incubator https://nuodb.github.io/nuodb-helm-charts/incubator
 elif [[ "$REQUIRES_AKS" == "true" ]]; then
   if ! command -v az &> /dev/null; then
     # Install Azure cli if not already available

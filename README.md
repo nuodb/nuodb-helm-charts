@@ -43,7 +43,7 @@ To list the NuoDB charts added to your repository, run `helm search repo nuodb/`
 The Incubator repository contains enhancements not yet available in the supported releases. This repository includes a sample application load generator. If you would like to install this sample application, then add the Incubator charts to your local helm repository, run:
 
 ```
-helm repo add nuodb-incubator https://nuodb-charts-incubator.storage.googleapis.com/
+helm repo add nuodb-incubator https://nuodb.github.io/nuodb-helm-charts/incubator
 "nuodb-incubator" has been added to your repositories
 ```
 
