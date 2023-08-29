@@ -1,8 +1,0 @@
-# Python byte code files
-*.pyc
-
-# Ignore tmp directory
-tmp/
-
-# Ignore code coverage directory
-coverage_info/

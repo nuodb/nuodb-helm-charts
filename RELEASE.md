@@ -28,9 +28,10 @@ Branches of the form `v<major>.<minor>-dev` are used to create patch releases fo
 
 The `relman.py` tool can be used to perform steps 1 through 4 of the release process described above.
 
-1. Switch to the `master` branch:
+1. Switch to the `master` branch and update submodules to ensure that `relman.py` is available:
 ```sh
 git checkout master
+git submodule update --init
 ```
 2. Use the `relman.py` tool to check that the current development version is larger than the last release tag, commit the changelog, tag the commit, and create release branch:
 ```sh
