@@ -590,6 +590,106 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 	testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
 }
 
+func TestKubernetesImportWithStorageGroups(t *testing.T) {
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
+	}
+	testlib.SkipTestOnNuoDBVersionCondition(t, "< 5.0.3")
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "demo",
+			"database.sm.resources.requests.cpu":    "250m",
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    "250m",
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.logPersistence.enabled":    "true",
+			"database.te.replicas":                  "0",
+			"database.sm.storageGroup.enabled":      "true",
+			"database.env[0].name":                  "NUODB_DEBUG",
+			"database.env[0].value":                 "debug",
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	defer testlib.Teardown(testlib.TEARDOWN_NGINX)
+
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+	})
+
+	// Upload backups taken from TestKubernetesRestoreWithStorageGroups test
+	// database on HTTP server
+	sg0BackupUrl := testlib.ServeFileViaHTTP(t, namespaceName, testlib.IMPORT_SG0_BACKUP_FILE)
+	sg1BackupUrl := testlib.ServeFileViaHTTP(t, namespaceName, testlib.IMPORT_SG1_BACKUP_FILE)
+
+	// Install database primary release which serves sg0
+	databaseOptions.SetValues["database.sm.storageGroup.name"] = "sg0"
+	databaseOptions.SetValues["database.autoImport.type"] = "backupset"
+	databaseOptions.SetValues["database.autoImport.source"] = sg0BackupUrl
+	sg0ReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// Install database secondary release which serves sg1
+	databaseOptions.SetValues["database.primaryRelease"] = "false"
+	databaseOptions.SetValues["database.te.enablePod"] = "false"
+	databaseOptions.SetValues["database.sm.storageGroup.name"] = "sg1"
+	databaseOptions.SetValues["database.autoImport.source"] = sg1BackupUrl
+	sg1ReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// Set the total number of engines as in the test utilities they are
+	// inferred from the values
+	databaseOptions.SetValues["database.sm.hotCopy.replicas"] = "2"
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	databaseOptions.KubectlOptions = kubectlOptions
+
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	sg0HcSmPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", sg0ReleaseName, opt.ClusterName, opt.DbName)
+	sg1HcSmPodTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", sg1ReleaseName, opt.ClusterName, opt.DbName)
+	sg0HcSmPodName0 := fmt.Sprintf("%s-hotcopy-0", sg0HcSmPodTemplate)
+	sg1HcSmPodName0 := fmt.Sprintf("%s-hotcopy-0", sg1HcSmPodTemplate)
+
+	// Get SM pod logs if the test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetAppLog(t, namespaceName, sg0HcSmPodName0, "_post-restore", &corev1.PodLogOptions{})
+		testlib.GetAppLog(t, namespaceName, sg1HcSmPodName0, "_post-restore", &corev1.PodLogOptions{})
+	})
+
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+
+	verifyStorageGroup := func(sgName string) {
+		// wait for archives to be added to the storage group
+		sg := testlib.AwaitStorageGroup(t, namespaceName, admin0, opt.DbName, sgName, 30*time.Second)
+		require.Equal(t, sg.State, "Available")
+		require.GreaterOrEqual(t, len(sg.ArchiveStates), 1)
+		require.GreaterOrEqual(t, len(sg.ProcessStates), 1)
+		require.GreaterOrEqual(t, len(sg.LeaderCandidates), 1)
+	}
+	verifyStorageGroup("sg0")
+	verifyStorageGroup("sg1")
+
+	// Start TEs after all storage groups are available
+	teDeployment := fmt.Sprintf("te-%s-nuodb-%s-%s", sg0ReleaseName, opt.ClusterName, opt.DbName)
+	testlib.ScaleDeployment(t, namespaceName, teDeployment, 1)
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 3)
+
+	// Verify that the database contains expected data in both storage groups
+	output, err := testlib.RunSQL(t, namespaceName, admin0, opt.DbName, "select sg, count(*) from codes group by sg")
+	require.NoError(t, err, "error running SQL: select sg, count(*) from codes group by sg")
+	require.True(t, regexp.MustCompile(`sg0\s+1`).MatchString(output), "Unexpected data in sg0: ", output)
+	require.True(t, regexp.MustCompile(`sg1\s+1`).MatchString(output), "Unexpected data in sg1: ", output)
+}
+
 func TestKubernetesRestoreDatabaseWithURL(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
