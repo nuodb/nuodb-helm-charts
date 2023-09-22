@@ -19,6 +19,8 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/Masterminds/semver"
 )
 
 func verifyExternalJournal(t *testing.T, namespaceName string, adminPod string,
@@ -790,4 +792,94 @@ func TestKubernetesRestoreDatabaseSeparateJournal(t *testing.T) {
 		require.Contains(t, tables, "No tables found in schema ", "Show schema returned: ", tables)
 		testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
 	})
+}
+
+func restoreDatabaseByArchiveType(t *testing.T, archiveType string) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{
+		SetValues: map[string]string{
+			"database.name":                         "demo",
+			"database.archiveType":                  archiveType,
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"backup.persistence.enabled":            "true",
+			"backup.persistence.size":               "1Gi",
+			"database.te.logPersistence.enabled":    "true",
+		},
+	}
+
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("%skubernetesrestoredatabase-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, _ := testlib.StartAdmin(t, &options, 1, namespaceName)
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &options)
+
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = opts
+
+	opt := testlib.GetExtractedOptions(&options)
+
+	// Generate diagnose in case this test fails
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetDiagnoseOnTestFailure(t, namespaceName, admin0)
+		testlib.RecoverCoresFromEngine(t, namespaceName, "te",
+			fmt.Sprintf("%s-nuodb-%s-%s-log-te-volume", databaseChartName, opt.ClusterName, opt.DbName))
+	})
+
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+	smPodName0 := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+
+	// Execute initial backup
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	testlib.BackupDatabase(t, namespaceName, smPodName0, opt.DbName, "full", backupGroup0)
+
+	t.Run("restoreDatabaseSameVersion", func(t *testing.T) {
+		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
+		go testlib.GetAppLog(t, namespaceName, tePodName, "_same_pre-restart", &corev1.PodLogOptions{Follow: true})
+		go testlib.GetAppLog(t, namespaceName, smPodName0, "_same_pre-restart", &corev1.PodLogOptions{Follow: true})
+
+		// restore database
+		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
+		testlib.RestoreDatabase(t, namespaceName, admin0, &options)
+
+		go testlib.GetAppLog(t, namespaceName, smPodName0, "_same_post-restart", &corev1.PodLogOptions{Follow: true})
+
+		if archiveType == "lsa" {
+			require.False(t, testlib.HasFile(t, namespaceName, smPodName0, "/var/opt/nuodb/archive/nuodb/demo/10.atm"))
+			require.True(t, testlib.HasFile(t, namespaceName, smPodName0, "/var/opt/nuodb/archive/nuodb/demo/10.cat"))
+		} else {
+			require.True(t, testlib.HasFile(t, namespaceName, smPodName0, "/var/opt/nuodb/archive/nuodb/demo/10.atm"))
+		}
+
+		// verify that the database does NOT contain the data from AFTER the backup
+		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
+		require.NoError(t, err, "error running SQL: show schema User")
+		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
+		testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
+	})
+
+}
+
+func TestKubernetesRestoreDatabaseLSA(t *testing.T) {
+	testlib.RunOnNuoDBVersionCondition(t, ">=6.0.0", func(version *semver.Version) {
+		restoreDatabaseByArchiveType(t, "lsa")
+	})
+}
+
+func TestKubernetesRestoreDatabaseNoLSA(t *testing.T) {
+	restoreDatabaseByArchiveType(t, "")
 }

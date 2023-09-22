@@ -69,7 +69,7 @@ nuodb:
 admin:
   # domain is the name of the NuoDB administration domain (e.g. the cluster name)
   domain: nuodb
-    
+
   # namespace: nuodb
   # tlsCACert:
   #   secret: nuodb-ca-cert
@@ -89,7 +89,7 @@ admin:
 
   ## Transparent Data Encryption (TDE) secrets
   # Storage passwords can be managed and stored as Kubernetes
-  # secrets. TDE secrets for all databases should be created and 
+  # secrets. TDE secrets for all databases should be created and
   # provided before deploying NuoDB. For example:
   #   kubectl create secret generic demo-tde-secret -n nuodb \
   #     --from-literal target='topSecret'
@@ -97,9 +97,9 @@ admin:
   # Note: TDE should be enabled on database layer using
   #   SQL> alter database change encryption type AES128;
   #
-  # Storage password rotation is performed by updating the secret and 
-  # providing the new target and historical (optional) passwords. 
-  # The historical passwords are used for restoring old backup sets. 
+  # Storage password rotation is performed by updating the secret and
+  # providing the new target and historical (optional) passwords.
+  # The historical passwords are used for restoring old backup sets.
   # For example:
   #   kubectl create secret generic demo-tde-secret -n nuodb \
   #     --from-literal target='superSecret' \
@@ -132,6 +132,10 @@ database:
   # rootPassword
   # Database password
   rootPassword: secret
+
+  # archiveType
+  # Archive Type (either "" or "lsa")
+  archiveType: ""
 
   # The names of the PriorityClasses that database pods should belong to. For
   # more information on PriorityClasses, see
@@ -438,7 +442,7 @@ database:
     # nodeSelector: {}
     # tolerations: []
     # topologySpreadConstraints: []
-    
+
     ## labels
     # Additional Labels given to the SMs started
     labels: {}
@@ -462,7 +466,7 @@ database:
     # information about served SGs is stored in the archive and may change over
     # time. The SM will emit warning messages if there is a mismatch between the
     # initially configured SG and the currently served SGs.
-    storageGroup: 
+    storageGroup:
       enabled: false
       # The name of the storage group. Only alphanumeric and underscore ('_')
       # characters are allowed. By default the Helm release name is used.
@@ -496,7 +500,7 @@ database:
       # internalIP: true
       # type: LoadBalancer
       # annotations: {}
-    
+
     # Enable NuoDB external access via Ingress; the provisioned Ingress
     # controller should support SSL passthrough feature allowing it to send the
     # TLS connections directly to the Transaction Engines instead of decrypting
@@ -513,7 +517,7 @@ database:
       # custom annotations that are set on the Ingress resource; SSL passthrough
       # feature should be configured so that SQL clients TLS connections are
       # send directly to the Transaction Engines
-      annotations: 
+      annotations:
         ingress.kubernetes.io/ssl-passthrough: "true"
 
     ## By default, the database clusterip service for direct TE connections is enabled,
@@ -521,7 +525,7 @@ database:
     dbServices: {}
       # enabled: false
 
-    # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB 
+    # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB
     replicas: 1
 
     ## resources
@@ -555,7 +559,7 @@ database:
 
     # Some clusters require longer readiness probe timeouts
     readinessTimeoutSeconds: 5
-  
+
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}
     # vault.hashicorp.com/agent-inject: true
@@ -595,7 +599,7 @@ database:
   resourceLabels: {}
 
   legacy:
-    headlessService: 
+    headlessService:
       enabled: false
     directService:
       enabled: false

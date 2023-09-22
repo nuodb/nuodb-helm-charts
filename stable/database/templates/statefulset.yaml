@@ -142,6 +142,11 @@ spec:
             secretKeyRef:
               name: {{ template "database.secretName" . }}
               key: database-name
+        - name: NUODOCKER_ARCHIVE_TYPE
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "database.secretName" . }}
+              key: database-archive-type
         - name: DB_USER
           valueFrom:
             secretKeyRef:
@@ -521,6 +526,11 @@ spec:
             secretKeyRef:
               name: {{ template "database.secretName" . }}
               key: database-name
+        - name: NUODOCKER_ARCHIVE_TYPE
+          valueFrom:
+            secretKeyRef:
+              name: {{ template "database.secretName" . }}
+              key: database-archive-type
         - name: DB_USER
           valueFrom:
             secretKeyRef:

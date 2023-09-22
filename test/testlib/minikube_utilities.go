@@ -809,6 +809,13 @@ func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
 	require.True(t, strings.Contains(output, "LoadBalancerPolicy"))
 }
 
+func HasFile(t *testing.T, namespace string, podName string, filename string) bool {
+	options := k8s.NewKubectlOptions("", "", namespace)
+
+	err := k8s.RunKubectlE(t, options, "exec", podName, "--", "ls", filename)
+	return err == nil
+}
+
 func VerifyLicenseFile(t *testing.T, namespace string, podName string, expectedLicense string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", "admin", "--", "cat", "/etc/nuodb/nuodb.lic")
