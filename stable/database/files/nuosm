@@ -15,13 +15,8 @@
 : ${NUODB_STORAGE_PASSWORDS_DIR:=/etc/nuodb/tde}
 : ${NUODB_DOMAIN:="nuodb"}
 : ${DB_NAME:="demo"}
-: ${NUODB_SEQUENCE_SYNC:=true}
 
-startup_key="/nuodb/nuosm/startup"
-first_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/first"
-restore_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore"
-credential_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/credentials"
-strip_req="$NUODB_RESTORE_REQUEST_PREFIX/$DB_NAME/restore/strip-levels"
+liveness_req="/nuodb/nuosm/liveness"
 
 DB_DIR=${NUODB_ARCHIVEDIR}
 DB_PARENTDIR=$(dirname ${DB_DIR})
@@ -34,9 +29,7 @@ LOGFILE=${NUODB_LOGDIR:=/var/log/nuodb}/nuosm.log
 # be prepended to the rest of the database process statup logging
 NUODB_EXTERNAL_STARTUP_LOG="$(mktemp /tmp/nuosm_startup.log.XXXXXX)"
 
-first_in=
 myArchive=
-legacy_restore_requested=
 restore_requested=
 restore_source=
 journal_flags=()
@@ -63,15 +56,6 @@ function die() {
   error="$@"
   [ -n "$wotIdid" ] && error="Error while ${wotIdid}: ${error}"
   logWithLevel "ERROR" "$error"
-
-  if [ -n "$first_in" ]; then
-    # cleanup legacy restore locks if defined
-    nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
-    nuocmd set value --key $startup_key/$DB_NAME --value '' --expected-value $HOSTNAME
-
-    # resurrect my archive if it is removed
-    resurrectRemovedArchive
-  fi
 
   exit $retval
 }
@@ -137,36 +121,6 @@ function isRestoreSourceAvailable() {
   local source="$1"
   isUrl "$source" || [ -d "$NUODB_BACKUPDIR/$source" ]
   return $?
-}
-
-#=======================================
-# function - resurrects already removed but not purged archive metadata
-#
-function resurrectRemovedArchive() {
-  trace "resurrecting removed archive metadata"
-  # Resurrect the previously fetched archiveId associated which this Pod it is
-  # removed
-  if [ -n "$myArchive" ] && \
-    nuocmd show archives \
-      --db-name $DB_NAME \
-      --removed \
-      --removed-archive-format "archive-id: {id}" | grep -q "archive-id: ${myArchive}$"; then
-    log "Resurrecting removed archiveId=${myArchive}"
-    nuocmd create archive --db-name $DB_NAME --archive-path $DB_DIR --is-external --restored --archive-id "$myArchive"
-  fi
-}
-
-#=======================================
-# function - clears legacy restore request once the database transitions into
-# RUNNING state which means that first-in process became running
-#
-function clearRestoreRequest() {
-    local expected_state="$1"
-    nuocmd check database --db-name $DB_NAME --check-running --wait-forever
-    log "clearing restore request"
-    nuocmd set value --key $restore_req --value '' --expected-value "$expected_state"
-    trace "releasing first-in"
-    nuocmd set value --key $first_req --value '' --expected-value $HOSTNAME
 }
 
 #=======================================
@@ -320,10 +274,7 @@ function perform_restore() {
     return $retval
   fi
 
-  if isRestoreRequestSupported \
-    && [ -z "$legacy_restore_requested" ] \
-    && [ -n "$restore_requested" ] \
-    && [ "$myArchive" -ne "-1" ]; then
+  if [ -n "$restore_requested" ] && [ "$myArchive" -ne "-1" ]; then
     # complete restore request for this archive in retry loop because there
     # could be concurrent requests due to all archives restored at the same time
     retry 5 completeRestoreRequest "$myArchive"
@@ -377,19 +328,6 @@ function purgeArchive() {
     log "Purging archive metadata archiveId=$archive_id"
     log "$( nuocmd delete archive --archive-id "$archive_id" --purge 2>&1 )"
   fi
-}
-
-#=======================================
-# function - NuoDB 4.2+ supports new way of requesting database in-place
-# restore build into nuodocker.
-#
-function isRestoreRequestSupported() {
-   nuodocker request restore -h > /dev/null 2>&1
-   if [ $? -eq 2 ]; then
-      return 1
-   else
-      return 0
-   fi
 }
 
 #=======================================
@@ -449,15 +387,6 @@ function resolveLatestSource() {
   return 0
 }
 
-#=======================================
-# function - fetch the legacy restore request from KV store
-#
-function get_legacy_restore_request() {
-  trace "retrieving legacy restore request from KV store"
-  legacy_restore_requested="$( nuocmd get value --key "$restore_req" 2>&1 )"
-  return $?
-}
-
 #=============================
 # main routine
 #=============================
@@ -488,9 +417,9 @@ fi
 
 # Retry the first request against the admin layer to make sure that Raft
 # commands can be committed and fail fast on error
-retry 3 get_legacy_restore_request
+retry 3 nuocmd get value --key "$liveness_req" 2>&1
 if [ $? -ne 0 ]; then
-  die 1 "Unable to retrieve legacy restore request: ${legacy_restore_requested}"
+  die 1 "NuoDB Admin layer liveness check failed"
 fi
 
 [ -f "$DB_DIR/info.json" ] && myArchive=$(sed -e 's|.*"id":\s*\([0-9]\+\).*|\1|' "$DB_DIR/info.json")
@@ -508,310 +437,84 @@ log "archiveId=$myArchive; DB=$DB_NAME; hostname=$HOSTNAME"
 atomCount=$( ls -l $DB_DIR/*.atm 2>/dev/null | wc -l )
 catalogCount=$( ls -l $DB_DIR/*.cat 2>/dev/null | wc -l )
 
-if isRestoreRequestSupported && [ -z "$legacy_restore_requested" ]; then
-  # Use nuodocker machinery only if NuoDB image is new enough and legacy restore
-  # request is not placed
+log "path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
 
-  log "path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
-
-  if [ "$myArchive" -ne "-1" ]; then
-    trace "reading restore request for archiveId=${myArchive}"
-    restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" --archive-ids "$myArchive")
-    restore_type="$(echo "$restore_requested" | awk '{print $2}')"
-    user_data="$(echo "$restore_requested" | awk '{print $3}')"
-
-    if [ -n "$restore_requested" ]; then
-      if [ "$restore_type" == "automatic" ]; then
-        # automatic restore for this archive has been requested
-        log "Archive with archiveId=${myArchive} has been requested for a restore"
-        trace "evaluating restore request data"
-        eval "$user_data"
-        if [ -z "$restore_source_encoded" ]; then
-          # restore_source_encoded variable should be passed in the user_data by
-          # `nuorestore` script
-          die 1 "restore source is missing from restore request for archiveId=${myArchive}, userData='${user_data}'"
-        fi
-        restore_source="$(printf "%s" "${restore_source_encoded}" | base64 -d)"
-        resolveLatestSource || die 1 "unable to resolve ${restore_source} restore source"
-        # restore chart doesn't have notion of stream|backupset
-        # `nuodocker restore archive` works with both
-        restore_type="backupset"
-        [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
-        [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
-        
-        log "Archive restore will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
-        trace "performing restore for archiveId=${myArchive}"
-        if isRestoreSourceAvailable "$restore_source"; then
-          perform_restore || die $? "$error"
-        else
-          error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
-          die 1 "$error"
-        fi
-      fi
-    elif [ "$atomCount" -lt 20 ] && [ "$catalogCount" -lt 2 ]; then
-      if [ -n "$NUODB_AUTO_RESTORE" ]; then
-        # autoRestore is configured, try to REPAIR the disk archive
-        restore_source="$NUODB_AUTO_RESTORE"
-        resolveLatestSource || log "unable to resolve ${restore_source} restore source"
-        restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
-        restore_type="${NUODB_AUTO_RESTORE_TYPE}"
-        strip_levels="${NUODB_RESTORE_STRIP_LEVELS:-1}"
-
-        log "Automatic archive repair will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
-        trace "restoring damaged archive"
-        if isRestoreSourceAvailable "$restore_source"; then
-          perform_restore || die $? "$error"
-        else
-          log "restore source ${restore_source} is not available: skipping automatic archive repair"
-        fi
-        # delete damaged archive metadata as a new one will be created by
-        # nuodocker start sm
-        [ ! -f "$DB_DIR/info.json" ] && purgeArchive "$myArchive"
-      fi
-    fi
-  elif [ ! -f "$DB_DIR/1.atm" ]; then
-    if [ -n "$NUODB_AUTO_IMPORT" ] && isRestoreSourceAvailable "$NUODB_AUTO_IMPORT"; then
-      trace "checking for database restore request"
-      database_restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" | grep "^Database ${DB_NAME} restore requested")
-      if [ -z "$database_restore_requested" ]; then
-        # autoImport is configured, try to IMPORT the disk archive
-        restore_source="$NUODB_AUTO_IMPORT"
-        restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64 -w 0)"
-        restore_type=${NUODB_AUTO_IMPORT_TYPE}
-        strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
-
-        log "Automatic archive import will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
-        trace "restoring empty archive"
-        perform_restore || die $? "$error"
-      else
-        log "${database_restore_requested}: skipping automatic archive import"
-      fi
-    fi
-  fi
-else
-  # Keep the legacy way to perform in-place restore for backwards compatibility
-
-  restore_requested="$legacy_restore_requested"
-
-  wotIdid=""
+if [ "$myArchive" -ne "-1" ]; then
+  trace "reading restore request for archiveId=${myArchive}"
+  restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" --archive-ids "$myArchive")
+  restore_type="$(echo "$restore_requested" | awk '{print $2}')"
+  user_data="$(echo "$restore_requested" | awk '{print $3}')"
 
   if [ -n "$restore_requested" ]; then
-    trace "retrieving restore credentials from raft"
-    restore_credentials="$( nuocmd get value --key $credential_req )"
-    [ -z "$restore_credentials" ] && restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
-
-    strip_levels="$( nuocmd get value --key $strip_req )"
-    [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
-  fi
-
-  # if my archive already exists
-  if [ "$myArchive" -ne "-1" ]; then
-
-    # if a restore has been requested, then do that
-    if [ -n "$restore_requested" ]; then
-      restore_source="$restore_requested"
-
-    # else if the database is configured with an AUTO_RESTORE, then specify that
-    elif [ -n "$NUODB_AUTO_RESTORE" ]; then
-      restore_source="$NUODB_AUTO_RESTORE"
-      restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
-      restore_type=${NUODB_AUTO_RESTORE_TYPE}
-      strip_levels=${NUODB_RESTORE_STRIP_LEVELS:-1}
-    fi
-
-  # my archive on disk does not exist - check to see if we should RESTORE/IMPORT it
-  elif [ ! -f $DB_DIR/1.atm ]; then
-
-    lostArchive=$(nuocmd show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /UNKNOWN ADDRESS/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-    
-    # if there is a lost archive, try to REPAIR/RESTORE the disk archive
-    if [ -n "$lostArchive" ]; then
-
-      # delete this lost archive to enable SM restart
-      myArchive="$lostArchive"
-
-      # if autoRestore is enabled - then configure that also
-      if [ -n "$NUODB_AUTO_RESTORE" ]; then
-        restore_source="$NUODB_AUTO_RESTORE"
-        restore_credentials=${DATABASE_RESTORE_CREDENTIALS:-:}
-        restore_type=${NUODB_AUTO_RESTORE_TYPE}
-        strip_levels=${NUODB_RESTORE_STRIP_LEVELS:-1}
+    if [ "$restore_type" == "automatic" ]; then
+      # automatic restore for this archive has been requested
+      log "Archive with archiveId=${myArchive} has been requested for a restore"
+      trace "evaluating restore request data"
+      eval "$user_data"
+      if [ -z "$restore_source_encoded" ]; then
+        # restore_source_encoded variable should be passed in the user_data by
+        # `nuorestore` script
+        die 1 "restore source is missing from restore request for archiveId=${myArchive}, userData='${user_data}'"
       fi
+      restore_source="$(printf "%s" "${restore_source_encoded}" | base64 -d)"
+      resolveLatestSource || die 1 "unable to resolve ${restore_source} restore source"
+      # restore chart doesn't have notion of stream|backupset
+      # `nuodocker restore archive` works with both
+      restore_type="backupset"
+      [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
+      [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
+      
+      log "Archive restore will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      trace "performing restore for archiveId=${myArchive}"
+      if isRestoreSourceAvailable "$restore_source"; then
+        perform_restore || die $? "$error"
+      else
+        error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
+        die 1 "$error"
+      fi
+    fi
+  elif [ "$atomCount" -lt 20 ] && [ "$catalogCount" -lt 2 ]; then
+    if [ -n "$NUODB_AUTO_RESTORE" ]; then
+      # autoRestore is configured, try to REPAIR the disk archive
+      restore_source="$NUODB_AUTO_RESTORE"
+      resolveLatestSource || log "unable to resolve ${restore_source} restore source"
+      restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
+      restore_type="${NUODB_AUTO_RESTORE_TYPE}"
+      strip_levels="${NUODB_RESTORE_STRIP_LEVELS:-1}"
 
-    # otherwise, we could IMPORT the initial state
-    elif [ -n "$NUODB_AUTO_IMPORT" ]; then 
+      log "Automatic archive repair will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      trace "restoring damaged archive"
+      if isRestoreSourceAvailable "$restore_source"; then
+        perform_restore || die $? "$error"
+      else
+        log "restore source ${restore_source} is not available: skipping automatic archive repair"
+      fi
+      # delete damaged archive metadata as a new one will be created by
+      # nuodocker start sm
+      [ ! -f "$DB_DIR/info.json" ] && purgeArchive "$myArchive"
+    fi
+  fi
+elif [ ! -f "$DB_DIR/1.atm" ]; then
+  if [ -n "$NUODB_AUTO_IMPORT" ] && isRestoreSourceAvailable "$NUODB_AUTO_IMPORT"; then
+    trace "checking for database restore request"
+    database_restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" | grep "^Database ${DB_NAME} restore requested")
+    if [ -z "$database_restore_requested" ]; then
+      # autoImport is configured, try to IMPORT the disk archive
       restore_source="$NUODB_AUTO_IMPORT"
-      restore_credentials=${DATABASE_IMPORT_CREDENTIALS:-:}
+      restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64 -w 0)"
       restore_type=${NUODB_AUTO_IMPORT_TYPE}
       strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
-    fi
-  elif [ -n "$NUODB_DEBUG" ]; then
-    log "myArchive not found, but archive has some contents: $( ls -l $DB_DIR )"
-  fi
 
-  # resolve ":latest"
-  if [ "$restore_source" = ":latest" ]; then
-    my_group="$(getMyBackupGroup)"
-
-    # find which backup group performed the latest backup
-    trace "retrieve :latest from nuobackup"
-    latest_group=$( nuobackup --type report-latest --db-name $DB_NAME )
-
-    # if the latest backup was not by my group, then wait to allow an SM from the latest group to start first
-    if [ "$latest_group" != "$my_group" ]; then
-      log ":latest backup was not made by my group $my_group - waiting to allow an SM from $latest_group to start..."
-
-      # try for 30 seconds, sleeping every 2 seconds
-      for retry in {1..30..2}; do
-        sm="$(nuocmd get value --key $first_req )"
-        [ -n "$sm" ] && break
-        sleep 2
-      done
-
-      [ -n "$sm" ] && log "Primary restore SM='${sm}'..." || log "No Primary restore SM found - attempting restore from $my_group..."
-    fi
-  fi
-
-  # resolve the latest backup for the specified backup group
-  if [ "$restore_source" = ":latest" -o "$restore_source" = ":group-latest" ]; then
-    my_group="$(getMyBackupGroup)"
-
-    trace "retrieving :group-latest from nuorestore"
-
-    log "Resolving restore '$restore_source'..."
-    restore_source=$( nuobackup --type report-latest --db-name $DB_NAME --group $my_group )
-    log "Latest restore for $my_group resolved to $restore_source"
-  fi
-
-  restore_credentials_encoded="$(printf "%s" "${restore_credentials}" | base64 -w 0)"
-
-  log "restore_source=$restore_source; restore_requested=$restore_requested; path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
-
-  wotIdid=""
-
-  if [ -n "$restore_requested" -a -n "$restore_source" ]; then
-    # work out who is the first one in
-    trace "trying to reserve first-in"
-    nuocmd set value --key $first_req --value $HOSTNAME --expected-value ''
-    first_in="$( nuocmd get value --key $first_req )"
-
-    wotIdid=""
-
-    log "First-in = $first_in"
-
-    # if I got in first - perform the restore
-    if [ "$first_in" = "$HOSTNAME" ]; then
-
-      log "I am first-in: $first_in == $HOSTNAME"
-
-      # take ownership of the SM startup semaphore
-      trace "Take ownership of SM startup semaphore"
-      nuocmd set value --key $startup_key/$DB_NAME --value $HOSTNAME --unconditional
-
-      wotIdid=""
-      if ! isRestoreSourceAvailable "$restore_source"; then
-        error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
-        die 1 $error
-      fi
-
-      # KAA will remove archives for scaled down SM statefulsets; 
-      # resurrect my archive if needed
-      resurrectRemovedArchive
-
-      # disable all the archive metadata so that get-archive-history will not look for other SMs
-      trace "Disable all archive metadata except my own"
-      archive_ids=$( nuocmd get archives --db-name $DB_NAME | grep -o "id=[0-9]\+" | grep -o "[0-9]\+")
-
-      # delete all archives but my own
-      for archv in $archive_ids; do
-        [ "$archv" -ne "$myArchive" ] && log "Deleting archiveId=$archv" && log $(nuocmd delete archive --archive-id $archv 2>&1)
-      done
-
-      # and restore the data
-      trace "performing restore"
-      perform_restore || die $? "$error"
-
-      wotIdid=""
-
-      log "Restored from $restore_source"
-      restore_successful="true"
-
-      # clear/release shared state only if restore is successful
-      log "Clearing restore credential request from raft"
-      nuocmd set value --key $credential_req --value '' --unconditional
-    fi
-
-    # wait until it's my turn to startup
-    trace "waiting until it's my turn to start up"
-    retry=0
-    until owner=$( nuocmd get value --key $startup_key/$DB_NAME ); [ "$owner" = "$HOSTNAME" -o "$NUODB_SEQUENCE_SYNC" = "false" ] ; do
-
-      [ "$owner" = "" -a $retry -gt 0 ] && die 1 "Fatal error in database RESTORE - initial SM has exited with error - $HOSTNAME aborting also"
-
-      # find the start-id of the SM that owns the semaphore
-      owner_id=$( nuocmd show database --db-name $DB_NAME --skip-exited --process-format "{engine_type}: {address} start-id: {start_id};" | grep -E "^ *SM: $owner" | grep -Eo "start-id: [[0-9]+" | grep -Eo "[0-9]+")
-      if [ -z "$owner_id" ]; then
-        log "Could not find start-id for starting SM on $owner - retrying..."
-        sleep 30
-
-        retry=$((retry + 1))
-        continue
-      fi
-
-      # wait for the starting SM to be RUNNING
-      nuocmd check process --start-id $owner_id --check-running --timeout 600
-      if [ $? != 0 ]; then
-        log "Timeout waiting for SM to go RUNNING - owner $owner, start-id $owner_id - retrying."
-        sleep 30
-        continue
-      fi
-
-      # transfer ownership of the startup semaphore to myself
-      nuocmd set value --key $startup_key/$DB_NAME --value $HOSTNAME --expected-value $owner
-    done
-
-    # Perform seed restore after the first-in SM started so that newly created archive is
-    # not deleted by the first-in
-    if [ "$first_in" != "$HOSTNAME" ]; then
-      # attempt to restore the same backup that the initial SM is restoring - to reduce SYNC time
-      trace "attempting to restore same backup as master SM to secondary SM"
-
-      if isRestoreSourceAvailable "$restore_source"; then
-        # any error in a SEED restore is a fatal error
-        perform_restore || die $? "$error"
-        log "Restored secondary archive to match primary restore"
-      fi
-    fi
-
-  fi
-
-  wotIdid=""
-
-  # resurrect my archive only if info.json file is available, otherwise
-  # nuodocker will create a new one; this is needed because KAA will remove
-  # archives for scaled down SM statefulsets
-  [ -f "$DB_DIR/info.json" ] && resurrectRemovedArchive
-
-  # if a RESTORE_SOURCE is defined, and the archive dir is empty, then import/restore from the URL
-  if [ -n "$restore_source" -a -z "$restore_requested" -a $atomCount -lt 20 -a $catalogCount -lt 2 ]; then
-    if isRestoreSourceAvailable "$restore_source"; then
-      trace "restoring empty/damaged archive"
-      log "Existing archive is empty or damaged - restoring and clearing metadata"
-      # any error in a IMPORT restore is a fatal error
+      log "Automatic archive import will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      trace "restoring empty archive"
       perform_restore || die $? "$error"
     else
-      # delete damaged archive metadata as new one will be created by nuodocker
-      [ ! -f "$DB_DIR/info.json" ] && purgeArchive "$myArchive"
+      log "${database_restore_requested}: skipping automatic archive import"
     fi
   fi
 fi
 
 log "$( nuocmd show archives --db-name $DB_NAME )"
-
-if [ -n "$restore_requested" ] && [ -n "$restore_successful" ]; then 
-    # clear the restore_request only if restore is successful
-    clearRestoreRequest "$restore_requested" &
-fi
 
 trace "executing nuodocker to start SM"
 

@@ -34,24 +34,16 @@ metadata:
   name: {{ template "database.fullname" . }}-readinessprobe
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}
-{{/* 
-  Restore ConfigMap is installed by primary Helm database release as it's used by
-  the restore chart which has access only to the target database name.
-*/}}
-{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
-  name: {{ .Values.admin.domain }}-{{ .Values.database.name }}-restore
+  name: {{ template "database.fullname" . }}-restore
 data:
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.autoImport.stripLevels | quote }}
   NUODB_RESTORE_STRIP_LEVELS: {{ default "1" .Values.database.autoRestore.stripLevels | quote }}
-  NUODB_RESTORE_REQUEST_PREFIX: {{ default "/nuodb/nuosm/database" .Values.nuodb.requestKey }}
-  NUODB_LATEST_BACKUP_PREFIX: {{ default "nuodb-backup/last_created" .Values.nuodb.latestPrefix }}
-  NUODB_BACKUP_KEY: {{ default "/nuodb/nuobackup" .Values.nuodb.latestKey }}
   NUODB_AUTO_IMPORT: {{ default "" .Values.database.autoImport.source | quote }}
   NUODB_AUTO_IMPORT_TYPE: {{ default "stream" .Values.database.autoImport.type | quote }}
   NUODB_AUTO_RESTORE: {{ include "autoRestore.source" . | default "" | quote }}
@@ -59,7 +51,6 @@ data:
   {{- if .Values.admin.tde }}
   NUODB_STORAGE_PASSWORDS_DIR: {{ default "/etc/nuodb/tde" .Values.admin.tde.storagePasswordsDir | quote }}
   {{- end }}
-{{- end }}
 {{- if .Values.database.configFiles }}
 ---
 apiVersion: v1

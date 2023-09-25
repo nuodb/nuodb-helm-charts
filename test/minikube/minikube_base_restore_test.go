@@ -253,28 +253,6 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
 		testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
 	})
-
-	t.Run("restoreDatabaseBackwardsCompatibility", func(t *testing.T) {
-		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
-		go testlib.GetAppLog(t, namespaceName, tePodName, "_compatible_pre-restart", &corev1.PodLogOptions{Follow: true})
-		go testlib.GetAppLog(t, namespaceName, smPodName0, "_compatible_pre-restart", &corev1.PodLogOptions{Follow: true})
-
-		// restore database using pre 4.2 version of NuoDB image for the restore
-		// chart; this should place "legacy" restore request
-		options.SetValues["nuodb.image.registry"] = "docker.io"
-		options.SetValues["nuodb.image.repository"] = "nuodb/nuodb-ce"
-		options.SetValues["nuodb.image.tag"] = "4.0.8"
-		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
-		testlib.RestoreDatabase(t, namespaceName, admin0, &options)
-
-		go testlib.GetAppLog(t, namespaceName, smPodName0, "_compatible_post-restart", &corev1.PodLogOptions{Follow: true})
-
-		// verify that the database does NOT contain the data from AFTER the backup
-		tables, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "show schema User")
-		require.NoError(t, err, "error running SQL: show schema User")
-		require.True(t, strings.Contains(tables, "No tables found in schema "), "Show schema returned: ", tables)
-		testlib.CheckRestoreRequests(t, namespaceName, admin0, opt.DbName, "", "")
-	})
 }
 
 func TestKubernetesImportDatabase(t *testing.T) {
