@@ -34,18 +34,13 @@ metadata:
   name: {{ template "database.fullname" . }}-readinessprobe
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}
-{{/* 
-  Restore ConfigMap is installed by primary Helm database release as it's used by
-  the restore chart which has access only to the target database name.
-*/}}
-{{- if eq (include "defaulttrue" .Values.database.primaryRelease) "true" }}
 ---
 apiVersion: v1
 kind: ConfigMap
 metadata:
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
-  name: {{ .Values.admin.domain }}-{{ .Values.database.name }}-restore
+  name: {{ template "database.fullname" . }}-restore
 data:
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.autoImport.stripLevels | quote }}
   NUODB_RESTORE_STRIP_LEVELS: {{ default "1" .Values.database.autoRestore.stripLevels | quote }}
@@ -56,7 +51,6 @@ data:
   {{- if .Values.admin.tde }}
   NUODB_STORAGE_PASSWORDS_DIR: {{ default "/etc/nuodb/tde" .Values.admin.tde.storagePasswordsDir | quote }}
   {{- end }}
-{{- end }}
 {{- if .Values.database.configFiles }}
 ---
 apiVersion: v1

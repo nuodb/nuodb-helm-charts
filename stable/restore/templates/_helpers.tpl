@@ -209,13 +209,16 @@ it by calling typeIs "bool" https://github.com/Masterminds/sprig/issues/111
 
 {{/*
 Import ENV vars from configMaps
-**BEWARE!!**
-   The values for envFrom are formated into a single line because some parsers
-   - either in k8s or rancher - throw errors occasionally if the multi-line format is used.
-   You Have Been Warned.
 */}}
 {{- define "restore.envFrom" }}
-envFrom: [ configMapRef: { name: {{ .Values.admin.domain }}-{{ include "restore.target" . }}-restore } {{- range $map := .Values.restore.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+{{- if .Values.restore.envFrom }}
+{{- if .Values.restore.envFrom.configMapRef }}
+envFrom:
+{{- range $map := .Values.restore.envFrom.configMapRef }}
+- configMapRef: { name: {{ $map }} }
+{{- end }}
+{{- end }}
+{{- end }}
 {{- end -}}
 
 {{/*
