@@ -19,8 +19,6 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/Masterminds/semver"
 )
 
 func verifyExternalJournal(t *testing.T, namespaceName string, adminPod string,
