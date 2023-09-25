@@ -57,7 +57,7 @@ func TestAutoRestoreDefault(t *testing.T) {
 	var found = false
 
 	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
-		if obj.Name == "nuodb-demo-restore" {
+		if obj.Name == "release-name-nuodb-cluster0-demo-database-restore" {
 			found = true
 			assert.EqualValues(t, "stream", obj.Data["NUODB_AUTO_RESTORE_TYPE"])
 		}
@@ -82,7 +82,7 @@ func TestAutoRestoreValidValueStream(t *testing.T) {
 	var found = false
 
 	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
-		if obj.Name == "nuodb-demo-restore" {
+		if obj.Name == "release-name-nuodb-cluster0-demo-database-restore" {
 			found = true
 			assert.Empty(t, obj.Data["NUODB_AUTO_RESTORE"])
 			assert.EqualValues(t, "stream", obj.Data["NUODB_AUTO_RESTORE_TYPE"])
@@ -108,10 +108,40 @@ func TestAutoRestoreValidValueBackupset(t *testing.T) {
 	var found = false
 
 	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
-		if obj.Name == "nuodb-demo-restore" {
+		if obj.Name == "release-name-nuodb-cluster0-demo-database-restore" {
 			found = true
 			assert.Empty(t, obj.Data["NUODB_AUTO_RESTORE"])
 			assert.EqualValues(t, "backupset", obj.Data["NUODB_AUTO_RESTORE_TYPE"])
+		}
+	}
+
+	require.True(t, found)
+}
+
+func TestRestoreConfigMapSecondaryRelease(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.primaryRelease":         "false",
+			"database.autoImport.source":      "http://files.nuodb.com/backup.tar.gz",
+			"database.autoImport.type":        "backupset",
+			"database.autoImport.stripLevels": "2",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
+
+	var found = false
+
+	for _, obj := range testlib.SplitAndRenderConfigMap(t, output, 1) {
+		if obj.Name == "release-name-nuodb-cluster0-demo-database-restore" {
+			found = true
+			assert.EqualValues(t, options.SetValues["database.autoImport.stripLevels"], obj.Data["NUODB_IMPORT_STRIP_LEVELS"])
+			assert.EqualValues(t, options.SetValues["database.autoImport.source"], obj.Data["NUODB_AUTO_IMPORT"])
+			assert.EqualValues(t, options.SetValues["database.autoImport.type"], obj.Data["NUODB_AUTO_IMPORT_TYPE"])
 		}
 	}
 

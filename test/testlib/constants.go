@@ -43,6 +43,8 @@ const INJECT_VALUES_FILE = "../../valuesInject.yaml"
 const INJECT_CLUSTERS_FILE = "../../clustersInject.yaml"
 
 const IMPORT_ARCHIVE_FILE = "../files/restore.bak.tz"
+const IMPORT_SG0_BACKUP_FILE = "../files/backup-sg0.bak.tz"
+const IMPORT_SG1_BACKUP_FILE = "../files/backup-sg1.bak.tz"
 
 // suffix "m" for spec.containers[].resources.requests.cpu denotes "millicores",
 // and 1 CPU is equivalent to 1000m

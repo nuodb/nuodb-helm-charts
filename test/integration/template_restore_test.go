@@ -331,3 +331,32 @@ func TestRestoreResourceLabels(t *testing.T) {
 		verifyRestoreResourceLabels(t, "release-name", options, &obj.Spec.Template)
 	}
 }
+
+func TestRestoreConfigEnv(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.RESTORE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"restore.envFrom.configMapRef[0]": "cm-foo",
+			"restore.envFrom.configMapRef[1]": "cm-bar",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/job.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderJob(t, output, 1) {
+		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+		restoreContainer := obj.Spec.Template.Spec.Containers[0]
+		require.NotEmpty(t, restoreContainer.EnvFrom)
+		var configMapRefNames []string
+		for _, ref := range restoreContainer.EnvFrom {
+			if ref.ConfigMapRef != nil {
+				configMapRefNames = append(configMapRefNames, ref.ConfigMapRef.Name)
+			}
+		}
+		assert.Contains(t, configMapRefNames, "cm-foo")
+		assert.Contains(t, configMapRefNames, "cm-bar")
+	}
+}
