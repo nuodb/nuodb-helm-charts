@@ -49,9 +49,6 @@ metadata:
 data:
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.autoImport.stripLevels | quote }}
   NUODB_RESTORE_STRIP_LEVELS: {{ default "1" .Values.database.autoRestore.stripLevels | quote }}
-  NUODB_RESTORE_REQUEST_PREFIX: {{ default "/nuodb/nuosm/database" .Values.nuodb.requestKey }}
-  NUODB_LATEST_BACKUP_PREFIX: {{ default "nuodb-backup/last_created" .Values.nuodb.latestPrefix }}
-  NUODB_BACKUP_KEY: {{ default "/nuodb/nuobackup" .Values.nuodb.latestKey }}
   NUODB_AUTO_IMPORT: {{ default "" .Values.database.autoImport.source | quote }}
   NUODB_AUTO_IMPORT_TYPE: {{ default "stream" .Values.database.autoImport.type | quote }}
   NUODB_AUTO_RESTORE: {{ include "autoRestore.source" . | default "" | quote }}
