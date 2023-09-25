@@ -16,6 +16,9 @@
         - [Start Unavailable Storage Group](#start-unavailable-storage-group)
         - [Storage Group Name Reconfiguration](#storage-group-name-reconfiguration)
     - [Backup Database with TPSG](#backup-database-with-tpsg)
+        - [Domain Process Labels](#domain-process-labels)
+    - [Restore Database with TPSG](#restore-database-with-tpsg)
+        - [Automatic archive initial import](#automatic-archive-initial-import)
     - [Troubleshooting](#troubleshooting)
         - [Storage Group Assignment Mismatch](#storage-group-assignment-mismatch)
         - [Backup Failure](#backup-failure)
@@ -257,6 +260,7 @@ kubectl scale statefulset -l domain=nuodb,database=demo,release=sgeast --replica
 ```
 
 Start the TEs which will wait for the storage group to become available.
+
 ```sh
 kubectl scale deployment -l domain=nuodb,database=demo,component=te --replicas 3
 ```
@@ -305,6 +309,55 @@ Restoring a database with TPSG requires that all storage groups are restored.
 At least one database archive per storage group must be selected for restore.
 If one of the special tags (`:latest`, `:group-latest`, or `<group-name>:<tag>`) is used as a restore source, all SMs that participated in the backup will be restored automatically.
 For more information, see [Database Restore](./BackupAndRestore.md#restore).
+
+### Automatic archive initial import
+
+Initial import is enabled by specifying `database.autoImport` where a different _source_ must be configured for each storage group during installation of the corresponding _secondary_ database Helm release.
+No additional synchronization between database processes is performed by NuoDB for this special case of a database restore operation.
+To prevent a TE from starting while new storage groups are being created, the TEs replicas must be set initially to 0.
+
+>**Note**
+> The `database.autoImport.credentials` cannot be overridden by _secondary_ database Helm releases. If remote authentication is enabled, the credentials must be set when installing the _primary_ database Helm release.
+
+Example steps to configure initial database archive import when TPSG is enabled are outlined below.
+
+```sh
+helm install database stable/database \
+  --set database.te.replicas=0 \
+  --set database.sm.hotCopy.replicas=0 \
+  --set database.sm.noHotCopy.enablePod=false \
+  ...
+```
+
+```sh
+helm install sgeast stable/database \
+    --set database.sm.storageGroup.enabled=true \
+    --set database.primaryRelease=false \
+    --set database.sm.hotCopy.replicas=1 \
+    --set database.sm.noHotCopy.replicas=1 \
+    --set database.te.enablePod=false \
+    --set database.autoImport.type=backupset \
+    --set database.autoImport.source=<URL to backup of SGEAST storage group> \
+    -f values.yaml
+```
+
+```sh
+helm install sgwest stable/database \
+  --set database.sm.storageGroup.enabled=true \
+  --set database.primaryRelease=false \
+  --set database.sm.hotCopy.replicas=1 \
+  --set database.sm.noHotCopy.replicas=1 \
+  --set database.te.enablePod=false \
+  --set database.autoImport.type=backupset \
+  --set database.autoImport.source=<URL to backup of SGWEST storage group> \
+  -f values.yaml
+```
+
+Wait for all database storage groups to become _Available_ and scale up the TEs.
+
+```sh
+kubectl scale deployment -l domain=nuodb,database=demo,component=te --replicas 3
+```
 
 ## Troubleshooting
 
