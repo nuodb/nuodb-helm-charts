@@ -312,6 +312,37 @@ func TestDatabaseStatefulSetLongName(t *testing.T) {
 	}
 }
 
+func TestDatabaseStatefulSetArchiveType(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := "../../stable/database"
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	t.Run("testEmptyArchiveType", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "NUODOCKER_ARCHIVE_TYPE", ""))
+		}
+	})
+
+	t.Run("testLsaArchiveType", func(t *testing.T) {
+		options.SetValues["database.archiveType"] = "lsa"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "NUODOCKER_ARCHIVE_TYPE", "lsa"))
+		}
+	})
+}
+
 func TestDatabaseVolumes(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
