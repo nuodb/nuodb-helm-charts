@@ -812,7 +812,14 @@ func VerifyPolicyInstalled(t *testing.T, namespace string, podName string) {
 func HasFile(t *testing.T, namespace string, podName string, filename string) bool {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	err := k8s.RunKubectlE(t, options, "exec", podName, "--", "ls", filename)
+	err := k8s.RunKubectlE(t, options, "exec", podName, "--", "test", "-f", filename)
+	return err == nil
+}
+
+func HasDirectory(t *testing.T, namespace string, podName string, filename string) bool {
+	options := k8s.NewKubectlOptions("", "", namespace)
+
+	err := k8s.RunKubectlE(t, options, "exec", podName, "--", "test", "-d", filename)
 	return err == nil
 }
 

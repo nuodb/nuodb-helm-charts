@@ -180,7 +180,7 @@ function clearRestoreRequest() {
 # On error, any copy of the replaced archive is retained.
 #
 function perform_restore() {
-  
+
   local restore_credentials="$(printf "%s" "${restore_credentials_encoded}" | base64 -d)"
   local retval=0
   local archSize=
@@ -204,7 +204,7 @@ function perform_restore() {
     saveName="${DB_DIR}-save-$( date +%Y%m%dT%H%M%S )"
     undo="mv $saveName $DB_DIR"
     mv $DB_DIR $saveName
-     
+
     retval=$?
     if [ $retval -ne 0 ]; then
       $undo
@@ -344,7 +344,7 @@ function perform_restore() {
 }
 
 #=======================================
-# function - retry the provided function 
+# function - retry the provided function
 #
 # Retry the passed function with arguments until succees or max retry count is
 # reached.
@@ -512,79 +512,79 @@ if isRestoreRequestSupported && [ -z "$legacy_restore_requested" ]; then
   # Use nuodocker machinery only if NuoDB image is new enough and legacy restore
   # request is not placed
 
-  log "path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
+log "path=$DB_DIR; atoms=${atomCount}; catalogs=${catalogCount}"
 
-  if [ "$myArchive" -ne "-1" ]; then
-    trace "reading restore request for archiveId=${myArchive}"
-    restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" --archive-ids "$myArchive")
-    restore_type="$(echo "$restore_requested" | awk '{print $2}')"
-    user_data="$(echo "$restore_requested" | awk '{print $3}')"
+if [ "$myArchive" -ne "-1" ]; then
+  trace "reading restore request for archiveId=${myArchive}"
+  restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" --archive-ids "$myArchive")
+  restore_type="$(echo "$restore_requested" | awk '{print $2}')"
+  user_data="$(echo "$restore_requested" | awk '{print $3}')"
 
-    if [ -n "$restore_requested" ]; then
-      if [ "$restore_type" == "automatic" ]; then
-        # automatic restore for this archive has been requested
-        log "Archive with archiveId=${myArchive} has been requested for a restore"
-        trace "evaluating restore request data"
-        eval "$user_data"
-        if [ -z "$restore_source_encoded" ]; then
-          # restore_source_encoded variable should be passed in the user_data by
-          # `nuorestore` script
-          die 1 "restore source is missing from restore request for archiveId=${myArchive}, userData='${user_data}'"
-        fi
-        restore_source="$(printf "%s" "${restore_source_encoded}" | base64 -d)"
-        resolveLatestSource || die 1 "unable to resolve ${restore_source} restore source"
-        # restore chart doesn't have notion of stream|backupset
-        # `nuodocker restore archive` works with both
-        restore_type="backupset"
-        [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
-        [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
-        
-        log "Archive restore will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
-        trace "performing restore for archiveId=${myArchive}"
-        if isRestoreSourceAvailable "$restore_source"; then
-          perform_restore || die $? "$error"
-        else
-          error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
-          die 1 "$error"
-        fi
+  if [ -n "$restore_requested" ]; then
+    if [ "$restore_type" == "automatic" ]; then
+      # automatic restore for this archive has been requested
+      log "Archive with archiveId=${myArchive} has been requested for a restore"
+      trace "evaluating restore request data"
+      eval "$user_data"
+      if [ -z "$restore_source_encoded" ]; then
+        # restore_source_encoded variable should be passed in the user_data by
+        # `nuorestore` script
+        die 1 "restore source is missing from restore request for archiveId=${myArchive}, userData='${user_data}'"
       fi
-    elif [ "$atomCount" -lt 20 ] && [ "$catalogCount" -lt 2 ]; then
-      if [ -n "$NUODB_AUTO_RESTORE" ]; then
-        # autoRestore is configured, try to REPAIR the disk archive
-        restore_source="$NUODB_AUTO_RESTORE"
-        resolveLatestSource || log "unable to resolve ${restore_source} restore source"
-        restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
-        restore_type="${NUODB_AUTO_RESTORE_TYPE}"
-        strip_levels="${NUODB_RESTORE_STRIP_LEVELS:-1}"
+      restore_source="$(printf "%s" "${restore_source_encoded}" | base64 -d)"
+      resolveLatestSource || die 1 "unable to resolve ${restore_source} restore source"
+      # restore chart doesn't have notion of stream|backupset
+      # `nuodocker restore archive` works with both
+      restore_type="backupset"
+      [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
+      [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
 
-        log "Automatic archive repair will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
-        trace "restoring damaged archive"
-        if isRestoreSourceAvailable "$restore_source"; then
-          perform_restore || die $? "$error"
-        else
-          log "restore source ${restore_source} is not available: skipping automatic archive repair"
-        fi
-        # delete damaged archive metadata as a new one will be created by
-        # nuodocker start sm
-        [ ! -f "$DB_DIR/info.json" ] && purgeArchive "$myArchive"
-      fi
-    fi
-  elif [ ! -f "$DB_DIR/1.atm" ]; then
-    if [ -n "$NUODB_AUTO_IMPORT" ] && isRestoreSourceAvailable "$NUODB_AUTO_IMPORT"; then
-      trace "checking for database restore request"
-      database_restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" | grep "^Database ${DB_NAME} restore requested")
-      if [ -z "$database_restore_requested" ]; then
-        # autoImport is configured, try to IMPORT the disk archive
-        restore_source="$NUODB_AUTO_IMPORT"
-        restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64 -w 0)"
-        restore_type=${NUODB_AUTO_IMPORT_TYPE}
-        strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
-
-        log "Automatic archive import will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
-        trace "restoring empty archive"
+      log "Archive restore will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      trace "performing restore for archiveId=${myArchive}"
+      if isRestoreSourceAvailable "$restore_source"; then
         perform_restore || die $? "$error"
       else
-        log "${database_restore_requested}: skipping automatic archive import"
+        error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
+        die 1 "$error"
+      fi
+    fi
+  elif [ "$atomCount" -lt 20 ] && [ "$catalogCount" -lt 2 ]; then
+    if [ -n "$NUODB_AUTO_RESTORE" ]; then
+      # autoRestore is configured, try to REPAIR the disk archive
+      restore_source="$NUODB_AUTO_RESTORE"
+      resolveLatestSource || log "unable to resolve ${restore_source} restore source"
+      restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
+      restore_type="${NUODB_AUTO_RESTORE_TYPE}"
+      strip_levels="${NUODB_RESTORE_STRIP_LEVELS:-1}"
+
+      log "Automatic archive repair will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      trace "restoring damaged archive"
+      if isRestoreSourceAvailable "$restore_source"; then
+        perform_restore || die $? "$error"
+      else
+        log "restore source ${restore_source} is not available: skipping automatic archive repair"
+      fi
+      # delete damaged archive metadata as a new one will be created by
+      # nuodocker start sm
+      [ ! -f "$DB_DIR/info.json" ] && purgeArchive "$myArchive"
+    fi
+  fi
+elif [ ! -f "$DB_DIR/1.atm" ] && [ ! -d "$DB_DIR/1.cat" ]; then
+  if [ -n "$NUODB_AUTO_IMPORT" ] && isRestoreSourceAvailable "$NUODB_AUTO_IMPORT"; then
+    trace "checking for database restore request"
+    database_restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" | grep "^Database ${DB_NAME} restore requested")
+    if [ -z "$database_restore_requested" ]; then
+      # autoImport is configured, try to IMPORT the disk archive
+      restore_source="$NUODB_AUTO_IMPORT"
+      restore_credentials_encoded="$(printf "%s" "${DATABASE_IMPORT_CREDENTIALS:-:}" | base64 -w 0)"
+      restore_type=${NUODB_AUTO_IMPORT_TYPE}
+      strip_levels=${NUODB_IMPORT_STRIP_LEVELS:-1}
+
+      log "Automatic archive import will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
+      trace "restoring empty archive"
+      perform_restore || die $? "$error"
+    else
+      log "${database_restore_requested}: skipping automatic archive import"
       fi
     fi
   fi
@@ -623,7 +623,7 @@ else
   elif [ ! -f $DB_DIR/1.atm ]; then
 
     lostArchive=$(nuocmd show archives --db-name $DB_NAME --archive-format "archive-id: {id}" | sed -En "/^archive-id: / {N; /UNKNOWN ADDRESS/ s/^archive-id: ([0-9]+).*$/\1/; T; p}" | head -n 1 )
-    
+
     # if there is a lost archive, try to REPAIR/RESTORE the disk archive
     if [ -n "$lostArchive" ]; then
 
@@ -639,7 +639,7 @@ else
       fi
 
     # otherwise, we could IMPORT the initial state
-    elif [ -n "$NUODB_AUTO_IMPORT" ]; then 
+    elif [ -n "$NUODB_AUTO_IMPORT" ]; then
       restore_source="$NUODB_AUTO_IMPORT"
       restore_credentials=${DATABASE_IMPORT_CREDENTIALS:-:}
       restore_type=${NUODB_AUTO_IMPORT_TYPE}
@@ -714,7 +714,7 @@ else
         die 1 $error
       fi
 
-      # KAA will remove archives for scaled down SM statefulsets; 
+      # KAA will remove archives for scaled down SM statefulsets;
       # resurrect my archive if needed
       resurrectRemovedArchive
 
@@ -808,7 +808,7 @@ fi
 
 log "$( nuocmd show archives --db-name $DB_NAME )"
 
-if [ -n "$restore_requested" ] && [ -n "$restore_successful" ]; then 
+if [ -n "$restore_requested" ] && [ -n "$restore_successful" ]; then
     # clear the restore_request only if restore is successful
     clearRestoreRequest "$restore_requested" &
 fi

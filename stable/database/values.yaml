@@ -134,7 +134,7 @@ database:
   rootPassword: secret
 
   # archiveType
-  # Archive Type (either "" or "lsa")
+  # Archive Type (either "" or "lsa") - for NuoDB Version >= 6.0.0
   archiveType: ""
 
   # The names of the PriorityClasses that database pods should belong to. For
