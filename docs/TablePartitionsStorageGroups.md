@@ -256,7 +256,7 @@ kubectl scale deployment -l domain=nuodb,database=demo,component=te --replicas 0
 Start the existing storage group which was previously unavailable.
 
 ```sh
-kubectl scale statefulset -l domain=nuodb,database=demo,release=sgeast --replicas 0
+kubectl scale statefulset -l domain=nuodb,database=demo,release=sgeast --replicas 1
 ```
 
 Start the TEs which will wait for the storage group to become available.
