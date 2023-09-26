@@ -41,10 +41,10 @@ This document explains how to configure Table Partitions and Storage Groups (TPS
 
 ## Deployment Overview
 
-NuoDB [database](../stable/database) Helm chart can be installed multiple times in a single Kubernetes namespace where there is one _primary_ and one or more _secondary_ Helm release.
+NuoDB [database](../stable/database) Helm chart can be installed multiple times in a single Kubernetes namespace where there is one _primary_ and any number of _secondary_ Helm release.
 A storage group is deployed as a separate _secondary_ Helm release which also deploys the SMs servicing this storage group.
 This allows the user to remove any storage group without removing resources installed by the _primary_ database Helm release.
-To simplify TPSG operations and observability, NuoDB Helm charts support one storage group per Storage Manager.
+To simplify TPSG operations and observability, NuoDB Helm charts support one storage group per Storage Manager StatefulSet.
 
 For information on adding storage groups, see [Managing Storage Groups](#managing-storage-groups).
 
@@ -71,7 +71,7 @@ For more information on configuring backup when TPSG is enabled, see [Backup Dat
 helm upgrade --install database stable/database \
   --set database.te.replicas=3 \
   --set database.sm.hotCopy.replicas=0 \
-  --set database.sm.noHotCopy.enablePod=false \
+  --set database.sm.noHotCopy.replicas=0 \
   --set database.sm.hotCopy.backupGroups.group0.labels="role hotcopy" \
   -f values.yaml
 ```
