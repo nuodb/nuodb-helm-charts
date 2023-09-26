@@ -182,9 +182,9 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 
 func restoreDatabaseByArchiveType(t *testing.T, options helm.Options, namespaceName string, admin0 string, archiveType string) {
 	isLsaType := archiveType == "lsa"
-	name := "restoreDatabaseSameVersion"
+	name := "restoreFileArchive"
 	if(isLsaType) {
-		name = "restoreLsaDatabaseSameVersion"
+		name = "restoreLsaArchive"
 	}
 
 	t.Run(name, func(t *testing.T) {
@@ -196,7 +196,9 @@ func restoreDatabaseByArchiveType(t *testing.T, options helm.Options, namespaceN
 
 		databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
-		delete(options.SetValues, "database.archiveType")
+		if(isLsaType) {
+			delete(options.SetValues, "database.archiveType")
+		}
 
 		opts := k8s.NewKubectlOptions("", "", namespaceName)
 		options.KubectlOptions = opts
