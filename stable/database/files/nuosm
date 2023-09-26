@@ -134,7 +134,7 @@ function isRestoreSourceAvailable() {
 # On error, any copy of the replaced archive is retained.
 #
 function perform_restore() {
-  
+
   local restore_credentials="$(printf "%s" "${restore_credentials_encoded}" | base64 -d)"
   local retval=0
   local archSize=
@@ -158,7 +158,7 @@ function perform_restore() {
     saveName="${DB_DIR}-save-$( date +%Y%m%dT%H%M%S )"
     undo="mv $saveName $DB_DIR"
     mv $DB_DIR $saveName
-     
+
     retval=$?
     if [ $retval -ne 0 ]; then
       $undo
@@ -295,7 +295,7 @@ function perform_restore() {
 }
 
 #=======================================
-# function - retry the provided function 
+# function - retry the provided function
 #
 # Retry the passed function with arguments until succees or max retry count is
 # reached.
@@ -463,7 +463,7 @@ if [ "$myArchive" -ne "-1" ]; then
       restore_type="backupset"
       [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
       [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
-      
+
       log "Archive restore will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
       trace "performing restore for archiveId=${myArchive}"
       if isRestoreSourceAvailable "$restore_source"; then
@@ -494,7 +494,7 @@ if [ "$myArchive" -ne "-1" ]; then
       [ ! -f "$DB_DIR/info.json" ] && purgeArchive "$myArchive"
     fi
   fi
-elif [ ! -f "$DB_DIR/1.atm" ]; then
+elif [ ! -f "$DB_DIR/1.atm" ] && [ ! -d "$DB_DIR/1.cat" ]; then
   if [ -n "$NUODB_AUTO_IMPORT" ] && isRestoreSourceAvailable "$NUODB_AUTO_IMPORT"; then
     trace "checking for database restore request"
     database_restore_requested=$(nuodocker get restore-requests --db-name "$DB_NAME" | grep "^Database ${DB_NAME} restore requested")
