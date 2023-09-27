@@ -58,7 +58,7 @@ func verifyDatabaseResourceLabels(t *testing.T, releaseName string, options *hel
 
 func TestDatabaseSecretsDefault(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{},
@@ -77,7 +77,7 @@ func TestDatabaseSecretsDefault(t *testing.T) {
 
 func TestDatabaseConfigMaps(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -105,7 +105,7 @@ func TestDatabaseConfigMaps(t *testing.T) {
 
 func TestDatabaseClusterServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{},
@@ -126,7 +126,7 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 
 func TestDatabaseClusterDirectServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -152,7 +152,7 @@ func TestDatabaseClusterDirectServiceRenders(t *testing.T) {
 
 func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -173,7 +173,7 @@ func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 
 func TestDatabaseServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -221,7 +221,7 @@ func TestDatabaseServiceRenders(t *testing.T) {
 
 func TestDatabaseNodePortServiceRenders(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -246,7 +246,7 @@ func TestDatabaseNodePortServiceRenders(t *testing.T) {
 
 func TestDatabaseStatefulSet(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{},
@@ -263,7 +263,7 @@ func TestDatabaseStatefulSet(t *testing.T) {
 
 func TestDatabaseStatefulSetResourceLabels(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -293,7 +293,7 @@ func TestDatabaseStatefulSetResourceLabels(t *testing.T) {
 
 func TestDatabaseStatefulSetLongName(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -312,9 +312,40 @@ func TestDatabaseStatefulSetLongName(t *testing.T) {
 	}
 }
 
+func TestDatabaseStatefulSetArchiveType(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	t.Run("testEmptyArchiveType", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "NUODOCKER_ARCHIVE_TYPE", ""))
+		}
+	})
+
+	t.Run("testLsaArchiveType", func(t *testing.T) {
+		options.SetValues["database.archiveType"] = "lsa"
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "NUODOCKER_ARCHIVE_TYPE", "lsa"))
+		}
+	})
+}
+
 func TestDatabaseVolumes(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	findEphemeralVolume := func(volumes []v1.Volume) *v1.Volume {
 		for _, volume := range volumes {
@@ -597,7 +628,7 @@ func TestDatabaseVolumes(t *testing.T) {
 
 func TestDatabaseDeploymentRenders(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	t.Run("testTePodEnabled", func(t *testing.T) {
 		options := &helm.Options{
@@ -688,7 +719,7 @@ func TestDatabaseDeploymentRenders(t *testing.T) {
 
 func TestDatabaseOtherOptions(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -793,7 +824,7 @@ func TestDatabaseCustomEnv(t *testing.T) {
 
 func TestDatabaseVPNRenders(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -831,7 +862,7 @@ func TestDatabaseVPNRenders(t *testing.T) {
 
 func TestDatabaseLabeling(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -878,7 +909,7 @@ func TestDatabaseLabeling(t *testing.T) {
 
 func TestReadinessProbe(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{},
@@ -914,7 +945,7 @@ func TestReadinessProbe(t *testing.T) {
 
 func TestDatabaseConfigDoesNotContainEmptyBlocks(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -1056,7 +1087,7 @@ func TestAutomaticDatabaseProtocolUpgrade(t *testing.T) {
 
 func TestDatabasePodAnnotationsRender(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -1106,7 +1137,7 @@ func TestDatabasePodAnnotationsRender(t *testing.T) {
 
 func TestDatabaseStoragePasswordsRender(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -1135,7 +1166,7 @@ func TestDatabaseStoragePasswordsRender(t *testing.T) {
 
 func TestDatabaseSeparateJournal(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	t.Run("testStatefulSetDefaults", func(t *testing.T) {
 		options := &helm.Options{
@@ -1221,7 +1252,7 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 
 func TestPriorityClasses(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	t.Run("testDefault", func(t *testing.T) {
 		output := helm.RenderTemplate(t, &helm.Options{}, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
@@ -1278,7 +1309,7 @@ func TestPriorityClasses(t *testing.T) {
 
 func TestDatabaseSecurityContext(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	t.Run("testDefault", func(t *testing.T) {
 		options := &helm.Options{
@@ -1878,7 +1909,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 
 func TestDatabaseInitContainers(t *testing.T) {
 	// Path to the helm chart we will test
-	helmChartPath := "../../stable/database"
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	t.Run("testDefault", func(t *testing.T) {
 		options := &helm.Options{
