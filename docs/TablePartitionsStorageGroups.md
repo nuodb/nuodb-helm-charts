@@ -226,7 +226,7 @@ kubectl exec admin-nuodb-cluster0-0 -- \
     nuocmd get storage-groups --db-name demo
 ```
 
-If [Kubernetes Aware Admin][1] is configured, there will be only one archive associated with the storage group as KAA will automatically remove archives for scaled-down SMs.
+If [Kubernetes Aware Admin][1] is configured, there will be only one archive associated with the storage group as KAA will automatically deprovision archives for scaled-down SMs.
 
 ```text
 ...
@@ -234,7 +234,8 @@ StorageGroup(archive_states={0: ADDED}, db_name=demo, id=10, leader_candidates=[
 ...
 ```
 
-Delete, _but not_ purge, the last archive that services this storage group.
+Deprovision, _but not_ purge, the last archive that services this storage group.
+The database archive is not being removed, and no data associated with it is going to be deleted.
 
 ```sh
 kubectl exec admin-nuodb-cluster0-0 -- \
@@ -243,7 +244,7 @@ kubectl exec admin-nuodb-cluster0-0 -- \
 
 ### Start Unavailable Storage Group
 
-Starting a previously _unavailable_ storage group in a database with running TEs is not supported.
+Starting a previously _unavailable_ storage groups in a database with running TEs is not supported.
 All TEs must be scaled down before the previously _unavailable_ storage group can be started.
 
 >**Warning**
@@ -264,6 +265,9 @@ Start the TEs which will wait for the storage group to become available.
 ```sh
 kubectl scale deployment -l domain=nuodb,database=demo,component=te --replicas 3
 ```
+
+>**Note**
+> The selector in the `kubectl scale deployment` commands match all TE deployments for database _demo_. If [TE groups](./HowToConnectExternally.md#transaction-engine-groups) with different replica count are deployed, the label selector must be changed to match an individual TE group.
 
 ### Storage Group Name Reconfiguration
 
@@ -383,10 +387,7 @@ The archive is servicing storage group `SGEAST`, however, the SM has been reconf
 The output below shows a failed _full_ backup:
 
 ```text
-Executing full hotcopy as a prerequisite for incremental hotcopy: full hotcopy in backupset 20230919T053410 has failed
-Starting full backup for database demo on processes with labels 'role hotcopy' ...
 'backup database' failed: Failure while performing hot-copy: Not all storage groups are included in hot-copy for dbName=demo, missingSgs=[SGEAST]
-Error running hotcopy 1
 ```
 
 The error indicates that the database backup doesn't select any SM/archive that services _SGEAST_ storage group.
