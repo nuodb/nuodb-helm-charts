@@ -1,3 +1,4 @@
+//go:build short
 // +build short
 
 package minikube
@@ -31,7 +32,10 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 		if os.Getenv("NUODB_LICENSE") == "ENTERPRISE" {
 			t.Skip("Cannot test licensing in Enterprise Edition")
 		}
-		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
+		if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") == "" {
+			t.Skip("Cannot test licensing without Limited License")
+		}
+		testlib.VerifyLicense(t, namespaceName, admin0, testlib.LIMITED)
 		testlib.VerifyLicensingErrorsInLog(t, namespaceName, admin0, false) // no error
 	})
 	t.Run("verifyAdminKvSetAndGet", func(t *testing.T) {
@@ -47,6 +51,7 @@ func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
 }
 
 func TestKubernetesInvalidLicense(t *testing.T) {
+	testlib.SkipTestOnNuoDBVersionCondition(t, ">= 6.0.0")
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -69,7 +74,7 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 		if os.Getenv("NUODB_LICENSE") == "ENTERPRISE" {
 			t.Skip("Cannot test licensing in Enterprise Edition")
 		}
-		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
+		testlib.VerifyLicense(t, namespaceName, admin0, testlib.UNLICENSED)
 
 		// the license provided is not a valid PEM file
 		testlib.VerifyLicensingErrorsInLog(t, namespaceName, admin0, true)

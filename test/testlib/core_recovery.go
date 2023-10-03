@@ -47,7 +47,7 @@ func RecoverCoresFromEngine(t *testing.T, namespaceName string, engineType strin
 
 	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(DEBUG_POD, debugPodName, pvcName))
 
-	AwaitPodUp(t, namespaceName, debugPodName, 30* time.Second)
+	AwaitPodUp(t, namespaceName, debugPodName, 30*time.Second)
 
 	k8s.RunKubectl(t, kubectlOptions, "exec", debugPodName, "--", "ls", "-lah", "/var/log/nuodb/")
 

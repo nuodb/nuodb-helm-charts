@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Masterminds/semver"
 	"github.com/stretchr/testify/require"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
@@ -830,11 +831,32 @@ func VerifyLicenseFile(t *testing.T, namespace string, podName string, expectedL
 	require.Equal(t, output, expectedLicense)
 }
 
+func VerifyLicense(t *testing.T, namespace string, podName string, expected LicenseType) {
+	options := k8s.NewKubectlOptions("", "", namespace)
+
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", "-c", "admin", podName, "--", "nuocmd", "show", "domain")
+	require.NoError(t, err)
+
+	expectedString := fmt.Sprintf("server license: %s", expected)
+	if expected != ENTERPRISE {
+		RunOnNuoDBVersionCondition(t, "<6.0.0", func(version *semver.Version) {
+			// Prior to NuoDB v6.0.0, Community and Enterprise license types are
+			// supported
+			expectedString = "server license: Community"
+		})
+	}
+	output = strings.ToLower(output)
+	expectedString = strings.ToLower(expectedString)
+	require.True(t, strings.Contains(output, expectedString), output)
+}
+
+// Deprecated: The VerifyLicenseIsCommunity function has been deprecated. When testing with NuoDB v6.0.0, use the VerifyLicense function instead.
 func VerifyLicenseIsCommunity(t *testing.T, namespace string, podName string) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", "-c", "admin", podName, "--", "nuocmd", "show", "domain")
 	require.NoError(t, err)
+
 	require.True(t, strings.Contains(output, "server license: Community"), output)
 }
 

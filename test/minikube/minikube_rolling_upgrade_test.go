@@ -233,13 +233,10 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
-	// enable debug logging for KAA after the update
-	options.ValuesFiles = []string{"../files/admin-kaa-debug.yaml"}
 	helm.Upgrade(t, &options, testlib.ADMIN_HELM_CHART_PATH, adminHelmChartReleaseName)
 
 	testlib.AwaitPodHasVersion(t, namespaceName, admin0, expectedNewVersion, 300*time.Second)
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
-
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 
 	opt := testlib.GetExtractedOptions(&options)

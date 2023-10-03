@@ -42,6 +42,10 @@ type ExtractedOptions struct {
 	DomainName            string
 }
 
+var nuoDBVersionMap map[string]string = make(map[string]string)
+
+var NuoDBVersionRegex = regexp.MustCompile(`^([0-9]+\.[0-9]+(?:\.[0-9]+)?).*$`)
+
 func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 	var err error
 
@@ -593,6 +597,9 @@ func ServeFileViaHTTP(t *testing.T, namespaceName string, localFilePath string) 
 }
 
 func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) string {
+	if version, ok := nuoDBVersionMap[options.SetValues["nuodb.image.tag"]]; ok {
+		return version
+	}
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	randomSuffix := strings.ToLower(random.UniqueId())
 	podName := fmt.Sprintf("nuodb-version-%s", randomSuffix)
@@ -619,16 +626,22 @@ func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) 
 	require.NoError(t, err, "Unable to check NuoDB version in helper pod")
 	match := regexp.MustCompile("NuoDB Server build (.*)").FindStringSubmatch(output)
 	require.NotNil(t, match, "Unable to match NuoDB version from output")
+	nuoDBVersionMap[options.SetValues["nuodb.image.tag"]] = match[1]
 	return match[1]
 }
 
 func RunOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool, actionFunc func(*semver.Version)) {
-	versionString := GetNuoDBVersion(t, "default", &helm.Options{})
-	// Select only the main NuoDB version (i.e 4.2.1) from the full version string
-	versionString = regexp.MustCompile(`^([0-9]+\.[0-9]+(?:\.[0-9]+)?).*$`).
-		ReplaceAllString(versionString, "${1}")
-	version, err := semver.NewVersion(versionString)
+	RunOnNuoDBVersionFromOptions(t, &helm.Options{}, versionCheckFunc, actionFunc)
+}
+
+func RunOnNuoDBVersionFromOptions(t *testing.T, options *helm.Options, versionCheckFunc func(*semver.Version) bool, actionFunc func(*semver.Version)) {
+	versionString, ok := options.SetValues["nuodb.image.tag"]
+	if !ok || !NuoDBVersionRegex.MatchString(versionString) {
+		versionString = GetNuoDBVersion(t, "default", options)
+	}
+	version, err := semver.NewVersion(NuoDBVersionRegex.ReplaceAllString(versionString, "${1}"))
 	require.NoError(t, err, "Unable to parse NuoDB version", versionString)
+
 	if versionCheckFunc(version) {
 		actionFunc(version)
 	} else {
@@ -659,6 +672,14 @@ func SkipTestOnNuoDBVersionCondition(t *testing.T, condition string) {
 
 func RunOnNuoDBVersionCondition(t *testing.T, condition string, actionFunc func(*semver.Version)) {
 	RunOnNuoDBVersion(t, func(version *semver.Version) bool {
+		c, err := semver.NewConstraint(condition)
+		require.NoError(t, err)
+		return c.Check(version)
+	}, actionFunc)
+}
+
+func RunOnNuoDBVersionFromOptionCondition(t *testing.T, options *helm.Options, condition string, actionFunc func(*semver.Version)) {
+	RunOnNuoDBVersionFromOptions(t, options, func(version *semver.Version) bool {
 		c, err := semver.NewConstraint(condition)
 		require.NoError(t, err)
 		return c.Check(version)

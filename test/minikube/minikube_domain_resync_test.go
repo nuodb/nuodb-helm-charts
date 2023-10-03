@@ -229,7 +229,7 @@ func TestDomainResync(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
