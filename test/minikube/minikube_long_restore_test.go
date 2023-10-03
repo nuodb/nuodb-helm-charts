@@ -76,7 +76,7 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
@@ -201,7 +201,7 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
@@ -341,7 +341,7 @@ func TestKubernetesRestoreCustomBackupGroups(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	processFilterTemplate := "and(label(backup cluster0) label(pod-name *-hotcopy-%d))"
 	databaseOptions := helm.Options{
@@ -474,7 +474,7 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
@@ -603,7 +603,7 @@ func TestKubernetesImportWithStorageGroups(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{

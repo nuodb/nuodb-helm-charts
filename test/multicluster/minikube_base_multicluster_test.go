@@ -96,7 +96,7 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 			testlib.CreateNamespace(t, namespaceName)
 			testlib.StartAdminCustomRelease(t, options, 1, namespaceName, adminReleaseName)
 			admin0 := fmt.Sprintf("%s-nuodb-%s-0", adminReleaseName, context.ThisCluster.Name)
-			testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+			testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 			databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
 			// Store deployment details in the context
 			context.AdminReleaseName = adminReleaseName

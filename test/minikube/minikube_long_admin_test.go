@@ -1,3 +1,4 @@
+//go:build long
 // +build long
 
 package minikube
@@ -33,7 +34,10 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 		if os.Getenv("NUODB_LICENSE") == "ENTERPRISE" {
 			t.Skip("Cannot test licensing in Enterprise Edition")
 		}
-		testlib.VerifyLicenseIsCommunity(t, namespaceName, admin0)
+		if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") == "" {
+			t.Skip("Cannot test licensing without Limited License")
+		}
+		testlib.VerifyLicense(t, namespaceName, admin0, testlib.LIMITED)
 		testlib.VerifyLicensingErrorsInLog(t, namespaceName, admin0, false) // no error
 	})
 	t.Run("verifyAdminClusterService", func(t *testing.T) { verifyAdminService(t, namespaceName, admin0, clusterServiceName, false) })

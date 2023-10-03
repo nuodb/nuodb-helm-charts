@@ -16,10 +16,10 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/Masterminds/semver"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/Masterminds/semver"
 )
 
 func verifyBackup(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
@@ -91,7 +91,7 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	options := helm.Options{
@@ -357,7 +357,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
