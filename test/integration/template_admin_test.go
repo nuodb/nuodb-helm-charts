@@ -49,6 +49,39 @@ func verifyAdminResourceLabels(t *testing.T, releaseName string, options *helm.O
 	}
 }
 
+func findProjectedSecret(name string, sources []v1.VolumeProjection) (*v1.SecretProjection, bool) {
+	for _, src := range sources {
+		if src.Secret != nil && src.Secret.Name == name {
+			return src.Secret, true
+		}
+	}
+	return nil, false
+}
+
+func verifyTLSSecrets(t assert.TestingT, spec v1.PodSpec, options *helm.Options) {
+	tlsVolume, found := testlib.GetVolume(spec.Volumes, "tls")
+	assert.True(t, found, "Expected to find tls volume")
+	assert.NotNil(t, tlsVolume.Projected)
+	assert.NotNil(t, tlsVolume.Projected.DefaultMode)
+	// volume mode 0440 is int32(288)
+	assert.Equal(t, int32(288), *tlsVolume.Projected.DefaultMode)
+	for _, tlsKeyPrefix := range []string{"admin.tlsClientPEM", "admin.tlsCACert", "admin.tlsKeyStore", "admin.tlsTrustStore"} {
+		secretNameValue := fmt.Sprintf("%s.secret", tlsKeyPrefix)
+		if secretName, ok := options.SetValues[secretNameValue]; ok {
+			errMsg := fmt.Sprintf("failed to verify volume projection for secret %q", secretName)
+			secret, found := findProjectedSecret(secretName, tlsVolume.Projected.Sources)
+			assert.True(t, found, errMsg)
+			secretKey := fmt.Sprintf("%s.key", tlsKeyPrefix)
+			assert.Len(t, secret.Items, 1, errMsg)
+			assert.Equal(t, options.SetValues[secretKey], secret.Items[0].Key, errMsg)
+		}
+	}
+	tlsVolumeMount, found := testlib.GetMount(spec.Containers[0].VolumeMounts, "tls")
+	assert.True(t, found, "Expected to find tls volume mount")
+	assert.Equal(t, "/etc/nuodb/keys", tlsVolumeMount.MountPath)
+	assert.True(t, tlsVolumeMount.ReadOnly)
+}
+
 func TestAdminDefaultLicense(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/admin"
@@ -1344,4 +1377,91 @@ func TestAdminIngressRenders(t *testing.T) {
 		assert.Contains(t, obj.Annotations, "ingress.kubernetes.io/ssl-passthrough")
 	}
 
+}
+
+func TestAdminTLSConfig(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testDisabled", func(t *testing.T) {
+		options := &helm.Options{}
+
+		// Render and decode StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			// Expect no TLS volumes or volume mounts
+			_, found := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "tls")
+			assert.False(t, found, "Did not expect to find TLS volume")
+			_, found = testlib.GetMount(obj.Spec.Template.Spec.Containers[0].VolumeMounts, "tls")
+			assert.False(t, found, "Did not expect to find TLS volume mount")
+		}
+	})
+
+	t.Run("testPasswordsInValues", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.tlsCACert.secret":       "nuodb-ca-cert",
+				"admin.tlsCACert.key":          "ca.cert",
+				"admin.tlsClientPEM.secret":    "nuodb-client-pem",
+				"admin.tlsClientPEM.key":       "nuocmd.pem",
+				"admin.tlsKeyStore.secret":     "nuodb-keystore",
+				"admin.tlsKeyStore.key":        "nuoadmin.p12",
+				"admin.tlsKeyStore.password":   "bar",
+				"admin.tlsTrustStore.secret":   "nuodb-truststore",
+				"admin.tlsTrustStore.key":      "nuoadmin-truststore.p12",
+				"admin.tlsTrustStore.password": "foo",
+			},
+		}
+
+		// Render and decode StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env,
+				"NUODB_KEYSTORE_PASSWORD", options.SetValues["admin.tlsKeyStore.password"]))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env,
+				"NUODB_TRUSTSTORE_PASSWORD", options.SetValues["admin.tlsTrustStore.password"]))
+		}
+	})
+
+	t.Run("testPasswordsInSecrets", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.tlsCACert.secret":          "nuodb-ca-cert",
+				"admin.tlsCACert.key":             "ca.cert",
+				"admin.tlsClientPEM.secret":       "nuodb-client-pem",
+				"admin.tlsClientPEM.key":          "nuocmd.pem",
+				"admin.tlsKeyStore.secret":        "nuodb-keystore",
+				"admin.tlsKeyStore.key":           "nuoadmin.p12",
+				"admin.tlsKeyStore.passwordKey":   "password",
+				"admin.tlsTrustStore.secret":      "nuodb-truststore",
+				"admin.tlsTrustStore.key":         "nuoadmin-truststore.p12",
+				"admin.tlsTrustStore.passwordKey": "password",
+			},
+		}
+
+		// Render and decode StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
+			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
+				"NUODB_KEYSTORE_PASSWORD", &v1.EnvVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: options.SetValues["admin.tlsKeyStore.secret"],
+						},
+						Key: options.SetValues["admin.tlsKeyStore.passwordKey"],
+					},
+				}))
+			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
+				"NUODB_TRUSTSTORE_PASSWORD", &v1.EnvVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: options.SetValues["admin.tlsTrustStore.secret"],
+						},
+						Key: options.SetValues["admin.tlsTrustStore.passwordKey"],
+					},
+				}))
+		}
+	})
 }

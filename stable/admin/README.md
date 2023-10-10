@@ -200,9 +200,11 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tlsKeyStore.secret` | TLS keystore secret name | `nil` |
 | `tlsKeyStore.key` | TLS keystore secret key | `nil` |
 | `tlsKeyStore.password` | TLS keystore secret password | `nil` |
+| `tlsKeyStore.passwordKey` | TLS keystore secret password key. One of `tlsKeyStore.password` or `tlsKeyStore.passwordKey` must be used | `nil` |
 | `tlsTrustStore.secret` | TLS truststore secret name | `nil` |
 | `tlsTrustStore.key` | TLS truststore secret key | `nil` |
 | `tlsTrustStore.password` | TLS truststore secret password | `nil` |
+| `tlsTrustStore.passwordKey` | TLS truststore secret password key. One of `tlsTrustStore.password` or `tlsTrustStore.passwordKey` must be used | `nil` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
 | `serviceSuffix.balancer` | The suffix to use for the LoadBalancer service name | `balancer` |
