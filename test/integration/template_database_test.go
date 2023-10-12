@@ -39,6 +39,13 @@ func verifyDatabaseResourceLabels(t *testing.T, releaseName string, options *hel
 	} else if _, ok := obj.(*appsv1.Deployment); ok {
 		expectedLabels["component"] = "te"
 	}
+	if enabled := options.SetValues["database.sm.storageGroup.enabled"]; enabled == "true" {
+		sgValue := releaseName
+		if v, ok := options.SetValues["database.sm.storageGroup.name"]; ok {
+			sgValue = v
+		}
+		expectedLabels["storage-group"] = sgValue
+	}
 
 	msg, ok := testlib.MapContains(labels, expectedLabels)
 	require.Truef(t, ok, "Mandatory labels missing from resource %s: %s", obj.GetName(), msg)
