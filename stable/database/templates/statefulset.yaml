@@ -10,6 +10,7 @@ metadata:
     kubectl.kubernetes.io/default-logs-container: engine
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
+    {{- include "database.storageGroupLabels" . | nindent 4 }}
     component: sm
     role: nohotcopy
   name: {{ include "database.statefulset.name" (printf "sm-%s" (include "database.fullname" .)) }}
@@ -37,6 +38,7 @@ spec:
       {{- end }}
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.storageGroupLabels" . | nindent 8 }}
         component: sm
         role: nohotcopy
     spec:
@@ -107,7 +109,7 @@ spec:
     {{- end }}
           - "--options"
           - "mem {{ .Values.database.sm.resources.requests.memory}} {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
-    {{- $labels := printf "%s %s" (include "database.storageGroup.label" .)  (include "opt.key-values" .Values.database.sm.labels) -}}
+    {{- $labels := printf "%s %s" (include "database.storageGroup.label" .) (include "opt.key-values" .Values.database.sm.labels) -}}
     {{- if trim $labels }}
           - "--labels"
           - "{{ $labels }}"
@@ -315,6 +317,7 @@ spec:
       name: archive-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       accessModes:
       {{- range .Values.database.persistence.accessModes }}
@@ -340,6 +343,7 @@ spec:
       name: journal-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       accessModes:
       {{- range .Values.database.sm.noHotCopy.journalPath.persistence.accessModes }}
@@ -394,6 +398,7 @@ metadata:
       Database deployment resource for NuoDB Storage Engines (SM).
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
+    {{- include "database.storageGroupLabels" . | nindent 4 }}
     component: sm
     role: hotcopy
   name: {{ include "database.statefulset.name" (printf "sm-%s-hotcopy" (include "database.fullname" .)) }}
@@ -421,6 +426,7 @@ spec:
       {{- end }}
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.storageGroupLabels" . | nindent 8 }}
         component: sm
         role: hotcopy
     spec:
@@ -702,6 +708,7 @@ spec:
       name: archive-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       accessModes:
       {{- range .Values.database.persistence.accessModes }}
@@ -727,6 +734,7 @@ spec:
       name: journal-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       accessModes:
       {{- range .Values.database.sm.hotCopy.journalPath.persistence.accessModes }}
@@ -752,6 +760,7 @@ spec:
       name: backup-volume
       labels:
         {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       accessModes:
       {{- range .Values.database.sm.hotCopy.persistence.accessModes }}
