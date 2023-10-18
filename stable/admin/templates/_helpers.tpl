@@ -455,24 +455,21 @@ rotation.
 */}}
 {{- define "admin.tlsVolume" -}}
 {{- if .Values.admin.tlsKeyStore }}
-{{- if .Values.admin.tlsTrustStore }}
 - name: tls
   projected:
     defaultMode: 0440
     sources:
+    - secret:
+        name: {{ .Values.admin.tlsKeyStore.secret }}
+        items:
+        - key: {{ .Values.admin.tlsKeyStore.key }}
+          path: nuoadmin.p12
 {{- if .Values.admin.tlsCACert }}
     - secret:
         name: {{ .Values.admin.tlsCACert.secret }}
         items:
         - key: {{ .Values.admin.tlsCACert.key }}
           path: ca.cert
-{{- end }}
-{{- if .Values.admin.tlsKeyStore }}
-    - secret:
-        name: {{ .Values.admin.tlsKeyStore.secret }}
-        items:
-        - key: {{ .Values.admin.tlsKeyStore.key }}
-          path: nuoadmin.p12
 {{- end }}
 {{- if .Values.admin.tlsTrustStore }}
     - secret:
@@ -489,7 +486,6 @@ rotation.
           path: nuocmd.pem
 {{- end }}
 {{- end }}
-{{- end }}
 {{- end -}}
 
 {{/*
@@ -500,10 +496,10 @@ Renders the TLS password for keystore or truststore.
 {{- $store := index . 1 -}}
 {{- if $store.password -}}
 {{ $store.password }}
-{{- else if $store.passwordKey -}}
+{{- else -}}
   {{- $secret := lookup "v1" "Secret" $.Release.Namespace $store.secret -}}
   {{- if $secret -}}
-  {{- $encoded := index $secret "data" $store.passwordKey -}}
+  {{- $encoded := index $secret "data" (default "password" $store.passwordKey) -}}
     {{- if $encoded -}}
 {{ print $encoded | b64dec }}
     {{- end -}}

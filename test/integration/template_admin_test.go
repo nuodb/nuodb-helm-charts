@@ -1427,16 +1427,55 @@ func TestAdminTLSConfig(t *testing.T) {
 	t.Run("testPasswordsInSecrets", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
+				"admin.tlsCACert.secret":     "nuodb-ca-cert",
+				"admin.tlsCACert.key":        "ca.cert",
+				"admin.tlsClientPEM.secret":  "nuodb-client-pem",
+				"admin.tlsClientPEM.key":     "nuocmd.pem",
+				"admin.tlsKeyStore.secret":   "nuodb-keystore",
+				"admin.tlsKeyStore.key":      "nuoadmin.p12",
+				"admin.tlsTrustStore.secret": "nuodb-truststore",
+				"admin.tlsTrustStore.key":    "nuoadmin-truststore.p12",
+			},
+		}
+
+		// Render and decode StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
+			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
+				"NUODB_KEYSTORE_PASSWORD", &v1.EnvVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: options.SetValues["admin.tlsKeyStore.secret"],
+						},
+						Key: "password",
+					},
+				}))
+			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
+				"NUODB_TRUSTSTORE_PASSWORD", &v1.EnvVarSource{
+					SecretKeyRef: &v1.SecretKeySelector{
+						LocalObjectReference: v1.LocalObjectReference{
+							Name: options.SetValues["admin.tlsTrustStore.secret"],
+						},
+						Key: "password",
+					},
+				}))
+		}
+	})
+
+	t.Run("testPasswordsInSecretsOverridePassword", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
 				"admin.tlsCACert.secret":          "nuodb-ca-cert",
 				"admin.tlsCACert.key":             "ca.cert",
 				"admin.tlsClientPEM.secret":       "nuodb-client-pem",
 				"admin.tlsClientPEM.key":          "nuocmd.pem",
 				"admin.tlsKeyStore.secret":        "nuodb-keystore",
 				"admin.tlsKeyStore.key":           "nuoadmin.p12",
-				"admin.tlsKeyStore.passwordKey":   "password",
+				"admin.tlsKeyStore.passwordKey":   "foo",
 				"admin.tlsTrustStore.secret":      "nuodb-truststore",
 				"admin.tlsTrustStore.key":         "nuoadmin-truststore.p12",
-				"admin.tlsTrustStore.passwordKey": "password",
+				"admin.tlsTrustStore.passwordKey": "bar",
 			},
 		}
 

@@ -123,23 +123,23 @@ spec:
         {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
-        {{- else if .Values.admin.tlsKeyStore.passwordKey }}
+        {{- else }}
         - name: NUODB_KEYSTORE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: {{ .Values.admin.tlsKeyStore.secret }}
-              key: {{ .Values.admin.tlsKeyStore.passwordKey }}
+              key: {{ .Values.admin.tlsKeyStore.passwordKey | default "password" }}
         {{- end }}
         {{- end }}
         {{- if .Values.admin.tlsTrustStore }}
         {{- if .Values.admin.tlsTrustStore.password }}
         - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
-        {{- else if .Values.admin.tlsTrustStore.passwordKey }}
+        {{- else }}
         - name: NUODB_TRUSTSTORE_PASSWORD
           valueFrom:
             secretKeyRef:
               name: {{ .Values.admin.tlsTrustStore.secret }}
-              key: {{ .Values.admin.tlsTrustStore.passwordKey }}
+              key: {{ .Values.admin.tlsTrustStore.passwordKey | default "password" }}
         {{- end }}
         {{- end }}
         {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabledOnContainer) "true" }}

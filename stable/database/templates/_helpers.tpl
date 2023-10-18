@@ -694,10 +694,10 @@ Renders the TLS password for keystore or truststore.
 {{- $store := index . 1 -}}
 {{- if $store.password -}}
 {{ $store.password }}
-{{- else if $store.passwordKey -}}
+{{- else -}}
   {{- $secret := lookup "v1" "Secret" $.Release.Namespace $store.secret -}}
   {{- if $secret -}}
-  {{- $encoded := index $secret "data" $store.passwordKey -}}
+  {{- $encoded := index $secret "data" (default "password" $store.passwordKey) -}}
     {{- if $encoded -}}
 {{ print $encoded | b64dec }}
     {{- end -}}

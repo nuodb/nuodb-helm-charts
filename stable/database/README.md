@@ -145,7 +145,7 @@ The following tables list the configurable admin parameters for a database and t
 | `tlsKeyStore.secret` | TLS keystore secret name | `nil` |
 | `tlsKeyStore.key` | TLS keystore secret key | `nil` |
 | `tlsKeyStore.password` | TLS keystore secret password | `nil` |
-| `tlsKeyStore.passwordKey` | TLS keystore secret password key. One of `tlsKeyStore.password` or `tlsKeyStore.passwordKey` must be used | `nil` |
+| `tlsKeyStore.passwordKey` | TLS keystore secret password key. One of `tlsKeyStore.password` or `tlsKeyStore.passwordKey` must be used | `password` |
 | `tlsClientPEM.secret` | TLS client PEM secret name | `nil` |
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
 | `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
