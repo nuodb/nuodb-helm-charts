@@ -513,10 +513,30 @@ release: {{ .Release.Name | quote }}
 {{- end -}}
 
 {{/*
+Renders the storage group labels. IMPORTANT: Adding new entries must be done
+with caution as these labels are rendered in the PVC spec which is immutable.
+The storage group name can not be reconfigured by definition.
+*/}}
+{{- define "database.storageGroupLabels" -}}
+{{- if .Values.database.sm.storageGroup -}}
+{{- if .Values.database.sm.storageGroup.enabled -}}
+storage-group: {{ include "database.storageGroup.name" . | quote }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Renders the name of the Secret for this database
 */}}
 {{- define "database.secretName" -}}
 {{ .Values.admin.domain }}-{{ .Values.database.name }}
+{{- end -}}
+
+{{/*
+Renders the storage group name
+*/}}
+{{- define "database.storageGroup.name" -}}
+{{ .Values.database.sm.storageGroup.name | default .Release.Name | trim }}
 {{- end -}}
 
 {{/*
@@ -535,7 +555,7 @@ Renders the storage groups option for nuosm script
 {{- end }}
 {{- end }}
 - "--storage-groups"
-- {{ .Values.database.sm.storageGroup.name | default .Release.Name | trim | quote }}
+- {{ include "database.storageGroup.name" . | quote }}
 {{- end }}
 {{- end }}
 {{- end -}}
@@ -544,11 +564,11 @@ Renders the storage groups option for nuosm script
 Renders the storage group domain process label
 */}}
 {{- define "database.storageGroup.label" -}}
-{{- if .Values.database.sm.storageGroup }}
-{{- if .Values.database.sm.storageGroup.enabled }}
-{{- printf "sg %s" (.Values.database.sm.storageGroup.name | default .Release.Name | trim) -}}
-{{- end }}
-{{- end }}
+{{- if .Values.database.sm.storageGroup -}}
+{{- if .Values.database.sm.storageGroup.enabled -}}
+{{ printf "sg %s" (include "database.storageGroup.name" .) }}
+{{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
