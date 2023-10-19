@@ -202,6 +202,8 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 	})
 
 	t.Run("NuoDB_From360_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.6.0", &testlib.UpgradeOptions{})
+		upgradeDatabaseTest(t, "3.6.0", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
+		})
 	})
 }

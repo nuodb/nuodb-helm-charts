@@ -36,6 +36,7 @@ spec:
       {{- else }}
         checksum/config: "0"
       {{- end }}
+      {{- include "admin.tlsConfigAnnotations" . | nindent 8 }}
       {{- if .Values.admin.podAnnotations }}
 {{ toYaml .Values.admin.podAnnotations | trim | indent 8}}
       {{- end }}
@@ -122,11 +123,23 @@ spec:
         {{- if .Values.admin.tlsKeyStore }}
         {{- if .Values.admin.tlsKeyStore.password }}
         - { name: NUODB_KEYSTORE_PASSWORD,    value: {{ .Values.admin.tlsKeyStore.password | quote }} }
+        {{- else }}
+        - name: NUODB_KEYSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.admin.tlsKeyStore.secret }}
+              key: {{ .Values.admin.tlsKeyStore.passwordKey | default "password" }}
         {{- end }}
         {{- end }}
         {{- if .Values.admin.tlsTrustStore }}
         {{- if .Values.admin.tlsTrustStore.password }}
         - { name: NUODB_TRUSTSTORE_PASSWORD,  value: {{ .Values.admin.tlsTrustStore.password | quote }} }
+        {{- else }}
+        - name: NUODB_TRUSTSTORE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.admin.tlsTrustStore.secret }}
+              key: {{ .Values.admin.tlsTrustStore.passwordKey | default "password" }}
         {{- end }}
         {{- end }}
         {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabledOnContainer) "true" }}
@@ -202,25 +215,10 @@ spec:
           mountPath: /usr/local/bin/livenessprobe
           subPath: livenessprobe
         {{- end }}
-        {{- if .Values.admin.tlsCACert }}
-        - name: tls-ca-cert
-          mountPath: /etc/nuodb/keys/ca.cert
-          subPath: {{ .Values.admin.tlsCACert.key }}
-        {{- end }}
         {{- if .Values.admin.tlsKeyStore }}
-        - name: tls-keystore
-          mountPath: /etc/nuodb/keys/nuoadmin.p12
-          subPath: {{ .Values.admin.tlsKeyStore.key }}
-        {{- end }}
-        {{- if .Values.admin.tlsTrustStore }}
-        - name: tls-truststore
-          mountPath: /etc/nuodb/keys/nuoadmin-truststore.p12
-          subPath: {{ .Values.admin.tlsTrustStore.key }}
-        {{- end }}
-        {{- if .Values.admin.tlsClientPEM }}
-        - name: tls-client-pem
-          mountPath: /etc/nuodb/keys/nuocmd.pem
-          subPath: {{ .Values.admin.tlsClientPEM.key }}
+        - name: tls
+          mountPath: /etc/nuodb/keys
+          readOnly: true
         {{- end }}
         {{- if .Values.admin.tde }}
         {{- if .Values.admin.tde.secrets }}
@@ -243,30 +241,7 @@ spec:
       {{- end }}
       {{- end }}
       {{- end }}
-      {{- if .Values.admin.tlsCACert }}
-      - name: tls-ca-cert
-        secret:
-          secretName: {{ .Values.admin.tlsCACert.secret }}
-          defaultMode: 0440
-      {{- end }}
-      {{- if .Values.admin.tlsKeyStore }}
-      - name: tls-keystore
-        secret:
-          secretName: {{ .Values.admin.tlsKeyStore.secret }}
-          defaultMode: 0440
-      {{- end }}
-      {{- if .Values.admin.tlsTrustStore }}
-      - name: tls-truststore
-        secret:
-          secretName: {{ .Values.admin.tlsTrustStore.secret }}
-          defaultMode: 0440
-      {{- end }}
-      {{- if .Values.admin.tlsClientPEM }}
-      - name: tls-client-pem
-        secret:
-          secretName: {{ .Values.admin.tlsClientPEM.secret }}
-          defaultMode: 0440
-      {{- end }}
+      {{- include "admin.tlsVolume" . | nindent 6 }}
       {{- if eq (include "admin.enableEphemeralVolume" .) "true" }}
       - name: eph-volume
         {{- include "admin.ephemeralVolume" . | indent 8 }}

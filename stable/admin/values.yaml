@@ -332,10 +332,12 @@ admin:
   #   secret: nuodb-keystore
   #   key: nuoadmin.p12
   #   password: changeIt
+  #   passwordKey: password
   # tlsTrustStore:
   #   secret: nuodb-truststore
   #   key: nuoadmin-truststore.p12
   #   password: changeIt
+  #   passwordKey: password
   # tlsClientPEM:
   #   secret: nuodb-client-pem
   #   key: nuocmd.pem

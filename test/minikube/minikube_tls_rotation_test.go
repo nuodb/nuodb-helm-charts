@@ -1,14 +1,16 @@
+//go:build long
 // +build long
 
 package minikube
 
 import (
 	"fmt"
-	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"testing"
+
+	v1 "k8s.io/api/core/v1"
 
 	"github.com/stretchr/testify/require"
 
@@ -19,21 +21,19 @@ import (
 	"github.com/gruntwork-io/terratest/modules/random"
 )
 
-func verifyAdminCertificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
-	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
-	for _, value := range certificateInfo["serverCertificates"].(map[string]interface{}) {
-		certSubjectName := value.(map[string]interface{})["subjectName"].(string)
-		require.Contains(t, certSubjectName, expectedDN,
-			"`%s` not found in:\n %s", expectedDN, certSubjectName)
+func verifyAdminCertificates(t *testing.T, info testlib.NuoDBCertificateInfo, expectedDN string) {
+	for serverId, value := range info.ServerCertificates {
+		require.Contains(t, value.SubjectName, expectedDN,
+			"Admin serverId=%s certificate is not updated: %q not found in %q",
+			serverId, expectedDN, value.SubjectName)
 	}
 }
 
-func verifyEngineCertificates(t *testing.T, certificateInfoJSON string, expectedDN string) {
-	certificateInfo := testlib.UnmarshalJSONObject(t, certificateInfoJSON)
-	for _, value := range certificateInfo["processCertificates"].(map[string]interface{}) {
-		certIssuerName := value.(map[string]interface{})["issuerName"].(string)
-		require.Contains(t, certIssuerName, expectedDN,
-			"`%s` not found in:\n %s", expectedDN, certIssuerName)
+func verifyEngineCertificates(t *testing.T, info testlib.NuoDBCertificateInfo, expectedDN string) {
+	for startId, value := range info.ProcessCertificates {
+		require.Contains(t, value.IssuerName, expectedDN,
+			"Engine startId=%s certificate is not updated: %q not found in %q",
+			startId, expectedDN, value.IssuerName)
 	}
 }
 
@@ -83,6 +83,8 @@ func TestKubernetesTLSRotation(t *testing.T) {
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":    "250m", // during upgrade we will be running 2 of these
 			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			// Lower the AP keystore reload interval
+			"admin.options.keystoreUpdateIntervalMs": "1000",
 		},
 	}
 
@@ -115,8 +117,8 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", adminReleaseName)
 
 	// get the OLD log
-	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
-	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v1.PodLogOptions{Follow: true})
 
 	// create the new certs...
 	testlib.GenerateCustomCertificates(t, certGeneratorPodName, namespaceName, newTLSCommands)
@@ -129,9 +131,15 @@ func TestKubernetesTLSRotation(t *testing.T) {
 		k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
 	})
 
-	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, false)
+	// Rotating TLS certificates doesn't require APs restart anymore; use the
+	// "helm upgrade" strategy to rotate the TLS keys and wait for the APs to
+	// reload their keystore files
+	testlib.RotateTLSCertificates(t, &options, namespaceName, adminReleaseName, databaseReleaseName, newTLSKeysLocation, true)
 
-	certificateInfo, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "--show-json", "get", "certificate-info")
+	data, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--",
+		"nuocmd", "--show-json", "get", "certificate-info")
+	require.NoError(t, err)
+	err, certificateInfo := testlib.UnmarshalCertificateInfo(data)
 	require.NoError(t, err)
 
 	t.Run("verifyAdminCertificates", func(t *testing.T) {

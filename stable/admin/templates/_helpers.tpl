@@ -444,3 +444,85 @@ that case.
 {{ default 10 .Values.admin.readinessProbe.timeoutSeconds }}
 {{- end -}}
 {{- end -}}
+
+
+{{/*
+Renders the TLS secrets as projected volume. Combining all secrets into one
+volume allows mounting them into single directory (/etc/nuodb/keys) without
+"subPath". The container mount will automatically receive updates for the
+volume sources defined in the projected volume which simplifies the TLS keys
+rotation.
+*/}}
+{{- define "admin.tlsVolume" -}}
+{{- if .Values.admin.tlsKeyStore }}
+- name: tls
+  projected:
+    defaultMode: 0440
+    sources:
+    - secret:
+        name: {{ .Values.admin.tlsKeyStore.secret }}
+        items:
+        - key: {{ .Values.admin.tlsKeyStore.key }}
+          path: nuoadmin.p12
+{{- if .Values.admin.tlsCACert }}
+    - secret:
+        name: {{ .Values.admin.tlsCACert.secret }}
+        items:
+        - key: {{ .Values.admin.tlsCACert.key }}
+          path: ca.cert
+{{- end }}
+{{- if .Values.admin.tlsTrustStore }}
+    - secret:
+        name: {{ .Values.admin.tlsTrustStore.secret }}
+        items:
+        - key: {{ .Values.admin.tlsTrustStore.key }}
+          path: nuoadmin-truststore.p12
+{{- end }}
+{{- if .Values.admin.tlsClientPEM }}
+    - secret:
+        name: {{ .Values.admin.tlsClientPEM.secret }}
+        items:
+        - key: {{ .Values.admin.tlsClientPEM.key }}
+          path: nuocmd.pem
+{{- end }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Renders the TLS password for keystore or truststore.
+*/}}
+{{- define "admin.keystorePassword" -}}
+{{- $ := index . 0 -}}
+{{- $store := index . 1 -}}
+{{- if $store.password -}}
+{{ $store.password }}
+{{- else -}}
+  {{- $secret := lookup "v1" "Secret" $.Release.Namespace $store.secret -}}
+  {{- if $secret -}}
+  {{- $encoded := index $secret "data" (default "password" $store.passwordKey) -}}
+    {{- if $encoded -}}
+{{ print $encoded | b64dec }}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Renders AP Pod annotations for TLS checksum that forces AP pods restart on
+configuration change. Pod restart is needed only if the TLS passwords are
+rotated as the AP will constantly reload the keystore file by default. New
+certificate entries are added programically to the truststore using "nuocmd add
+trusted-certificate" command which doesn't require AP restart.
+*/}}
+{{- define "admin.tlsConfigAnnotations" -}}
+{{- $passwords  := "" -}}
+{{- if .Values.admin.tlsKeyStore }}
+  {{- $passwords = printf "%s%s" $passwords (include "admin.keystorePassword" (list . .Values.admin.tlsKeyStore)) -}}
+{{- end }}
+{{- if .Values.admin.tlsTrustStore }}
+  {{- $passwords = printf "%s%s" $passwords (include "admin.keystorePassword" (list . .Values.admin.tlsTrustStore)) -}}
+{{- end }}
+{{- if $passwords }}
+checksum/tls-passwords: {{ sha256sum $passwords }}
+{{- end }}
+{{- end -}}

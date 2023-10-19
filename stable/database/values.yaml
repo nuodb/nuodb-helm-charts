@@ -78,6 +78,7 @@ admin:
   #   secret: nuodb-keystore
   #   key: nuoadmin.p12
   #   password: changeIt
+  #   passwordKey: password
   # tlsClientPEM:
   #   secret: nuodb-client-pem
   #   key: nuocmd.pem
