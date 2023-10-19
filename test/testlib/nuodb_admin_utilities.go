@@ -151,7 +151,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 	// License is mandatory for running test with NuoDB 6.0
 	RunOnNuoDBVersionFromOptionCondition(t, options, ">=6.0.0", func(version *semver.Version) {
-		if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") != "" && os.Getenv("NUODB_LICENSE_CONTENT") != "" {
+		if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") == "" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 			t.Error("License is required for running test with NuoDB 6.0 and above")
 		}
 	})
