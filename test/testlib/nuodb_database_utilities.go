@@ -631,9 +631,7 @@ func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) 
 }
 
 func RunOnNuoDBVersion(t *testing.T, versionCheckFunc func(*semver.Version) bool, actionFunc func(*semver.Version)) {
-	versionString := GetNuoDBVersion(t, "default", &helm.Options{})
-	// Select only the main NuoDB version (i.e 4.2.1) from the full version string
-	checkVersion(t, versionString, versionCheckFunc, actionFunc)
+	RunOnNuoDBVersionFromOptions(t, &helm.Options{}, versionCheckFunc, actionFunc)
 }
 
 func RunOnNuoDBVersionFromOptions(t *testing.T, options *helm.Options, versionCheckFunc func(*semver.Version) bool, actionFunc func(*semver.Version)) {
@@ -641,10 +639,6 @@ func RunOnNuoDBVersionFromOptions(t *testing.T, options *helm.Options, versionCh
 	if !ok || !NuoDBVersionRegex.MatchString(versionString) {
 		versionString = GetNuoDBVersion(t, "default", options)
 	}
-	checkVersion(t, versionString, versionCheckFunc, actionFunc)
-}
-
-func checkVersion(t *testing.T, versionString string, versionCheckFunc func(*semver.Version) bool, actionFunc func(*semver.Version)) {
 	version, err := semver.NewVersion(NuoDBVersionRegex.ReplaceAllString(versionString, "${1}"))
 	require.NoError(t, err, "Unable to parse NuoDB version", versionString)
 
