@@ -238,6 +238,10 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 	testlib.AwaitPodHasVersion(t, namespaceName, admin0, expectedNewVersion, 300*time.Second)
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
+	testlib.RunOnNuoDBVersionFromOptionCondition(t, options, ">=6.0.0", func(version *semver.Version) {
+		testlib.ApplyLicense(t, namespaceName, admin0, testlib.LIMITED)
+	}
+
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 
 	opt := testlib.GetExtractedOptions(&options)
