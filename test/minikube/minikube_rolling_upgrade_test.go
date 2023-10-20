@@ -240,7 +240,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 
 	testlib.RunOnNuoDBVersionFromOptionCondition(t, options, ">=6.0.0", func(version *semver.Version) {
 		testlib.ApplyLicense(t, namespaceName, admin0, testlib.LIMITED)
-	}
+	})
 
 	t.Run("verifyAdminState", func(t *testing.T) { testlib.VerifyAdminState(t, namespaceName, admin0) })
 
