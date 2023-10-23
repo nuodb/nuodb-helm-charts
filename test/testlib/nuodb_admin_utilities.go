@@ -148,8 +148,6 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	// we don't want to change the test flow for NuoDB version 6.0.
 	// Any test which requires Enterprise license would install it using
 	// ApplyLicense function
-	
-
 	if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") != "" {
 		ApplyLicense(t, namespaceName, adminNames[0], LIMITED)
 	} else if os.Getenv("NUODB_LICENSE_CONTENT") != "" {
