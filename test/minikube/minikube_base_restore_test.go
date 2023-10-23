@@ -170,6 +170,9 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 	backupPodName = restartSmAndExecuteJournalBackup(smPodName1, backupGroup1)
 	// verify that the journal backup fails and another full backup is requested
 	// because the last full hot copy failed
+
+	testlib.VerifyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
+
 	require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, backupPodName,
 		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}),
 		"Incremental hot copy not requested to enable journal after sync")
