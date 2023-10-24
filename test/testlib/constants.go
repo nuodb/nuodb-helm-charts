@@ -62,3 +62,11 @@ const NGINX_DEPLOYMENT = "nginx"
 const ADMIN_API_INGRESS_HOSTNAME = "api.nuodb.local"
 const ADMIN_SQL_INGRESS_HOSTNAME = "sql.nuodb.local"
 const DATABASE_TE_INGRESS_HOSTNAME = "demo.nuodb.local"
+
+type LicenseType string
+
+const (
+	UNLICENSED LicenseType = "UNLICENSED"
+	LIMITED    LicenseType = "LIMITED"
+	ENTERPRISE LicenseType = "ENTERPRISE"
+)

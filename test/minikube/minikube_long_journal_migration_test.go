@@ -1,4 +1,6 @@
+//go:build diagnostics
 // +build diagnostics
+
 // not the ideal plan, but diagnostics is currently 1/2 the time of other plans
 
 package minikube
@@ -66,7 +68,7 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
-	testlib.ApplyNuoDBLicense(t, namespaceName, admin0)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)

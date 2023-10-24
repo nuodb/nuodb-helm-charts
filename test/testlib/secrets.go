@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/k8s"
-
 )
 
 const TLS_SECRET_PASSWORD_YAML_TEMPLATE = `---

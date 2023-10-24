@@ -14,6 +14,7 @@ import (
 
 	v12 "k8s.io/api/core/v1"
 
+	"github.com/Masterminds/semver"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
@@ -142,6 +143,24 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		}
 	}
 
+	
+	// LIMITED license takes priority over Enterprise license because
+	// we don't want to change the test flow for NuoDB version 6.0.
+	// Any test which requires Enterprise license would install it using
+	// ApplyLicense function
+	if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") != "" {
+		ApplyLicense(t, namespaceName, adminNames[0], LIMITED)
+	} else if os.Getenv("NUODB_LICENSE_CONTENT") != "" {
+		ApplyLicense(t, namespaceName, adminNames[0], ENTERPRISE)
+	}
+
+	// License is mandatory for running test with NuoDB 6.0
+	RunOnNuoDBVersionFromOptionCondition(t, options, ">=6.0.0", func(version *semver.Version) {
+		if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") == "" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+			t.Error("License is required for running test with NuoDB 6.0 and above")
+		}
+	})
+
 	return
 }
 
@@ -194,9 +213,20 @@ func AwaitNrLoadBalancerPolicies(t *testing.T, namespace string, podName string,
 	}, 30*time.Second)
 }
 
+// Deprecated: The ApplyNuoDBLicense function is deprecated, When testing with NuoDB v6.0.0, use the ApplyLicense function instead
 func ApplyNuoDBLicense(t *testing.T, namespace string, adminPod string) {
+	ApplyLicense(t, namespace, adminPod, ENTERPRISE)
+}
+
+func ApplyLicense(t *testing.T, namespace string, adminPod string, licenseType LicenseType) {
 	options := k8s.NewKubectlOptions("", "", namespace)
-	licenseContent := os.Getenv("NUODB_LICENSE_CONTENT")
+	licenseContent := ""
+	if licenseType == LIMITED {
+		licenseContent = os.Getenv("NUODB_LIMITED_LICENSE_CONTENT")
+	} else if licenseType == ENTERPRISE {
+		licenseContent = os.Getenv("NUODB_LICENSE_CONTENT")
+	}
+
 	if licenseContent != "" {
 		licenseContentBytes, err := base64.StdEncoding.DecodeString(licenseContent)
 		require.NoError(t, err)

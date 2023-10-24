@@ -13,9 +13,9 @@ type DBVersion struct {
 
 type NuoDBDatabase struct {
 	Incarnation DBVersion `json:"incarnation"`
-	Name string `json:"name"`
-	Processes string `json:"processes"`
-	State string `json:"state"`
+	Name        string    `json:"name"`
+	Processes   string    `json:"processes"`
+	State       string    `json:"state"`
 }
 
 func UnmarshalDatabase(s string) (err error, databases []NuoDBDatabase) {
