@@ -105,9 +105,10 @@ function execute_backup() {
          --value "" --expected-value "${failed}"
 
       latest=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" )
-      current=${latest:-0}
+      current=${latest:--1}
       # bump latest, and wrap around (simple ring-buffer)
       next=$(( (current + 1) % $NUODB_MAX_BACKUP_HISTORY ))
+      next_value=$(nuocmd get value --key "${NUODB_BACKUP_KEY}/${db_name}/${backup_group}/$next")
       # the backupset for all archives in the backup group will be the same
       # after a successful hotcopy
       backupset=$(echo "$current_backup" | head -1 | awk '{print $2}')
@@ -129,8 +130,8 @@ function execute_backup() {
          echo "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next/pods = [${pods[*]}]"
          echo "$NUODB_BACKUP_KEY/$db_name/latest = $backup_group"
 
-         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next" --value "$backupset" --expected-value "" && \
-         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next/pods" --value "${pods[*]}" --expected-value "" && \
+         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next" --value "$backupset" --expected-value "$next_value" && \
+         nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/$next/pods" --value "${pods[*]}" --unconditional && \
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/${backup_group}/latest" --value "$next" --expected-value "$latest" && \
          nuocmd set value --key "$NUODB_BACKUP_KEY/$db_name/latest" --value "$backup_group" --unconditional
       else
@@ -313,12 +314,16 @@ elif [ "$backup_type" = "report-backups" ]; then
       groups=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/backup-groups")
    fi
    for group in $groups; do
-      i=1
+      i=0
       while true; do
          backupset=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${i}")
-         [ -z "$backupset" ] && break
-         backup_pods=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${i}/pods")
-         echo "${group}:${i} ${backupset} ${backup_pods}"
+         if [ -n "$backupset" ]; then
+            backup_pods=$(nuocmd get value --key "$NUODB_BACKUP_KEY/$db_name/${group}/${i}/pods")
+            echo "${group}:${i} ${backupset} ${backup_pods}"
+         elif [ $i -ne 0 ]; then
+            # Backup index 0 may be missing is old deployments
+            break
+         fi
          (( i=i+1 ))
       done
    done

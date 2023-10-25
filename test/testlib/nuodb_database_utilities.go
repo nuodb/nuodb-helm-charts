@@ -2,7 +2,7 @@ package testlib
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"os"
 	"path"
 	"path/filepath"
@@ -379,6 +379,10 @@ func BackupDatabaseE(
 		return err
 	}
 	defer func() {
+		// Get backup logs and delete the job
+		if pod, err := FindPod(t, namespaceName, jobName); err == nil {
+			GetAppLog(t, namespaceName, pod.Name, "", &v12.PodLogOptions{Container: "nuodb"})
+		}
 		k8s.RunKubectl(t, opts, "delete", "job", jobName)
 	}()
 	var backupErr error
@@ -396,7 +400,7 @@ func BackupDatabaseE(
 		}
 		if restartCount > 0 {
 			// some of the containers failed and was restarted; stop waiting
-			buf, err := ioutil.ReadAll(getAppLogStream(
+			buf, err := io.ReadAll(getAppLogStream(
 				t, namespaceName, pod.Name,
 				&corev1.PodLogOptions{Previous: true, Container: "nuodb"}))
 			if err != nil {
@@ -424,6 +428,18 @@ func GetLatestBackup(t *testing.T, namespaceName string, podName string,
 	require.NoError(t, err, "Error while reporting latest backupset")
 	require.True(t, backupset != "")
 	return backupset
+}
+
+func GetLatestBackupGroup(t *testing.T, namespaceName string, podName string, databaseName string) string {
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	group, err := k8s.RunKubectlAndGetOutputE(t, opts,
+		"exec", podName, "-c", "engine", "--", "bash", "-c",
+		"nuobackup --type report-latest --db-name "+databaseName+
+			" --backup-root /var/opt/nuodb/backup 2>/dev/null",
+	)
+	require.NoError(t, err, "Error while reporting latest backup group")
+	require.True(t, group != "")
+	return group
 }
 
 func GetArchives(t *testing.T, namespaceName string, adminPod string, dbName string) (archives []NuoDBArchive, removedArchives []NuoDBArchive) {
@@ -572,7 +588,7 @@ func ServePodFileViaHTTP(t *testing.T, namespaceName string, srcPodName string, 
 	}
 
 	prefix := "nginx-html"
-	tmpDir, err := ioutil.TempDir("", prefix)
+	tmpDir, err := os.MkdirTemp("", prefix)
 	require.NoError(t, err, "Unable to create TMP directory with prefix ", prefix)
 	defer os.RemoveAll(tmpDir)
 	fileName := filepath.Base(filePath)
