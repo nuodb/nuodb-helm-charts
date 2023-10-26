@@ -728,7 +728,22 @@ func SuspendDatabaseBackupJobs(t *testing.T, namespaceName string, domain, dbNam
 			t.Logf("Suspending %s", cronJob)
 			k8s.RunKubectl(t, kubectlOptions, "patch", cronJob,
 				"-p", "{\"spec\" : {\"suspend\" : true }}")
-			DeleteJobPods(t, namespaceName, cronJob)
+			// Extract the cronjob name and delete any jobs or pods that are
+			// already scheduled
+			parts := strings.Split(cronJob, "/")
+			require.Equal(t, 2, len(parts))
+			cronJobName := parts[1]
+			output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "jobs", "-o",
+				fmt.Sprintf(`jsonpath={.items[?(@.metadata.ownerReferences[*].name=="%s")].metadata.name}`, cronJobName))
+			require.NoError(t, err)
+			output = strings.TrimSpace(output)
+			if output != "" {
+				for _, jobName := range strings.Split(output, " ") {
+					t.Logf("Deleting job %s", jobName)
+					k8s.RunKubectl(t, kubectlOptions, "delete", "job", jobName)
+				}
+			}
+			DeleteJobPods(t, namespaceName, cronJobName)
 		}
 	}
 }
