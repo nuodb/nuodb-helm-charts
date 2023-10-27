@@ -832,22 +832,36 @@ func VerifyLicenseFile(t *testing.T, namespace string, podName string, expectedL
 }
 
 func VerifyLicense(t *testing.T, namespace string, podName string, expected LicenseType) {
+	require.NoError(t, VerifyLicenseE(t, namespace, podName, expected))
+}
+
+func VerifyLicenseE(t *testing.T, namespace string, podName string, expected LicenseType) error {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", "-c", "admin", podName, "--", "nuocmd", "show", "domain")
-	require.NoError(t, err)
-
-	expectedString := fmt.Sprintf("server license: %s", expected)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", podName, "-c", "admin", "--",
+		"nuocmd", "--show-json-fields", "decodedLicense.type", "get", "effective-license")
+	if err != nil {
+		return err
+	}
+	license := struct {
+		Type string `json:"decodedLicense.type"`
+	}{}
+	err = json.Unmarshal([]byte(output), &license)
+	if err != nil {
+		return fmt.Errorf("failed to decode license type: %w", err)
+	}
+	expectedString := fmt.Sprintf("%s", expected)
 	if expected != ENTERPRISE {
 		RunOnNuoDBVersionCondition(t, "<6.0.0", func(version *semver.Version) {
 			// Prior to NuoDB v6.0.0, Community and Enterprise license types are
 			// supported
-			expectedString = "server license: Community"
+			expectedString = "COMMUNITY"
 		})
 	}
-	output = strings.ToLower(output)
-	expectedString = strings.ToLower(expectedString)
-	require.True(t, strings.Contains(output, expectedString), output)
+	if license.Type != expectedString {
+		return fmt.Errorf("unexpected license type expected=%q, found=%q", expectedString, license.Type)
+	}
+	return nil
 }
 
 // Deprecated: The VerifyLicenseIsCommunity function has been deprecated. When testing with NuoDB v6.0.0, use the VerifyLicense function instead.
