@@ -387,6 +387,69 @@ function resolveLatestSource() {
   return 0
 }
 
+#=======================================
+# function - Looks for a previous archive and journal and imports it
+#
+function loadFromSnapshot() {
+  local RECREATE_ARCHIVES="false"
+
+  if [ -z "$(ls -A ${DB_DIR})" ]; then
+    local archives=$( find "/var/opt/nuodb/archive" -name info.json )
+    if [ -z "$archives" ] || [ $(echo "$archives" | wc -l) != 1 ]; then 
+      die 1 "Did not find exactly 1 archive: ${archives}"
+    fi
+
+    local ARCHIVE_PATH=$( dirname $archives )
+    log "Found snapshot at ${ARCHIVE_PATH}"
+
+    if [ -n "$BACKUP_ID" ]; then
+      if [ ! -e ${ARCHIVE_PATH}/backup.json ] || \
+          [ $BACKUP_ID != $(sed -e 's|.*"id":\s*"\?\([^\s"]\+\)"\?[,}].*|\1|' "$ARCHIVE_PATH/backup.json") ]; then
+        die 1 "Incorrect backup id in archive"
+      fi
+    fi
+
+    if [ "$SEPARATE_JOURNAL" == "true" ]; then
+      local RELATIVE_ARCHIVE=$(realpath --relative-base=/var/opt/nuodb/archive $ARCHIVE_PATH)
+      local EXPECTED_JOURNAL="/var/opt/nuodb/journal/${RELATIVE_ARCHIVE}"
+
+      if [ ! -d $EXPECTED_JOURNAL ]; then
+        die 1 "Did not find a journal snapshot at '$EXPECTED_JOURNAL'"
+      fi
+      
+      if [ -n "$BACKUP_ID" ]; then
+        if [ ! -e ${EXPECTED_JOURNAL}/backup.json ] || \
+            [ $BACKUP_ID != $(sed -e 's|.*"id":\s*"\?\([^\s"]\+\)"\?[,}].*|\1|' "$EXPECTED_JOURNAL/backup.json") ]; then
+          die 1 "Incorrect backup id in journal"
+        fi
+      fi
+
+      mv ${EXPECTED_JOURNAL}/* ${JOURNAL_DIR}
+
+    fi
+
+    # Don't move the archive until after we have done error checking.
+    # Once we move the archive, we are going to be in the `archive already exists` branch
+    # when kubernetes retries/restarts the pod.
+    mv ${ARCHIVE_PATH}/* ${DB_DIR}
+
+    local RECREATE_ARCHIVES="true"
+  else
+    log "archive already exists, not looking for snapshot archives"
+
+    if [ -e ${DB_DIR}/backup.json ] && [ -n "$BACKUP_ID" ] && \
+          [ $BACKUP_ID == $(sed -e 's|.*"id":\s*"\?\([^\s"]\+\)"\?[,}].*|\1|' "$DB_DIR/backup.json") ]; then
+      local RECREATE_ARCHIVES="true"
+    fi
+  fi
+
+  if [ $RECREATE_ARCHIVES == "true" ]; then
+    log "Removing outdated archive metadata"
+    rm ${DB_DIR}/info.json ${DB_DIR}/backup.json
+    [ -e ${JOURNAL_DIR}/backup.json ] && rm ${JOURNAL_DIR}/backup.json
+  fi
+}
+
 #=============================
 # main routine
 #=============================
@@ -413,6 +476,12 @@ if [ "$SEPARATE_JOURNAL" == "true" ]; then
   journal_flags+=("--journal-dir")
   journal_flags+=("${JOURNAL_DIR}")
   log "journal-dir=${JOURNAL_DIR}"
+fi
+
+if [ "$SNAPSHOT_RESTORED" == "true" ]; then
+  loadFromSnapshot
+else
+  log "No snapshot"
 fi
 
 # Retry the first request against the admin layer to make sure that Raft
