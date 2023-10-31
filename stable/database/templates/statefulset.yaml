@@ -317,6 +317,10 @@ spec:
         matchLabels:
           database: {{ .Values.database.name }}
 {{- end }}
+      {{- if .Values.database.persistence.dataSourceRef }}
+      dataSourceRef:
+        {{- toYaml .Values.database.persistence.dataSourceRef | nindent 8}}
+      {{- end }}
       resources:
         requests:
           storage: {{ .Values.database.persistence.size }}
@@ -337,6 +341,10 @@ spec:
       {{- else }}
       storageClassName: {{ .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
       {{- end }}
+    {{- end }}
+    {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef }}
+      dataSourceRef:
+      {{- toYaml .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
     {{- end }}
 {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
@@ -691,7 +699,6 @@ spec:
           database: {{ .Values.database.name }}
 {{- end }}
       {{- if .Values.database.persistence.dataSourceRef }}
-      # TODO: Copy logic to other PVCs
       dataSourceRef:
         {{- toYaml .Values.database.persistence.dataSourceRef | nindent 8}}
       {{- end }}
@@ -717,7 +724,6 @@ spec:
       {{- end }}
     {{- end }}
     {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef }}
-      # TODO: Copy logic to other PVCs
       dataSourceRef:
       {{- toYaml .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
     {{- end }}
