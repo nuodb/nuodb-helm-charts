@@ -142,10 +142,10 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 			AwaitAdminFullyConnected(t, namespaceName, adminNames[i], replicaCount)
 		}
 	}
-	
+
 	// If the nuodb.lic is provided explicitly then don't apply the
 	// license from the env variable
-	if values,ok:=options.SetValues["admin.configFiles.nuodb\\.lic"]; !ok || values == "" {
+	if values, ok := options.SetValues["admin.configFiles.nuodb\\.lic"]; !ok || values == "" {
 
 		// LIMITED license takes priority over Enterprise license because
 		// we don't want to change the test flow for NuoDB version 6.0.
