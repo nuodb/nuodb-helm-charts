@@ -2517,3 +2517,79 @@ func TestDatabaseTLSConfig(t *testing.T) {
 	})
 
 }
+
+func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	// Make sure that we don't set a data source unless one is configured
+	t.Run("testNoDataSourceConfigured", func(t *testing.T) {
+		options := &helm.Options{}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, template := range obj.Spec.VolumeClaimTemplates {
+				assert.Nil(t, template.Spec.DataSourceRef)
+			}
+		}
+	})
+
+	//Make sure that we can set all of the possible fields in each data source sperarately
+	t.Run("testAllDataSourceConfigured", func(t *testing.T) {
+		values := map[string]string{
+			"database.sm.hotCopy.journalPath.enabled":   "true",
+			"database.sm.noHotCopy.journalPath.enabled": "true",
+		}
+
+		setFields := func(specKey string, label string) {
+			for _, field := range []string{"apiGroup", "kind", "name", "namespace"} {
+				values[specKey+".dataSourceRef."+field] = label + field
+			}
+		}
+
+		check := func(specKey string, sourceDef *v1.TypedObjectReference) {
+			assert.Equal(t, specKey+"apiGroup", *sourceDef.APIGroup)
+			assert.Equal(t, specKey+"kind", sourceDef.Kind)
+			assert.Equal(t, specKey+"name", sourceDef.Name)
+			assert.Equal(t, specKey+"namespace", *sourceDef.Namespace)
+		}
+
+		setFields("database.persistence", "archive")
+		setFields("database.sm.hotCopy.journalPath.persistence", "hotCopyJournal")
+		setFields("database.sm.noHotCopy.journalPath.persistence", "noHotCopyJournal")
+
+		options := &helm.Options{
+			SetValues: values,
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			check("archive", obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef)
+			if strings.Contains(obj.Name, "-hotcopy") {
+				check("hotCopyJournal", obj.Spec.VolumeClaimTemplates[1].Spec.DataSourceRef)
+			} else {
+				check("noHotCopyJournal", obj.Spec.VolumeClaimTemplates[1].Spec.DataSourceRef)
+			}
+		}
+	})
+
+	// Test to make sure that we can omit optional fields when defining a data source (such as when copying an existing PVC)
+	t.Run("testPvcDataSource", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.persistence.dataSourceRef.kind": "PersistentVolumeClaim",
+				"database.persistence.dataSourceRef.name": "some-other-sm",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			assert.Equal(t, "PersistentVolumeClaim", obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.Kind)
+			assert.Equal(t, "some-other-sm", obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.Name)
+			assert.Nil(t, obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.APIGroup)
+			assert.Nil(t, obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.Namespace)
+		}
+	})
+}

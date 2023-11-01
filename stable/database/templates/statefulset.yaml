@@ -342,9 +342,9 @@ spec:
       storageClassName: {{ .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
       {{- end }}
     {{- end }}
-    {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef }}
+    {{- if .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef }}
       dataSourceRef:
-      {{- toYaml .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
+      {{- toYaml .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
     {{- end }}
 {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
