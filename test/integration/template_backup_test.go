@@ -345,6 +345,28 @@ func TestDatabaseBackupCronJobRestartPolicyOverride(t *testing.T) {
 	}
 }
 
+func TestDatabaseBackupCronJobEnvironment(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.journalBackup.enabled": "true",
+			"database.env[0].name":                      "foo",
+			"database.env[0].value":                     "bar",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
+
+	for _, job := range testlib.SplitAndRenderCronJob(t, output, 3) {
+		assert.Equal(t, 1, len(job.Spec.JobTemplate.Spec.Template.Spec.Containers))
+		container := job.Spec.JobTemplate.Spec.Template.Spec.Containers[0]
+		testlib.EnvContains(container.Env, "foo", "bar")
+	}
+}
+
 func TestDatabaseBackupTimeout(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/database"
