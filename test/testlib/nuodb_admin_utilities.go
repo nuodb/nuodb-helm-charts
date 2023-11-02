@@ -143,23 +143,27 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 		}
 	}
 
-	
-	// LIMITED license takes priority over Enterprise license because
-	// we don't want to change the test flow for NuoDB version 6.0.
-	// Any test which requires Enterprise license would install it using
-	// ApplyLicense function
-	if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") != "" {
-		ApplyLicense(t, namespaceName, adminNames[0], LIMITED)
-	} else if os.Getenv("NUODB_LICENSE_CONTENT") != "" {
-		ApplyLicense(t, namespaceName, adminNames[0], ENTERPRISE)
-	}
+	// If the nuodb.lic is provided explicitly then don't apply the
+	// license from the env variable
+	if values, ok := options.SetValues["admin.configFiles.nuodb\\.lic"]; !ok || values == "" {
 
-	// License is mandatory for running test with NuoDB 6.0
-	RunOnNuoDBVersionFromOptionCondition(t, options, ">=6.0.0", func(version *semver.Version) {
-		if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") == "" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
-			t.Error("License is required for running test with NuoDB 6.0 and above")
+		// LIMITED license takes priority over Enterprise license because
+		// we don't want to change the test flow for NuoDB version 6.0.
+		// Any test which requires Enterprise license would install it using
+		// ApplyLicense function
+		if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") != "" {
+			ApplyLicense(t, namespaceName, adminNames[0], LIMITED)
+		} else if os.Getenv("NUODB_LICENSE_CONTENT") != "" {
+			ApplyLicense(t, namespaceName, adminNames[0], ENTERPRISE)
 		}
-	})
+
+		// License is mandatory for running test with NuoDB 6.0
+		RunOnNuoDBVersionFromOptionCondition(t, options, ">=6.0.0", func(version *semver.Version) {
+			if os.Getenv("NUODB_LIMITED_LICENSE_CONTENT") == "" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+				t.Error("License is required for running test with NuoDB 6.0 and above")
+			}
+		})
+	}
 
 	return
 }
