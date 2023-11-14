@@ -61,6 +61,25 @@ entries:
   cloudbeaver:
   - apiVersion: v2
     appVersion: 22.1.4
+    created: "2023-11-14T16:20:33.494618786Z"
+    description: A web based SQL GUI tool for running queries against NuoDB.
+    digest: 7856f690547fa6a5baf613a75d3f9116d6946f08d367396b0e7ddff3a2f34fce
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/incubator/cloudbeaver
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: cloudbeaver
+    type: application
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.7.0/cloudbeaver-3.7.0.tgz
+    version: 3.7.0
+  - apiVersion: v2
+    appVersion: 22.1.4
     created: "2023-06-22T04:42:55.34402709-04:00"
     description: A web based SQL GUI tool for running queries against NuoDB.
     digest: bc0054359f6758ac6d26d8f8f3145998de1e4f281af6847ac51b83c8710e1cf9
@@ -79,6 +98,24 @@ entries:
     - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.6.0/cloudbeaver-3.6.0.tgz
     version: 3.6.0
   demo-ycsb:
+  - apiVersion: v1
+    appVersion: 5.0.3
+    created: "2023-11-14T16:20:33.495371798Z"
+    description: Load YCSB for NuoDB
+    digest: d4b5e37bd13a31a5947cf19d5a73a216061b61c91d4ec36040d43da6436177fb
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.7.0/demo-ycsb-3.7.0.tgz
+    version: 3.7.0
   - apiVersion: v1
     appVersion: 5.0.3
     created: "2023-06-22T04:42:55.345645511-04:00"
@@ -295,4 +332,4 @@ entries:
     urls:
     - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.2/demo-ycsb-2.2.tgz
     version: "2.2"
-generated: "2023-06-22T04:42:55.340017301-04:00"
+generated: "2023-11-14T16:20:33.49039162Z"

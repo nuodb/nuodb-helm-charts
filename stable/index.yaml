@@ -3,6 +3,24 @@ entries:
   admin:
   - apiVersion: v1
     appVersion: 5.0.3
+    created: "2023-11-14T16:20:33.410962069Z"
+    description: Administration tier for NuoDB.
+    digest: 9b8524dff6f27c421a152cfbcc16653683626c52a5b201f561451657a49ca351
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/admin
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: admin
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.7.0/admin-3.7.0.tgz
+    version: 3.7.0
+  - apiVersion: v1
+    appVersion: 5.0.3
     created: "2023-06-22T04:42:50.461678251-04:00"
     description: Administration tier for NuoDB.
     digest: 0372c068331a105d2e90c6c189e89caa99c9203a5b7b320163baa446b937fa46
@@ -238,6 +256,24 @@ entries:
   database:
   - apiVersion: v1
     appVersion: 5.0.3
+    created: "2023-11-14T16:20:33.413327307Z"
+    description: NuoDB distributed SQL database.
+    digest: 7e9ec58de312b56c525e6e5a3a1dbf1ca2ba730d0a90f6468db986dd1c9b3f8a
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/database
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: database
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.7.0/database-3.7.0.tgz
+    version: 3.7.0
+  - apiVersion: v1
+    appVersion: 5.0.3
     created: "2023-06-22T04:42:50.468879625-04:00"
     description: NuoDB distributed SQL database.
     digest: dcb2322d31e639aaf9fbbcb35c183176e00af0be1e86f16d123a9157c87d8c3a
@@ -471,6 +507,25 @@ entries:
     - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.1/database-2.1.tgz
     version: "2.1"
   restore:
+  - apiVersion: v1
+    appVersion: 5.0.3
+    created: "2023-11-14T16:20:33.421458835Z"
+    description: On-demand restore a NuoDB SQL database.
+    digest: bdb64fb113b3ba9f25ccb846283c6b483fb92379f00edf6329af7b62c2a28ab5
+    home: hhttps://github.com/nuodb/nuodb-helm-charts/tree/master/stable/restore
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    - restore
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: restore
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.7.0/restore-3.7.0.tgz
+    version: 3.7.0
   - apiVersion: v1
     appVersion: 5.0.3
     created: "2023-06-22T04:42:50.4854036-04:00"
@@ -721,6 +776,24 @@ entries:
   storage-class:
   - apiVersion: v1
     appVersion: 5.0.3
+    created: "2023-11-14T16:20:33.42179194Z"
+    description: Storage classes for NuoDB.
+    digest: a38d98778acf0bf8882e272593802ab948cb714db0a873470a7523e43f2ffe07
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/storage-class
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: storage-class
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.7.0/storage-class-3.7.0.tgz
+    version: 3.7.0
+  - apiVersion: v1
+    appVersion: 5.0.3
     created: "2023-06-22T04:42:50.486917572-04:00"
     description: Storage classes for NuoDB.
     digest: 49ec3c07af21d0552dca700b6e5a865631f8e0039442549819b8caa0b4750b6f
@@ -954,6 +1027,25 @@ entries:
     - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.1/storage-class-2.1.tgz
     version: "2.1"
   transparent-hugepage:
+  - apiVersion: v1
+    appVersion: 5.0.3
+    created: "2023-11-14T16:20:33.422188746Z"
+    description: Disable disables transparent_hugepage on Linux nodes.
+    digest: 4c75dca60fd1e4362936b48baf412704d23949a8d8554aa5346c2692a39bd363
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/transparent-hugepage
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    - backup
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: transparent-hugepage
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.7.0/transparent-hugepage-3.7.0.tgz
+    version: 3.7.0
   - apiVersion: v1
     appVersion: 5.0.3
     created: "2023-06-22T04:42:50.488178054-04:00"
@@ -1201,4 +1293,4 @@ entries:
     urls:
     - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.1/transparent-hugepage-2.1.tgz
     version: "2.1"
-generated: "2023-06-22T04:42:50.45634173-04:00"
+generated: "2023-11-14T16:20:33.409135841Z"
