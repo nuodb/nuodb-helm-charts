@@ -171,7 +171,6 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 	// verify that the journal backup fails and another full backup is requested
 	// because the last full hot copy failed
 
-
 	require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, backupPodName,
 		"Executing incremental hot copy as journal hot copy is temporarily suspended", &corev1.PodLogOptions{}),
 		"Incremental hot copy not requested to enable journal after sync")
@@ -185,20 +184,20 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 func restoreDatabaseByArchiveType(t *testing.T, options helm.Options, namespaceName string, admin0 string, archiveType string) {
 	isLsaType := archiveType == "lsa"
 	name := "restoreFileArchive"
-	if(isLsaType) {
+	if isLsaType {
 		name = "restoreLsaArchive"
 	}
 
 	t.Run(name, func(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
-		if(isLsaType) {
+		if isLsaType {
 			options.SetValues["database.archiveType"] = "lsa"
 		}
 
 		databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &options)
 
-		if(isLsaType) {
+		if isLsaType {
 			delete(options.SetValues, "database.archiveType")
 		}
 
@@ -435,4 +434,85 @@ func TestKubernetesAutoRestore(t *testing.T) {
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	})
+}
+
+func TestKubernetesSnapshotRestore(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-0", admin)
+
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_ADMIN, t, func() {
+		k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
+		testlib.DescribePods(t, namespaceName, admin)
+	})
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":      testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.hotCopy.journalPath.enabled": "true",
+		},
+	})
+
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "bash", "-c",
+		"echo \"CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123);\" | nuosql demo --user dba --password secret")
+
+	require.NoError(t, err, output)
+
+	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-hotcopy-0", sourceDatabaseChartName)
+	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+		"echo \"{\\\"id\\\": \\\"123abc\\\"}\" > /var/opt/nuodb/archive/nuodb/demo/backup.json")
+	require.NoError(t, err, output)
+
+	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+		"echo \"{\\\"id\\\": \\\"123abc\\\"}\" > /var/opt/nuodb/journal/nuodb/demo/backup.json")
+	require.NoError(t, err, output)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SNAPSHOT)
+
+	achiveVolumeName := "archive-volume-" + smPod
+	archiveSnapshotName := "archive-snapshot"
+	testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveSnapshotName)
+
+	journalVolumeName := "journal-volume-" + smPod
+	journalSnapshotName := "journal-snapshot"
+	testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalSnapshotName)
+
+	restoredDb := "db-clone"
+	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":                                 testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":                              testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                                 testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":                              testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.name":                                                      restoredDb,
+			"database.persistence.dataSourceRef.kind":                            "VolumeSnapshot",
+			"database.persistence.dataSourceRef.name":                            archiveSnapshotName,
+			"database.persistence.dataSourceRef.apiGroup":                        "snapshot.storage.k8s.io",
+			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.kind":     "VolumeSnapshot",
+			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.name":     journalSnapshotName,
+			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.apiGroup": "snapshot.storage.k8s.io",
+			"database.autoImport.backup_id":                                      "123abc",
+			"database.sm.hotCopy.journalPath.enabled":                            "true",
+		},
+	})
+
+	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "-c", "admin", "--", "bash", "-c",
+		fmt.Sprintf("echo \"SELECT id FROM testtbl;\" | nuosql %s --user dba --password secret", restoredDb))
+
+	require.NoError(t, err, output)
+
+	require.True(t, strings.Contains(output, "123"))
 }

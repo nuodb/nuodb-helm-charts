@@ -29,6 +29,7 @@ const TEARDOWN_VAULT = "vault"
 const TEARDOWN_MULTICLUSTER = "multicluster"
 const TEARDOWN_NGINX = "nginx"
 const TEARDOWN_HAPROXY = "haproxy"
+const TEARDOWN_SNAPSHOT = "snapshot"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"
@@ -50,6 +51,9 @@ const IMPORT_SG1_BACKUP_FILE = "../files/backup-sg1.bak.tz"
 // and 1 CPU is equivalent to 1000m
 const MINIMAL_VIABLE_ENGINE_CPU = "500m"
 const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
+
+const SNAPSHOTABLE_STORAGE_CLASS = "csi-hostpath-sc"
+const VOLUME_SNAPSHOT_CLASS = "csi-hostpath-snapclass"
 
 const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
 

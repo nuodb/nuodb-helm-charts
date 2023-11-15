@@ -2531,6 +2531,8 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			for _, template := range obj.Spec.VolumeClaimTemplates {
 				assert.Nil(t, template.Spec.DataSourceRef)
 			}
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "false"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
 	})
 
@@ -2539,6 +2541,7 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 		values := map[string]string{
 			"database.sm.hotCopy.journalPath.enabled":   "true",
 			"database.sm.noHotCopy.journalPath.enabled": "true",
+			"database.autoImport.backup_id":             "123abc",
 		}
 
 		setFields := func(specKey string, label string) {
@@ -2571,6 +2574,8 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			} else {
 				check("noHotCopyJournal", obj.Spec.VolumeClaimTemplates[1].Spec.DataSourceRef)
 			}
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", "123abc"))
 		}
 	})
 
@@ -2590,6 +2595,8 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			assert.Equal(t, "some-other-sm", obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.Name)
 			assert.Nil(t, obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.APIGroup)
 			assert.Nil(t, obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.Namespace)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
 	})
 }

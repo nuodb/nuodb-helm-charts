@@ -118,6 +118,10 @@ elif [[ "$REQUIRES_MINISHIFT" == "true" ]]; then
   # get the helm repo for upgrade testing
   helm repo add nuodb https://nuodb.github.io/nuodb-helm-charts
   helm repo add nuodb-incubator https://nuodb.github.io/nuodb-helm-charts/incubator
+
+  # enable volume snapshots and CSI
+  minikube addons enable volumesnapshots
+  minikube addons enable csi-hostpath-driver
 elif [[ "$REQUIRES_AKS" == "true" ]]; then
   if ! command -v az &> /dev/null; then
     # Install Azure cli if not already available

@@ -30,6 +30,17 @@ spec:
     type: Recreate
 `
 
+const SNAPSHOT_TEMPLATE = `
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshot
+metadata:
+  name: %s
+spec:
+  volumeSnapshotClassName: %s
+  source:
+    persistentVolumeClaimName: %s
+`
+
 type ExtractedOptions struct {
 	NrTePods              int
 	NrSmHotCopyPods       int
@@ -746,4 +757,18 @@ func SuspendDatabaseBackupJobs(t *testing.T, namespaceName string, domain, dbNam
 			DeleteJobPods(t, namespaceName, cronJobName)
 		}
 	}
+}
+
+func SnapshotVolume(t *testing.T, namespaceName string, pvcName string, snapName string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(SNAPSHOT_TEMPLATE, snapName, VOLUME_SNAPSHOT_CLASS, pvcName))
+
+	AddTeardown(TEARDOWN_SNAPSHOT, func() {
+		k8s.RunKubectl(t, kubectlOptions, "delete", "volumesnapshot", snapName)
+	})
+
+	Await(t, func() bool {
+		out, error := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "volumesnapshot", snapName, "-o", "custom-columns=:.status.readyToUse", "--no-headers")
+		return error == nil && strings.TrimSpace(out) == "true"
+	}, 30*time.Second)
 }
