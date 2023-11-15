@@ -768,7 +768,9 @@ func SnapshotVolume(t *testing.T, namespaceName string, pvcName string, snapName
 	})
 
 	Await(t, func() bool {
-		out, error := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "volumesnapshot", snapName, "-o", "custom-columns=:.status.readyToUse", "--no-headers")
+		out, error := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "describe", "volumesnapshot", snapName)
+		fmt.Println(out, error)
+		out, error = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "volumesnapshot", snapName, "-o", "custom-columns=:.status.readyToUse", "--no-headers")
 		return error == nil && strings.TrimSpace(out) == "true"
 	}, 30*time.Second)
 }
