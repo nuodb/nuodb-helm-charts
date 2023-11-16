@@ -495,13 +495,13 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 	restoredDb := "db-clone"
 	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":                       testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory":                    testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":                       testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory":                    testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.persistence.storageClass":                        testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.sm.hotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.name": restoredDb,
+			"database.sm.resources.requests.cpu":                                 testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":                              testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                                 testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":                              testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.hotCopy.journalPath.persistence.storageClass":           testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.persistence.storageClass":                                  testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.name":                                                      restoredDb,
 			"database.persistence.dataSourceRef.kind":                            "VolumeSnapshot",
 			"database.persistence.dataSourceRef.name":                            archiveSnapshotName,
 			"database.persistence.dataSourceRef.apiGroup":                        "snapshot.storage.k8s.io",
