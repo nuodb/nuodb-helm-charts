@@ -492,6 +492,8 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 	journalSnapshotName := "journal-snapshot"
 	testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalSnapshotName)
 
+	helm.DeleteE(t, &helm.Options{KubectlOptions: k8s.NewKubectlOptions("", "", namespaceName)}, sourceDatabaseChartName, true)
+
 	restoredDb := "db-clone"
 	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 		SetValues: map[string]string{

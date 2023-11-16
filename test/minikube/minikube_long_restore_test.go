@@ -892,7 +892,7 @@ func TestKubernetesRestoreDatabaseSeparateJournal(t *testing.T) {
 	})
 }
 
-func TestKubernetesSnapshotRestoreLong(t *testing.T) {
+func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 	// Set up domain
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
