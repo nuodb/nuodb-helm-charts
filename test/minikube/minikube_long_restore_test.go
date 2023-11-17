@@ -892,6 +892,7 @@ func TestKubernetesRestoreDatabaseSeparateJournal(t *testing.T) {
 	})
 }
 
+// Extensive end to end tests for creating a database off of a VolumeSnapshot
 func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 	// Set up domain
 	testlib.AwaitTillerUp(t)
@@ -914,6 +915,7 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 
 	options.KubectlOptions = kubectlOptions
 
+	// Try to create a database from a snapshot
 	testDb := func(dbName string, archiveSnapshotName string, journalSnapshotName string, backupId string, shouldStart bool) string {
 		retVal := ""
 

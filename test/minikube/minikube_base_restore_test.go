@@ -436,6 +436,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	})
 }
 
+// Basic test for creating a database off of a VolumeSnapshot
 func TestKubernetesSnapshotRestore(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)

@@ -759,6 +759,7 @@ func SuspendDatabaseBackupJobs(t *testing.T, namespaceName string, domain, dbNam
 	}
 }
 
+// Create a snapshot of a pvc and wait for it to become ready
 func SnapshotVolume(t *testing.T, namespaceName string, pvcName string, snapName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(SNAPSHOT_TEMPLATE, snapName, VOLUME_SNAPSHOT_CLASS, pvcName))
