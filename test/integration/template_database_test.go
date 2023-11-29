@@ -2541,7 +2541,7 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 		values := map[string]string{
 			"database.sm.hotCopy.journalPath.enabled":   "true",
 			"database.sm.noHotCopy.journalPath.enabled": "true",
-			"database.autoImport.backup_id":             "123abc",
+			"database.autoImport.backupId":              "123abc",
 		}
 
 		setFields := func(specKey string, label string) {
@@ -2550,11 +2550,11 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			}
 		}
 
-		check := func(specKey string, sourceDef *v1.TypedObjectReference) {
-			assert.Equal(t, specKey+"apiGroup", *sourceDef.APIGroup)
-			assert.Equal(t, specKey+"kind", sourceDef.Kind)
-			assert.Equal(t, specKey+"name", sourceDef.Name)
-			assert.Equal(t, specKey+"namespace", *sourceDef.Namespace)
+		check := func(label string, sourceDef *v1.TypedObjectReference) {
+			assert.Equal(t, label+"apiGroup", *sourceDef.APIGroup)
+			assert.Equal(t, label+"kind", sourceDef.Kind)
+			assert.Equal(t, label+"name", sourceDef.Name)
+			assert.Equal(t, label+"namespace", *sourceDef.Namespace)
 		}
 
 		setFields("database.persistence", "archive")
@@ -2583,8 +2583,9 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 	t.Run("testPvcDataSource", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.persistence.dataSourceRef.kind": "PersistentVolumeClaim",
-				"database.persistence.dataSourceRef.name": "some-other-sm",
+				"database.persistence.dataSourceRef.kind":     "PersistentVolumeClaim",
+				"database.persistence.dataSourceRef.name":     "some-other-sm",
+				"database.persistence.dataSourceRef.apiGroup": "null", //Unset the default
 			},
 		}
 

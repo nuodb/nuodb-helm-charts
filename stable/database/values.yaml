@@ -234,6 +234,9 @@ database:
     accessModes:
       - ReadWriteOnce
     # storageClass: "-"
+    dataSourceRef:
+      kind: VolumeSnapshot
+      apiGroup: snapshot.storage.k8s.io
 
   ## database-wide options.
   # These are applied using the --database-options on the startup command
@@ -390,6 +393,9 @@ database:
           accessModes:
             - ReadWriteOnce
           # storageClass: "-"
+          dataSourceRef:
+            kind: VolumeSnapshot
+            apiGroup: snapshot.storage.k8s.io
 
       coldStorage:
         credentials: ""
@@ -425,6 +431,9 @@ database:
           accessModes:
             - ReadWriteOnce
           # storageClass: "-"
+          dataSourceRef:
+            kind: VolumeSnapshot
+            apiGroup: snapshot.storage.k8s.io
 
     ## resources
     # k8s resource min (request) and max (limit)

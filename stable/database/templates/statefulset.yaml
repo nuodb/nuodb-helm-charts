@@ -173,8 +173,8 @@ spec:
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
         - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled}}" }
-        - { name: SNAPSHOT_RESTORED,   value: "{{ not (empty .Values.database.persistence.dataSourceRef) }}" }
-        - { name: BACKUP_ID,           value: "{{ .Values.database.autoImport.backup_id }}" }
+        - { name: SNAPSHOT_RESTORED,   value: "{{ not (empty .Values.database.persistence.dataSourceRef.name) }}" }
+        - { name: BACKUP_ID,           value: "{{ .Values.database.autoImport.backupId }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -317,7 +317,7 @@ spec:
         matchLabels:
           database: {{ .Values.database.name }}
 {{- end }}
-      {{- if .Values.database.persistence.dataSourceRef }}
+      {{- if .Values.database.persistence.dataSourceRef.name }}
       dataSourceRef:
         {{- toYaml .Values.database.persistence.dataSourceRef | nindent 8}}
       {{- end }}
@@ -342,7 +342,7 @@ spec:
       storageClassName: {{ .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
       {{- end }}
     {{- end }}
-    {{- if .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef }}
+    {{- if .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef.name }}
       dataSourceRef:
       {{- toYaml .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
     {{- end }}
@@ -552,8 +552,8 @@ spec:
         - { name: OVERWRITE_COPIES,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
         - { name: SEPARATE_JOURNAL,  value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled}}" }
-        - { name: SNAPSHOT_RESTORED, value: "{{ not (empty .Values.database.persistence.dataSourceRef) }}" }
-        - { name: BACKUP_ID,         value: "{{ .Values.database.autoImport.backup_id }}" }
+        - { name: SNAPSHOT_RESTORED, value: "{{ not (empty .Values.database.persistence.dataSourceRef.name) }}" }
+        - { name: BACKUP_ID,         value: "{{ .Values.database.autoImport.backupId }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -698,7 +698,7 @@ spec:
         matchLabels:
           database: {{ .Values.database.name }}
 {{- end }}
-      {{- if .Values.database.persistence.dataSourceRef }}
+      {{- if .Values.database.persistence.dataSourceRef.name }}
       dataSourceRef:
         {{- toYaml .Values.database.persistence.dataSourceRef | nindent 8}}
       {{- end }}
@@ -723,7 +723,7 @@ spec:
       storageClassName: {{ .Values.database.sm.hotCopy.journalPath.persistence.storageClass }}
       {{- end }}
     {{- end }}
-    {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef }}
+    {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef.name }}
       dataSourceRef:
       {{- toYaml .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
     {{- end }}

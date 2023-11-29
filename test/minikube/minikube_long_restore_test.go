@@ -915,6 +915,22 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 
 	options.KubectlOptions = kubectlOptions
 
+	smNamePattern := "sm-%s-nuodb-cluster0-%s-0"
+
+	deleteDb := func(helmChartName string, dbName string, hasJournal bool) {
+		helm.DeleteE(t, &options, helmChartName, true)
+
+		smPod := fmt.Sprintf(smNamePattern, helmChartName, dbName)
+		achiveVolumeName := "archive-volume-" + smPod
+
+		k8s.RunKubectl(t, kubectlOptions, "delete", "persistentvolumeclaim", achiveVolumeName)
+
+		if hasJournal {
+			journalVolumeName := "journal-volume-" + smPod
+			k8s.RunKubectl(t, kubectlOptions, "delete", "persistentvolumeclaim", journalVolumeName)
+		}
+	}
+
 	// Try to create a database from a snapshot
 	testDb := func(dbName string, archiveSnapshotName string, journalSnapshotName string, backupId string, shouldStart bool) string {
 		retVal := ""
@@ -925,21 +941,23 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 			"database.te.resources.requests.cpu":          testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.te.resources.requests.memory":       testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.persistence.storageClass":           testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.sm.noHotCopy.replicas":              "1",
+			"database.sm.hotCopy.replicas":                "0",
 			"database.name":                               dbName,
 			"database.persistence.dataSourceRef.kind":     "VolumeSnapshot",
 			"database.persistence.dataSourceRef.name":     archiveSnapshotName,
 			"database.persistence.dataSourceRef.apiGroup": "snapshot.storage.k8s.io",
 		}
 		if backupId != "" {
-			values["database.autoImport.backup_id"] = backupId
+			values["database.autoImport.backupId"] = backupId
 		}
 
 		if journalSnapshotName != "" {
-			values["database.sm.hotCopy.journalPath.enabled"] = "true"
-			values["database.sm.hotCopy.journalPath.persistence.dataSourceRef.kind"] = "VolumeSnapshot"
-			values["database.sm.hotCopy.journalPath.persistence.dataSourceRef.name"] = journalSnapshotName
-			values["database.sm.hotCopy.journalPath.persistence.dataSourceRef.apiGroup"] = "snapshot.storage.k8s.io"
-			values["database.sm.hotCopy.journalPath.persistence.storageClass"] = testlib.SNAPSHOTABLE_STORAGE_CLASS
+			values["database.sm.noHotCopy.journalPath.enabled"] = "true"
+			values["database.sm.noHotCopy.journalPath.persistence.dataSourceRef.kind"] = "VolumeSnapshot"
+			values["database.sm.noHotCopy.journalPath.persistence.dataSourceRef.name"] = journalSnapshotName
+			values["database.sm.noHotCopy.journalPath.persistence.dataSourceRef.apiGroup"] = "snapshot.storage.k8s.io"
+			values["database.sm.noHotCopy.journalPath.persistence.storageClass"] = testlib.SNAPSHOTABLE_STORAGE_CLASS
 		}
 
 		var databaseChartName string
@@ -949,162 +967,243 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 				SetValues: values,
 			})
 
-			output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "-c", "admin", "--", "bash", "-c",
-				fmt.Sprintf("echo \"SELECT id FROM testtbl;\" | nuosql %s --user dba --password secret", dbName))
-
+			// Verify that the data in the database was recovered
+			output, err := testlib.RunSQL(t, namespaceName, admin0, dbName, "SELECT id FROM testtbl")
 			require.NoError(t, err, output)
 
 			require.True(t, strings.Contains(output, "123"))
+
+			// Add some more data and verify that it survives a reboot
+			output, err = testlib.RunSQL(t, namespaceName, admin0, dbName, "INSERT INTO testtbl (id) values (456)")
+			require.NoError(t, err, output)
+
+			smPod := fmt.Sprintf(smNamePattern, databaseChartName, dbName)
+			testlib.DeletePod(t, namespaceName, "pod/"+smPod)
+			testlib.AwaitNrReplicasScheduled(t, namespaceName, smPod, 1)
+			testlib.AwaitPodUp(t, namespaceName, smPod, 90*time.Second)
+
+			output, err = testlib.RunSQL(t, namespaceName, admin0, dbName, "SELECT id FROM testtbl")
+			require.NoError(t, err, output)
+
+			require.True(t, strings.Contains(output, "123"))
+			require.True(t, strings.Contains(output, "456"))
 		} else {
 			databaseChartName = testlib.StartDatabaseNoWait(t, namespaceName, admin0, &helm.Options{
 				SetValues: values,
 			})
 
-			smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-%s-hotcopy-0", databaseChartName, dbName)
-			var pod *corev1.Pod
-			testlib.Await(t, func() bool {
-				var err error
-				pod, err = k8s.GetPodE(t, kubectlOptions, smPod)
-				return err == nil && len(pod.Status.ContainerStatuses) > 0 &&
-					pod.Status.ContainerStatuses[0].State.Terminated != nil &&
-					pod.Status.ContainerStatuses[0].State.Terminated.Reason == "Error"
-			}, 60*time.Second)
-			retVal = k8s.GetPodLogs(t, kubectlOptions, pod, "engine")
+			smPod := fmt.Sprintf(smNamePattern, databaseChartName, dbName)
+
+			testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPod, 1, 60*time.Second)
+			retVal = k8s.GetPodLogs(t, kubectlOptions, k8s.GetPod(t, kubectlOptions, smPod), "engine")
 		}
 
-		helm.DeleteE(t, &options, databaseChartName, true)
+		deleteDb(databaseChartName, dbName, journalSnapshotName != "")
 		return retVal
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-
-	sourceDb := "src-noj"
-	sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.persistence.storageClass":     testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.name":                         sourceDb,
-		},
-	})
-
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "bash", "-c",
-		fmt.Sprintf("echo \"CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123);\" | nuosql %s --user dba --password secret", sourceDb))
-
-	require.NoError(t, err, output)
-
 	defer testlib.Teardown(testlib.TEARDOWN_SNAPSHOT)
 
-	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-%s-hotcopy-0", sourceDatabaseChartName, sourceDb)
-	achiveVolumeName := "archive-volume-" + smPod
+	// Test restoring an archive with a journal embedded
+	t.Run("testArchive", func(t *testing.T) {
+		// TODO: Once it exists, use proper database snapshot function to freeze database, set backup id, and create volume snapshots
 
-	noJournalNoBidSnapshotName := "noj-nobid-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalNoBidSnapshotName)
+		sourceDb := "src-noj"
+		sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.persistence.storageClass":     testlib.SNAPSHOTABLE_STORAGE_CLASS,
+				"database.name":                         sourceDb,
+				"database.sm.noHotCopy.replicas":        "1",
+				"database.sm.hotCopy.replicas":          "0",
+			},
+		})
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		fmt.Sprintf("echo \"{\\\"id\\\": \\\"123abc\\\"}\" > /var/opt/nuodb/archive/nuodb/%s/backup.json", sourceDb))
-	require.NoError(t, err, output)
+		output, err := testlib.RunSQL(t, namespaceName, admin0, sourceDb, "CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123)")
 
-	noJournalBidSnapshotName := "noj-bid-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalBidSnapshotName)
+		require.NoError(t, err, output)
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		fmt.Sprintf("echo \"{\\\"id\\\": \\\"123abd\\\"}\" > /var/opt/nuodb/archive/nuodb/%s/backup.json", sourceDb))
-	require.NoError(t, err, output)
+		smPod := fmt.Sprintf(smNamePattern, sourceDatabaseChartName, sourceDb)
+		achiveVolumeName := "archive-volume-" + smPod
 
-	noJournalBadBidSnapshotName := "noj-badbid-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalBadBidSnapshotName)
+		// Snapshot the archive without a backup.txt
+		noJournalNoBidSnapshotName := "noj-nobid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalNoBidSnapshotName)
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		"mkdir /var/opt/nuodb/archive/nuodb/foo && touch /var/opt/nuodb/archive/nuodb/foo/info.json")
-	require.NoError(t, err, output)
+		// Snapshot the archive with a backup.txt containing the correct backupId
+		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+			fmt.Sprintf("echo \"123abc\" > /var/opt/nuodb/archive/nuodb/%s/backup.txt", sourceDb))
+		require.NoError(t, err, output)
 
-	noJournalExtraArchiveSnapshotName := "noj-dupe-arch-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalExtraArchiveSnapshotName)
+		noJournalBidSnapshotName := "noj-bid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalBidSnapshotName)
 
-	helm.DeleteE(t, &options, sourceDatabaseChartName, true)
+		// Snapshot the archive with a backup.txt containing the wrong backupId
+		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+			fmt.Sprintf("echo \"trash\" > /var/opt/nuodb/archive/nuodb/%s/backup.txt", sourceDb))
+		require.NoError(t, err, output)
 
-	testDb("noj-nobid", noJournalNoBidSnapshotName, "", "", true)
-	testDb("noj-gdbid", noJournalBidSnapshotName, "", "123abc", true)
-	testDb("noj-ignbid", noJournalBadBidSnapshotName, "", "", true)
+		noJournalBadBidSnapshotName := "noj-badbid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalBadBidSnapshotName)
 
-	output = testDb("noj-misbid", noJournalNoBidSnapshotName, "", "123abc", false)
-	require.Contains(t, output, "Incorrect backup id in archive")
+		// Snapshot the archive volume with two archives on it
+		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+			"mkdir /var/opt/nuodb/archive/nuodb/foo && touch /var/opt/nuodb/archive/nuodb/foo/info.json")
+		require.NoError(t, err, output)
 
-	output = testDb("noj-badbid", noJournalBadBidSnapshotName, "", "123abc", false)
-	require.Contains(t, output, "Incorrect backup id in archive")
+		noJournalExtraArchiveBidSnapshotName := "noj-dupe-arch-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalExtraArchiveBidSnapshotName)
 
-	output = testDb("noj-2arch", noJournalExtraArchiveSnapshotName, "", "123abc", false)
-	require.Contains(t, output, "Did not find exactly 1 archive:")
+		deleteDb(sourceDatabaseChartName, sourceDb, false)
 
-	sourceDb = "src-journ"
-	sourceDatabaseChartName = testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
-		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":                       testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory":                    testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":                       testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory":                    testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.persistence.storageClass":                        testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.sm.hotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.name": sourceDb,
-			"database.sm.hotCopy.journalPath.enabled": "true",
-		},
+		// Test that sm can start from a snapshot with out a backup.txt if no backupId is supplied
+		t.Run("testArchiveNoBackupId", func(t *testing.T) {
+			testDb("noj-nobid", noJournalNoBidSnapshotName, "", "", true)
+		})
+
+		// Test that sm can start from a snapshot with a backup.txt containing the backupId
+		t.Run("testArchiveCorrectBackupId", func(t *testing.T) {
+			testDb("noj-gdbid", noJournalBidSnapshotName, "", "123abc", true)
+		})
+
+		// Test that sm can start from a snapshot with an arbitrary backup.txt if no backupId is supplied
+		t.Run("testArchiveIgnoredBackupId", func(t *testing.T) {
+			testDb("noj-ignbid", noJournalBadBidSnapshotName, "", "", true)
+		})
+
+		// Test that we can clone an SM with the same domain and database names
+		t.Run("testArchiveRecreate", func(t *testing.T) {
+			testDb(sourceDb, noJournalBidSnapshotName, "", "123abc", true)
+		})
+
+		// Test that sm won't start from a snapshot without a backup.txt if a backupId is supplied
+		t.Run("testNegativeArchiveNoBackupFile", func(t *testing.T) {
+			output := testDb("noj-misbid", noJournalNoBidSnapshotName, "", "123abc", false)
+			require.Contains(t, output, "Incorrect backup id in archive")
+		})
+
+		// Test that sm won't start from a snapshot with a backup.txt containing the wrong backupId
+		t.Run("testNegativeArchiveWrongBackupId", func(t *testing.T) {
+			output := testDb("noj-badbid", noJournalBadBidSnapshotName, "", "123abc", false)
+			require.Contains(t, output, "Incorrect backup id in archive")
+		})
+
+		// Test that sm won't start if there are multiple archives to restore from
+		t.Run("testNegativeMultipleArchives", func(t *testing.T) {
+			output := testDb("noj-2arch", noJournalExtraArchiveBidSnapshotName, "", "123abc", false)
+			require.Contains(t, output, "Did not find exactly 1 archive:")
+		})
 	})
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "bash", "-c",
-		fmt.Sprintf("echo \"CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123);\" | nuosql %s --user dba --password secret", sourceDb))
+	// Test restoring a journal outside of the archive
+	t.Run("testJournal", func(t *testing.T) {
+		sourceDb := "src-journ"
+		sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.sm.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.te.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+				"database.te.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+				"database.persistence.storageClass":                          testlib.SNAPSHOTABLE_STORAGE_CLASS,
+				"database.sm.noHotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
+				"database.name":                             sourceDb,
+				"database.sm.noHotCopy.replicas":            "1",
+				"database.sm.hotCopy.replicas":              "0",
+				"database.sm.noHotCopy.journalPath.enabled": "true",
+			},
+		})
 
-	require.NoError(t, err, output)
+		output, err := testlib.RunSQL(t, namespaceName, admin0, sourceDb, "CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123)")
 
-	smPod = fmt.Sprintf("sm-%s-nuodb-cluster0-%s-hotcopy-0", sourceDatabaseChartName, sourceDb)
-	achiveVolumeName = "archive-volume-" + smPod
-	journalVolumeName := "journal-volume-" + smPod
+		require.NoError(t, err, output)
 
-	journalNoBidSnapshotName := "jor-nobid-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalNoBidSnapshotName)
+		smPod := fmt.Sprintf(smNamePattern, sourceDatabaseChartName, sourceDb)
+		achiveVolumeName := "archive-volume-" + smPod
+		journalVolumeName := "journal-volume-" + smPod
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		fmt.Sprintf("echo \"{\\\"id\\\": \\\"123abc\\\"}\" > /var/opt/nuodb/archive/nuodb/%s/backup.json", sourceDb))
-	require.NoError(t, err, output)
+		// Snapshot the archive and journal without a backup.txt
+		journalNoBidSnapshotName := "jor-nobid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalNoBidSnapshotName)
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		fmt.Sprintf("echo \"{\\\"id\\\": \\\"123abc\\\"}\" > /var/opt/nuodb/journal/nuodb/%s/backup.json", sourceDb))
-	require.NoError(t, err, output)
+		archiveNeedsJournalNoBidSnapshotName := "arc-nobid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveNeedsJournalNoBidSnapshotName)
 
-	archiveNeedsJournalSnapshotName := "archive-jor-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveNeedsJournalSnapshotName)
+		// Snapshot the archive and journal with a backup.txt containing the correct backupId
+		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+			fmt.Sprintf("echo \"123abc\"> /var/opt/nuodb/archive/nuodb/%s/backup.txt", sourceDb))
+		require.NoError(t, err, output)
 
-	journalBidSnapshotName := "jor-bid-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalBidSnapshotName)
+		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+			fmt.Sprintf("echo \"123abc\" > /var/opt/nuodb/journal/nuodb/%s/backup.txt", sourceDb))
+		require.NoError(t, err, output)
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		fmt.Sprintf("echo \"{\\\"id\\\": \\\"123abd\\\"}\" > /var/opt/nuodb/journal/nuodb/%s/backup.json", sourceDb))
-	require.NoError(t, err, output)
+		journalBidSnapshotName := "jor-bid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalBidSnapshotName)
 
-	journalBadBidSnapshotName := "jor-badbid-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalBadBidSnapshotName)
+		archiveBidSnapshotName := "arc-bid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveBidSnapshotName)
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		fmt.Sprintf("mv /var/opt/nuodb/journal/nuodb/%s /var/opt/nuodb/journal/nuodb/wrong", sourceDb))
-	require.NoError(t, err, output)
+		// Snapshot the archive and journal with a journal backup.txt containing the wrong backupId
+		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+			fmt.Sprintf("echo \"trash\" > /var/opt/nuodb/journal/nuodb/%s/backup.txt", sourceDb))
+		require.NoError(t, err, output)
 
-	journalWrongPathSnapshotName := "jor-moved-snapshot"
-	testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalWrongPathSnapshotName)
+		journalBadBidSnapshotName := "jor-badbid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalBadBidSnapshotName)
 
-	helm.DeleteE(t, &options, sourceDatabaseChartName, true)
+		archiveBadBidSnapshotName := "arc-badbid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveBadBidSnapshotName)
 
-	testDb("jor-nobid", archiveNeedsJournalSnapshotName, journalNoBidSnapshotName, "", true)
-	testDb("jor-gdbid", archiveNeedsJournalSnapshotName, journalBidSnapshotName, "123abc", true)
-	testDb("jor-ignbid", archiveNeedsJournalSnapshotName, journalBadBidSnapshotName, "", true)
+		// Snapshot the journal volume with the journal files moved out of the expected location
+		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+			fmt.Sprintf("mv /var/opt/nuodb/journal/nuodb/%s /var/opt/nuodb/journal/nuodb/wrong", sourceDb))
+		require.NoError(t, err, output)
 
-	output = testDb("jor-misbid", archiveNeedsJournalSnapshotName, journalNoBidSnapshotName, "123abc", false)
-	require.Contains(t, output, "Incorrect backup id in journal")
+		journalWrongPathSnapshotName := "jor-moved-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalWrongPathSnapshotName)
 
-	output = testDb("jor-badbid", archiveNeedsJournalSnapshotName, journalBadBidSnapshotName, "123abc", false)
-	require.Contains(t, output, "Incorrect backup id in journal")
+		deleteDb(sourceDatabaseChartName, sourceDb, true)
 
-	output = testDb("jor-mvjor", archiveNeedsJournalSnapshotName, journalWrongPathSnapshotName, "123abc", false)
-	require.Contains(t, output, "Did not find a journal snapshot at '/var/opt/nuodb/journal/nuodb/src-journ'")
+		// Test that sm can start from a journal with out a backup.txt if no backupId is supplied
+		t.Run("testJournalNoBackupId", func(t *testing.T) {
+			testDb("jor-nobid", archiveNeedsJournalNoBidSnapshotName, journalNoBidSnapshotName, "", true)
+		})
+
+		// Test that sm can start from a journal with a backup.txt containing the backupId
+		t.Run("testJournalCorrectBackupId", func(t *testing.T) {
+			testDb("jor-gdbid", archiveBidSnapshotName, journalBidSnapshotName, "123abc", true)
+		})
+
+		// Test that sm can start from a journal with an arbitrary backup.txt if no backupId is supplied
+		t.Run("testJournalIgnoredBackupId", func(t *testing.T) {
+			testDb("jor-ignbid", archiveBadBidSnapshotName, journalBadBidSnapshotName, "", true)
+		})
+
+		// Test that we can clone an SM with the same domain and database names
+		t.Run("testJournalRecreate", func(t *testing.T) {
+			testDb(sourceDb, archiveBidSnapshotName, journalBidSnapshotName, "123abc", true)
+		})
+
+		// Test that sm won't start from a journal without a backup.txt if a backupId is supplied
+		t.Run("testNegativeJournalNoBackupFile", func(t *testing.T) {
+			output := testDb("jor-misbid", archiveBidSnapshotName, journalNoBidSnapshotName, "123abc", false)
+			require.Contains(t, output, "Incorrect backup id in journal")
+		})
+
+		// Test that sm won't start from a journal with a backup.txt containing the wrong backupId
+		t.Run("testNegativeJournalWrongBackupFile", func(t *testing.T) {
+			output := testDb("jor-badbid", archiveBidSnapshotName, journalBadBidSnapshotName, "123abc", false)
+			require.Contains(t, output, "Incorrect backup id in journal")
+		})
+
+		// Test that sm won't start if it cannot find a journal at the expected backup location
+		t.Run("testNegativeMissingJournal", func(t *testing.T) {
+			output := testDb("jor-mvjor", archiveBidSnapshotName, journalWrongPathSnapshotName, "123abc", false)
+			require.Contains(t, output, "Did not find a journal snapshot at '/var/opt/nuodb/journal/nuodb/src-journ'")
+		})
+	})
 }

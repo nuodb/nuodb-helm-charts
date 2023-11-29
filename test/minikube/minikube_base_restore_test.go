@@ -438,6 +438,7 @@ func TestKubernetesAutoRestore(t *testing.T) {
 
 // Basic test for creating a database off of a VolumeSnapshot
 func TestKubernetesSnapshotRestore(t *testing.T) {
+	// TODO: Once it exists, use proper database snapshot function to freeze database, set backup id, and create volume snapshots
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -469,18 +470,17 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 		},
 	})
 
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "bash", "-c",
-		"echo \"CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123);\" | nuosql demo --user dba --password secret")
+	output, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123)")
 
 	require.NoError(t, err, output)
 
 	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-hotcopy-0", sourceDatabaseChartName)
 	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		"echo \"{\\\"id\\\": \\\"123abc\\\"}\" > /var/opt/nuodb/archive/nuodb/demo/backup.json")
+		"echo \"123abc\" > /var/opt/nuodb/archive/nuodb/demo/backup.txt")
 	require.NoError(t, err, output)
 
 	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
-		"echo \"{\\\"id\\\": \\\"123abc\\\"}\" > /var/opt/nuodb/journal/nuodb/demo/backup.json")
+		"echo \"123abc\" > /var/opt/nuodb/journal/nuodb/demo/backup.txt")
 	require.NoError(t, err, output)
 
 	defer testlib.Teardown(testlib.TEARDOWN_SNAPSHOT)
@@ -511,14 +511,12 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.kind":     "VolumeSnapshot",
 			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.name":     journalSnapshotName,
 			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.apiGroup": "snapshot.storage.k8s.io",
-			"database.autoImport.backup_id":                                      "123abc",
+			"database.autoImport.backupId":                                       "123abc",
 			"database.sm.hotCopy.journalPath.enabled":                            "true",
 		},
 	})
 
-	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "-c", "admin", "--", "bash", "-c",
-		fmt.Sprintf("echo \"SELECT id FROM testtbl;\" | nuosql %s --user dba --password secret", restoredDb))
-
+	output, err = testlib.RunSQL(t, namespaceName, admin0, restoredDb, "SELECT id FROM testtbl")
 	require.NoError(t, err, output)
 
 	require.True(t, strings.Contains(output, "123"))
