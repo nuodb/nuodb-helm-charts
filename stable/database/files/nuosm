@@ -400,7 +400,7 @@ function checkBackupId() {
 # function - Looks for a previous archive and journal and imports it
 #
 function loadFromSnapshot() {
-  local RECREATE_ARCHIVES="false"
+  local recreate_archives="false"
 
   if [ ! -f "$DB_DIR/state.dat" ]; then
     local archives=$( find "/var/opt/nuodb/archive" -name info.json )
@@ -408,31 +408,31 @@ function loadFromSnapshot() {
       die 1 "Did not find exactly 1 archive: ${archives}"
     fi
 
-    local ARCHIVE_PATH=$( dirname $archives )
-    log "Found snapshot at ${ARCHIVE_PATH}"
+    local archive_path=$( dirname $archives )
+    log "Found snapshot at ${archive_path}"
 
     if [ -n "$BACKUP_ID" ]; then
-      if ! checkBackupId ${ARCHIVE_PATH}/backup.txt ; then
+      if ! checkBackupId ${archive_path}/backup.txt ; then
         die 1 "Incorrect backup id in archive"
       fi
     fi
 
     if [ "$SEPARATE_JOURNAL" == "true" ]; then
-      local RELATIVE_ARCHIVE=$(realpath --relative-base=/var/opt/nuodb/archive $ARCHIVE_PATH)
-      local EXPECTED_JOURNAL="/var/opt/nuodb/journal/${RELATIVE_ARCHIVE}"
+      local relative_archive=$(realpath --relative-base=/var/opt/nuodb/archive $archive_path)
+      local expected_journal="/var/opt/nuodb/journal/${relative_archive}"
 
-      if [ ! -d $EXPECTED_JOURNAL ]; then
-        die 1 "Did not find a journal snapshot at '$EXPECTED_JOURNAL'"
+      if [ ! -d $expected_journal ]; then
+        die 1 "Did not find a journal snapshot at '$expected_journal'"
       fi
       
       if [ -n "$BACKUP_ID" ]; then
-        if ! checkBackupId ${EXPECTED_JOURNAL}/backup.txt ; then
+        if ! checkBackupId ${expected_journal}/backup.txt ; then
           die 1 "Incorrect backup id in journal"
         fi
       fi
 
       rm -r ${JOURNAL_DIR}
-      mv ${EXPECTED_JOURNAL} ${JOURNAL_DIR}
+      mv ${expected_journal} ${JOURNAL_DIR}
 
     fi
 
@@ -440,23 +440,23 @@ function loadFromSnapshot() {
     # Once we move the archive, we are going to be in the `archive already exists` branch
     # when kubernetes retries/restarts the pod.
     rm -r ${DB_DIR}
-    mv ${ARCHIVE_PATH} ${DB_DIR}
+    mv ${archive_path} ${DB_DIR}
 
-    local RECREATE_ARCHIVES="true"
+    local recreate_archives="true"
   else
     trace "archive already exists, not looking for snapshot archives"
 
     local backup_file=${DB_DIR}/backup.txt
     if [ -n "$BACKUP_ID" ] && [ -f  $backup_file ] ; then
       if [ "$(cat $backup_file | tr -d [:space:])" == "$BACKUP_ID" ] ; then
-        local RECREATE_ARCHIVES="true"
+        local recreate_archives="true"
       else
         log "Archive present but with a wrong backupId. Did the SM crash during a snapshot?"
       fi
     fi
   fi
 
-  if [ $RECREATE_ARCHIVES == "true" ]; then
+  if [ $recreate_archives == "true" ]; then
     log "Removing outdated archive metadata"
     rm ${DB_DIR}/info.json ${DB_DIR}/backup.txt
     [ -e ${JOURNAL_DIR}/backup.json ] && rm ${JOURNAL_DIR}/backup.txt

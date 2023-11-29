@@ -921,13 +921,13 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 		helm.DeleteE(t, &options, helmChartName, true)
 
 		smPod := fmt.Sprintf(smNamePattern, helmChartName, dbName)
-		achiveVolumeName := "archive-volume-" + smPod
+		archivePvc := "archive-volume-" + smPod
 
-		k8s.RunKubectl(t, kubectlOptions, "delete", "persistentvolumeclaim", achiveVolumeName)
+		k8s.RunKubectl(t, kubectlOptions, "delete", "persistentvolumeclaim", archivePvc)
 
 		if hasJournal {
-			journalVolumeName := "journal-volume-" + smPod
-			k8s.RunKubectl(t, kubectlOptions, "delete", "persistentvolumeclaim", journalVolumeName)
+			journalPvc := "journal-volume-" + smPod
+			k8s.RunKubectl(t, kubectlOptions, "delete", "persistentvolumeclaim", journalPvc)
 		}
 	}
 
@@ -1028,73 +1028,73 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 		require.NoError(t, err, output)
 
 		smPod := fmt.Sprintf(smNamePattern, sourceDatabaseChartName, sourceDb)
-		achiveVolumeName := "archive-volume-" + smPod
+		archivePvc := "archive-volume-" + smPod
 
 		// Snapshot the archive without a backup.txt
-		noJournalNoBidSnapshotName := "noj-nobid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalNoBidSnapshotName)
+		archiveNoBidSnapshotName := "noj-nobid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, archivePvc, archiveNoBidSnapshotName)
 
 		// Snapshot the archive with a backup.txt containing the correct backupId
 		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
 			fmt.Sprintf("echo \"123abc\" > /var/opt/nuodb/archive/nuodb/%s/backup.txt", sourceDb))
 		require.NoError(t, err, output)
 
-		noJournalBidSnapshotName := "noj-bid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalBidSnapshotName)
+		archiveBidSnapshotName := "noj-bid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, archivePvc, archiveBidSnapshotName)
 
 		// Snapshot the archive with a backup.txt containing the wrong backupId
 		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
 			fmt.Sprintf("echo \"trash\" > /var/opt/nuodb/archive/nuodb/%s/backup.txt", sourceDb))
 		require.NoError(t, err, output)
 
-		noJournalBadBidSnapshotName := "noj-badbid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalBadBidSnapshotName)
+		archiveBadBidSnapshotName := "noj-badbid-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, archivePvc, archiveBadBidSnapshotName)
 
 		// Snapshot the archive volume with two archives on it
 		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
 			"mkdir /var/opt/nuodb/archive/nuodb/foo && touch /var/opt/nuodb/archive/nuodb/foo/info.json")
 		require.NoError(t, err, output)
 
-		noJournalExtraArchiveBidSnapshotName := "noj-dupe-arch-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, noJournalExtraArchiveBidSnapshotName)
+		extraArchiveSnapshotName := "noj-dupe-arch-snapshot"
+		testlib.SnapshotVolume(t, namespaceName, archivePvc, extraArchiveSnapshotName)
 
 		deleteDb(sourceDatabaseChartName, sourceDb, false)
 
 		// Test that sm can start from a snapshot with out a backup.txt if no backupId is supplied
 		t.Run("testArchiveNoBackupId", func(t *testing.T) {
-			testDb("noj-nobid", noJournalNoBidSnapshotName, "", "", true)
+			testDb("noj-nobid", archiveNoBidSnapshotName, "", "", true)
 		})
 
 		// Test that sm can start from a snapshot with a backup.txt containing the backupId
 		t.Run("testArchiveCorrectBackupId", func(t *testing.T) {
-			testDb("noj-gdbid", noJournalBidSnapshotName, "", "123abc", true)
+			testDb("noj-gdbid", archiveBidSnapshotName, "", "123abc", true)
 		})
 
 		// Test that sm can start from a snapshot with an arbitrary backup.txt if no backupId is supplied
 		t.Run("testArchiveIgnoredBackupId", func(t *testing.T) {
-			testDb("noj-ignbid", noJournalBadBidSnapshotName, "", "", true)
+			testDb("noj-ignbid", archiveBadBidSnapshotName, "", "", true)
 		})
 
 		// Test that we can clone an SM with the same domain and database names
 		t.Run("testArchiveRecreate", func(t *testing.T) {
-			testDb(sourceDb, noJournalBidSnapshotName, "", "123abc", true)
+			testDb(sourceDb, archiveBidSnapshotName, "", "123abc", true)
 		})
 
 		// Test that sm won't start from a snapshot without a backup.txt if a backupId is supplied
 		t.Run("testNegativeArchiveNoBackupFile", func(t *testing.T) {
-			output := testDb("noj-misbid", noJournalNoBidSnapshotName, "", "123abc", false)
+			output := testDb("noj-misbid", archiveNoBidSnapshotName, "", "123abc", false)
 			require.Contains(t, output, "Incorrect backup id in archive")
 		})
 
 		// Test that sm won't start from a snapshot with a backup.txt containing the wrong backupId
 		t.Run("testNegativeArchiveWrongBackupId", func(t *testing.T) {
-			output := testDb("noj-badbid", noJournalBadBidSnapshotName, "", "123abc", false)
+			output := testDb("noj-badbid", archiveBadBidSnapshotName, "", "123abc", false)
 			require.Contains(t, output, "Incorrect backup id in archive")
 		})
 
 		// Test that sm won't start if there are multiple archives to restore from
 		t.Run("testNegativeMultipleArchives", func(t *testing.T) {
-			output := testDb("noj-2arch", noJournalExtraArchiveBidSnapshotName, "", "123abc", false)
+			output := testDb("noj-2arch", extraArchiveSnapshotName, "", "123abc", false)
 			require.Contains(t, output, "Did not find exactly 1 archive:")
 		})
 	})
@@ -1122,15 +1122,15 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 		require.NoError(t, err, output)
 
 		smPod := fmt.Sprintf(smNamePattern, sourceDatabaseChartName, sourceDb)
-		achiveVolumeName := "archive-volume-" + smPod
-		journalVolumeName := "journal-volume-" + smPod
+		archivePvc := "archive-volume-" + smPod
+		journalPvc := "journal-volume-" + smPod
 
 		// Snapshot the archive and journal without a backup.txt
 		journalNoBidSnapshotName := "jor-nobid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalNoBidSnapshotName)
+		testlib.SnapshotVolume(t, namespaceName, journalPvc, journalNoBidSnapshotName)
 
 		archiveNeedsJournalNoBidSnapshotName := "arc-nobid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveNeedsJournalNoBidSnapshotName)
+		testlib.SnapshotVolume(t, namespaceName, archivePvc, archiveNeedsJournalNoBidSnapshotName)
 
 		// Snapshot the archive and journal with a backup.txt containing the correct backupId
 		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
@@ -1142,10 +1142,10 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 		require.NoError(t, err, output)
 
 		journalBidSnapshotName := "jor-bid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalBidSnapshotName)
+		testlib.SnapshotVolume(t, namespaceName, journalPvc, journalBidSnapshotName)
 
 		archiveBidSnapshotName := "arc-bid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveBidSnapshotName)
+		testlib.SnapshotVolume(t, namespaceName, archivePvc, archiveBidSnapshotName)
 
 		// Snapshot the archive and journal with a journal backup.txt containing the wrong backupId
 		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
@@ -1153,10 +1153,10 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 		require.NoError(t, err, output)
 
 		journalBadBidSnapshotName := "jor-badbid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalBadBidSnapshotName)
+		testlib.SnapshotVolume(t, namespaceName, journalPvc, journalBadBidSnapshotName)
 
 		archiveBadBidSnapshotName := "arc-badbid-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveBadBidSnapshotName)
+		testlib.SnapshotVolume(t, namespaceName, archivePvc, archiveBadBidSnapshotName)
 
 		// Snapshot the journal volume with the journal files moved out of the expected location
 		output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
@@ -1164,7 +1164,7 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 		require.NoError(t, err, output)
 
 		journalWrongPathSnapshotName := "jor-moved-snapshot"
-		testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalWrongPathSnapshotName)
+		testlib.SnapshotVolume(t, namespaceName, journalPvc, journalWrongPathSnapshotName)
 
 		deleteDb(sourceDatabaseChartName, sourceDb, true)
 

@@ -234,6 +234,10 @@ database:
     accessModes:
       - ReadWriteOnce
     # storageClass: "-"
+
+    # The data source for the archive PVC
+    # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
+    # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
     dataSourceRef:
       kind: VolumeSnapshot
       apiGroup: snapshot.storage.k8s.io
@@ -393,6 +397,10 @@ database:
           accessModes:
             - ReadWriteOnce
           # storageClass: "-"
+
+          # The data source for the archive PVC
+          # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
+          # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
           dataSourceRef:
             kind: VolumeSnapshot
             apiGroup: snapshot.storage.k8s.io
@@ -431,6 +439,10 @@ database:
           accessModes:
             - ReadWriteOnce
           # storageClass: "-"
+
+          # The data source for the archive PVC
+          # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
+          # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
           dataSourceRef:
             kind: VolumeSnapshot
             apiGroup: snapshot.storage.k8s.io
