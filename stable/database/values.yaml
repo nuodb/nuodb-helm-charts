@@ -398,7 +398,7 @@ database:
             - ReadWriteOnce
           # storageClass: "-"
 
-          # The data source for the archive PVC
+          # The data source for journal PVC, only applies to SMs with hotcopy enabled
           # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
           # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
           dataSourceRef:
@@ -440,7 +440,7 @@ database:
             - ReadWriteOnce
           # storageClass: "-"
 
-          # The data source for the archive PVC
+          # The data source for journal PVC, only applies to SMs with hotcopy disabled
           # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
           # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
           dataSourceRef:
