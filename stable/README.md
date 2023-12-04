@@ -106,17 +106,17 @@ To obtain the license file required to deploy NuoDB with a Limited License, cont
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **NuoDB License** ([Instructions](license/README.md)) 
 
-3. Install the NuoDB Admin domain administrative tier
+4. Install the NuoDB Admin domain administrative tier
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **NuoDB Admin** ([Instructions](admin/README.md)) 
 
-4. Install the NuoDB database Storage Manager (SM) and Transaction Engine (TE) components
+5. Install the NuoDB database Storage Manager (SM) and Transaction Engine (TE) components
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **NuoDB Database** ([Instructions](database/README.md)) 
 
-5. Optionally, install NuoDB Insights visual monitoring into your deployment environment. NuoDB Insights displays real-time and historical performance data graphically to assist you with workload and/or root-cause analysis. Installing NuoDB Insights is highly recommended.
+6. Optionally, install NuoDB Insights visual monitoring into your deployment environment. NuoDB Insights displays real-time and historical performance data graphically to assist you with workload and/or root-cause analysis. Installing NuoDB Insights is highly recommended.
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **NuoDB Insights** ([Instructions](https://github.com/nuodb/nuodb-insights/tree/master/stable#deploying-nuodb-insights-using-helm-charts)) 
