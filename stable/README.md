@@ -100,6 +100,12 @@ Each Helm Chart has a default values.yaml parameter file that contains configura
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **Storage Classes** ([Instructions](storage-class/README.md)) 
 
+3. Install NuoDB License.
+To obtain the license file required to deploy NuoDB with a Limited License, contact <nuodb.support@3ds.com>.
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+**NuoDB License** ([Instructions](license/README.md)) 
+
 3. Install the NuoDB Admin domain administrative tier
 
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
