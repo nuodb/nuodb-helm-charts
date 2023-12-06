@@ -56,8 +56,8 @@ configFiles:
     -----END LICENSE-----
 ```
 
- NOTE:
-Paste the entire license file, including the lines `-----BEGIN LICENSE-----` and `-----END LICENSE-----`.
+> **NOTE**:
+> Paste the entire license file, including the lines `-----BEGIN LICENSE-----` and `-----END LICENSE-----`.
 
 4. Save the changes to the `admin-values.yaml` file.
 
@@ -94,8 +94,8 @@ configFiles:
     <base64-encoded data>
     -----END LICENSE-----
 ```
-NOTE:
-Paste the entire license file, including the lines `-----BEGIN LICENSE-----` and `-----END LICENSE-----`.
+> **NOTE**:
+> Paste the entire license file, including the lines `-----BEGIN LICENSE-----` and `-----END LICENSE-----`.
 
 4. Save the changes to the `admin-values.yaml` file.
 
@@ -112,8 +112,8 @@ This step will restart the AP pods one at a time without affecting any running a
 nuocmd --show-json get effective-license
 ```
 
-TIP:
-Use a version control software to track the changes to the `admin-values.yaml` file.
+> **TIP**:
+>Use a version control software to track the changes to the `admin-values.yaml` file.
 
 ## Use the nuocmd set license command
 To install a NuoDB *Enterprise License* for an existing Admin domain using nuocmd, invoke `nuocmd` on an AP running in Kubernetes.
@@ -122,5 +122,5 @@ To install a NuoDB *Enterprise License* for an existing Admin domain using nuocm
 kubectl cp <nuodb.lic path on local host> <AP-pod-name>:/tmp/nuodb.lic
 kubectl exec <AP-pod-name> -- nuocmd set license --license-file /tmp/nuodb.lic
 ```
-NOTE:
-Since the license is stored in the key-value store of the Raft state and is replicated automatically to all APs, run `nuocmd set license` on any one AP in the domain.
+> **NOTE**:
+> Since the license is stored in the key-value store of the Raft state and is replicated automatically to all APs, run `nuocmd set license` on any one AP in the domain.
