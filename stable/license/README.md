@@ -5,7 +5,7 @@ When using the Helm package manager to deploy NuoDB, a license is not installed 
 To view the details such as date of expiry (`expires`), name of the license holder (`holder`), and the type of license (`type`) , run:
 
 ```
-  nuocmd get effective-license
+nuocmd get effective-license
 ```
 
 For example, if the *Enterprise License* is installed:
