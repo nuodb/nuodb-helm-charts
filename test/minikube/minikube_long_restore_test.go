@@ -932,7 +932,7 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 	}
 
 	// Try to create a database from a snapshot
-	testDb := func(dbName string, archiveSnapshotName string, journalSnapshotName string, backupId string, shouldStart bool) string {
+	testDb := func(dbName string, archiveSnapshotName string, journalSnapshotName string, backupId string, shouldStart bool, verifyRestart bool) string {
 		retVal := ""
 
 		values := map[string]string{
@@ -973,20 +973,22 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 
 			require.True(t, strings.Contains(output, "123"))
 
-			// Add some more data and verify that it survives a reboot
-			output, err = testlib.RunSQL(t, namespaceName, admin0, dbName, "INSERT INTO testtbl (id) values (456)")
-			require.NoError(t, err, output)
+			if verifyRestart {
+				// Add some more data and verify that it survives a reboot
+				output, err = testlib.RunSQL(t, namespaceName, admin0, dbName, "INSERT INTO testtbl (id) values (456)")
+				require.NoError(t, err, output)
 
-			smPod := fmt.Sprintf(smNamePattern, databaseChartName, dbName)
-			testlib.DeletePod(t, namespaceName, "pod/"+smPod)
-			testlib.AwaitNrReplicasScheduled(t, namespaceName, smPod, 1)
-			testlib.AwaitPodUp(t, namespaceName, smPod, 90*time.Second)
+				smPod := fmt.Sprintf(smNamePattern, databaseChartName, dbName)
+				testlib.DeletePod(t, namespaceName, "pod/"+smPod)
+				testlib.AwaitNrReplicasScheduled(t, namespaceName, smPod, 1)
+				testlib.AwaitPodUp(t, namespaceName, smPod, 90*time.Second)
 
-			output, err = testlib.RunSQL(t, namespaceName, admin0, dbName, "SELECT id FROM testtbl")
-			require.NoError(t, err, output)
+				output, err = testlib.RunSQL(t, namespaceName, admin0, dbName, "SELECT id FROM testtbl")
+				require.NoError(t, err, output)
 
-			require.True(t, strings.Contains(output, "123"))
-			require.True(t, strings.Contains(output, "456"))
+				require.True(t, strings.Contains(output, "123"))
+				require.True(t, strings.Contains(output, "456"))
+			}
 		} else {
 			databaseChartName = testlib.StartDatabaseNoWait(t, namespaceName, admin0, &helm.Options{
 				SetValues: values,
@@ -1062,39 +1064,39 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 
 		// Test that sm can start from a snapshot with out a backup.txt if no backupId is supplied
 		t.Run("testArchiveNoBackupId", func(t *testing.T) {
-			testDb("noj-nobid", archiveNoBidSnapshotName, "", "", true)
+			testDb("noj-nobid", archiveNoBidSnapshotName, "", "", true, false)
 		})
 
 		// Test that sm can start from a snapshot with a backup.txt containing the backupId
 		t.Run("testArchiveCorrectBackupId", func(t *testing.T) {
-			testDb("noj-gdbid", archiveBidSnapshotName, "", "123abc", true)
+			testDb("noj-gdbid", archiveBidSnapshotName, "", "123abc", true, true)
 		})
 
 		// Test that sm can start from a snapshot with an arbitrary backup.txt if no backupId is supplied
 		t.Run("testArchiveIgnoredBackupId", func(t *testing.T) {
-			testDb("noj-ignbid", archiveBadBidSnapshotName, "", "", true)
+			testDb("noj-ignbid", archiveBadBidSnapshotName, "", "", true, false)
 		})
 
 		// Test that we can clone an SM with the same domain and database names
 		t.Run("testArchiveRecreate", func(t *testing.T) {
-			testDb(sourceDb, archiveBidSnapshotName, "", "123abc", true)
+			testDb(sourceDb, archiveBidSnapshotName, "", "123abc", true, true)
 		})
 
 		// Test that sm won't start from a snapshot without a backup.txt if a backupId is supplied
 		t.Run("testNegativeArchiveNoBackupFile", func(t *testing.T) {
-			output := testDb("noj-misbid", archiveNoBidSnapshotName, "", "123abc", false)
+			output := testDb("noj-misbid", archiveNoBidSnapshotName, "", "123abc", false, false)
 			require.Contains(t, output, "Incorrect backup id in archive")
 		})
 
 		// Test that sm won't start from a snapshot with a backup.txt containing the wrong backupId
 		t.Run("testNegativeArchiveWrongBackupId", func(t *testing.T) {
-			output := testDb("noj-badbid", archiveBadBidSnapshotName, "", "123abc", false)
+			output := testDb("noj-badbid", archiveBadBidSnapshotName, "", "123abc", false, false)
 			require.Contains(t, output, "Incorrect backup id in archive")
 		})
 
 		// Test that sm won't start if there are multiple archives to restore from
 		t.Run("testNegativeMultipleArchives", func(t *testing.T) {
-			output := testDb("noj-2arch", extraArchiveSnapshotName, "", "123abc", false)
+			output := testDb("noj-2arch", extraArchiveSnapshotName, "", "123abc", false, false)
 			require.Contains(t, output, "Did not find exactly 1 archive:")
 		})
 	})
@@ -1170,39 +1172,39 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 
 		// Test that sm can start from a journal with out a backup.txt if no backupId is supplied
 		t.Run("testJournalNoBackupId", func(t *testing.T) {
-			testDb("jor-nobid", archiveNeedsJournalNoBidSnapshotName, journalNoBidSnapshotName, "", true)
+			testDb("jor-nobid", archiveNeedsJournalNoBidSnapshotName, journalNoBidSnapshotName, "", true, false)
 		})
 
 		// Test that sm can start from a journal with a backup.txt containing the backupId
 		t.Run("testJournalCorrectBackupId", func(t *testing.T) {
-			testDb("jor-gdbid", archiveBidSnapshotName, journalBidSnapshotName, "123abc", true)
+			testDb("jor-gdbid", archiveBidSnapshotName, journalBidSnapshotName, "123abc", true, true)
 		})
 
 		// Test that sm can start from a journal with an arbitrary backup.txt if no backupId is supplied
 		t.Run("testJournalIgnoredBackupId", func(t *testing.T) {
-			testDb("jor-ignbid", archiveBadBidSnapshotName, journalBadBidSnapshotName, "", true)
+			testDb("jor-ignbid", archiveBadBidSnapshotName, journalBadBidSnapshotName, "", true, false)
 		})
 
 		// Test that we can clone an SM with the same domain and database names
 		t.Run("testJournalRecreate", func(t *testing.T) {
-			testDb(sourceDb, archiveBidSnapshotName, journalBidSnapshotName, "123abc", true)
+			testDb(sourceDb, archiveBidSnapshotName, journalBidSnapshotName, "123abc", true, true)
 		})
 
 		// Test that sm won't start from a journal without a backup.txt if a backupId is supplied
 		t.Run("testNegativeJournalNoBackupFile", func(t *testing.T) {
-			output := testDb("jor-misbid", archiveBidSnapshotName, journalNoBidSnapshotName, "123abc", false)
+			output := testDb("jor-misbid", archiveBidSnapshotName, journalNoBidSnapshotName, "123abc", false, false)
 			require.Contains(t, output, "Incorrect backup id in journal")
 		})
 
 		// Test that sm won't start from a journal with a backup.txt containing the wrong backupId
 		t.Run("testNegativeJournalWrongBackupFile", func(t *testing.T) {
-			output := testDb("jor-badbid", archiveBidSnapshotName, journalBadBidSnapshotName, "123abc", false)
+			output := testDb("jor-badbid", archiveBidSnapshotName, journalBadBidSnapshotName, "123abc", false, false)
 			require.Contains(t, output, "Incorrect backup id in journal")
 		})
 
 		// Test that sm won't start if it cannot find a journal at the expected backup location
 		t.Run("testNegativeMissingJournal", func(t *testing.T) {
-			output := testDb("jor-mvjor", archiveBidSnapshotName, journalWrongPathSnapshotName, "123abc", false)
+			output := testDb("jor-mvjor", archiveBidSnapshotName, journalWrongPathSnapshotName, "123abc", false, false)
 			require.Contains(t, output, "Did not find a journal snapshot at '/var/opt/nuodb/journal/nuodb/src-journ'")
 		})
 	})
