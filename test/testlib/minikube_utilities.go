@@ -451,6 +451,11 @@ func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName strin
 		var podNames string
 		for _, pod := range FindAllPodsInSchema(t, namespace) {
 			if strings.Contains(pod.Name, expectedName) {
+				//ignore all completed pods
+				if pod.Status.Phase == corev1.PodSucceeded {
+					continue;
+				}
+
 				if arePodConditionsMet(&pod, corev1.PodScheduled, corev1.ConditionTrue) {
 					// build array of scheduled pods
 					pods = append(pods, pod)
