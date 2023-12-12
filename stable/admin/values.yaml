@@ -333,6 +333,7 @@ admin:
   # affinity: {}
   # nodeSelector: {}
   # tolerations: []
+  # topologySpreadConstraints:  []
 
   # tlsCACert:
   #   secret: nuodb-ca-cert
