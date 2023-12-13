@@ -996,6 +996,8 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 
 			smPod := fmt.Sprintf(smNamePattern, databaseChartName, dbName)
 
+			testlib.AwaitNrReplicasScheduled(t, namespaceName, smPod, 1)
+
 			testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPod, 1, 60*time.Second)
 			retVal = k8s.GetPodLogs(t, kubectlOptions, k8s.GetPod(t, kubectlOptions, smPod), "engine")
 		}
@@ -1005,7 +1007,6 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 	}
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-	defer testlib.Teardown(testlib.TEARDOWN_SNAPSHOT)
 
 	// Test restoring an archive with a journal embedded
 	t.Run("testArchive", func(t *testing.T) {
