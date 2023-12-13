@@ -145,6 +145,8 @@ The following tables list the configurable parameters for the `admin` option of 
 | `domain` | NuoDB admin cluster name | `nuodb` |
 | `namespace` | Namespace where admin is deployed; when peering to an existing admin cluster provide its project name | `nuodb` |
 | `replicas` | Number of NuoDB Admin replicas | `1` |
+| `license.secret` | The name of the Secret resource for NuoDB license. Supported starting from NuoDB image version 5.1.1 | `""` |
+| `license.key` | The key which value has the NuoDB license contents | `nuodb.lic` |
 | `lbConfig.prefilter` | Global load balancer prefilter expression | `nil` |
 | `lbConfig.default` | Global load balancer default query | `nil` |
 | `lbConfig.policies` | Load balancer named policies | `{ nearest: ... }` |
@@ -166,7 +168,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |
 | `tolerations` | Tolerations for NuoDB Admin | `[]` |
-| `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
+| `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb` |
 | `configFiles.*` | See below. | `{}` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteMany` |
 | `persistence.size` | Amount of disk space allocated for admin RAFT state | `10Gi` |

@@ -302,12 +302,21 @@ admin:
     #   memory: 16Mi
 
   # Custom NuoDB configuration files path
-  configFilesPath: /etc/nuodb/
+  configFilesPath: /etc/nuodb
 
-  # NuoDB is a licensed product for Enterprise Edition.
-  # Obtain your license from NuoDB support.
+  # NuoDB is a licensed product for Enterprise Edition. Obtain your license from
+  # NuoDB support at support@nuodb.com.
   #
-  # You can provide the license via a configFile by using:
+  # You can provide the license via Kubernetes secret which is supported
+  # starting with NuoDB image version 5.1.1.
+  #
+  license:
+    # The name of the Secret resource.
+    secret: ""
+    # The key which value has the NuoDB license contents.
+    key: "nuodb.lic"
+
+  # Alternatively, you can provide the license via a configFile by using:
   #
   # - Helm CLI parameter
   # - Specify in this values.yaml file
