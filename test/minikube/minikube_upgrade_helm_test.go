@@ -5,6 +5,7 @@ package minikube
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -62,7 +63,7 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, upgradeOptions *test
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 }
 
-func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *testlib.UpgradeOptions) {
+func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, enableCron bool, upgradeOptions *testlib.UpgradeOptions) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -74,6 +75,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, upgradeOptions *t
 			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": "250Mi",
 			"nuodb.image.pullPolicy":                "IfNotPresent",
+			"database.sm.hotCopy.enableBackups":     strconv.FormatBool(enableCron),
 		},
 		Version: fromHelmVersion,
 	}
@@ -184,25 +186,25 @@ func TestUpgradeHelm(t *testing.T) {
 func TestUpgradeHelmFullDB(t *testing.T) {
 
 	t.Run("NuoDB_From330_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.3.0", &testlib.UpgradeOptions{
+		upgradeDatabaseTest(t, "3.3.0", false, &testlib.UpgradeOptions{
 			AdminPodShouldGetRecreated: true,
 		})
 	})
 
 	t.Run("NuoDB_From340_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.4.0", &testlib.UpgradeOptions{
+		upgradeDatabaseTest(t, "3.4.0", false, &testlib.UpgradeOptions{
 			AdminPodShouldGetRecreated: true,
 		})
 	})
 
 	t.Run("NuoDB_From350_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.5.0", &testlib.UpgradeOptions{
+		upgradeDatabaseTest(t, "3.5.0", true, &testlib.UpgradeOptions{
 			AdminPodShouldGetRecreated: true,
 		})
 	})
 
 	t.Run("NuoDB_From360_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.6.0", &testlib.UpgradeOptions{
+		upgradeDatabaseTest(t, "3.6.0", true, &testlib.UpgradeOptions{
 			AdminPodShouldGetRecreated: true,
 		})
 	})
