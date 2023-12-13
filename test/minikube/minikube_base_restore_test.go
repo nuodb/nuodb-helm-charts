@@ -24,13 +24,16 @@ import (
 
 func verifyBackup(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
 	// verify that the backup has been documented by the Admin layer
-	backupset, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions,
+	output, err := k8s.RunKubectlAndGetOutputE(t, options.KubectlOptions,
 		"exec", podName, "--",
 		"nuodocker", "get", "current-backup", "--db-name", databaseName,
 	)
+	require.NoError(t, err, "Error running 'nuodocker get current-backup': %s", output)
+	require.True(t, output != "")
 
-	require.NoError(t, err, "Error running: nuodocker get current-backup  ")
-	require.True(t, backupset != "")
+	latestGroup := testlib.GetLatestBackupGroup(t, namespaceName, podName, databaseName)
+	latestBackupSet := testlib.GetLatestBackup(t, namespaceName, podName, databaseName, latestGroup)
+	require.Contains(t, output, latestBackupSet, "Metadata for last backupset is not recorded")
 }
 
 func TestKubernetesBackupDatabase(t *testing.T) {
@@ -61,7 +64,7 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 			},
 		}
 
-		testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
 
 		// Generate diagnose in case this test fails
 		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
@@ -72,10 +75,74 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 
+		opt := testlib.GetExtractedOptions(&databaseOptions)
+		smPodName0 := fmt.Sprintf("sm-%s-%s-%s-%s-hotcopy-0",
+			databaseReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+
 		defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
 		testlib.AwaitJobSucceeded(t, namespaceName, "incremental-hotcopy-nuodb-demo-cluster0-0", 120*time.Second)
-		verifyBackup(t, namespaceName, admin0, "demo", &databaseOptions)
+		verifyBackup(t, namespaceName, smPodName0, "demo", &databaseOptions)
 	})
+
+}
+
+func TestKubernetesBackupHistory(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	adminOptions := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &adminOptions, 1, "")
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	defer testlib.Teardown(testlib.TEARDOWN_BACKUP)
+
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		},
+		SetStrValues: map[string]string{
+			"database.env[0].name":  "NUODB_MAX_BACKUP_HISTORY",
+			"database.env[0].value": "2",
+		},
+	}
+
+	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	kubectlOptions := databaseOptions.KubectlOptions
+	backupGroup0 := fmt.Sprintf("%s-0", opt.ClusterName)
+	smPodName0 := fmt.Sprintf("sm-%s-%s-%s-%s-hotcopy-0",
+		databaseReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+	fullCronJob := fmt.Sprintf("full-hotcopy-%s-%s-%s", opt.DomainName, opt.DbName, backupGroup0)
+
+	// Executing 3 full backups with NUODB_MAX_BACKUP_HISTORY=2 will reuse
+	// index 0 to store metadata for the third backup
+	for i := 0; i < 3; i++ {
+		jobName := fmt.Sprintf("backup-database-%s", strings.ToLower(random.UniqueId()))
+		k8s.RunKubectl(t, kubectlOptions, "create", "job", "--from=cronjob/"+fullCronJob, jobName)
+		// Get logs from backup jobs in case the test fails
+		testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+			podName := testlib.GetPodName(t, namespaceName, jobName)
+			testlib.GetAppLog(t, namespaceName, podName, "", &corev1.PodLogOptions{})
+		})
+		testlib.AwaitJobSucceeded(t, namespaceName, jobName, 120*time.Second)
+	}
+	// Verify that the last backupSet is stored as index 0
+	latestBackupSet := testlib.GetLatestBackup(t, namespaceName, smPodName0, opt.DbName, backupGroup0)
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName0, "-c", "engine", "--",
+		"nuocmd", "get", "value", "--key", fmt.Sprintf("/nuodb/nuobackup/%s/%s/0", opt.DbName, backupGroup0))
+	require.NoError(t, err, output)
+	require.Equal(t, latestBackupSet, output, "")
+
+	verifyBackup(t, namespaceName, smPodName0, "demo", &databaseOptions)
 }
 
 func TestKubernetesJournalBackupSuspended(t *testing.T) {
@@ -178,7 +245,7 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 		"Executing full hotcopy as a prerequisite for incremental hotcopy", &corev1.PodLogOptions{}),
 		"Full hot copy should be requested as previous full have failed")
 
-	verifyBackup(t, namespaceName, admin0, "demo", &options)
+	verifyBackup(t, namespaceName, smPodName0, "demo", &options)
 }
 
 func restoreDatabaseByArchiveType(t *testing.T, options helm.Options, namespaceName string, admin0 string, archiveType string) {

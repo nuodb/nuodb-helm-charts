@@ -161,6 +161,9 @@ spec:
           - "tdeMonitor.storagePasswordsDir={{ .Values.admin.tde.storagePasswordsDir }}"
           {{- end }}
           {{- end }}
+          {{- if .Values.admin.license.secret }}
+          - "licenseFilePath={{ .Values.admin.configFilesPath }}/license/nuodb.lic"
+          {{- end }}
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
           {{- end }}
@@ -198,9 +201,14 @@ spec:
         {{- with .Values.admin.configFiles }}
         {{- range $key, $val := . }}
         - name: configurations
-          mountPath: {{ $.Values.admin.configFilesPath }}{{ $key }}
+          mountPath: {{ $.Values.admin.configFilesPath }}/{{ $key }}
           subPath: {{ $key }}
         {{- end -}}
+        {{- end }}
+        {{- if .Values.admin.license.secret }}
+        - name: license
+          mountPath: {{ .Values.admin.configFilesPath }}/license
+          readOnly: true
         {{- end }}
         - name: raftlog
           mountPath: /var/opt/nuodb
@@ -250,6 +258,15 @@ spec:
       - name: configurations
         configMap:
           name: {{ template "admin.fullname" . }}-configuration
+      {{- end }}
+      {{- if .Values.admin.license.secret }}
+      - name: license
+        secret:
+          secretName: {{ .Values.admin.license.secret }}
+          defaultMode: 0440
+          items:
+            - key: {{ .Values.admin.license.key }}
+              path: nuodb.lic
       {{- end }}
       - name: nuoadmin
         configMap:

@@ -247,7 +247,7 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		// Execute backup for backup group 1
 		backupsetGroup1 := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup1)
-		verifyBackupSet(t, namespaceName, backupsetGroup1, backupGroup1, 1, hcSmPodName1)
+		verifyBackupSet(t, namespaceName, backupsetGroup1, backupGroup1, 0, hcSmPodName1)
 
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 		// restore database
@@ -276,7 +276,7 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		// Execute backup for backup group 0
 		backupsetGroup0 := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
-		verifyBackupSet(t, namespaceName, backupsetGroup0, backupGroup0, 1, hcSmPodName0)
+		verifyBackupSet(t, namespaceName, backupsetGroup0, backupGroup0, 0, hcSmPodName0)
 
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 		// restore database
@@ -304,11 +304,11 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		// Create another backup for backup group 0 (index 2)
 		newBackupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
-		verifyBackupSet(t, namespaceName, newBackupset, backupGroup0, 2, hcSmPodName0)
+		verifyBackupSet(t, namespaceName, newBackupset, backupGroup0, 1, hcSmPodName0)
 
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 		// restore database
-		databaseOptions.SetValues["restore.source"] = "cluster0-0:2"
+		databaseOptions.SetValues["restore.source"] = "cluster0-0:1"
 		testlib.RestoreDatabase(t, namespaceName, admin0, &databaseOptions)
 		testlib.RestartDatabasePods(t, namespaceName, databaseChartName, &databaseOptions)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrTePods+opt.NrSmPods)
@@ -402,7 +402,7 @@ func TestKubernetesRestoreCustomBackupGroups(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		// Create another backup for backup group 0 (index 1)
 		newBackupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup0)
-		verifyBackupSet(t, namespaceName, newBackupset, backupGroup0, 1, hcSmPodName0)
+		verifyBackupSet(t, namespaceName, newBackupset, backupGroup0, 0, hcSmPodName0)
 
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 
@@ -432,7 +432,7 @@ func TestKubernetesRestoreCustomBackupGroups(t *testing.T) {
 		defer testlib.Teardown(testlib.TEARDOWN_RESTORE)
 		// Execute backup for backup group 1
 		newBackupset := testlib.BackupDatabase(t, namespaceName, hcSmPodName0, opt.DbName, "full", backupGroup1)
-		verifyBackupSet(t, namespaceName, newBackupset, backupGroup1, 1, hcSmPodName1)
+		verifyBackupSet(t, namespaceName, newBackupset, backupGroup1, 0, hcSmPodName1)
 
 		testlib.CreateQuickstartSchema(t, namespaceName, admin0)
 
