@@ -274,6 +274,9 @@ database:
     stripLevels: "1"
     type: ""
 
+    # ID to validate dataSourceRef values
+    backupId: ""
+
   # ensure all values here are strings - so quote any purely numeric values
   autoRestore:
     source: ""
