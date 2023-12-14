@@ -431,7 +431,7 @@ function loadFromSnapshot() {
         fi
       fi
 
-      rm -r ${JOURNAL_DIR}
+      rm -rf ${JOURNAL_DIR}
       mv ${expected_journal} ${JOURNAL_DIR}
 
     fi
@@ -439,7 +439,7 @@ function loadFromSnapshot() {
     # Don't move the archive until after we have done error checking.
     # Once we move the archive, we are going to be in the `archive already exists` branch
     # when kubernetes retries/restarts the pod.
-    rm -r ${DB_DIR}
+    rm -rf ${DB_DIR}
     mv ${archive_path} ${DB_DIR}
 
     local recreate_archives="true"

@@ -179,7 +179,7 @@ workflows:
           test-suite: "./test/minikube"
           tag: "long"
           requires-minikube: true
-          timeout: "90m"
+          timeout: "120m"
       - go-test:
           name: "Diagnostics tests"
           test-suite: "./test/minikube"

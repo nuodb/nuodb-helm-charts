@@ -212,6 +212,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
+| `persistence.dataSourceRef` | Data Source to initialize the archive volume.  See below.  |  |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
@@ -221,6 +222,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `autoImport.credentials` | Authentication for the download of `source` in the form `user`:`password` | '""'|
 | `autoImport.stripLevels` | The number of levels to strip off pathnames when unpacking a TAR file of an archive | `1` |
 | `autoImport.type` | Type of content in `source`. One of `stream` -> exact copy of an archive; or `backupset` -> a NuoDB hotcopy backupset | 'backupset' |
+| `autoImport.backupId` | When specifying a value for `dataSourceRef` (see below), can be used to validate the snapshot| `""` |
 | `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
 | `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |
 | `ephemeralVolume.size` | The size of the generic ephemeral volume to create | `1Gi` |
@@ -254,6 +256,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
 | `sm.hotCopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
+| `sm.hotCopy.journalPath.persistence.dataSourceRef` | Data Source to initialize the journal volume. See below.  |  |
 | `sm.hotCopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
 | `sm.hotCopy.journalBackup.journalSchedule` | cron schedule for _JOURNAL_ hotcopy jobs. When journal backup is enabled, an SM will retain each journal file on disk until it is journal hot copied into a backup set. This means that journal hot copy must be executed periodically to prevent SMs from running out of disk space on the journal volume | `?/15 * * * *` |
 | `sm.hotCopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
@@ -334,6 +337,21 @@ The purpose of this section is to allow customisation of the names of the cluste
 | `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
 | `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
 | `nodeport` | suffix for the nodePort service | .Values.admin.serviceSuffix.nodeport |
+
+### persistence.dataSourceRef.*
+
+Define a VolumeSnapshot, PersistentVolumeClaim, or other dataSource from which to initialize a database volume.
+
+See [Persistent Volume Doumentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references) and [Resource Schema](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core)
+
+When taking a Volume Snapshot, you can drop a file called `backup.txt` in the directory root containing an arbitrary value. That value should be passed in via `database.autoImport.backupId`. Required if restoring a database with the same domain and database names, optional otherwise.
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `name` | Backup or volume name. dataSource will be omitted if `nil` | `nil` |
+| `namespace` | Namespace containing the source | `nil` |
+| `kind` | Data source kind | `VolumeSnapshot` |
+| `apiGroup` | APIGroup is the group for the resource. If APIGroup is not specified, the specified Kind must be in the core API group. | `snapshot.storage.k8s.io` |
 
 #### database.legacy
 

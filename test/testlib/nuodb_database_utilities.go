@@ -780,10 +780,6 @@ func SnapshotVolume(t *testing.T, namespaceName string, pvcName string, snapName
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	k8s.KubectlApplyFromString(t, kubectlOptions, fmt.Sprintf(SNAPSHOT_TEMPLATE, snapName, VOLUME_SNAPSHOT_CLASS, pvcName))
 
-	AddTeardown(TEARDOWN_SNAPSHOT, func() {
-		k8s.RunKubectl(t, kubectlOptions, "delete", "volumesnapshot", snapName)
-	})
-
 	Await(t, func() bool {
 		out, error := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "volumesnapshot", snapName, "-o", "jsonpath='{.status.readyToUse}'")
 		return error == nil && strings.TrimSpace(out) == "'true'"
