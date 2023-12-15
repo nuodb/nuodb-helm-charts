@@ -272,6 +272,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.noHotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.noHotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
 | `sm.noHotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
+| `sm.hotCopy.journalPath.persistence.dataSourceRef` | Data Source to initialize the journal volume. See below.  |  |
 | `sm.labels` | Labels given to the SMs started | `{}` |
 | `sm.engineOptions` | Additional NuoDB engine options | `{}` |
 | `sm.resources` | Labels to apply to all resources | `{}` |
@@ -348,7 +349,7 @@ When taking a Volume Snapshot, you can drop a file called `backup.txt` in the di
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
-| `name` | Backup or volume name. dataSource will be omitted if `nil` | `nil` |
+| `name` | Backup or volume name. The entire dataSource will be omitted if this value is empty | `nil` |
 | `namespace` | Namespace containing the source | `nil` |
 | `kind` | Data source kind | `VolumeSnapshot` |
 | `apiGroup` | APIGroup is the group for the resource. If APIGroup is not specified, the specified Kind must be in the core API group. | `snapshot.storage.k8s.io` |

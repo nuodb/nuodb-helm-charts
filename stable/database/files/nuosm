@@ -459,7 +459,7 @@ function loadFromSnapshot() {
   if [ $recreate_archives == "true" ]; then
     log "Removing outdated archive metadata"
     rm ${DB_DIR}/info.json ${DB_DIR}/backup.txt
-    [ -e ${JOURNAL_DIR}/backup.json ] && rm ${JOURNAL_DIR}/backup.txt
+    [ -e ${JOURNAL_DIR}/backup.txt ] && rm ${JOURNAL_DIR}/backup.txt
   fi
 }
 
