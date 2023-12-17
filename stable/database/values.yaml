@@ -238,11 +238,23 @@ database:
     # The data source for the archive PVC
     # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
     # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
-    dataSourceRef:
+    archiveDataSource:
       # name: archive-snapshot
-      # namespace: old-namespace
+      # namespace: source-namespace
       kind: VolumeSnapshot
       apiGroup: snapshot.storage.k8s.io
+
+    # The data source for the journal PVC
+    # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
+    # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
+    journalDataSource:
+      # name: journal-snapshot
+      # namespace: source-namespace
+      kind: VolumeSnapshot
+      apiGroup: snapshot.storage.k8s.io
+
+    # Whether to validate that data sources for PVCs exist
+    validateDataSources: true
 
   ## database-wide options.
   # These are applied using the --database-options on the startup command
@@ -273,9 +285,6 @@ database:
     credentials: ""
     stripLevels: "1"
     type: ""
-
-    # ID to validate dataSourceRef values
-    backupId: ""
 
   # ensure all values here are strings - so quote any purely numeric values
   autoRestore:
@@ -314,6 +323,35 @@ database:
 
     # The storage class to use for the generic ephemeral volume.
     # storageClass: "-"
+
+  snapshotRestore:
+    # ID to validate archive and journal volumes restored from snapshots
+    backupId: ""
+
+    # Template to resolve name of snapshot to use as a data source, where
+    # volumeType is one of "archive" or "journal".
+    snapshotNameTemplate: "{{.backupId}}-{{.volumeType}}"
+
+  backupHooks:
+    # If enabled=true, sidecar containers are created for non-hotcopy SMs to
+    # perform synchronization necessary to obtain snapshots of the archive and
+    # journal directories.
+    enabled: false
+    image:
+      registry: docker.io
+      repository: library/python
+      tag: 3.12-slim
+      pullPolicy: IfNotPresent
+
+    # If the non-hotcopy SM is configured with separate archive and journal
+    # volumes, writes are frozen to the archive volume when the pre-backup hook
+    # is invoked and unfrozen when the post-backup hook is invoked. If
+    # useSuspend=true, then the SM process is suspended completely rather than
+    # only writes to the archive being frozen. This is to enable usage in
+    # environments where fsfreeze cannot be invoked on the archive filesystem,
+    # e.g. because it is using hostpath-based storage where other processes
+    # would be affected.
+    useSuspend: false
 
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
@@ -403,15 +441,6 @@ database:
             - ReadWriteOnce
           # storageClass: "-"
 
-          # The data source for journal PVC, only applies to SMs with hotcopy enabled
-          # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
-          # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
-          dataSourceRef:
-            # name: journal-snapshot
-            # namespace: old-namespace
-            kind: VolumeSnapshot
-            apiGroup: snapshot.storage.k8s.io
-
       coldStorage:
         credentials: ""
 
@@ -446,15 +475,6 @@ database:
           accessModes:
             - ReadWriteOnce
           # storageClass: "-"
-
-          # The data source for journal PVC, only applies to SMs with hotcopy disabled
-          # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
-          # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
-          dataSourceRef:
-            # name: journal-snapshot
-            # namespace: old-namespace
-            kind: VolumeSnapshot
-            apiGroup: snapshot.storage.k8s.io
 
     ## resources
     # k8s resource min (request) and max (limit)

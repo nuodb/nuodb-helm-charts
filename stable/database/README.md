@@ -212,7 +212,9 @@ The following tables list the configurable parameters of the `database` chart an
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
-| `persistence.dataSourceRef` | Data Source to initialize the archive volume.  See below.  |  |
+| `persistence.archiveDataSource.*` | The data source to use to initialize the archive volume. This takes precedence over the archive snapshot resolved from `database.snapshotRestore`. | `disabled` |
+| `persistence.journalDataSource.*` | The data source to use to initialize the journal volume. This takes precedence over the journal snapshot resolved from `database.snapshotRestore`. | `disabled` |
+| `persistence.validateDataSources` | Whether to validate that data sources resolved from `database.snapshotRestore` or specified explicitly using `persistence.archiveDataSource` and `persistence.journalDataSource` actually exist. This is useful because data source references that do not exist are silently ignored by Kubernetes. | `true` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
@@ -222,8 +224,11 @@ The following tables list the configurable parameters of the `database` chart an
 | `autoImport.credentials` | Authentication for the download of `source` in the form `user`:`password` | '""'|
 | `autoImport.stripLevels` | The number of levels to strip off pathnames when unpacking a TAR file of an archive | `1` |
 | `autoImport.type` | Type of content in `source`. One of `stream` -> exact copy of an archive; or `backupset` -> a NuoDB hotcopy backupset | 'backupset' |
-| `autoImport.backupId` | When specifying a value for `dataSourceRef` (see below), can be used to validate the snapshot| `""` |
 | `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
+| `backupHooks.enabled` | Whether to enable the backup hooks sidecar for non-hotcopy SMs | `false` |
+| `backupHooks.useSuspend` | Whether to use suspend and resume (`kill -STOP` and `kill -CONT`) on the nuodb process instead of freezing writes to the archive using `fsfreeze`. This may be necessary if the archive volume shares a filesystem with other services that may be disrupted by `fsfreeze` or if there is a security policy that restricts the creation of containers with `securityContext.privileged=true`, which is required for `fsfreeze`. | `false` |
+| `snapshotRestore.backupId` | The backup ID being restored, which is set to enable restore from data sources | `""` |
+| `snapshotRestore.snapshotNameTemplate` | The template used to resolve the names of snapshots to use as data sources for the archive and journal PVCs. The template can reference `backupId` and `volumeType`, which is one of `archive`, `journal`. | `{{.backupId}}-{{.volumeType}}` |
 | `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |
 | `ephemeralVolume.size` | The size of the generic ephemeral volume to create | `1Gi` |
 | `ephemeralVolume.sizeToMemory` | Whether to size the generic ephemeral volume based on the `resources.limits.memory` setting of the process so that at least one core file is retained for the lifetime of the pod | `false` |
@@ -256,7 +261,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
 | `sm.hotCopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
-| `sm.hotCopy.journalPath.persistence.dataSourceRef` | Data Source to initialize the journal volume. See below.  |  |
 | `sm.hotCopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
 | `sm.hotCopy.journalBackup.journalSchedule` | cron schedule for _JOURNAL_ hotcopy jobs. When journal backup is enabled, an SM will retain each journal file on disk until it is journal hot copied into a backup set. This means that journal hot copy must be executed periodically to prevent SMs from running out of disk space on the journal volume | `?/15 * * * *` |
 | `sm.hotCopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
@@ -272,7 +276,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.noHotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.noHotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
 | `sm.noHotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
-| `sm.hotCopy.journalPath.persistence.dataSourceRef` | Data Source to initialize the journal volume. See below.  |  |
 | `sm.labels` | Labels given to the SMs started | `{}` |
 | `sm.engineOptions` | Additional NuoDB engine options | `{}` |
 | `sm.resources` | Labels to apply to all resources | `{}` |
@@ -282,7 +285,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.topologySpreadConstraints` | Topology spread constraints for NuoDB SM | `[]` |
 | `sm.readinessTimeoutSeconds` | SM readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 | `sm.storageGroup.enabled` | Enable Table Partitions and Storage Groups (TPSG) for all SMs in this database Helm release | `false` |
-| `sm.storageGroup.name` | The name of the storage group. Only alphanumeric and underscore ('_') characters are allowed. By default the Helm release name is used | `.Release.Name` |
+| `sm.storageGroup.name` | The name of the storage group. Only alphanumeric and underscore (`_`) characters are allowed. By default the Helm release name is used | `.Release.Name` |
 | `te.enablePod` | Create deployment for TEs. By default, the TE Deployment is disabled if TP/SG is enabled and this is a "secondary" release. | `nil` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
@@ -329,7 +332,7 @@ Any file located in `database.configFilesPath` can be replaced; the YAML key cor
 | ----- | ----------- | ------ |
 | `nuodb.config` | [NuoDB database options][6] | `nil` |
 
-### database.serviceSuffix.*
+#### database.serviceSuffix.*
 
 The purpose of this section is to allow customisation of the names of the clusterIP and balancer database services (load-balancers).
 
@@ -338,21 +341,6 @@ The purpose of this section is to allow customisation of the names of the cluste
 | `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
 | `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
 | `nodeport` | suffix for the nodePort service | .Values.admin.serviceSuffix.nodeport |
-
-### persistence.dataSourceRef.*
-
-Define a VolumeSnapshot, PersistentVolumeClaim, or other dataSource from which to initialize a database volume.
-
-See [Persistent Volume Doumentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references) and [Resource Schema](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core)
-
-When taking a Volume Snapshot, you can drop a file called `backup.txt` in the directory root containing an arbitrary value. That value should be passed in via `database.autoImport.backupId`. Required if restoring a database with the same domain and database names, optional otherwise.
-
-| Key | Description | Default |
-| ----- | ----------- | ------ |
-| `name` | Backup or volume name. The entire dataSource will be omitted if this value is empty | `nil` |
-| `namespace` | Namespace containing the source | `nil` |
-| `kind` | Data source kind | `VolumeSnapshot` |
-| `apiGroup` | APIGroup is the group for the resource. If APIGroup is not specified, the specified Kind must be in the core API group. | `snapshot.storage.k8s.io` |
 
 #### database.legacy
 

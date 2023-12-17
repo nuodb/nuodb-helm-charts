@@ -29,7 +29,7 @@ const TEARDOWN_VAULT = "vault"
 const TEARDOWN_MULTICLUSTER = "multicluster"
 const TEARDOWN_NGINX = "nginx"
 const TEARDOWN_HAPROXY = "haproxy"
-const TEARDOWN_SNAPSHOT = "snapshot"
+const TEARDOWN_CSIDRIVER_FS = "csidriver-fs"
 
 const ADMIN_HELM_CHART_PATH = "../../stable/admin"
 const DATABASE_HELM_CHART_PATH = "../../stable/database"

@@ -44,7 +44,7 @@ Also, we can't use a single if because lazy evaluation is not an option
 {{- end -}}
 {{- end -}}
 
-{{- define "nuodb.sidecar" -}}
+{{- define "nuodb.sidecar.collector" -}}
 {{- if .Values.nuocollector }}
 {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
 - name: nuocollector

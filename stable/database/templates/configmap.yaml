@@ -40,6 +40,15 @@ kind: ConfigMap
 metadata:
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
+  name: {{ template "database.fullname" . }}-backup-hooks
+data:
+{{ (.Files.Glob "files/backup_hooks.py").AsConfig | indent 2 }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.fullname" . }}-restore
 data:
   NUODB_IMPORT_STRIP_LEVELS: {{ default "1" .Values.database.autoImport.stripLevels | quote }}

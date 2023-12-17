@@ -29,11 +29,29 @@ func ArgContains(args []string, x string) bool {
 	return false
 }
 
-func EnvContains(envs []v1.EnvVar, key string, value string) bool {
+func EnvGet(envs []v1.EnvVar, key string) (string, bool) {
 	for _, n := range envs {
-		if n.Name == key && n.Value == value {
-			return true
+		if n.Name == key {
+			return n.Value, true
 		}
+	}
+	return "", false
+}
+
+func AssertEnvNotContains(t *testing.T, envs []v1.EnvVar, key string) {
+	actual, ok := EnvGet(envs, key)
+	assert.False(t, ok, "Unexpected environment variable %s=%s", key, actual)
+}
+
+func AssertEnvContains(t *testing.T, envs []v1.EnvVar, key, expected string) {
+	actual, ok := EnvGet(envs, key)
+	assert.True(t, ok, "Environment variable %s not set", key)
+	assert.Equal(t, expected, actual)
+}
+
+func EnvContains(envs []v1.EnvVar, key string, expected string) bool {
+	if actual, ok := EnvGet(envs, key); ok {
+		return actual == expected
 	}
 	return false
 }

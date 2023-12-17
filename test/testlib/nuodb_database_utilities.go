@@ -1,6 +1,8 @@
 package testlib
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -10,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"text/template"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -785,4 +788,78 @@ func SnapshotVolume(t *testing.T, namespaceName string, pvcName string, snapName
 		out, error := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "volumesnapshot", snapName, "-o", "jsonpath='{.status.readyToUse}'")
 		return error == nil && strings.TrimSpace(out) == "'true'"
 	}, 30*time.Second)
+}
+
+func getSnapshotName(t *testing.T, tmpl *template.Template, backupId, volumeType string) string {
+	var buf bytes.Buffer
+	err := tmpl.Execute(&buf, &map[string]string{
+		"backupId":   backupId,
+		"volumeType": volumeType,
+	})
+	require.NoError(t, err)
+	return buf.String()
+}
+
+func getArchiveSnapshotName(t *testing.T, tmpl *template.Template, backupId string) string {
+	return getSnapshotName(t, tmpl, backupId, "archive")
+}
+
+func getJournalSnapshotName(t *testing.T, tmpl *template.Template, backupId string) string {
+	return getSnapshotName(t, tmpl, backupId, "journal")
+}
+
+type BackupHookResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+func GetBackupHookResponse(t *testing.T, namespaceName, smPod, resourcePath string) *BackupHookResponse {
+	// Issue request to backup hook server. The nuodb image has curl, so use
+	// it in the SM container to issue HTTP request against the backup hook
+	// server running in a sidecar container on the same pod.
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
+		"curl", "-s", "-X", "POST", "http://0.0.0.0:8000/"+resourcePath)
+	require.NoError(t, err, output)
+
+	// Decode response and make sure request was successful
+	buffer := bytes.NewBufferString(output)
+	decoder := json.NewDecoder(buffer)
+	var response BackupHookResponse
+	err = decoder.Decode(&response)
+	require.NoError(t, err, "Unable to decode output as JSON: %s", output)
+
+	// Make sure output was fully decoded
+	unread := strings.TrimSpace(buffer.String())
+	require.Zero(t, len(unread), "Did not fully decode output: %s", output)
+	return &response
+}
+
+func InvokeBackupHook(t *testing.T, namespaceName, smPod, resourcePath string) {
+	response := GetBackupHookResponse(t, namespaceName, smPod, resourcePath)
+	require.True(t, response.Success, "Unexpected response: %s", response.Message)
+}
+
+func SnapshotSm(t *testing.T, namespaceName, smPod, backupId, snapshotNameTemplate string, journalVolume bool) {
+	// Invoke pre-backup hook
+	InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId)
+
+	// Parse snapshot name template
+	tmpl, err := template.New("").Parse(snapshotNameTemplate)
+	require.NoError(t, err)
+
+	// Snapshot archive
+	achiveVolumeName := "archive-volume-" + smPod
+	archiveSnapshotName := getArchiveSnapshotName(t, tmpl, backupId)
+	SnapshotVolume(t, namespaceName, achiveVolumeName, archiveSnapshotName)
+
+	// Snapshot journal if journal volume is separate
+	if journalVolume {
+		journalVolumeName := "journal-volume-" + smPod
+		journalSnapshotName := getJournalSnapshotName(t, tmpl, backupId)
+		SnapshotVolume(t, namespaceName, journalVolumeName, journalSnapshotName)
+	}
+
+	// Invoke post-backup hook
+	InvokeBackupHook(t, namespaceName, smPod, "post-backup/"+backupId)
 }

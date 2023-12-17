@@ -237,8 +237,8 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
-      {{- include "nuodb.sidecar" . | nindent 6 }}
-{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      {{- include "nuodb.sidecar.collector" . | nindent 6 }}
+      {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}

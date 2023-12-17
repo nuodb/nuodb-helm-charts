@@ -1,4 +1,4 @@
-{{- define "nuodb.sidecar" -}}
+{{- define "nuodb.sidecar.collector" -}}
 {{- $ := index . 0 -}}
 {{- $engine := index . 1 -}}
 {{- if $.Values.nuocollector }}
@@ -45,7 +45,6 @@
     name: eph-volume
     subPath: log
     {{- end }}
-shareProcessNamespace: true
 {{- end }}
 {{- end }}
 {{- end -}}

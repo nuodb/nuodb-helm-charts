@@ -2518,6 +2518,146 @@ func TestDatabaseTLSConfig(t *testing.T) {
 
 }
 
+func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	// Make sure backup hooks are disabled by default
+	t.Run("testDefault", func(t *testing.T) {
+		options := &helm.Options{}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				assert.NotEqual(t, "backup-hooks", container.Name)
+			}
+		}
+	})
+
+	// Make sure sidecar is rendered if backup hooks are enabled
+	t.Run("testEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                "true",
+				"database.securityContext.enabledOnContainer": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		var sidecar *v1.Container
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				if container.Name == "backup-hooks" {
+					sidecar = &container
+					assert.NotContains(t, obj.Name, "hotcopy", "Backup hooks should not be enabled for HCSM statefulset")
+					// Make sure shareProcessNamespace=true for pod
+					assert.NotNil(t, obj.Spec.Template.Spec.ShareProcessNamespace)
+					assert.True(t, *obj.Spec.Template.Spec.ShareProcessNamespace)
+				}
+			}
+		}
+		// Make sure securityContext appears and does not have
+		// privileged=true, which is only required when the journal
+		// volume is separate
+		assert.NotNil(t, sidecar)
+		assert.NotNil(t, sidecar.SecurityContext)
+		assert.NotNil(t, sidecar.SecurityContext.Privileged)
+		assert.False(t, *sidecar.SecurityContext.Privileged)
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "false")
+		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
+		// Check volume mounts
+		volumes := make([]string, len(sidecar.VolumeMounts))
+		for i, v := range sidecar.VolumeMounts {
+			volumes[i] = v.Name
+		}
+		assert.Contains(t, volumes, "archive-volume")
+		assert.Contains(t, volumes, "backup-hooks")
+		assert.NotContains(t, volumes, "journal-volume")
+	})
+
+	// Make sure fsfreeze is enabled if journal volume is separate
+	t.Run("testSeparateJournalVolume", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                "true",
+				"database.securityContext.enabledOnContainer": "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		var sidecar *v1.Container
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				if container.Name == "backup-hooks" {
+					sidecar = &container
+					assert.NotContains(t, obj.Name, "hotcopy", "Backup hooks should not be enabled for HCSM statefulset")
+					// Make sure shareProcessNamespace=true for pod
+					assert.NotNil(t, obj.Spec.Template.Spec.ShareProcessNamespace)
+					assert.True(t, *obj.Spec.Template.Spec.ShareProcessNamespace)
+				}
+			}
+		}
+		// Make sure securityContext appears and has privileged=true,
+		// which is required when the journal volume is separate
+		assert.NotNil(t, sidecar)
+		assert.NotNil(t, sidecar.SecurityContext)
+		assert.NotNil(t, sidecar.SecurityContext.Privileged)
+		assert.True(t, *sidecar.SecurityContext.Privileged)
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_JOURNAL_DIR", "/mnt/journal/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "false")
+		// Check volume mounts
+		volumes := make([]string, len(sidecar.VolumeMounts))
+		for i, v := range sidecar.VolumeMounts {
+			volumes[i] = v.Name
+		}
+		assert.Contains(t, volumes, "archive-volume")
+		assert.Contains(t, volumes, "journal-volume")
+		assert.Contains(t, volumes, "backup-hooks")
+	})
+
+	// Make sure process suspend/resume is enabled if useSuspend=true
+	t.Run("testUseSuspend", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                "true",
+				"database.backupHooks.useSuspend":             "true",
+				"database.securityContext.enabledOnContainer": "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		var sidecar *v1.Container
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				if container.Name == "backup-hooks" {
+					sidecar = &container
+					assert.NotContains(t, obj.Name, "hotcopy", "Backup hooks should not be enabled for HCSM statefulset")
+					// Make sure shareProcessNamespace=true for pod
+					assert.NotNil(t, obj.Spec.Template.Spec.ShareProcessNamespace)
+					assert.True(t, *obj.Spec.Template.Spec.ShareProcessNamespace)
+				}
+			}
+		}
+		// Make sure securityContext appears and does not have
+		// privileged=true, which is not required because fsfreeze is
+		// not being used
+		assert.NotNil(t, sidecar)
+		assert.NotNil(t, sidecar.SecurityContext)
+		assert.NotNil(t, sidecar.SecurityContext.Privileged)
+		assert.False(t, *sidecar.SecurityContext.Privileged)
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_JOURNAL_DIR", "/mnt/journal/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "true")
+		// Check volume mounts
+		volumes := make([]string, len(sidecar.VolumeMounts))
+		for i, v := range sidecar.VolumeMounts {
+			volumes[i] = v.Name
+		}
+		assert.Contains(t, volumes, "archive-volume")
+		assert.Contains(t, volumes, "journal-volume")
+		assert.Contains(t, volumes, "backup-hooks")
+	})
+}
+
 func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
@@ -2531,85 +2671,169 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			for _, template := range obj.Spec.VolumeClaimTemplates {
 				assert.Nil(t, template.Spec.DataSourceRef)
 			}
-			assert.False(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "false"))
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
 	})
 
-	//Make sure that we can set all of the possible fields in each data source sperarately
-	t.Run("testAllDataSourceConfigured", func(t *testing.T) {
-		values := map[string]string{
-			"database.sm.hotCopy.journalPath.enabled":   "true",
-			"database.sm.noHotCopy.journalPath.enabled": "true",
-			"database.autoImport.backupId":              "123abc",
-		}
-
-		setFields := func(specKey string, label string) {
-			for _, field := range []string{"apiGroup", "kind", "name", "namespace"} {
-				values[specKey+".dataSourceRef."+field] = label + field
-			}
-		}
-
-		check := func(label string, sourceDef *v1.TypedObjectReference) {
-			assert.Equal(t, label+"apiGroup", *sourceDef.APIGroup)
-			assert.Equal(t, label+"kind", sourceDef.Kind)
-			assert.Equal(t, label+"name", sourceDef.Name)
-			assert.Equal(t, label+"namespace", *sourceDef.Namespace)
-		}
-
-		setFields("database.persistence", "archive")
-		setFields("database.sm.hotCopy.journalPath.persistence", "hotCopyJournal")
-		setFields("database.sm.noHotCopy.journalPath.persistence", "noHotCopyJournal")
-
-		options := &helm.Options{
-			SetValues: values,
-		}
-
-		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
-
-		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
-			check("archive", obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef)
-			if strings.Contains(obj.Name, "-hotcopy") {
-				check("hotCopyJournal", obj.Spec.VolumeClaimTemplates[1].Spec.DataSourceRef)
-			} else {
-				check("noHotCopyJournal", obj.Spec.VolumeClaimTemplates[1].Spec.DataSourceRef)
-			}
-			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
-			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", "123abc"))
-		}
-	})
-
-	// Test to make sure that we can omit optional fields when defining a data source (such as when copying an existing PVC)
-	t.Run("testPvcDataSource", func(t *testing.T) {
+	// Render volume snapshot data sources by specifying backup ID
+	t.Run("testSnapshotRestoreDataSources", func(t *testing.T) {
+		backupId := "123abc"
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.persistence.dataSourceRef.kind":     "PersistentVolumeClaim",
-				"database.persistence.dataSourceRef.name":     "some-other-sm",
-				"database.persistence.dataSourceRef.apiGroup": "null", //Unset the default
+				"database.snapshotRestore.backupId": backupId,
+				// Escape curly braces so that they are not processed as JSON by helm.RenderTemplate()
+				"database.snapshotRestore.snapshotNameTemplate": `\{\{.backupId\}\}-\{\{.volumeType\}\}-volume-snapshot`,
+				"database.persistence.validateDataSources":      "false", // Disable validation of the data source references
+				"database.sm.hotCopy.journalPath.enabled":       "true",
+				"database.sm.noHotCopy.journalPath.enabled":     "true",
 			},
 		}
 
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
-			assert.Equal(t, "PersistentVolumeClaim", obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.Kind)
-			assert.Equal(t, "some-other-sm", obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.Name)
-			assert.Nil(t, obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.APIGroup)
-			assert.Nil(t, obj.Spec.VolumeClaimTemplates[0].Spec.DataSourceRef.Namespace)
+			archiveFound := false
+			journalFound := false
+			for _, volumeClaimTemplate := range obj.Spec.VolumeClaimTemplates {
+				if volumeClaimTemplate.Name == "archive-volume" || volumeClaimTemplate.Name == "journal-volume" {
+					if volumeClaimTemplate.Name == "archive-volume" {
+						archiveFound = true
+					} else {
+						journalFound = true
+					}
+					assert.Equal(t, "snapshot.storage.k8s.io", *volumeClaimTemplate.Spec.DataSourceRef.APIGroup)
+					assert.Equal(t, "VolumeSnapshot", volumeClaimTemplate.Spec.DataSourceRef.Kind)
+					assert.Equal(t, fmt.Sprintf("%s-%s-snapshot", backupId, volumeClaimTemplate.Name), volumeClaimTemplate.Spec.DataSourceRef.Name)
+					assert.Nil(t, volumeClaimTemplate.Spec.DataSourceRef.Namespace)
+				}
+			}
+			assert.True(t, archiveFound)
+			assert.True(t, journalFound)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", backupId))
+		}
+	})
+
+	// Render volume snapshot data sources by only specifying name of data sources
+	t.Run("testDataSources", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.persistence.archiveDataSource.name": "archive-volume-snapshot",
+				"database.persistence.journalDataSource.name": "journal-volume-snapshot",
+				"database.persistence.validateDataSources":    "false", // Disable validation of the data source references
+				"database.sm.hotCopy.journalPath.enabled":     "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			archiveFound := false
+			journalFound := false
+			for _, volumeClaimTemplate := range obj.Spec.VolumeClaimTemplates {
+				if volumeClaimTemplate.Name == "archive-volume" || volumeClaimTemplate.Name == "journal-volume" {
+					if volumeClaimTemplate.Name == "archive-volume" {
+						archiveFound = true
+					} else {
+						journalFound = true
+					}
+					assert.Equal(t, "snapshot.storage.k8s.io", *volumeClaimTemplate.Spec.DataSourceRef.APIGroup)
+					assert.Equal(t, "VolumeSnapshot", volumeClaimTemplate.Spec.DataSourceRef.Kind)
+					assert.Equal(t, volumeClaimTemplate.Name+"-snapshot", volumeClaimTemplate.Spec.DataSourceRef.Name)
+					assert.Nil(t, volumeClaimTemplate.Spec.DataSourceRef.Namespace)
+				}
+			}
+			assert.True(t, archiveFound)
+			assert.True(t, journalFound)
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
 	})
 
-	// Test starting with an old values.yaml file that does not have default values set for dataSourceRef
+	// Test to make sure that we can omit optional fields when defining a data source (such as when copying an existing PVC)
+	t.Run("testPvcDataSources", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.persistence.archiveDataSource.kind":      "PersistentVolumeClaim",
+				"database.persistence.archiveDataSource.name":      "archive-volume-otherdb-0",
+				"database.persistence.archiveDataSource.namespace": "otherns",
+				"database.persistence.archiveDataSource.apiGroup":  "null", // Unset the default
+				"database.persistence.journalDataSource.kind":      "PersistentVolumeClaim",
+				"database.persistence.journalDataSource.name":      "journal-volume-otherdb-0",
+				"database.persistence.journalDataSource.namespace": "otherns",
+				"database.persistence.journalDataSource.apiGroup":  "null",  // Unset the default
+				"database.persistence.validateDataSources":         "false", // Disable validation of the data source references
+				"database.sm.hotCopy.journalPath.enabled":          "true",
+				"database.sm.noHotCopy.journalPath.enabled":        "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			archiveFound := false
+			journalFound := false
+			for _, volumeClaimTemplate := range obj.Spec.VolumeClaimTemplates {
+				if volumeClaimTemplate.Name == "archive-volume" || volumeClaimTemplate.Name == "journal-volume" {
+					if volumeClaimTemplate.Name == "archive-volume" {
+						archiveFound = true
+					} else {
+						journalFound = true
+					}
+					assert.Nil(t, volumeClaimTemplate.Spec.DataSourceRef.APIGroup)
+					assert.Equal(t, "PersistentVolumeClaim", volumeClaimTemplate.Spec.DataSourceRef.Kind)
+					assert.Equal(t, volumeClaimTemplate.Name+"-otherdb-0", volumeClaimTemplate.Spec.DataSourceRef.Name)
+					assert.Equal(t, "otherns", *volumeClaimTemplate.Spec.DataSourceRef.Namespace)
+				}
+			}
+			assert.True(t, archiveFound)
+			assert.True(t, journalFound)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
+		}
+	})
+
+	// Render volume snapshots with validation (enabled by default) and check that it fails due to missing volume snapshot
+	t.Run("testSnapshotRestoreValidation", func(t *testing.T) {
+		backupId := "123abc"
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.snapshotRestore.backupId": backupId,
+			},
+		}
+
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Invalid data source: VolumeSnapshot/123abc-archive not found in namespace default")
+	})
+
+	// Render PVC data source with validation (enabled by default) and check that it fails due to missing PVC
+	t.Run("testDataSourceValidation", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.persistence.journalDataSource.kind":      "PersistentVolumeClaim",
+				"database.persistence.journalDataSource.name":      "journal-volume-otherdb-0",
+				"database.persistence.journalDataSource.namespace": "otherns",
+				"database.persistence.journalDataSource.apiGroup":  "null", // Unset the default
+				"database.sm.hotCopy.journalPath.enabled":          "true",
+			},
+		}
+
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		assert.NotNil(t, err)
+		assert.Contains(t, err.Error(), "Invalid data source: PersistentVolumeClaim/journal-volume-otherdb-0 not found in namespace otherns")
+	})
+
+	// Test starting with an old values.yaml file that does not have default values set for archiveDataSource and journalDataSource
 	t.Run("testLegacyValues", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.persistence.dataSourceRef":                          "null",
-				"database.sm.hotCopy.journalPath.persistence.dataSourceRef":   "null",
-				"database.sm.noHotCopy.journalPath.persistence.dataSourceRef": "null",
-				"database.sm.hotCopy.journalPath.enabled":                     "true",
-				"database.sm.noHotCopy.journalPath.enabled":                   "true",
+				"database.persistence.archiveDataSource":    "null",
+				"database.persistence.journalDataSource":    "null",
+				"database.sm.hotCopy.journalPath.enabled":   "true",
+				"database.sm.noHotCopy.journalPath.enabled": "true",
 			},
 		}
 
@@ -2619,7 +2843,7 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			for _, template := range obj.Spec.VolumeClaimTemplates {
 				assert.Nil(t, template.Spec.DataSourceRef)
 			}
-			assert.False(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "false"))
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
 	})

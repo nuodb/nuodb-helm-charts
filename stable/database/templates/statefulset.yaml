@@ -65,6 +65,7 @@ spec:
       tolerations:
 {{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
       {{- end }}
+      {{- include "database.sm.shareProcessNamespace" . | indent 6 -}}
       {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDisk) "true" }}
       initContainers:
       - name: init-disk
@@ -173,12 +174,8 @@ spec:
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
         - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled}}" }
-        {{- if not (empty .Values.database.persistence.dataSourceRef) }}
-          {{- if (not (empty .Values.database.persistence.dataSourceRef.name)) }}
-        - { name: SNAPSHOT_RESTORED,   value: "true" }
-          {{- end }}
-        {{- end }}
-        - { name: BACKUP_ID,           value: "{{ .Values.database.autoImport.backupId }}" }
+        - { name: SNAPSHOT_RESTORED,   value: "{{- include "database.snapshotRestored" . }}" }
+        - { name: BACKUP_ID,           value: "{{ .Values.database.snapshotRestore.backupId }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -260,8 +257,49 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
-      {{- include "nuodb.sidecar" (list . .Values.database.sm) | nindent 6 }}
-{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
+      - name: backup-hooks
+        image: {{ include "backupHooks.image" . }}
+        imagePullPolicy: {{ default "" .Values.database.backupHooks.image.pullPolicy }}
+        args:
+          - python
+          - /backup_hooks.py
+          - server
+          - --port=8000
+        ports:
+        - containerPort: 8000
+          protocol: TCP
+        env:
+          - name: USE_SUSPEND
+            value: {{ include "defaultfalse" .Values.database.backupHooks.useSuspend | quote }}
+          - name: NUODB_ARCHIVE_DIR
+            value: {{ printf "/mnt/archive/%s/%s" .Values.admin.domain .Values.database.name }}
+          {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
+          - name: NUODB_JOURNAL_DIR
+            value: {{ printf "/mnt/journal/%s/%s" .Values.admin.domain .Values.database.name }}
+          {{- end }}
+        resources: {}
+        {{- if and
+            (eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true")
+            (not (eq (include "defaultfalse" .Values.database.backupHooks.useSuspend) "true")) }}
+        securityContext:
+          privileged: true
+        {{- else }}
+        {{- include "sc.containerSecurityContext" . | indent 8 }}
+        {{- end }}
+        volumeMounts:
+        - name: backup-hooks
+          mountPath: /backup_hooks.py
+          subPath: backup_hooks.py
+        - name: archive-volume
+          mountPath: /mnt/archive
+        {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
+        - name: journal-volume
+          mountPath: /mnt/journal
+        {{- end }}
+      {{- end }}
+      {{- include "nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
+      {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}
       - name: configurations
@@ -284,6 +322,10 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
+      - name: backup-hooks
+        configMap:
+          name: {{ template "database.fullname" . }}-backup-hooks
+          defaultMode: 0666
       {{- include "database.tlsVolume" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}
@@ -309,23 +351,18 @@ spec:
       {{- range .Values.database.persistence.accessModes }}
         - {{ . }}
       {{- end }}
-    {{- if .Values.database.persistence.storageClass }}
+      {{- if .Values.database.persistence.storageClass }}
       {{- if (eq "-" .Values.database.persistence.storageClass) }}
       storageClassName: ""
       {{- else }}
       storageClassName: {{ .Values.database.persistence.storageClass }}
       {{- end }}
-    {{- end }}
-{{- if .Values.database.isManualVolumeProvisioning }}
+      {{- end }}
+      {{- include "database.archiveDataSource" . | nindent 6 }}
+      {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
         matchLabels:
           database: {{ .Values.database.name }}
-{{- end }}
-      {{- if .Values.database.persistence.dataSourceRef }}
-        {{- if .Values.database.persistence.dataSourceRef.name }}
-      dataSourceRef:
-        {{- toYaml .Values.database.persistence.dataSourceRef | nindent 8}}
-        {{- end }}
       {{- end }}
       resources:
         requests:
@@ -341,24 +378,19 @@ spec:
       {{- range .Values.database.sm.noHotCopy.journalPath.persistence.accessModes }}
         - {{ . }}
       {{- end }}
-    {{- if .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
+      {{- if .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
       {{- if (eq "-" .Values.database.sm.noHotCopy.journalPath.persistence.storageClass) }}
       storageClassName: ""
       {{- else }}
       storageClassName: {{ .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
       {{- end }}
-    {{- end }}
-    {{- if .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef }}
-      {{- if .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef.name }}
-      dataSourceRef:
-      {{- toYaml .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
       {{- end }}
-    {{- end }}
-{{- if .Values.database.isManualVolumeProvisioning }}
+      {{- include "database.journalDataSource" . | nindent 6 }}
+      {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
         matchLabels:
           database: {{ .Values.database.name }}
-{{- end }}
+      {{- end }}
       resources:
         requests:
           storage: {{ .Values.database.sm.noHotCopy.journalPath.persistence.size }}
@@ -451,6 +483,7 @@ spec:
       tolerations:
 {{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
       {{- end }}
+      {{- include "database.sm.shareProcessNamespace" . | indent 6 -}}
       {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDisk) "true" }}
       initContainers:
       - name: init-disk
@@ -559,13 +592,9 @@ spec:
         - { name: COMPONENT_NAME,    value: "sm" }
         - { name: OVERWRITE_COPIES,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
-        - { name: SEPARATE_JOURNAL,  value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled}}" }
-        {{- if not (empty .Values.database.persistence.dataSourceRef) }}
-          {{- if (not (empty .Values.database.persistence.dataSourceRef.name)) }}
-        - { name: SNAPSHOT_RESTORED,   value: "true" }
-          {{- end }}
-        {{- end }}
-        - { name: BACKUP_ID,         value: "{{ .Values.database.autoImport.backupId }}" }
+        - { name: SEPARATE_JOURNAL,  value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled }}" }
+        - { name: SNAPSHOT_RESTORED, value: "{{- include "database.snapshotRestored" . }}" }
+        - { name: BACKUP_ID,         value: "{{ .Values.database.snapshotRestore.backupId }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -649,8 +678,8 @@ spec:
           # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
-      {{- include "nuodb.sidecar" (list . .Values.database.sm) | nindent 6 }}
-{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      {{- include "nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
+      {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}
       - name: configurations
@@ -698,23 +727,18 @@ spec:
       {{- range .Values.database.persistence.accessModes }}
         - {{ . }}
       {{- end }}
-    {{- if .Values.database.persistence.storageClass }}
+      {{- if .Values.database.persistence.storageClass }}
       {{- if (eq "-" .Values.database.persistence.storageClass) }}
       storageClassName: ""
       {{- else }}
       storageClassName: {{ .Values.database.persistence.storageClass }}
       {{- end }}
-    {{- end }}
-{{- if .Values.database.isManualVolumeProvisioning }}
+      {{- end }}
+      {{- include "database.archiveDataSource" . | nindent 6 }}
+      {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
         matchLabels:
           database: {{ .Values.database.name }}
-{{- end }}
-      {{- if .Values.database.persistence.dataSourceRef }}
-        {{- if .Values.database.persistence.dataSourceRef.name }}
-      dataSourceRef:
-        {{- toYaml .Values.database.persistence.dataSourceRef | nindent 8}}
-        {{- end }}
       {{- end }}
       resources:
         requests:
@@ -730,24 +754,19 @@ spec:
       {{- range .Values.database.sm.hotCopy.journalPath.persistence.accessModes }}
         - {{ . }}
       {{- end }}
-    {{- if .Values.database.sm.hotCopy.journalPath.persistence.storageClass }}
+      {{- if .Values.database.sm.hotCopy.journalPath.persistence.storageClass }}
       {{- if (eq "-" .Values.database.sm.hotCopy.journalPath.persistence.storageClass) }}
       storageClassName: ""
       {{- else }}
       storageClassName: {{ .Values.database.sm.hotCopy.journalPath.persistence.storageClass }}
       {{- end }}
-    {{- end }}
-    {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef }}
-      {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef.name }}
-      dataSourceRef:
-      {{- toYaml .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
       {{- end }}
-    {{- end }}
-{{- if .Values.database.isManualVolumeProvisioning }}
+      {{- include "database.journalDataSource" . | nindent 6 }}
+      {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
         matchLabels:
           database: {{ .Values.database.name }}
-{{- end }}
+      {{- end }}
       resources:
         requests:
           storage: {{ .Values.database.sm.hotCopy.journalPath.persistence.size }}

@@ -63,6 +63,29 @@ Also, we can't use a single if because lazy evaluation is not an option
 {{- end -}}
 
 {{/*
+Return the backup hooks sidecar image
+*/}}
+{{- define "backupHooks.image" -}}
+{{- $registryName := .Values.database.backupHooks.image.registry -}}
+{{- $repositoryName := .Values.database.backupHooks.image.repository -}}
+{{- $tag := .Values.database.backupHooks.image.tag | toString -}}
+{{/*
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
+Also, we can't use a single if because lazy evaluation is not an option
+*/}}
+{{- if .Values.global }}
+    {{- if .Values.global.imageRegistry }}
+        {{- printf "%s/%s:%s" .Values.global.imageRegistry $repositoryName $tag -}}
+    {{- else -}}
+        {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+    {{- end -}}
+{{- else -}}
+    {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
 Return init image
 */}}
 {{- define "init.image" -}}
@@ -757,4 +780,130 @@ checksum/tls-passwords: {{ sha256sum $password }}
 checksum/tls-keystore: {{ sha256sum $keystore }}
   {{- end }}
 {{- end }}
+{{- end -}}
+
+{{/*
+Set shareProcessNamespace=true if needed for an SM statefulset.
+*/}}
+{{- define "database.sm.shareProcessNamespace" -}}
+{{- $hasSidecars := false -}}
+{{- if .Values.nuocollector -}}
+  {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" -}}
+    {{- $hasSidecars = true -}}
+  {{- end -}}
+{{- end -}}
+{{- if .Values.database.backupHooks -}}
+  {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" -}}
+    {{- $hasSidecars = true -}}
+  {{- end -}}
+{{- end -}}
+{{- if $hasSidecars }}
+shareProcessNamespace: true
+{{- end }}
+{{- end -}}
+
+{{/*
+Set shareProcessNamespace=true if needed for a TE deployment.
+*/}}
+{{- define "database.te.shareProcessNamespace" -}}
+{{- $hasSidecars := false -}}
+{{- if .Values.nuocollector -}}
+  {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" -}}
+    {{- $hasSidecars = true -}}
+  {{- end -}}
+{{- end -}}
+{{- if $hasSidecars }}
+shareProcessNamespace: true
+{{- end }}
+{{- end -}}
+
+{{/*
+Render dataSourceRef if dataSourceRef.name is not empty.
+*/}}
+{{- define "database.dataSource" -}}
+{{- if . -}}
+  {{- if .name -}}
+dataSourceRef:
+  {{- toYaml . | nindent 2 }}
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render dataSourceRef from snapshotRestore configuration.
+*/}}
+{{- define "database.snapshotRestoreDataSource" -}}
+{{- $ := index . 0 -}}
+{{- $volumeType := index . 1 -}}
+{{- if $.Values.database.snapshotRestore -}}
+  {{- if $.Values.database.snapshotRestore.backupId -}}
+    {{- $context := dict "backupId" $.Values.database.snapshotRestore.backupId "volumeType" $volumeType "Template" $.Template -}}
+dataSourceRef:
+  name: {{ tpl $.Values.database.snapshotRestore.snapshotNameTemplate $context | quote }}
+  kind: VolumeSnapshot
+  apiGroup: snapshot.storage.k8s.io
+  {{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Validate and render dataSourceRef.
+*/}}
+{{- define "database.validateAndRenderDataSource" -}}
+{{- $ := index . 0 -}}
+{{- $dataSource := index . 1 -}}
+{{- if $dataSource -}}
+  {{- if eq (include "defaulttrue" $.Values.database.persistence.validateDataSources) "true" -}}
+    {{- $ref := (fromYaml $dataSource).dataSourceRef -}}
+    {{- $apiVersion := $ref.apiGroup -}}
+    {{- if $apiVersion -}}
+      {{- $apiVersion = printf "%s/v1" $apiVersion -}}
+    {{- else -}}
+      {{- $apiVersion = "v1" -}}
+    {{- end -}}
+    {{- $namespace := default $.Release.Namespace $ref.namespace -}}
+    {{- if not (lookup $apiVersion $ref.kind $namespace $ref.name) -}}
+      {{- fail (printf "Invalid data source: %s/%s not found in namespace %s" $ref.kind $ref.name $namespace) -}}
+    {{- end -}}
+  {{- end -}}
+  {{- print $dataSource -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Render archive dataSourceRef, giving precedence to
+database.persistent.archiveDataSource and falling back to snapshot name
+resolved from snapshotRestore configuration.
+*/}}
+{{- define "database.archiveDataSource" -}}
+{{- $dataSource := include "database.dataSource" .Values.database.persistence.archiveDataSource -}}
+{{- if not $dataSource -}}
+  {{- $dataSource = include "database.snapshotRestoreDataSource" (list . "archive") -}}
+{{- end -}}
+{{- include "database.validateAndRenderDataSource" (list . $dataSource) -}}
+{{- end -}}
+
+{{/*
+Render journal dataSourceRef, giving precedence to
+database.persistent.journalDataSource and falling back to snapshot name
+resolved from snapshotRestore configuration.
+*/}}
+{{- define "database.journalDataSource" -}}
+{{- $dataSource := include "database.dataSource" .Values.database.persistence.journalDataSource -}}
+{{- if not $dataSource -}}
+  {{- $dataSource = include "database.snapshotRestoreDataSource" (list . "journal") -}}
+{{- end -}}
+{{- include "database.validateAndRenderDataSource" (list . $dataSource) -}}
+{{- end -}}
+
+{{/*
+Get SNAPSHOT_RESTORED environment variable value.
+*/}}
+{{- define "database.snapshotRestored" -}}
+{{- $dataSource := include "database.archiveDataSource" . -}}
+{{- if $dataSource -}}
+true
+{{- else -}}
+false
+{{- end -}}
 {{- end -}}
