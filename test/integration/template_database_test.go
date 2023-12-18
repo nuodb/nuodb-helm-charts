@@ -2531,7 +2531,7 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			for _, template := range obj.Spec.VolumeClaimTemplates {
 				assert.Nil(t, template.Spec.DataSourceRef)
 			}
-			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "false"))
+			assert.False(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
 	})
@@ -2619,7 +2619,7 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			for _, template := range obj.Spec.VolumeClaimTemplates {
 				assert.Nil(t, template.Spec.DataSourceRef)
 			}
-			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "false"))
+			assert.False(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
 	})

@@ -173,7 +173,11 @@ spec:
         - { name: OVERWRITE_COPIES,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,    value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
         - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled}}" }
-        - { name: SNAPSHOT_RESTORED,   value: "{{ and (not (empty .Values.database.persistence.dataSourceRef)) (not (empty .Values.database.persistence.dataSourceRef.name)) }}" }
+        {{- if not (empty .Values.database.persistence.dataSourceRef) }}
+          {{- if (not (empty .Values.database.persistence.dataSourceRef.name)) }}
+        - { name: SNAPSHOT_RESTORED,   value: "true" }
+          {{- end }}
+        {{- end }}
         - { name: BACKUP_ID,           value: "{{ .Values.database.autoImport.backupId }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
@@ -552,7 +556,11 @@ spec:
         - { name: OVERWRITE_COPIES,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.copies | default "3" }}" }
         - { name: OVERWRITE_WINDOW,  value: "{{ .Values.database.sm.logPersistence.overwriteBackoff.windowMinutes | default "120" }}" }
         - { name: SEPARATE_JOURNAL,  value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled}}" }
-        - { name: SNAPSHOT_RESTORED, value: "{{ and (not (empty .Values.database.persistence.dataSourceRef)) (not (empty .Values.database.persistence.dataSourceRef.name)) }}" }
+        {{- if not (empty .Values.database.persistence.dataSourceRef) }}
+          {{- if (not (empty .Values.database.persistence.dataSourceRef.name)) }}
+        - { name: SNAPSHOT_RESTORED,   value: "true" }
+          {{- end }}
+        {{- end }}
         - { name: BACKUP_ID,         value: "{{ .Values.database.autoImport.backupId }}" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
