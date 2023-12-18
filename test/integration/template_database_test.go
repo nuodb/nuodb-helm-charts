@@ -2600,4 +2600,27 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
 	})
+
+	// Test starting with an old values.yaml file that does not have default values set for dataSourceRef
+	t.Run("testLegacyValues", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.persistence.dataSourceRef":                          "null",
+				"database.sm.hotCopy.journalPath.persistence.dataSourceRef":   "null",
+				"database.sm.noHotCopy.journalPath.persistence.dataSourceRef": "null",
+				"database.sm.hotCopy.journalPath.enabled":                     "true",
+				"database.sm.noHotCopy.journalPath.enabled":                   "true",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, template := range obj.Spec.VolumeClaimTemplates {
+				assert.Nil(t, template.Spec.DataSourceRef)
+			}
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "false"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
+		}
+	})
 }

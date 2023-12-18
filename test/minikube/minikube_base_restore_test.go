@@ -460,13 +460,15 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 
 	sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":                       testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory":                    testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":                       testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory":                    testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.persistence.storageClass":                        testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.sm.hotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.sm.hotCopy.journalPath.enabled":                  "true",
+			"database.sm.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.persistence.storageClass":                          testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.sm.noHotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.sm.noHotCopy.journalPath.enabled":                  "true",
+			"database.sm.noHotCopy.replicas":                             "1",
+			"database.sm.hotCopy.replicas":                               "0",
 		},
 	})
 
@@ -474,7 +476,7 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 
 	require.NoError(t, err, output)
 
-	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-hotcopy-0", sourceDatabaseChartName)
+	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-0", sourceDatabaseChartName)
 	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
 		"echo \"123abc\" > /var/opt/nuodb/archive/nuodb/demo/backup.txt")
 	require.NoError(t, err, output)
@@ -498,21 +500,23 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 	restoredDb := "db-clone"
 	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":                                 testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory":                              testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":                                 testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory":                              testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.sm.hotCopy.journalPath.persistence.storageClass":           testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.persistence.storageClass":                                  testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.name":                                                      restoredDb,
-			"database.persistence.dataSourceRef.kind":                            "VolumeSnapshot",
-			"database.persistence.dataSourceRef.name":                            archiveSnapshotName,
-			"database.persistence.dataSourceRef.apiGroup":                        "snapshot.storage.k8s.io",
-			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.kind":     "VolumeSnapshot",
-			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.name":     journalSnapshotName,
-			"database.sm.hotCopy.journalPath.persistence.dataSourceRef.apiGroup": "snapshot.storage.k8s.io",
-			"database.autoImport.backupId":                                       "123abc",
-			"database.sm.hotCopy.journalPath.enabled":                            "true",
+			"database.sm.resources.requests.cpu":                                   testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":                                testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                                   testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":                                testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.noHotCopy.journalPath.persistence.storageClass":           testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.persistence.storageClass":                                    testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.name":                                                        restoredDb,
+			"database.persistence.dataSourceRef.kind":                              "VolumeSnapshot",
+			"database.persistence.dataSourceRef.name":                              archiveSnapshotName,
+			"database.persistence.dataSourceRef.apiGroup":                          "snapshot.storage.k8s.io",
+			"database.sm.noHotCopy.journalPath.persistence.dataSourceRef.kind":     "VolumeSnapshot",
+			"database.sm.noHotCopy.journalPath.persistence.dataSourceRef.name":     journalSnapshotName,
+			"database.sm.noHotCopy.journalPath.persistence.dataSourceRef.apiGroup": "snapshot.storage.k8s.io",
+			"database.autoImport.backupId":                                         "123abc",
+			"database.sm.noHotCopy.journalPath.enabled":                            "true",
+			"database.sm.noHotCopy.replicas":                                       "1",
+			"database.sm.hotCopy.replicas":                                         "0",
 		},
 	})
 
