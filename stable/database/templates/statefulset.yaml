@@ -321,9 +321,11 @@ spec:
         matchLabels:
           database: {{ .Values.database.name }}
 {{- end }}
-      {{- if and .Values.database.persistence.dataSourceRef .Values.database.persistence.dataSourceRef.name }}
+      {{- if .Values.database.persistence.dataSourceRef }}
+        {{- if .Values.database.persistence.dataSourceRef.name }}
       dataSourceRef:
         {{- toYaml .Values.database.persistence.dataSourceRef | nindent 8}}
+        {{- end }}
       {{- end }}
       resources:
         requests:
@@ -346,9 +348,11 @@ spec:
       storageClassName: {{ .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
       {{- end }}
     {{- end }}
-    {{- if and .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef.name }}
+    {{- if .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef }}
+      {{- if .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef.name }}
       dataSourceRef:
       {{- toYaml .Values.database.sm.noHotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
+      {{- end }}
     {{- end }}
 {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
@@ -706,9 +710,11 @@ spec:
         matchLabels:
           database: {{ .Values.database.name }}
 {{- end }}
-      {{- if and .Values.database.persistence.dataSourceRef .Values.database.persistence.dataSourceRef.name }}
+      {{- if .Values.database.persistence.dataSourceRef }}
+        {{- if .Values.database.persistence.dataSourceRef.name }}
       dataSourceRef:
         {{- toYaml .Values.database.persistence.dataSourceRef | nindent 8}}
+        {{- end }}
       {{- end }}
       resources:
         requests:
@@ -731,9 +737,11 @@ spec:
       storageClassName: {{ .Values.database.sm.hotCopy.journalPath.persistence.storageClass }}
       {{- end }}
     {{- end }}
-    {{- if and  .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef.name }}
+    {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef }}
+      {{- if .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef.name }}
       dataSourceRef:
       {{- toYaml .Values.database.sm.hotCopy.journalPath.persistence.dataSourceRef | nindent 8}}
+      {{- end }}
     {{- end }}
 {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
