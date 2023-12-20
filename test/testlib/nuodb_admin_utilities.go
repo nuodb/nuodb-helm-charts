@@ -145,8 +145,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 	// If the nuodb.lic is provided explicitly then don't apply the
 	// license from the env variable
-	if values, ok := options.SetValues["admin.configFiles.nuodb\\.lic"]; !ok || values == "" {
-
+	if !isLicenseSetInValues(options) {
 		// LIMITED license takes priority over Enterprise license because
 		// we don't want to change the test flow for NuoDB version 6.0.
 		// Any test which requires Enterprise license would install it using
@@ -166,6 +165,12 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	}
 
 	return
+}
+
+func isLicenseSetInValues(options *helm.Options) bool {
+	licFile := options.SetValues["admin.configFiles.nuodb\\.lic"]
+	licSecret := options.SetValues["admin.license.secret"]
+	return licFile != "" || licSecret != ""
 }
 
 func InstallAdmin(t *testing.T, options *helm.Options, helmChartReleaseName string) {

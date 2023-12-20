@@ -63,8 +63,7 @@ func verifyTLSSecrets(t assert.TestingT, spec v1.PodSpec, options *helm.Options)
 	assert.True(t, found, "Expected to find tls volume")
 	assert.NotNil(t, tlsVolume.Projected)
 	assert.NotNil(t, tlsVolume.Projected.DefaultMode)
-	// volume mode 0440 is int32(288)
-	assert.Equal(t, int32(288), *tlsVolume.Projected.DefaultMode)
+	assert.Equal(t, int32(0440), *tlsVolume.Projected.DefaultMode)
 	for _, tlsKeyPrefix := range []string{"admin.tlsClientPEM", "admin.tlsCACert", "admin.tlsKeyStore", "admin.tlsTrustStore"} {
 		secretNameValue := fmt.Sprintf("%s.secret", tlsKeyPrefix)
 		if secretName, ok := options.SetValues[secretNameValue]; ok {
@@ -1503,4 +1502,40 @@ func TestAdminTLSConfig(t *testing.T) {
 				}))
 		}
 	})
+}
+
+func TestAdminLicenseFromSecret(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.license.secret": "nuodb-license",
+			"admin.license.key":    "content",
+		},
+	}
+
+	// Render and decode StatefulSets
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		// Verify the license volume
+		licenseVolume, found := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "license")
+		assert.True(t, found, "Expected to find license volume")
+		assert.NotNil(t, licenseVolume.Secret)
+		assert.NotNil(t, licenseVolume.Secret.DefaultMode)
+		assert.Equal(t, int32(0440), *licenseVolume.Secret.DefaultMode)
+		assert.Equal(t, options.SetValues["admin.license.secret"], licenseVolume.Secret.SecretName)
+		assert.Len(t, licenseVolume.Secret.Items, 1, "Expected to find nuodb.lic item")
+		assert.Equal(t, options.SetValues["admin.license.key"], licenseVolume.Secret.Items[0].Key)
+		assert.Equal(t, "nuodb.lic", licenseVolume.Secret.Items[0].Path)
+
+		// Verify the license volume mount
+		licenseVolumeMount, found := testlib.GetMount(obj.Spec.Template.Spec.Containers[0].VolumeMounts, "license")
+		assert.True(t, found, "Expected to find license volume mount")
+		assert.Equal(t, "/etc/nuodb/license", licenseVolumeMount.MountPath)
+		assert.True(t, licenseVolumeMount.ReadOnly)
+
+		// Verify the NuoAdmin config option
+		assert.Contains(t, obj.Spec.Template.Spec.Containers[0].Args, "licenseFilePath=/etc/nuodb/license/nuodb.lic")
+	}
 }
