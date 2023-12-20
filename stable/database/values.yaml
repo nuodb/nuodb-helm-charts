@@ -235,6 +235,15 @@ database:
       - ReadWriteOnce
     # storageClass: "-"
 
+    # The data source for the archive PVC
+    # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
+    # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
+    dataSourceRef:
+      # name: archive-snapshot
+      # namespace: old-namespace
+      kind: VolumeSnapshot
+      apiGroup: snapshot.storage.k8s.io
+
   ## database-wide options.
   # These are applied using the --database-options on the startup command
   # change these to values appropriate for this database
@@ -264,6 +273,9 @@ database:
     credentials: ""
     stripLevels: "1"
     type: ""
+
+    # ID to validate dataSourceRef values
+    backupId: ""
 
   # ensure all values here are strings - so quote any purely numeric values
   autoRestore:
@@ -391,6 +403,15 @@ database:
             - ReadWriteOnce
           # storageClass: "-"
 
+          # The data source for journal PVC, only applies to SMs with hotcopy enabled
+          # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
+          # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
+          dataSourceRef:
+            # name: journal-snapshot
+            # namespace: old-namespace
+            kind: VolumeSnapshot
+            apiGroup: snapshot.storage.k8s.io
+
       coldStorage:
         credentials: ""
 
@@ -425,6 +446,15 @@ database:
           accessModes:
             - ReadWriteOnce
           # storageClass: "-"
+
+          # The data source for journal PVC, only applies to SMs with hotcopy disabled
+          # see https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references
+          # schema https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core
+          dataSourceRef:
+            # name: journal-snapshot
+            # namespace: old-namespace
+            kind: VolumeSnapshot
+            apiGroup: snapshot.storage.k8s.io
 
     ## resources
     # k8s resource min (request) and max (limit)

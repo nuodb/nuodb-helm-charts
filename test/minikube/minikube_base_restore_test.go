@@ -502,3 +502,93 @@ func TestKubernetesAutoRestore(t *testing.T) {
 		testlib.CheckArchives(t, namespaceName, admin0, opt.DbName, 2, 0)
 	})
 }
+
+// Basic test for creating a database off of a VolumeSnapshot
+func TestKubernetesSnapshotRestore(t *testing.T) {
+	// TODO: Once it exists, use proper database snapshot function to freeze database, set backup id, and create volume snapshots
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-0", admin)
+
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_ADMIN, t, func() {
+		k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
+		testlib.DescribePods(t, namespaceName, admin)
+	})
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.persistence.storageClass":                          testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.sm.noHotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.sm.noHotCopy.journalPath.enabled":                  "true",
+			"database.sm.noHotCopy.replicas":                             "1",
+			"database.sm.hotCopy.replicas":                               "0",
+		},
+	})
+
+	output, err := testlib.RunSQL(t, namespaceName, admin0, "demo", "CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123)")
+
+	require.NoError(t, err, output)
+
+	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-0", sourceDatabaseChartName)
+	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+		"echo \"123abc\" > /var/opt/nuodb/archive/nuodb/demo/backup.txt")
+	require.NoError(t, err, output)
+
+	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--", "bash", "-c",
+		"echo \"123abc\" > /var/opt/nuodb/journal/nuodb/demo/backup.txt")
+	require.NoError(t, err, output)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SNAPSHOT)
+
+	achiveVolumeName := "archive-volume-" + smPod
+	archiveSnapshotName := "archive-snapshot"
+	testlib.SnapshotVolume(t, namespaceName, achiveVolumeName, archiveSnapshotName)
+
+	journalVolumeName := "journal-volume-" + smPod
+	journalSnapshotName := "journal-snapshot"
+	testlib.SnapshotVolume(t, namespaceName, journalVolumeName, journalSnapshotName)
+
+	helm.DeleteE(t, &helm.Options{KubectlOptions: k8s.NewKubectlOptions("", "", namespaceName)}, sourceDatabaseChartName, true)
+
+	restoredDb := "db-clone"
+	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":                                   testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":                                testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                                   testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":                                testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.noHotCopy.journalPath.persistence.storageClass":           testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.persistence.storageClass":                                    testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.name":                                                        restoredDb,
+			"database.persistence.dataSourceRef.kind":                              "VolumeSnapshot",
+			"database.persistence.dataSourceRef.name":                              archiveSnapshotName,
+			"database.persistence.dataSourceRef.apiGroup":                          "snapshot.storage.k8s.io",
+			"database.sm.noHotCopy.journalPath.persistence.dataSourceRef.kind":     "VolumeSnapshot",
+			"database.sm.noHotCopy.journalPath.persistence.dataSourceRef.name":     journalSnapshotName,
+			"database.sm.noHotCopy.journalPath.persistence.dataSourceRef.apiGroup": "snapshot.storage.k8s.io",
+			"database.autoImport.backupId":                                         "123abc",
+			"database.sm.noHotCopy.journalPath.enabled":                            "true",
+			"database.sm.noHotCopy.replicas":                                       "1",
+			"database.sm.hotCopy.replicas":                                         "0",
+		},
+	})
+
+	output, err = testlib.RunSQL(t, namespaceName, admin0, restoredDb, "SELECT id FROM testtbl")
+	require.NoError(t, err, output)
+
+	require.True(t, strings.Contains(output, "123"))
+}

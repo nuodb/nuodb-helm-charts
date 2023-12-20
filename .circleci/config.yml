@@ -79,7 +79,7 @@ jobs:
         type: string
 
     machine:
-      image: ubuntu-2004:202201-02
+      image: ubuntu-2004:2023.07.1
 
     resource_class: <<parameters.resource-class>>
 
@@ -179,7 +179,7 @@ workflows:
           test-suite: "./test/minikube"
           tag: "long"
           requires-minikube: true
-          timeout: "90m"
+          timeout: "120m"
       - go-test:
           name: "Diagnostics tests"
           test-suite: "./test/minikube"

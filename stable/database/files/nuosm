@@ -387,6 +387,82 @@ function resolveLatestSource() {
   return 0
 }
 
+#=======================================
+# function - Test that a backup file (the first argument) exists and contains
+# the value of $BACKUP_ID
+#
+function checkBackupId() {
+  local backup_file=$1
+  [ -f $backup_file ] && [ "$(cat $backup_file | tr -d [:space:])" == "$BACKUP_ID" ]
+}
+
+#=======================================
+# function - Looks for a previous archive and journal and imports it
+#
+function loadFromSnapshot() {
+  local recreate_archives="false"
+
+  if [ ! -f "$DB_DIR/state.dat" ]; then
+    local archives=$( find "/var/opt/nuodb/archive" -name info.json )
+    if [ -z "$archives" ] || [ $(echo "$archives" | wc -l) != 1 ]; then 
+      die 1 "Did not find exactly 1 archive: ${archives}"
+    fi
+
+    local archive_path=$( dirname $archives )
+    log "Found snapshot at ${archive_path}"
+
+    if [ -n "$BACKUP_ID" ]; then
+      if ! checkBackupId ${archive_path}/backup.txt ; then
+        die 1 "Incorrect backup id in archive"
+      fi
+    fi
+
+    if [ "$SEPARATE_JOURNAL" == "true" ]; then
+      local relative_archive=$(realpath --relative-base=/var/opt/nuodb/archive $archive_path)
+      local expected_journal="/var/opt/nuodb/journal/${relative_archive}"
+
+      if [ ! -d $expected_journal ]; then
+        die 1 "Did not find a journal snapshot at '$expected_journal'"
+      fi
+      
+      if [ -n "$BACKUP_ID" ]; then
+        if ! checkBackupId ${expected_journal}/backup.txt ; then
+          die 1 "Incorrect backup id in journal"
+        fi
+      fi
+
+      rm -rf ${JOURNAL_DIR}
+      mv ${expected_journal} ${JOURNAL_DIR}
+
+    fi
+
+    # Don't move the archive until after we have done error checking.
+    # Once we move the archive, we are going to be in the `archive already exists` branch
+    # when kubernetes retries/restarts the pod.
+    rm -rf ${DB_DIR}
+    mv ${archive_path} ${DB_DIR}
+
+    local recreate_archives="true"
+  else
+    trace "archive already exists, not looking for snapshot archives"
+
+    local backup_file=${DB_DIR}/backup.txt
+    if [ -n "$BACKUP_ID" ] && [ -f  $backup_file ] ; then
+      if [ "$(cat $backup_file | tr -d [:space:])" == "$BACKUP_ID" ] ; then
+        local recreate_archives="true"
+      else
+        log "Archive present but with a wrong backupId. Did the SM crash during a snapshot?"
+      fi
+    fi
+  fi
+
+  if [ $recreate_archives == "true" ]; then
+    log "Removing outdated archive metadata"
+    rm ${DB_DIR}/info.json ${DB_DIR}/backup.txt
+    [ -e ${JOURNAL_DIR}/backup.txt ] && rm ${JOURNAL_DIR}/backup.txt
+  fi
+}
+
 #=============================
 # main routine
 #=============================
@@ -413,6 +489,10 @@ if [ "$SEPARATE_JOURNAL" == "true" ]; then
   journal_flags+=("--journal-dir")
   journal_flags+=("${JOURNAL_DIR}")
   log "journal-dir=${JOURNAL_DIR}"
+fi
+
+if [ "$SNAPSHOT_RESTORED" == "true" ]; then
+  loadFromSnapshot
 fi
 
 # Retry the first request against the admin layer to make sure that Raft
