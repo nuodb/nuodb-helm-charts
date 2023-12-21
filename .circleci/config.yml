@@ -196,10 +196,11 @@ workflows:
           tag: "large"
           requires-minikube: true
           resource-class: large
-      - go-test:
-          name: "Multi-cluster tests"
-          test-suite: "./test/multicluster"
-          requires-aks: true
+# HELM-411: Disable multi-cluster tests until the AWS cluster is integrated with CircleCI.
+#      - go-test:
+#          name: "Multi-cluster tests"
+#          test-suite: "./test/multicluster"
+#          requires-aks: true
   # Executes single Go test (disabled by default)
   single-test:
     when: << pipeline.parameters.run_single_test >>
