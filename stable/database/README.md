@@ -410,7 +410,7 @@ helm status database
 
 Verify the pods are running:
 
-```bash
+```console
 $ kubectl get pods
 NAME                                              READY   STATUS    RESTARTS   AGE
 admin-nuodb-cluster0-0                            1/1     Running   0          62s
@@ -424,7 +424,7 @@ The command displays the NuoDB Pods running on the Kubernetes cluster. When comp
 
 Verify the connected states of the database domain:
 
-```bash
+```console
 $ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 
 server version: 4.0.8-2-881d0e5d44, server license: Community
@@ -443,7 +443,7 @@ The command displays the status of NuoDB processes. The Servers section lists ad
 
 to scale-out the TEs, run:
 
-```bash
+```console
 $ kubectl scale deployment te-database-nuodb-cluster0-demo --replicas=2
 deployment.extensions/te-database-nuodb-cluster0-demo scaled
 ```
@@ -452,7 +452,7 @@ deployment.extensions/te-database-nuodb-cluster0-demo scaled
 
 This will clear the archive references and metadata from the admin layer if the default demo database was recreated
 
-```bash
+```
 kubectl exec -it admin-nuodb-cluster0-0  -- /bin/bash
 
 $ nuocmd get archives --db-name demo
@@ -481,7 +481,7 @@ The command removes all the Kubernetes components associated with the chart and 
 
 [1]: #adminconfigfiles
 [2]: #databaseconfigfiles
-[3]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Obtaining-and-Installing-NuoDB-Licenses.htm
-[4]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Host-Properties.htm
-[5]: http://doc.nuodb.com/Latest/Content/Data-Type-Mappings.htm
-[6]: http://doc.nuodb.com/Latest/Default.htm#Database-Options.htm
+[3]: https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/obtaining-and-installing-an-enterprise-edition-license
+[4]: https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/host-properties-nuoadmin.conf
+[5]: https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/data-type-mappings-nuodb-types.config
+[6]: https://doc.nuodb.com/nuodb/latest/reference-information/database-options

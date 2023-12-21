@@ -318,7 +318,7 @@ helm status admin
 
 Verify the pods are running:
 
-```bash
+```console
 $ kubectl get pods
 NAME                           READY     STATUS    RESTARTS   AGE
 admin-nuodb-cluster0-0         1/1       Running   0          29m
@@ -328,7 +328,7 @@ The command displays the NuoDB Pods running on the Kubernetes cluster. When comp
 
 Verify the connected states of the database domain:
 
-```bash
+```console
 $ kubectl exec -it admin-nuodb-cluster0-0 -- nuocmd show domain
 
 server version: 4.0.7-2-6526a2db74, server license: Community
@@ -359,6 +359,6 @@ helm delete admin
 
 The command removes all the Kubernetes components associated with the chart and deletes the release.
 
-[3]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Obtaining-and-Installing-NuoDB-Licenses.htm
-[4]: http://doc.nuodb.com/Latest/Content/Nuoadmin-Host-Properties.htm
-[5]: http://doc.nuodb.com/Latest/Content/Data-Type-Mappings.htm
+[3]: https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/obtaining-and-installing-an-enterprise-edition-license
+[4]: https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/host-properties-nuoadmin.conf
+[5]: https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/data-type-mappings-nuodb-types.config

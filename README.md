@@ -30,8 +30,8 @@ Helm 2 has reached it's end of life. The last Helm 2 security patch was released
 
 To add the NuoDB charts to your local helm repository, run:
 
-```
-helm repo add nuodb https://nuodb.github.io/nuodb-helm-charts
+```console
+$ helm repo add nuodb https://nuodb.github.io/nuodb-helm-charts
 "nuodb" has been added to your repositories
 ```
 
@@ -42,8 +42,8 @@ To list the NuoDB charts added to your repository, run `helm search repo nuodb/`
 
 The Incubator repository contains enhancements not yet available in the supported releases. This repository includes a sample application load generator. If you would like to install this sample application, then add the Incubator charts to your local helm repository, run:
 
-```
-helm repo add nuodb-incubator https://nuodb.github.io/nuodb-helm-charts/incubator
+```console
+$ helm repo add nuodb-incubator https://nuodb.github.io/nuodb-helm-charts/incubator
 "nuodb-incubator" has been added to your repositories
 ```
 
@@ -69,7 +69,7 @@ This project is still under active development. If you experience any [issues](h
 To run the tests in this project, Go 1.12 is required.
 To clone the repository and run a test suite (e.g. `test/integration`), execute the following:
 
-```
+```bash
 git clone git@github.com:nuodb/nuodb-helm-charts
 cd nuodb-helm-charts
 go test -v -timeout 60s ./test/integration
@@ -77,7 +77,7 @@ go test -v -timeout 60s ./test/integration
 
 Alternatively, `go get` can be used to clone the repository into the `GOPATH`:
 
-```
+```bash
 GO111MODULE=off go get github.com/nuodb/nuodb-helm-charts
 cd $(go env GOPATH)/src/github.com/nuodb/nuodb-helm-charts
 go test -v -timeout 60s ./test/integration
@@ -85,13 +85,13 @@ go test -v -timeout 60s ./test/integration
 
 The tests in `test/minikube` require `kubectl` to be configured with access to a Kubernetes cluster, typically Minikube running on localhost, and can be run as follows:
 
-```
+```bash
 go test -v -timeout 60m -tags=short ./test/minikube
 go test -v -timeout 60m -tags=long ./test/minikube
 ```
 
 A specific test case can be run as follows:
 
-```
+```bash
 go test -v -timeout 10m ./test/minikube/* -run TestKubernetesStartDatabaseShrinkedAdmin
 ```

@@ -15,11 +15,11 @@ NuoDB Helm Charts and their privilege requirements:
 
 | Helm Charts | Privilege | Short Explanation |
 | ----- | ----------- | ------ |
-| transparent-hugepage| allowHostDirVolumePlugin: true | To mount hostPath and disable THP on host|
-| transparent-hugepage| volumes.hostPath | To mount hostPath and disable THP on host|
-| transparent-hugepage| seLinuxContext.* | To mount hostPath and disable THP on host|
-| admin, database| allowedCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
-| admin, database| defaultAddCapabilities.FOWNER | To change directory ownership in PV to the nuodb process|
+| transparent-hugepage | `allowHostDirVolumePlugin: true` | To mount hostPath and disable THP on host |
+| transparent-hugepage | `volumes.hostPath` | To mount hostPath and disable THP on host |
+| transparent-hugepage | `seLinuxContext.*` | To mount hostPath and disable THP on host |
+| admin, database | `allowedCapabilities.FOWNER` | To change directory ownership in PV to the nuodb process |
+| admin, database | `defaultAddCapabilities.FOWNER` | To change directory ownership in PV to the nuodb process |
 
 ## Install Helm 3
 
@@ -28,12 +28,12 @@ If you are planning to install Helm 2, please follow the [official Helm 2 docs][
 ### MacOS
 
 Use the Brew package manager:
-```
+```bash
 brew install helm
 ```
 
 Alternatively, you can also use the MacPorts package manager:
-```
+```bash
 sudo port install helm-3.6
 sudo port select --set helm helm3.6
 ```
@@ -49,21 +49,21 @@ This example uses Helm version 3.2.4, which can be downloaded via <https://githu
 
 Run the following commands to install the Helm locally on your Linux client machine:
 ```bash
-$ curl -s https://storage.googleapis.com/kubernetes-helm/helm-3.2.4-linux-amd64.tar.gz | tar xz
-$ cd linux-amd64
+curl -s https://storage.googleapis.com/kubernetes-helm/helm-3.2.4-linux-amd64.tar.gz | tar xz
+cd linux-amd64
 ```
 
-Move the Helm binaries to /usr/local/bin
-```
-$ mv helm /usr/local/bin
+Move the Helm binaries to `/usr/local/bin`:
+```bash
+mv helm /usr/local/bin
 ```
 
 ## Confirm that the Helm client is installed correctly 
 
 The results should be as follows:
 
-```bash
-helm version
+```console
+$ helm version
 version.BuildInfo{Version:"v3.2.4", GitCommit:"0ad800ef43d3b826f31a5ad8dfbb4fe05d143688", GitTreeState:"dirty", GoVersion:"go1.14.3"}
 ```
 
@@ -73,7 +73,7 @@ The following section outlines the steps in order to deploy a NuoDB database usi
 
 ## Create the _nuodb_ namespace to install the NuoDB components
 
-```
+```bash
 kubectl create namespace nuodb
 ```
 
@@ -92,33 +92,27 @@ Each Helm Chart has a default values.yaml parameter file that contains configura
 
 1. Disable Linux Transparent Huge Pages(THP) on all cluster nodes that will host NuoDB pods.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **Disable transparent-hugepage** ([Instructions](transparent-hugepage/README.md))
 
 2. Optionally, create additional storage classes for use when configuring NuoDB persistent storage. You can also use persistent storage without using the _Storage Classes_ Chart. See the chart documentation for existing options: 
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **Storage Classes** ([Instructions](storage-class/README.md)) 
 
 3. Install NuoDB License.
 To obtain the license file required to deploy NuoDB with a Limited License, contact <nuodb.support@3ds.com>.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **NuoDB License** ([Instructions](license/README.md)) 
 
 4. Install the NuoDB Admin domain administrative tier
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **NuoDB Admin** ([Instructions](admin/README.md)) 
 
 5. Install the NuoDB database Storage Manager (SM) and Transaction Engine (TE) components
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **NuoDB Database** ([Instructions](database/README.md)) 
 
 6. Optionally, install NuoDB Insights visual monitoring into your deployment environment. NuoDB Insights displays real-time and historical performance data graphically to assist you with workload and/or root-cause analysis. Installing NuoDB Insights is highly recommended.
 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
 **NuoDB Insights** ([Instructions](https://github.com/nuodb/nuodb-insights/tree/master/stable#deploying-nuodb-insights-using-helm-charts)) 
 
 ## Cleanup

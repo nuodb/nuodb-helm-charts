@@ -126,7 +126,7 @@ helm status ycsb
 
 Verify the pods are running:
 
-```bash
+```console
 $ kubectl get pods
 NAME                     READY   STATUS      RESTARTS   AGE
 ycsb-load-xcl5f          1/1     Running     0          18h
@@ -136,7 +136,7 @@ ycsb-load-xcl5f          1/1     Running     0          18h
 
 Now to scale the Quickstart workload is simple enough:
 
-```bash
+```console
 $ kubectl scale rc ycsb-load --replicas=1
 replicationcontroller "demo-ycsb" scaled
 ```

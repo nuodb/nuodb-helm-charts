@@ -183,7 +183,7 @@ While installing the restore chart, we may wish to find the backupset to be used
 
 To get the recent backupset we need to exec into the `sm-database-cashews-demo-backup-0` pod:
 
-```bash
+```console
 $ kubectl exec -it sm-database-cashews-demo-backup-0 -- ls -al var/opt/nuodb/backup
 
 total 32
@@ -198,8 +198,8 @@ Then pick the desired recent backupset and copy its name into the source value i
 
 In your values.yaml file, the place where you'd put the backupset name is as follows:
 
-```bash
-source: 20190904T160352
+```yaml
+    source: 20190904T160352
 ```
 
 Or if you are using command line parameters, the setting would be:
@@ -240,7 +240,7 @@ However, if `restore.autoRestart` is set to `false`, then you retain control to 
 
 Verify the restore completed successfully; view the log output from the restarted SM pods, it should contain something similar to the following:
 
-```bash
+```
 Finished restoring /var/opt/nuodb/backup/20190619T101450 to /var/opt/nuodb/archive/nuodb/demo. Created archive with archive ID 8
 ```
 
