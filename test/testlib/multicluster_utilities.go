@@ -18,15 +18,15 @@ import (
 const CONTEXT_CLUSTER_KEY = CONTEXT_KEY("cluster")
 
 var MULTI_CLUSTER_1 = K8sCluster{
-	Name:    "cluster1",
+	Name:    "cluster-nuodb-1",
 	Domain:  "cluster1.local",
-	Context: "YIN",
+	Context: "yin",
 }
 
 var MULTI_CLUSTER_2 = K8sCluster{
-	Name:    "cluster2",
+	Name:    "cluster-nuodb-2",
 	Domain:  "cluster2.local",
-	Context: "YANG",
+	Context: "yang",
 }
 
 type CONTEXT_KEY string

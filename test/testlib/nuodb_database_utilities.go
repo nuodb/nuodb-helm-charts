@@ -150,7 +150,8 @@ func RestartDatabasePods(t *testing.T, namespaceName string, helmChartReleaseNam
 type DatabaseInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
 
 func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, options *helm.Options, installationStep DatabaseInstallationStep, awaitDatabase bool) (helmChartReleaseName string) {
-	randomSuffix := strings.ToLower(random.UniqueId())
+	//Truncation done to reduce pod name length
+	randomSuffix := strings.ToLower(random.UniqueId())[:5]
 
 	InjectTestValues(t, options)
 	opt := GetExtractedOptions(options)

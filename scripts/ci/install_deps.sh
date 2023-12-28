@@ -53,14 +53,14 @@ $ip sql.nuodb.local
 $ip demo.nuodb.local" | sudo tee -a /etc/hosts
 
   # Start 'minikube tunnel' so that services with type LoadBalancer are correctly
-  # provisioned and routes to the minikube IP are created; 
+  # provisioned and routes to the minikube IP are created;
   # see https://minikube.sigs.k8s.io/docs/handbook/accessing/#using-minikube-tunnel
   nohup minikube tunnel > ${TEST_RESULTS}/minikube_tunnel.log 2>&1 &
   echo "echo \"MINIKUBE_PROCS: <\$(ps aux | grep minikube)>\"" >> $HOME/.nuodbrc
 
-  # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution 
+  # In some tests (specifically TestKubernetesTLSRotation), we observe incorrect DNS resolution
   # after pods have been re-created which causes problems with inter pod communication.
-  # Set CoreDNS TTL to 0 so that DNS entries are not cached. 
+  # Set CoreDNS TTL to 0 so that DNS entries are not cached.
   kubectl get cm coredns -n kube-system -o yaml | sed -e 's/ttl [0-9]*$/ttl 0/' | kubectl apply -n kube-system -f -
   kubectl delete pods -l k8s-app=kube-dns -n kube-system
 
@@ -130,12 +130,20 @@ elif [[ "$REQUIRES_AKS" == "true" ]]; then
   # Azure login will be done by CircleCI automatically, however, let's keep the
   # code in case we need to migrate to other CI system. The AZURE_SP,
   # AZURE_SP_PASSWORD, AZURE_SP_TENANT, AZURE_AKS_RESOURCE_GROUP and
-  # AZURE_AKS_CLUSTERS environment variables should be set before hand.
+  # CLUSTER_CONTEXTS environment variables should be set before hand.
   if ! az account show > /dev/null 2>&1 ; then
     az login --service-principal -u "${AZURE_SP}" -p "${AZURE_SP_PASSWORD}" --tenant "${AZURE_SP_TENANT}"
   fi
-  for cluster in ${AZURE_AKS_CLUSTERS}; do
+  for cluster in ${CLUSTER_CONTEXTS}; do
     az aks get-credentials --name "$cluster" -g "${AZURE_AKS_RESOURCE_GROUP}"
+  done
+elif [[ "$REQUIRES_AWS" == "true" ]]; then
+  for cluster in ${CLUSTER_CONTEXTS}; do
+    if [[ "${cluster}" = "yin" ]]; then
+      aws eks --region "${AWS_DEFAULT_REGION}" update-kubeconfig --name "${EKS_CLUSTER_1}" --alias "$cluster"
+    else
+      aws eks --region "${AWS_DEFAULT_REGION}" update-kubeconfig --name "${EKS_CLUSTER_2}" --alias "$cluster"
+    fi
   done
 else
   echo "Skipping installation steps"
