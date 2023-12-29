@@ -28,8 +28,11 @@ parameters:
   run_single_test_timeout:
     default: '120m'
     type: string
+  run_single_test_requires_aws:
+    default: false
+    type: boolean
 orbs:
-  azure-cli: circleci/azure-cli@1.1.0
+  aws-cli: circleci/aws-cli@4.1.2
 jobs:
   go-test:
     parameters:
@@ -77,6 +80,11 @@ jobs:
         description: |
           CircleCI instance size
         type: string
+      requires-aws:
+        default: false
+        description: |
+          The test suite requires that Amazon AWS cluster to be available.
+        type: boolean
 
     machine:
       image: ubuntu-2004:2023.07.1
@@ -94,24 +102,23 @@ jobs:
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       AZURE_AKS_RESOURCE_GROUP: "orca-ying-yang"
-      AZURE_AKS_CLUSTERS: "yin yang"
+      CLUSTER_CONTEXTS: "yin yang"
       TEST_RESULTS: /tmp/test-results # path to where test results will be saved
-    
+
     steps:
       - checkout
 
       - when:
-          condition: <<parameters.requires-aks>>
+          condition: <<parameters.requires-aws>>
+          executor: aws-cli/default
           steps:
-            - azure-cli/install # install Azure CLI is faster if done by CircleCI orb
-            - azure-cli/login-with-service-principal # login using service principal
-
+            - aws-cli/setup
       - run:
           name: Install Dependencies
           command: |
             export REQUIRES_MINIKUBE="<< parameters.requires-minikube >>"
             export REQUIRES_MINISHIFT="<< parameters.requires-minishift >>"
-            export REQUIRES_AKS="<< parameters.requires-aks >>"
+            export REQUIRES_AWS="<< parameters.requires-aws >>"
             export KUBECONFIG="$HOME/.kube/config"
             export MINIKUBE_HOME="$HOME"
             chmod a+x scripts/ci/*.sh
@@ -120,7 +127,7 @@ jobs:
       - restore_cache: # restores saved cache if no changes are detected since last run
           keys:
             - go-mod-v4-custom-<< parameters.test-suite >>-<< parameters.tag >>-{{ checksum "go.sum" }}
-      
+
       - run:
           name: Run the tests
           command: |
@@ -143,7 +150,7 @@ jobs:
             mkdir -p $TEST_RESULTS # create the test results directory
             go clean -testcache
             echo "Running with Go arguments: $@"
-            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@" 
+            gotestsum --junitfile ${TEST_RESULTS}/gotestsum-report-${CIRCLE_BUILD_NUM}.xml --format testname -- -timeout ${TEST_TIMEOUT} "$@"
           no_output_timeout: 60m
 
       - save_cache: # store unique cache for each test suite and tag combination
@@ -196,11 +203,10 @@ workflows:
           tag: "large"
           requires-minikube: true
           resource-class: large
-# HELM-411: Disable multi-cluster tests until the AWS cluster is integrated with CircleCI.
-#      - go-test:
-#          name: "Multi-cluster tests"
-#          test-suite: "./test/multicluster"
-#          requires-aks: true
+      - go-test:
+          name: "Multi-cluster tests"
+          test-suite: "./test/multicluster"
+          requires-aws: true
   # Executes single Go test (disabled by default)
   single-test:
     when: << pipeline.parameters.run_single_test >>
@@ -212,4 +218,4 @@ workflows:
           timeout: << pipeline.parameters.run_single_test_timeout >>
           repeat: << pipeline.parameters.run_single_test_repeat >>
           requires-minikube: << pipeline.parameters.run_single_test_requires_minikube >>
-          requires-aks: << pipeline.parameters.run_single_test_requires_aks >>
+          requires-aws: << pipeline.parameters.run_single_test_requires_aws >>
