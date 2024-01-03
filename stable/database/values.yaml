@@ -343,6 +343,11 @@ database:
       tag: 3.12-slim
       pullPolicy: IfNotPresent
 
+    # Kubernetes resource requests and limits used for the backup hooks sidecar
+    # container
+    # ref: http://kubernetes.io/docs/user-guide/compute-resources/
+    resources: {}
+
     # If the non-hotcopy SM is configured with separate archive and journal
     # volumes, writes are frozen to the archive volume when the pre-backup hook
     # is invoked and unfrozen when the post-backup hook is invoked. If

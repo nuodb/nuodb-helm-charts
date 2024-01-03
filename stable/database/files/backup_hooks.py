@@ -135,8 +135,7 @@ def freeze_archive(unfreeze=False):
                 LOGGER.info("Suspending nuodb process with pid %s", pid)
                 os.kill(int(pid), signal.SIGSTOP)
                 # Make sure all threads are suspended
-                for pid in pids:
-                    await_suspended(pid)
+                await_suspended(pid)
     else:
         # Freeze or unfreeze the archive filesystem using fsfreeze
         if unfreeze:

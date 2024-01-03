@@ -278,7 +278,8 @@ spec:
           - name: NUODB_JOURNAL_DIR
             value: {{ printf "/mnt/journal/%s/%s" .Values.admin.domain .Values.database.name }}
           {{- end }}
-        resources: {}
+        resources:
+        {{- toYaml .Values.database.backupHooks.resources | trim | nindent 10 }}
         {{- if and
             (eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true")
             (not (eq (include "defaultfalse" .Values.database.backupHooks.useSuspend) "true")) }}

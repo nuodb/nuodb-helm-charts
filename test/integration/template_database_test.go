@@ -2530,14 +2530,20 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 				assert.NotEqual(t, "backup-hooks", container.Name)
 			}
 		}
+		// Check that configmap for backup_hooks.py was not rendered
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
+		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 5) {
+			assert.NotContains(t, cm.Name, "backup-hooks")
+		}
 	})
 
 	// Make sure sidecar is rendered if backup hooks are enabled
 	t.Run("testEnabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.backupHooks.enabled":                "true",
-				"database.securityContext.enabledOnContainer": "true",
+				"database.backupHooks.enabled":                 "true",
+				"database.backupHooks.resources.limits.memory": "5Gi",
+				"database.securityContext.enabledOnContainer":  "true",
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
@@ -2571,6 +2577,18 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, volumes, "archive-volume")
 		assert.Contains(t, volumes, "backup-hooks")
 		assert.NotContains(t, volumes, "journal-volume")
+		// Check resource limit
+		assert.NotNil(t, sidecar.Resources.Limits.Memory())
+		assert.Equal(t, resource.MustParse("5Gi"), *sidecar.Resources.Limits.Memory())
+		// Check that configmap for backup_hooks.py was rendered
+		var backupHooksCm *v1.ConfigMap
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
+		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
+			if strings.Contains(cm.Name, "backup-hooks") {
+				backupHooksCm = &cm
+			}
+		}
+		assert.NotNil(t, backupHooksCm)
 	})
 
 	// Make sure fsfreeze is enabled if journal volume is separate
