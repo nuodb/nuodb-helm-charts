@@ -44,7 +44,7 @@ metadata:
   name: {{ template "database.fullname" . }}-backup-hooks
 data:
 {{ (.Files.Glob "files/backup_hooks.py").AsConfig | indent 2 }}
-{{- end -}}
+{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap

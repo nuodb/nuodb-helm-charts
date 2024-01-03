@@ -323,10 +323,12 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
+      {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
       - name: backup-hooks
         configMap:
           name: {{ template "database.fullname" . }}-backup-hooks
           defaultMode: 0666
+      {{- end }}
       {{- include "database.tlsVolume" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}
