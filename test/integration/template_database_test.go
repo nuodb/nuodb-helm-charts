@@ -2824,7 +2824,7 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 
 		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "Invalid data source: VolumeSnapshot/123abc-archive not found in namespace default")
+		assert.Contains(t, err.Error(), "Invalid data source: snapshot.storage.k8s.io/v1/VolumeSnapshot/123abc-archive not found in namespace default")
 	})
 
 	// Render PVC data source with validation (enabled by default) and check that it fails due to missing PVC
@@ -2841,7 +2841,7 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 
 		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		assert.NotNil(t, err)
-		assert.Contains(t, err.Error(), "Invalid data source: PersistentVolumeClaim/journal-volume-otherdb-0 not found in namespace otherns")
+		assert.Contains(t, err.Error(), "Invalid data source: v1/PersistentVolumeClaim/journal-volume-otherdb-0 not found in namespace otherns")
 	})
 
 	// Test starting with an old values.yaml file that does not have default values set for archiveDataSource and journalDataSource

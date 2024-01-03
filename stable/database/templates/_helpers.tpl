@@ -855,15 +855,13 @@ Validate and render dataSourceRef.
 {{- if $dataSource -}}
   {{- if eq (include "defaulttrue" $.Values.database.persistence.validateDataSources) "true" -}}
     {{- $ref := (fromYaml $dataSource).dataSourceRef -}}
-    {{- $apiVersion := $ref.apiGroup -}}
-    {{- if $apiVersion -}}
-      {{- $apiVersion = printf "%s/v1" $apiVersion -}}
-    {{- else -}}
-      {{- $apiVersion = "v1" -}}
+    {{- $apiVersion := "v1" -}}
+    {{- if $ref.apiGroup -}}
+      {{- $apiVersion = printf "%s/v1" $ref.apiGroup -}}
     {{- end -}}
     {{- $namespace := default $.Release.Namespace $ref.namespace -}}
     {{- if not (lookup $apiVersion $ref.kind $namespace $ref.name) -}}
-      {{- fail (printf "Invalid data source: %s/%s not found in namespace %s" $ref.kind $ref.name $namespace) -}}
+      {{- fail (printf "Invalid data source: %s/%s/%s not found in namespace %s" $apiVersion $ref.kind $ref.name $namespace) -}}
     {{- end -}}
   {{- end -}}
   {{- print $dataSource -}}
