@@ -203,6 +203,21 @@ func TestFsFreezeBackupHook(t *testing.T) {
 		require.False(t, response.Success)
 		require.Equal(t, "No handler found for path /liquidate-archive", response.Message)
 
+		// Negative test: use a resource path with too many components
+		response = testlib.GetBackupHookResponse(t, namespaceName, smPod, "pre-backup/123/456")
+		require.False(t, response.Success)
+		require.Equal(t, "2 parameter(s) expected but 3 supplied in request /pre-backup/123/456, including payload and query parameters", response.Message)
+
+		// Negative test: use a resource path with not enough components
+		response = testlib.GetBackupHookResponse(t, namespaceName, smPod, "pre-backup")
+		require.False(t, response.Success)
+		require.Equal(t, "2 parameter(s) expected but 1 supplied in request /pre-backup, including payload and query parameters", response.Message)
+
+		// Negative test: supply an empty backup ID
+		response = testlib.GetBackupHookResponse(t, namespaceName, smPod, "pre-backup/")
+		require.False(t, response.Success)
+		require.Equal(t, "Backup ID not specified", response.Message)
+
 		// Negative test: invoke post-backup hook without backup in progress
 		response = testlib.GetBackupHookResponse(t, namespaceName, smPod, "post-backup/"+backupId)
 		require.False(t, response.Success)

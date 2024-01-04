@@ -150,6 +150,10 @@ def freeze_archive(unfreeze=False):
 
 
 def pre_backup(backup_id, payload):
+    # Check that backup ID was specified
+    if not backup_id:
+        raise UserError("Backup ID not specified")
+
     # Make sure we do not attempt to execute pre-backup hook if a backup is
     # already in progress, which may block indefinitely if writes to the
     # archive and journal directories are frozen
@@ -182,6 +186,10 @@ def pre_backup(backup_id, payload):
 
 
 def post_backup(backup_id, query):
+    # Check that backup ID was specified
+    if not backup_id:
+        raise UserError("Backup ID not specified")
+
     # Check backup ID to make sure it matches current backup
     force = query is not None and query.get("force") == True
     current_backup_id = get_backup_id()
