@@ -897,24 +897,15 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 	// Set up domain
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
-
-	options := helm.Options{}
-
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
+	options := helm.Options{}
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = kubectlOptions
 	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
 	admin0 := fmt.Sprintf("%s-0", admin)
-
-	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_ADMIN, t, func() {
-		k8s.RunKubectl(t, kubectlOptions, "get", "pods", "-o", "wide")
-		testlib.DescribePods(t, namespaceName, admin)
-	})
-
-	options.KubectlOptions = kubectlOptions
-
 	smNamePattern := "sm-%s-nuodb-cluster0-%s-0"
 
 	deleteDb := func(helmChartName string, dbName string, hasJournal bool) {
@@ -922,7 +913,6 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 
 		smPod := fmt.Sprintf(smNamePattern, helmChartName, dbName)
 		archivePvc := "archive-volume-" + smPod
-
 		k8s.RunKubectl(t, kubectlOptions, "delete", "persistentvolumeclaim", archivePvc)
 
 		if hasJournal {
@@ -936,27 +926,27 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 		retVal := ""
 
 		values := map[string]string{
-			"database.sm.resources.requests.cpu":          testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory":       testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":          testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory":       testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.persistence.storageClass":           testlib.SNAPSHOTABLE_STORAGE_CLASS,
-			"database.sm.noHotCopy.replicas":              "1",
-			"database.sm.hotCopy.replicas":                "0",
-			"database.name":                               dbName,
-			"database.persistence.dataSourceRef.kind":     "VolumeSnapshot",
-			"database.persistence.dataSourceRef.name":     archiveSnapshotName,
-			"database.persistence.dataSourceRef.apiGroup": "snapshot.storage.k8s.io",
+			"database.sm.resources.requests.cpu":              testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":           testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":              testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":           testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.persistence.storageClass":               testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.sm.noHotCopy.replicas":                  "1",
+			"database.sm.hotCopy.replicas":                    "0",
+			"database.name":                                   dbName,
+			"database.persistence.archiveDataSource.kind":     "VolumeSnapshot",
+			"database.persistence.archiveDataSource.name":     archiveSnapshotName,
+			"database.persistence.archiveDataSource.apiGroup": "snapshot.storage.k8s.io",
 		}
 		if backupId != "" {
-			values["database.autoImport.backupId"] = backupId
+			values["database.snapshotRestore.backupId"] = backupId
 		}
 
 		if journalSnapshotName != "" {
 			values["database.sm.noHotCopy.journalPath.enabled"] = "true"
-			values["database.sm.noHotCopy.journalPath.persistence.dataSourceRef.kind"] = "VolumeSnapshot"
-			values["database.sm.noHotCopy.journalPath.persistence.dataSourceRef.name"] = journalSnapshotName
-			values["database.sm.noHotCopy.journalPath.persistence.dataSourceRef.apiGroup"] = "snapshot.storage.k8s.io"
+			values["database.persistence.journalDataSource.kind"] = "VolumeSnapshot"
+			values["database.persistence.journalDataSource.name"] = journalSnapshotName
+			values["database.persistence.journalDataSource.apiGroup"] = "snapshot.storage.k8s.io"
 			values["database.sm.noHotCopy.journalPath.persistence.storageClass"] = testlib.SNAPSHOTABLE_STORAGE_CLASS
 		}
 
@@ -1010,8 +1000,6 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 
 	// Test restoring an archive with a journal embedded
 	t.Run("testArchive", func(t *testing.T) {
-		// TODO: Once it exists, use proper database snapshot function to freeze database, set backup id, and create volume snapshots
-
 		sourceDb := "src-noj"
 		sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 			SetValues: map[string]string{

@@ -185,8 +185,9 @@ spec:
           # the TE becomes unready if it does not start within 5 minutes = 30s + 5s*54
           successThreshold: 2
           timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
-      {{- include "nuodb.sidecar" (list . .Values.database.te) | nindent 6 }}
-{{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      {{- include "nuodb.sidecar.collector" (list . .Values.database.te) | nindent 6 }}
+      {{- include "nuodb.imagePullSecrets" . | indent 6 }}
+      {{- include "database.te.shareProcessNamespace" . | indent 6 }}
       volumes:
         {{- if .Values.database.configFiles }}
         - name: configurations

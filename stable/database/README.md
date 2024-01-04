@@ -64,7 +64,7 @@ The following tables list the configurable parameters for the `busybox` option:
 | `image.repository` | busybox container image name |`busybox`|
 | `image.tag` | busybox container image tag | `latest` |
 | `image.pullPolicy` | busybox container pull policy |`IfNotPresent`|
-| `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
+| `image.pullSecrets` | Specify docker-registry secret names as an array | `[]` (does not add image pull secrets to deployed pods) |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
 
@@ -101,7 +101,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
 | `image.tag` | NuoDB container image tag | `5.0.3` |
 | `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
-| `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
+| `image.pullSecrets` | Specify docker-registry secret names as an array | `[]` (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
 | `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
 
@@ -175,9 +175,9 @@ The purpose of this section is to allow customisation of the names of the cluste
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
-| `clusterip` | suffix for the clusterIP load-balancer | "clusterip" |
-| `balancer` | suffix for the balancer service | "balancer" |
-| `nodeport` | suffix for the NodePort service | "nodeport" |
+| `clusterip` | suffix for the clusterIP load-balancer | `clusterip` |
+| `balancer` | suffix for the balancer service | `balancer` |
+| `nodeport` | suffix for the NodePort service | `nodeport` |
 
 #### database.*
 
@@ -212,18 +212,24 @@ The following tables list the configurable parameters of the `database` chart an
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `persistence.size` | Amount of disk space allocated for database archive storage | `20Gi` |
 | `persistence.storageClass` | Storage class for volume backing database archive storage | `-` |
-| `persistence.dataSourceRef` | Data Source to initialize the archive volume.  See below.  |  |
+| `persistence.archiveDataSource.*` | The data source to use to initialize the archive volume. This takes precedence over the archive snapshot resolved from `database.snapshotRestore`. | `disabled` |
+| `persistence.journalDataSource.*` | The data source to use to initialize the journal volume. This takes precedence over the journal snapshot resolved from `database.snapshotRestore`. | `disabled` |
+| `persistence.validateDataSources` | Whether to validate that data sources resolved from `database.snapshotRestore` or specified explicitly using `persistence.archiveDataSource` and `persistence.journalDataSource` actually exist. This is useful because data source references that do not exist are silently ignored by Kubernetes. | `true` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |
 | `primaryRelease` | One primary and multiple secondary database Helm releases for the same database name may be deployed into the same Kubernetes namespace. Set to `false` when deploying secondary database Helm releases. | `true` |
 | `autoImport.*` | Enable and configure the automatic initializing of the initial database state | `disabled` |
 | `autoImport.source` | The source - typically a URL - of the database copy to import | `""` |
-| `autoImport.credentials` | Authentication for the download of `source` in the form `user`:`password` | '""'|
+| `autoImport.credentials` | Authentication for the download of `source` in the form `user`:`password` | `""` |
 | `autoImport.stripLevels` | The number of levels to strip off pathnames when unpacking a TAR file of an archive | `1` |
-| `autoImport.type` | Type of content in `source`. One of `stream` -> exact copy of an archive; or `backupset` -> a NuoDB hotcopy backupset | 'backupset' |
-| `autoImport.backupId` | When specifying a value for `dataSourceRef` (see below), can be used to validate the snapshot| `""` |
+| `autoImport.type` | Type of content in `source`. One of `stream` -> exact copy of an archive; or `backupset` -> a NuoDB hotcopy backupset | `backupset` |
 | `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
+| `backupHooks.enabled` | Whether to enable the backup hooks sidecar for non-hotcopy SMs | `false` |
+| `backupHooks.resources` | Kubernetes resource requests and limits set on the backup hook sidecar container | `{}` |
+| `backupHooks.useSuspend` | Whether to use suspend and resume (`kill -STOP` and `kill -CONT`) on the nuodb process instead of freezing writes to the archive using `fsfreeze`. This may be necessary if the archive volume shares a filesystem with other services that may be disrupted by `fsfreeze` or if there is a security policy that restricts the creation of containers with `securityContext.privileged=true`, which is required for `fsfreeze`. If `ping-timeout` is enabled, then the time between the pre- and post-backup hook invocations should not approach the `ping-timeout` value, otherwise there is risk of node failure detection being triggered and causing the SM to be shutdown/evicted.| `false` |
+| `snapshotRestore.backupId` | The backup ID being restored, which is set to enable restore from data sources | `""` |
+| `snapshotRestore.snapshotNameTemplate` | The template used to resolve the names of snapshots to use as data sources for the archive and journal PVCs. The template can reference `backupId` and `volumeType`, which is one of `archive`, `journal`. | `{{.backupId}}-{{.volumeType}}` |
 | `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |
 | `ephemeralVolume.size` | The size of the generic ephemeral volume to create | `1Gi` |
 | `ephemeralVolume.sizeToMemory` | Whether to size the generic ephemeral volume based on the `resources.limits.memory` setting of the process so that at least one core file is retained for the lifetime of the pod | `false` |
@@ -256,7 +262,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
 | `sm.hotCopy.persistence.accessModes` | access modes for the hotcopy storage PV | `[ ReadWriteOnce ]` |
 | `sm.hotCopy.persistence.size` | size of the hotcopy storage PV | `20Gi` |
-| `sm.hotCopy.journalPath.persistence.dataSourceRef` | Data Source to initialize the journal volume. See below.  |  |
 | `sm.hotCopy.journalBackup.enabled` | Is `journal hotcopy` enabled - true/false | `false` |
 | `sm.hotCopy.journalBackup.journalSchedule` | cron schedule for _JOURNAL_ hotcopy jobs. When journal backup is enabled, an SM will retain each journal file on disk until it is journal hot copied into a backup set. This means that journal hot copy must be executed periodically to prevent SMs from running out of disk space on the journal volume | `?/15 * * * *` |
 | `sm.hotCopy.journalBackup.deadline` | Deadline for a `journal hotcopy` job to start (seconds) | `90` |
@@ -272,7 +277,6 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.noHotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.noHotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
 | `sm.noHotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
-| `sm.hotCopy.journalPath.persistence.dataSourceRef` | Data Source to initialize the journal volume. See below.  |  |
 | `sm.labels` | Labels given to the SMs started | `{}` |
 | `sm.engineOptions` | Additional NuoDB engine options | `{}` |
 | `sm.resources` | Labels to apply to all resources | `{}` |
@@ -282,7 +286,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.topologySpreadConstraints` | Topology spread constraints for NuoDB SM | `[]` |
 | `sm.readinessTimeoutSeconds` | SM readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
 | `sm.storageGroup.enabled` | Enable Table Partitions and Storage Groups (TPSG) for all SMs in this database Helm release | `false` |
-| `sm.storageGroup.name` | The name of the storage group. Only alphanumeric and underscore ('_') characters are allowed. By default the Helm release name is used | `.Release.Name` |
+| `sm.storageGroup.name` | The name of the storage group. Only alphanumeric and underscore (`_`) characters are allowed. By default the Helm release name is used | `{{ .Release.Name }}` |
 | `te.enablePod` | Create deployment for TEs. By default, the TE Deployment is disabled if TP/SG is enabled and this is a "secondary" release. | `nil` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
@@ -329,23 +333,21 @@ Any file located in `database.configFilesPath` can be replaced; the YAML key cor
 | ----- | ----------- | ------ |
 | `nuodb.config` | [NuoDB database options][6] | `nil` |
 
-### database.serviceSuffix.*
+#### database.serviceSuffix.*
 
 The purpose of this section is to allow customisation of the names of the clusterIP and balancer database services (load-balancers).
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
-| `clusterip` | suffix for the clusterIP load-balancer | .Values.admin.serviceSuffix.clusterip |
-| `balancer` | suffix for the balancer service | .Values.admin.serviceSuffix.balancer |
-| `nodeport` | suffix for the nodePort service | .Values.admin.serviceSuffix.nodeport |
+| `clusterip` | suffix for the clusterIP load-balancer | `{{ .Values.admin.serviceSuffix.clusterip }}` |
+| `balancer` | suffix for the balancer service | `{{ .Values.admin.serviceSuffix.balancer }}` |
+| `nodeport` | suffix for the nodePort service | `{{ .Values.admin.serviceSuffix.nodeport }}` |
 
-### persistence.dataSourceRef.*
+#### `database.snapshotRestore.*`, `database.persistence.archiveDataSource.*`, and `database.persistence.journalDataSource.*`
 
-Define a VolumeSnapshot, PersistentVolumeClaim, or other dataSource from which to initialize a database volume.
+The `database.snapshotRestore` section can be specified to restore a database from volume snapshots. `database.snapshotRestore.snapshotNameTemplate` can be used to resolve the names of the archive and journal volume snapshots within the same namespace.
 
-See [Persistent Volume Doumentation](https://kubernetes.io/docs/concepts/storage/persistent-volumes/#data-source-references) and [Resource Schema](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.27/#typedobjectreference-v1-core)
-
-When taking a Volume Snapshot, you can drop a file called `backup.txt` in the directory root containing an arbitrary value. That value should be passed in via `database.autoImport.backupId`. Required if restoring a database with the same domain and database names, optional otherwise.
+To restore a database from volume snapshots within a different namespace or using PVCs as data sources rather than volume snapshots, the `database.persistence.archiveDataSource` and `database.persistence.journalDataSource` sections can be used to explicitly specify the data sources. When specifying a PVC as a data source, the `apiGroup` should be set to empty.
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
@@ -360,8 +362,8 @@ Features in this section have been deprecated but not yet removed.
 
 | Key | Description | Default |
 | ----- | ----------- | ------ |
-| `headlessService.enabled` | Create a headless service for this database. Use the TE group `ClusterIP` service instead. | false |
-| `directService.enabled` | Create a service for direct connections to the database. Use the TE group `ClusterIP` service instead. | false |
+| `headlessService.enabled` | Create a headless service for this database. Use the TE group `ClusterIP` service instead. | `false` |
+| `directService.enabled` | Create a service for direct connections to the database. Use the TE group `ClusterIP` service instead. | `false` |
 
 #### nuocollector.*
 
