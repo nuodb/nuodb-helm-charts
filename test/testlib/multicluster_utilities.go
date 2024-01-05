@@ -3,9 +3,12 @@ package testlib
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"math"
+	"net"
+	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -13,6 +16,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/stretchr/testify/require"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const CONTEXT_CLUSTER_KEY = CONTEXT_KEY("cluster")
@@ -150,6 +154,14 @@ func ChangeCluster(t *testing.T, cluster K8sCluster) (func(), func()) {
 	return changeFunc, changeBackFunc
 }
 
+func GetClusterDeploymentContext(t *testing.T, context context.Context) *ClusterDeploymentContext {
+	value := context.Value(CONTEXT_CLUSTER_KEY)
+	require.NotNil(t, value, "Unable to retrieve cluster deployment context")
+	deploymentContext, ok := value.(*ClusterDeploymentContext)
+	require.True(t, ok, "Unexpected type for cluster deployment context")
+	return deploymentContext
+}
+
 /**
  * Deploy NuoDB Helm charts using deployment context
  *
@@ -174,9 +186,7 @@ func ChangeCluster(t *testing.T, cluster K8sCluster) (func(), func()) {
  */
 func DeployWithContext(t *testing.T, context context.Context, deployFunc func(context *ClusterDeploymentContext, options *helm.Options)) {
 	// Retrieve cluster deployment information from the context
-	value := context.Value(CONTEXT_CLUSTER_KEY)
-	require.NotNil(t, value, "Unable to retrieve cluster deployment context")
-	deploymentContext := value.(*ClusterDeploymentContext)
+	deploymentContext := GetClusterDeploymentContext(t, context)
 	thisCluster := deploymentContext.ThisCluster
 	entrypointCluster := deploymentContext.EntrypointCluster
 	thisCluster = InjectClusters(t, thisCluster)
@@ -242,4 +252,98 @@ func AdjustPodTimeout(podName string, timeout time.Duration) time.Duration {
 		return time.Duration(int64(1.5 * math.Max(float64(timeout), float64(300*time.Second))))
 	}
 	return timeout
+}
+
+const (
+	DNS_CONFIG_MARKER = "# BEGIN BASE CONFIG"
+	COREDNS_NS        = "kube-system"
+	COREDNS_CM        = "coredns"
+	COREFILE_KEY      = "Corefile"
+	DNS_SERVICE       = "dns-service"
+)
+
+func getClusterDnsServer(t *testing.T, clusterContext context.Context) string {
+	var ret string
+	DeployWithContext(t,
+		clusterContext,
+		func(context *ClusterDeploymentContext, options *helm.Options) {
+			// Copy kubectl options and update namespace
+			require.NotNil(t, options.KubectlOptions)
+			kubectlOptions := *options.KubectlOptions
+			kubectlOptions.Namespace = COREDNS_NS
+			// Get endpoint for DNS server
+			out, err := k8s.RunKubectlAndGetOutputE(t, &kubectlOptions,
+				"get", "service", DNS_SERVICE,
+				"-o", "jsonpath={.status.loadBalancer.ingress[0].hostname}")
+			require.NoError(t, err)
+			ret = strings.TrimSpace(out)
+		},
+	)
+	return ret
+}
+
+func getDnsServerIps(t *testing.T, clusterContext context.Context) []string {
+	host := getClusterDnsServer(t, clusterContext)
+	if host == "" {
+		return nil
+	}
+	addresses, err := net.LookupHost(host)
+	require.NoError(t, err)
+	sort.Strings(addresses)
+	return addresses
+}
+
+func getDnsConfigSnippet(t *testing.T, context context.Context) string {
+	dnsServers := getDnsServerIps(t, context)
+	if dnsServers == nil {
+		return ""
+	}
+	deploymentContext := GetClusterDeploymentContext(t, context)
+	return fmt.Sprintf(`%s:53 {
+    errors
+    cache 30
+    forward . %s {
+      force_tcp
+    }
+}`, deploymentContext.ThisCluster.Domain, strings.Join(dnsServers, " "))
+}
+
+func updateDnsConfig(t *testing.T, ctx context.Context, kubectlOptions *k8s.KubectlOptions, dnsConfigSnippet string) {
+	// Create K8s client and get configmap for CoreDNS
+	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, kubectlOptions)
+	require.NoError(t, err, "Unable to create K8s client")
+	cm, err := clientset.CoreV1().ConfigMaps(COREDNS_NS).Get(ctx, COREDNS_CM, v1.GetOptions{})
+	require.NoError(t, err, "Unable to get CoreDNS configmap")
+	config, ok := cm.Data[COREFILE_KEY]
+	require.True(t, ok, "Did not find key %s in CoreDNS configmap", COREFILE_KEY)
+
+	// Find marker string separating generated config from base config
+	idx := strings.Index(config, DNS_CONFIG_MARKER)
+	require.GreaterOrEqual(t, idx, 0, "Did not find marker string in CoreDNS config")
+
+	// Update configmap if generated config changed
+	updatedConfig := dnsConfigSnippet + "\n" + config[idx:]
+	if updatedConfig == config {
+		t.Logf("DNS configuration up to date")
+		return
+	}
+	t.Logf("Adding DNS config snippet %s", dnsConfigSnippet)
+	cm.Data[COREFILE_KEY] = updatedConfig
+	_, err = clientset.CoreV1().ConfigMaps(COREDNS_NS).Update(ctx, cm, v1.UpdateOptions{})
+	require.NoError(t, err)
+}
+
+// UpdateDnsConfig adds the DNS server from one cluster as an upstream resolver
+// for the other, replacing any stale IP addresses that may currently be appear
+// in the CoreDNS configuration.
+func UpdateDnsConfig(t *testing.T, fromCtx context.Context, toCtx context.Context) {
+	dnsConfigSnippet := getDnsConfigSnippet(t, fromCtx)
+	if dnsConfigSnippet != "" {
+		DeployWithContext(t,
+			toCtx,
+			func(context *ClusterDeploymentContext, options *helm.Options) {
+				updateDnsConfig(t, toCtx, options.KubectlOptions, dnsConfigSnippet)
+			},
+		)
+	}
 }
