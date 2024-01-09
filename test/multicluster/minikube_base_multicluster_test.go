@@ -86,6 +86,10 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 	cluster2Context := testlib.NewClusterDeploymentContext(context,
 		&options, testlib.MULTI_CLUSTER_2, testlib.MULTI_CLUSTER_1)
 
+	// Add each DNS server as an upstream resolver for the other
+	testlib.UpdateDnsConfig(t, cluster1Context, cluster2Context)
+	testlib.UpdateDnsConfig(t, cluster2Context, cluster1Context)
+
 	defer testlib.Teardown(testlib.TEARDOWN_MULTICLUSTER)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
