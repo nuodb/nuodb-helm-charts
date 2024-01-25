@@ -139,7 +139,7 @@ helm status thp
 
 Verify the pods are running:
 
-```bash
+```console
 $ kubectl get pods -l app=disable-thp-transparent-hugepage
 NAME                      READY     STATUS    RESTARTS   AGE
 disable-thp-transparent-hugepage-96tzq   1/1     Running   0          3m45s
