@@ -215,6 +215,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `persistence.archiveDataSource.*` | The data source to use to initialize the archive volume. This takes precedence over the archive snapshot resolved from `database.snapshotRestore`. | `disabled` |
 | `persistence.journalDataSource.*` | The data source to use to initialize the journal volume. This takes precedence over the journal snapshot resolved from `database.snapshotRestore`. | `disabled` |
 | `persistence.validateDataSources` | Whether to validate that data sources resolved from `database.snapshotRestore` or specified explicitly using `persistence.archiveDataSource` and `persistence.journalDataSource` actually exist. This is useful because data source references that do not exist are silently ignored by Kubernetes. | `true` |
+| `persistence.preprovisionVolumes` | Whether to explicitly provision PVCs for all SMs specified by `database.sm.noHotCopy.replicas`. If data sources are configured, then they will appear in the preprovisioned PVCs of the non-hotcopy SMs but not in the `volumeClaimTemplates` section, so that the existence of the volume snapshots is not required in order to scale up the non-hotcopy SM StatefulSet. | `false` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb/` |
 | `configFiles.*` | See below. | `{}` |
 | `podAnnotations` | Annotations to pass through to the SM an TE pods | `nil` |

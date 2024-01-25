@@ -46,8 +46,9 @@ def write_file(path, content):
     # default. Making the file group-writable ensures that it is accessible to
     # the nuodb user in OpenShift deployments where an arbitrary uid is used
     # with gid 0.
-    os.chown(path, 1000, 0)
-    os.chmod(path, mode=0o660)
+    if os.getuid() == 0:
+        os.chown(path, 1000, 0)
+        os.chmod(path, mode=0o660)
 
 
 def get_nuodb_pids():

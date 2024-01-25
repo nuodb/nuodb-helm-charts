@@ -256,6 +256,10 @@ database:
     # Whether to validate that data sources for PVCs exist
     validateDataSources: true
 
+    # Whether to preprovision PVCs from data sources and omit the data source
+    # reference from the volumeClaimTemplate section of the statefulset.
+    preprovisionVolumes: false
+
   ## database-wide options.
   # These are applied using the --database-options on the startup command
   # change these to values appropriate for this database

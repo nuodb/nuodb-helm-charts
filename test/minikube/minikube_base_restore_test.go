@@ -503,19 +503,19 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	})
 }
 
-// Basic test for creating a database off of a VolumeSnapshot
-func TestKubernetesSnapshotRestore(t *testing.T) {
+// Test exercising backup hooks and volume snapshot restore
+func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, inPlaceRestore bool) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	// Create admin release
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+	adminRelease, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
 
-	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin := fmt.Sprintf("%s-nuodb-cluster0", adminRelease)
 	admin0 := fmt.Sprintf("%s-0", admin)
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	// Create database release with snapshottable storage class and backup hooks enabled
-	sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+	sourceDatabaseRelease := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
 		SetValues: map[string]string{
 			"database.sm.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
@@ -528,6 +528,8 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 			"database.sm.hotCopy.replicas":                               "0",
 			"database.backupHooks.enabled":                               "true",
 			"database.backupHooks.useSuspend":                            "true",
+			"database.securityContext.runAsNonRootGroup":                 "true",
+			"database.securityContext.enabledOnContainer":                "true",
 		},
 	})
 
@@ -536,7 +538,7 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 	require.NoError(t, err, output)
 
 	// Snapshot archive and journal for SM pod
-	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-0", sourceDatabaseChartName)
+	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-0", sourceDatabaseRelease)
 	backupId := "123abc"
 	snapshotNameTemplate := "{{.backupId}}-{{.volumeType}}" // Use default template to name snapshots
 	testlib.SnapshotSm(t, namespaceName, smPod, backupId, snapshotNameTemplate, true)
@@ -549,15 +551,24 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 	require.Contains(t, output, "Resuming nuodb process")
 
 	// Delete snapshotted database to ensure K8s cluster has capacity for cloned database
-	helm.DeleteE(t, &helm.Options{KubectlOptions: kubectlOptions}, sourceDatabaseChartName, true)
+	helm.DeleteE(t, &helm.Options{KubectlOptions: kubectlOptions}, sourceDatabaseRelease, true)
 
 	// Create database release for cloned database from snapshots
 	restoredDb := "db-clone"
-	testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+	if inPlaceRestore {
+		restoredDb = "demo"
+		// Delete database and archive objects from domain state
+		k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "delete", "database", "--db-name", "demo")
+		k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "delete", "archive", "--archive-id", "0", "--purge")
+
+		// Delete all PVCs for the source database release (archive and journal)
+		k8s.RunKubectl(t, kubectlOptions, "delete", "pvc", "--selector", "release="+sourceDatabaseRelease)
+	}
+	options := &helm.Options{
 		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.cpu":                         "250m",
 			"database.sm.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.cpu":                         "250m",
 			"database.te.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.sm.noHotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
 			"database.persistence.storageClass":                          testlib.SNAPSHOTABLE_STORAGE_CLASS,
@@ -565,12 +576,75 @@ func TestKubernetesSnapshotRestore(t *testing.T) {
 			"database.snapshotRestore.backupId":                          backupId,
 			"database.sm.noHotCopy.journalPath.enabled":                  "true",
 			"database.sm.noHotCopy.replicas":                             "1",
-			"database.sm.hotCopy.replicas":                               "0",
+			"database.sm.hotCopy.enablePod":                              "false",
 		},
-	})
+	}
+	// Supply value for preprovisionVolumes
+	if preprovisionVolumes {
+		options.SetValues["database.persistence.preprovisionVolumes"] = "true"
+	}
+	dbRelease := testlib.StartDatabase(t, namespaceName, admin0, options)
 
 	// Make sure data written to clone is present
 	output, err = testlib.RunSQL(t, namespaceName, admin0, restoredDb, "SELECT id FROM testtbl")
 	require.NoError(t, err, output)
 	require.True(t, strings.Contains(output, "123"))
+
+	smSts := fmt.Sprintf("sm-%s-nuodb-cluster0-%s", dbRelease, restoredDb)
+	numProcesses := 2
+	t.Run("scaleSmStatefulSet", func(t *testing.T) {
+		if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+			t.Skip("Cannot scale SM statefulset unless license is supplied")
+		}
+
+		// Apply license to allow multiple SMs to be started
+		testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
+
+		// Delete volume snapshots if PVCs were pre-provisioned, since
+		// they are not needed after initial database creation
+		if preprovisionVolumes {
+			k8s.RunKubectl(t, kubectlOptions, "delete", "volumesnapshot", backupId+"-archive")
+			k8s.RunKubectl(t, kubectlOptions, "delete", "volumesnapshot", backupId+"-journal")
+		}
+
+		// Scale SM statefulset and wait for new SM to become ready
+		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", smSts, "--replicas=2")
+		numProcesses = 3
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, restoredDb, numProcesses)
+	})
+
+	t.Run("restartDatabase", func(t *testing.T) {
+		// Write more data
+		output, err = testlib.RunSQL(t, namespaceName, admin0, restoredDb, "INSERT INTO testtbl (id) values (456)")
+		require.NoError(t, err, output)
+
+		// Restart SM statefulset
+		k8s.RunKubectl(t, kubectlOptions, "rollout", "restart", "statefulset", smSts)
+		k8s.RunKubectl(t, kubectlOptions, "rollout", "status", "statefulset", smSts, "--timeout=300s")
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, restoredDb, numProcesses)
+
+		// Make sure all expected data is present
+		output, err = testlib.RunSQL(t, namespaceName, admin0, restoredDb, "SELECT id FROM testtbl")
+		require.NoError(t, err, output)
+		require.True(t, strings.Contains(output, "123"))
+		require.True(t, strings.Contains(output, "456"))
+	})
+}
+
+// Test exercising backup hooks and volume snapshot restore with data sources
+// specified on volumeClaimTemplates section of SM statefulset.
+func TestKubernetesSnapshotRestoreTemplateDataSources(t *testing.T) {
+	runTestKubernetesSnapshotRestore(t, false, false)
+}
+
+// Test exercising backup hooks and volume snapshot restore with data sources
+// specified for pre-provisioned PVCs.
+func TestKubernetesSnapshotRestorePreprovisionVolumes(t *testing.T) {
+	runTestKubernetesSnapshotRestore(t, true, false)
+}
+
+// Test exercising backup hooks and volume snapshot in-place restore with data
+// sources specified for pre-provisioned PVCs
+func TestKubernetesSnapshotRestoreInPlace(t *testing.T) {
+	runTestKubernetesSnapshotRestore(t, true, true)
 }
