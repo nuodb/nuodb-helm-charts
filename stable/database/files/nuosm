@@ -454,16 +454,16 @@ function loadFromSnapshot() {
     local recreate_archives="true"
   elif [ -n "$BACKUP_ID" ] && [ -f "${DB_DIR}/backup.txt" ]; then
     # Check backup ID in archive
-    if ! checkBackupId "${DB_DIR}/backup.txt"; then
-      die 1 "Incorrect backup id in archive"
+    if checkBackupId "${DB_DIR}/backup.txt"; then
+      local recreate_archives="true"
+    else
+      log "Incorrect backup id in archive... Did the SM crash during a snapshot?"
     fi
 
     # Check backup ID in journal
     if [ "$SEPARATE_JOURNAL" == "true" ] && ! checkBackupId "${JOURNAL_DIR}/backup.txt"; then
-      die 1 "Incorrect backup id in journal"
+      log "Incorrect backup id in journal... Did the SM crash during a snapshot?"
     fi
-
-    local recreate_archives="true"
   fi
 
   if [ "$recreate_archives" == "true" ]; then
