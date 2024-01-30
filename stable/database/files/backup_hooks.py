@@ -212,7 +212,7 @@ def post_backup(backup_id, query):
     # Delete backup ID files and payload file
     if os.path.exists(ARCHIVE_BACKUP_ID_FILE):
         os.remove(ARCHIVE_BACKUP_ID_FILE)
-    if os.path.exists(JOURNAL_BACKUP_ID_FILE):
+    if JOURNAL_BACKUP_ID_FILE is not None and os.path.exists(JOURNAL_BACKUP_ID_FILE):
         os.remove(JOURNAL_BACKUP_ID_FILE)
     if os.path.exists(BACKUP_PAYLOAD_FILE):
         os.remove(BACKUP_PAYLOAD_FILE)
