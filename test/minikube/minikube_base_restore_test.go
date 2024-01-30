@@ -590,7 +590,6 @@ func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, in
 	require.NoError(t, err, output)
 	require.True(t, strings.Contains(output, "123"))
 
-	smSts := fmt.Sprintf("sm-%s-nuodb-cluster0-%s", dbRelease, restoredDb)
 	numProcesses := 2
 	t.Run("scaleSmStatefulSet", func(t *testing.T) {
 		if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
@@ -607,10 +606,33 @@ func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, in
 			k8s.RunKubectl(t, kubectlOptions, "delete", "volumesnapshot", backupId+"-journal")
 		}
 
-		// Scale SM statefulset and wait for new SM to become ready
-		k8s.RunKubectl(t, kubectlOptions, "scale", "statefulset", smSts, "--replicas=2")
+		// Increase SM statefulset replicas and wait for new SM to become ready
+		options.SetValues["database.sm.noHotCopy.replicas"] = "2"
+		helm.Upgrade(t, options, testlib.DATABASE_HELM_CHART_PATH, dbRelease)
 		numProcesses = 3
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, restoredDb, numProcesses)
+
+		// Check data source on PVCs for ordinal 0
+		for _, volumeType := range []string{"archive", "journal"} {
+			pvcName := fmt.Sprintf("%s-volume-sm-%s-nuodb-cluster0-%s-0", volumeType, dbRelease, restoredDb)
+			output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "pvc", pvcName, "-o", "jsonpath={.spec.dataSourceRef.name}")
+			require.NoError(t, err, output)
+			require.Equal(t, backupId+"-"+volumeType, strings.TrimSpace(output))
+		}
+
+		// Check data source on PVCs for ordinal 1
+		for _, volumeType := range []string{"archive", "journal"} {
+			pvcName := fmt.Sprintf("%s-volume-sm-%s-nuodb-cluster0-%s-1", volumeType, dbRelease, restoredDb)
+			output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "pvc", pvcName, "-o", "jsonpath={.spec.dataSourceRef.name}")
+			require.NoError(t, err, output)
+			// Expect no data source on ordinal 1 if PVCs were
+			// pre-provisioned, since data source was deleted
+			if preprovisionVolumes {
+				require.Empty(t, strings.TrimSpace(output))
+			} else {
+				require.Equal(t, backupId+"-"+volumeType, strings.TrimSpace(output))
+			}
+		}
 	})
 
 	t.Run("restartDatabase", func(t *testing.T) {
@@ -618,9 +640,8 @@ func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, in
 		output, err = testlib.RunSQL(t, namespaceName, admin0, restoredDb, "INSERT INTO testtbl (id) values (456)")
 		require.NoError(t, err, output)
 
-		// Restart SM statefulset
-		k8s.RunKubectl(t, kubectlOptions, "rollout", "restart", "statefulset", smSts)
-		k8s.RunKubectl(t, kubectlOptions, "rollout", "status", "statefulset", smSts, "--timeout=300s")
+		// Restart database
+		testlib.RestartDatabasePods(t, namespaceName, dbRelease, options)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, restoredDb, numProcesses)
 
 		// Make sure all expected data is present

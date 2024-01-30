@@ -861,7 +861,11 @@ Validate and render dataSourceRef.
     {{- end -}}
     {{- $namespace := default $.Release.Namespace $ref.namespace -}}
     {{- if not (lookup $apiVersion $ref.kind $namespace $ref.name) -}}
-      {{- fail (printf "Invalid data source: %s/%s/%s not found in namespace %s" $apiVersion $ref.kind $ref.name $namespace) -}}
+      {{- if and $.Release.IsUpgrade (eq (include "defaultfalse" $.Values.database.persistence.preprovisionVolumes) "true") -}}
+        {{- $dataSource = "" -}}
+      {{- else -}}
+        {{- fail (printf "Invalid data source: %s/%s/%s not found in namespace %s" $apiVersion $ref.kind $ref.name $namespace) -}}
+      {{- end -}}
     {{- end -}}
   {{- end -}}
   {{- print $dataSource -}}
