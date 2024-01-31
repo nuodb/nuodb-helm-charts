@@ -10,6 +10,8 @@ metadata:
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
     {{- include "database.storageGroupLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
 spec:
   {{- include "database.archivePvcSpec" (list . true) | nindent 2 }}
 {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
@@ -21,6 +23,8 @@ metadata:
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
     {{- include "database.storageGroupLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
 spec:
   {{- include "database.journalPvcSpec" (list . true) | nindent 2 }}
 {{- end }}

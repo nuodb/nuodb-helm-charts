@@ -412,7 +412,7 @@ function loadFromSnapshot() {
       local ordinal="${POD_NAME##*-}"
       if [ -z "$archives" ] && [ "$ordinal" != 0 ]; then
         log "No archive snapshot found for $POD_NAME with non-0 ordinal $ordinal"
-        return 1
+        return 0
       fi
       die 1 "Did not find exactly 1 archive: ${archives}"
     fi
