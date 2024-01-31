@@ -124,8 +124,15 @@ func GetExtractedOptions(options *helm.Options) (opt ExtractedOptions) {
 func EnsureDatabaseNotRunning(t *testing.T, adminPod string, opt ExtractedOptions, kubectlOptions *k8s.KubectlOptions) {
 	// invoke shutdown database; this may fail if the database is already NOT_RUNNING, which is okay
 	k8s.RunKubectlE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "shutdown", "database", "--db-name", opt.DbName)
+
 	// wait for all database processes to exit
-	k8s.RunKubectl(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "check", "database", "--db-name", opt.DbName, "--num-processes", "0", "--timeout", "30")
+	_, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "check", "database", "--db-name", opt.DbName, "--num-processes", "0", "--timeout", "30")
+	if err != nil {
+		// suppress error caused by database entering TOMBSTONE state,
+		// which can happen due to KAA deleting the database object
+		// after the database Helm release is uninstalled
+		require.Contains(t, err.Error(), "Database "+opt.DbName+" in TOMBSTONE state")
+	}
 }
 
 func RestartDatabasePods(t *testing.T, namespaceName string, helmChartReleaseName string, options *helm.Options) {

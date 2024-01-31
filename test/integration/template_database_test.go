@@ -2757,6 +2757,8 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 					} else {
 						journalFound = true
 					}
+					assert.NotNil(t, volumeClaimTemplate.Spec.DataSourceRef)
+					assert.NotNil(t, volumeClaimTemplate.Spec.DataSourceRef.APIGroup)
 					assert.Equal(t, "snapshot.storage.k8s.io", *volumeClaimTemplate.Spec.DataSourceRef.APIGroup)
 					assert.Equal(t, "VolumeSnapshot", volumeClaimTemplate.Spec.DataSourceRef.Kind)
 					assert.Equal(t, volumeClaimTemplate.Name+"-snapshot", volumeClaimTemplate.Spec.DataSourceRef.Name)
@@ -2768,6 +2770,79 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
 			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
 		}
+	})
+
+	// Render preprovisioned PVCs with volume snapshot data sources
+	t.Run("testPreprovisionedVolumes", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.persistence.archiveDataSource.name": "archive-volume-snapshot",
+				"database.persistence.journalDataSource.name": "journal-volume-snapshot",
+				"database.persistence.validateDataSources":    "false", // Disable validation of the data source references
+				"database.persistence.preprovisionVolumes":    "true",
+				"database.sm.hotCopy.journalPath.enabled":     "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+				"database.sm.noHotCopy.replicas":              "3",
+			},
+		}
+
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		var stsName string
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			archiveFound := false
+			journalFound := false
+			for _, volumeClaimTemplate := range obj.Spec.VolumeClaimTemplates {
+				if volumeClaimTemplate.Name == "archive-volume" || volumeClaimTemplate.Name == "journal-volume" {
+					if volumeClaimTemplate.Name == "archive-volume" {
+						archiveFound = true
+					} else {
+						journalFound = true
+					}
+					// The hotcopy SM PVCs should not be preprovisioned and should have data source
+					// references in the volume claim template
+					if strings.Contains(obj.Name, "hotcopy") {
+						assert.NotNil(t, volumeClaimTemplate.Spec.DataSourceRef)
+						assert.NotNil(t, volumeClaimTemplate.Spec.DataSourceRef.APIGroup)
+						assert.Equal(t, "snapshot.storage.k8s.io", *volumeClaimTemplate.Spec.DataSourceRef.APIGroup)
+						assert.Equal(t, "VolumeSnapshot", volumeClaimTemplate.Spec.DataSourceRef.Kind)
+						assert.Equal(t, volumeClaimTemplate.Name+"-snapshot", volumeClaimTemplate.Spec.DataSourceRef.Name)
+						assert.Nil(t, volumeClaimTemplate.Spec.DataSourceRef.Namespace)
+					} else {
+						assert.Nil(t, volumeClaimTemplate.Spec.DataSourceRef)
+						stsName = obj.Name
+					}
+				}
+			}
+			assert.True(t, archiveFound)
+			assert.True(t, journalFound)
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "SNAPSHOT_RESTORED", "true"))
+			assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env, "BACKUP_ID", ""))
+		}
+		assert.NotEmpty(t, stsName)
+
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/persistentvolumeclaim.yaml"})
+
+		archivePvcs := 0
+		journalPvcs := 0
+		for _, pvc := range testlib.SplitAndRenderPersistentVolumeClaim(t, output, 6) {
+			prefix := "archive-volume"
+			if strings.HasPrefix(pvc.Name, prefix) {
+				archivePvcs += 1
+			} else {
+				prefix = "journal-volume"
+				journalPvcs += 1
+			}
+			assert.Regexp(t, fmt.Sprintf("^%s-%s-[0-2]$", prefix, stsName), pvc.Name)
+			assert.NotNil(t, pvc.Spec.DataSourceRef)
+			assert.NotNil(t, pvc.Spec.DataSourceRef.APIGroup)
+			assert.Equal(t, "snapshot.storage.k8s.io", *pvc.Spec.DataSourceRef.APIGroup)
+			assert.Equal(t, "VolumeSnapshot", pvc.Spec.DataSourceRef.Kind)
+			assert.Equal(t, prefix+"-snapshot", pvc.Spec.DataSourceRef.Name)
+			assert.Nil(t, pvc.Spec.DataSourceRef.Namespace)
+		}
+		assert.Equal(t, 3, archivePvcs)
+		assert.Equal(t, 3, journalPvcs)
 	})
 
 	// Test to make sure that we can omit optional fields when defining a data source (such as when copying an existing PVC)
@@ -2800,6 +2875,7 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 					} else {
 						journalFound = true
 					}
+					assert.NotNil(t, volumeClaimTemplate.Spec.DataSourceRef)
 					assert.Nil(t, volumeClaimTemplate.Spec.DataSourceRef.APIGroup)
 					assert.Equal(t, "PersistentVolumeClaim", volumeClaimTemplate.Spec.DataSourceRef.Kind)
 					assert.Equal(t, volumeClaimTemplate.Name+"-otherdb-0", volumeClaimTemplate.Spec.DataSourceRef.Name)

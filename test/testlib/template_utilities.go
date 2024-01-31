@@ -135,17 +135,16 @@ func GetVolumeClaim(vcp []v1.PersistentVolumeClaim, expectedName string) (*v1.Pe
 	return nil, false
 }
 
-func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int) []v1.ConfigMap {
-	objects := make([]v1.ConfigMap, 0)
-
+func SplitAndRender[T any](t *testing.T, output string, expectedNrObjects int, kind string) []T {
+	objects := make([]T, 0)
 	parts := strings.Split(output, "---")
 	for _, part := range parts {
 		if len(part) == 0 {
 			continue
 		}
 
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "ConfigMap")) {
-			var obj v1.ConfigMap
+		if strings.Contains(part, fmt.Sprintf("kind: %s", kind)) {
+			var obj T
 			helm.UnmarshalK8SYaml(t, part, &obj)
 
 			objects = append(objects, obj)
@@ -153,272 +152,63 @@ func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int)
 	}
 
 	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
 	return objects
+}
+
+func SplitAndRenderPersistentVolumeClaim(t *testing.T, output string, expectedNrObjects int) []v1.PersistentVolumeClaim {
+	return SplitAndRender[v1.PersistentVolumeClaim](t, output, expectedNrObjects, "PersistentVolumeClaim")
+}
+
+func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int) []v1.ConfigMap {
+	return SplitAndRender[v1.ConfigMap](t, output, expectedNrObjects, "ConfigMap")
 }
 
 func SplitAndRenderCronJob(t *testing.T, output string, expectedNrObjects int) []v1beta1.CronJob {
-	objects := make([]v1beta1.CronJob, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "CronJob")) {
-			var obj v1beta1.CronJob
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[v1beta1.CronJob](t, output, expectedNrObjects, "CronJob")
 }
 
 func SplitAndRenderDaemonSet(t *testing.T, output string, expectedNrObjects int) []appsv1.DaemonSet {
-	objects := make([]appsv1.DaemonSet, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "DaemonSet")) {
-			var obj appsv1.DaemonSet
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[appsv1.DaemonSet](t, output, expectedNrObjects, "DaemonSet")
 }
 
 func SplitAndRenderJob(t *testing.T, output string, expectedNrObjects int) []batchv1.Job {
-	objects := make([]batchv1.Job, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "Job")) {
-			var obj batchv1.Job
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[batchv1.Job](t, output, expectedNrObjects, "Job")
 }
 
 func SplitAndRenderDeployment(t *testing.T, output string, expectedNrObjects int) []appsv1.Deployment {
-	objects := make([]appsv1.Deployment, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "Deployment")) {
-			var obj appsv1.Deployment
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[appsv1.Deployment](t, output, expectedNrObjects, "Deployment")
 }
 
 func SplitAndRenderReplicationController(t *testing.T, output string, expectedNrObjects int) []v1.ReplicationController {
-	objects := make([]v1.ReplicationController, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "ReplicationController")) {
-			var obj v1.ReplicationController
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[v1.ReplicationController](t, output, expectedNrObjects, "ReplicationController")
 }
 
 func SplitAndRenderSecret(t *testing.T, output string, expectedNrObjects int) []v1.Secret {
-	objects := make([]v1.Secret, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "Secret")) {
-			var obj v1.Secret
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[v1.Secret](t, output, expectedNrObjects, "Secret")
 }
 
 func SplitAndRenderService(t *testing.T, output string, expectedNrObjects int) []v1.Service {
-	objects := make([]v1.Service, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "Service")) {
-			var obj v1.Service
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[v1.Service](t, output, expectedNrObjects, "Service")
 }
 
 func SplitAndRenderStatefulSet(t *testing.T, output string, expectedNrObjects int) []appsv1.StatefulSet {
-	objects := make([]appsv1.StatefulSet, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "StatefulSet")) {
-			var obj appsv1.StatefulSet
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[appsv1.StatefulSet](t, output, expectedNrObjects, "StatefulSet")
 }
 
 func SplitAndRenderStorageClass(t *testing.T, output string, expectedNrObjects int) []storagev1.StorageClass {
-	objects := make([]storagev1.StorageClass, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "StorageClass")) {
-			var obj storagev1.StorageClass
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[storagev1.StorageClass](t, output, expectedNrObjects, "StorageClass")
 }
 
 func SplitAndRenderRole(t *testing.T, output string, expectedNrObjects int) []rbacv1.Role {
-	objects := make([]rbacv1.Role, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "Role")) {
-			var obj rbacv1.Role
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[rbacv1.Role](t, output, expectedNrObjects, "Role")
 }
 
 func SplitAndRenderServiceAccount(t *testing.T, output string, expectedNrObjects int) []v1.ServiceAccount {
-	objects := make([]v1.ServiceAccount, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "ServiceAccount")) {
-			var obj v1.ServiceAccount
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[v1.ServiceAccount](t, output, expectedNrObjects, "ServiceAccount")
 }
 
 func SplitAndRenderIngress(t *testing.T, output string, expectedNrObjects int) []networkingv1.Ingress {
-	objects := make([]networkingv1.Ingress, 0)
-
-	parts := strings.Split(output, "---")
-	for _, part := range parts {
-		if len(part) == 0 {
-			continue
-		}
-
-		if strings.Contains(part, fmt.Sprintf("kind: %s", "Ingress")) {
-			var obj networkingv1.Ingress
-			helm.UnmarshalK8SYaml(t, part, &obj)
-
-			objects = append(objects, obj)
-		}
-	}
-
-	require.GreaterOrEqual(t, len(objects), expectedNrObjects)
-
-	return objects
+	return SplitAndRender[networkingv1.Ingress](t, output, expectedNrObjects, "Ingress")
 }
 
 func IsStatefulSetHotCopyEnabled(ss *appsv1.StatefulSet) bool {

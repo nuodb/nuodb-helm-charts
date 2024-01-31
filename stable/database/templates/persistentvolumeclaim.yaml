@@ -1,3 +1,36 @@
+{{- if eq (include "defaultfalse" .Values.database.persistence.preprovisionVolumes) "true" }}
+{{- $sts := include "database.statefulset.name" (printf "sm-%s" (include "database.fullname" .)) -}}
+{{- range $i := until (int .Values.database.sm.noHotCopy.replicas) }}
+{{- with $ }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: archive-volume-{{ printf "%s-%d" $sts $i }}
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
+    {{- include "database.storageGroupLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  {{- include "database.archivePvcSpec" (list . true) | nindent 2 }}
+{{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: journal-volume-{{ printf "%s-%d" $sts $i }}
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
+    {{- include "database.storageGroupLabels" . | nindent 4 }}
+  annotations:
+    "helm.sh/resource-policy": keep
+spec:
+  {{- include "database.journalPvcSpec" (list . true) | nindent 2 }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
 {{- if eq (include "defaultfalse" .Values.database.te.logPersistence.enabled) "true" }}
 ---
 apiVersion: v1

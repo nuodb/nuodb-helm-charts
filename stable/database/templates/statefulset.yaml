@@ -350,26 +350,8 @@ spec:
         {{- include "database.resourceLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
-      accessModes:
-      {{- range .Values.database.persistence.accessModes }}
-        - {{ . }}
-      {{- end }}
-      {{- if .Values.database.persistence.storageClass }}
-      {{- if (eq "-" .Values.database.persistence.storageClass) }}
-      storageClassName: ""
-      {{- else }}
-      storageClassName: {{ .Values.database.persistence.storageClass }}
-      {{- end }}
-      {{- end }}
-      {{- include "database.archiveDataSource" . | nindent 6 }}
-      {{- if .Values.database.isManualVolumeProvisioning }}
-      selector:
-        matchLabels:
-          database: {{ .Values.database.name }}
-      {{- end }}
-      resources:
-        requests:
-          storage: {{ .Values.database.persistence.size }}
+      {{- $includeDataSource := eq (include "defaultfalse" .Values.database.persistence.preprovisionVolumes) "false" -}}
+      {{- include "database.archivePvcSpec" (list . $includeDataSource) | nindent 6 }}
   {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
   - metadata:
       name: journal-volume
@@ -377,26 +359,7 @@ spec:
         {{- include "database.resourceLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
-      accessModes:
-      {{- range .Values.database.sm.noHotCopy.journalPath.persistence.accessModes }}
-        - {{ . }}
-      {{- end }}
-      {{- if .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
-      {{- if (eq "-" .Values.database.sm.noHotCopy.journalPath.persistence.storageClass) }}
-      storageClassName: ""
-      {{- else }}
-      storageClassName: {{ .Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
-      {{- end }}
-      {{- end }}
-      {{- include "database.journalDataSource" . | nindent 6 }}
-      {{- if .Values.database.isManualVolumeProvisioning }}
-      selector:
-        matchLabels:
-          database: {{ .Values.database.name }}
-      {{- end }}
-      resources:
-        requests:
-          storage: {{ .Values.database.sm.noHotCopy.journalPath.persistence.size }}
+      {{- include "database.journalPvcSpec" (list . $includeDataSource) | nindent 6 }}
   {{- end }}
   {{- if eq (include "defaultfalse" .Values.database.sm.logPersistence.enabled) "true" }}
   - metadata:

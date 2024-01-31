@@ -46,8 +46,9 @@ def write_file(path, content):
     # default. Making the file group-writable ensures that it is accessible to
     # the nuodb user in OpenShift deployments where an arbitrary uid is used
     # with gid 0.
-    os.chown(path, 1000, 0)
-    os.chmod(path, mode=0o660)
+    if os.getuid() == 0:
+        os.chown(path, 1000, 0)
+        os.chmod(path, mode=0o660)
 
 
 def get_nuodb_pids():
@@ -211,7 +212,7 @@ def post_backup(backup_id, query):
     # Delete backup ID files and payload file
     if os.path.exists(ARCHIVE_BACKUP_ID_FILE):
         os.remove(ARCHIVE_BACKUP_ID_FILE)
-    if os.path.exists(JOURNAL_BACKUP_ID_FILE):
+    if JOURNAL_BACKUP_ID_FILE is not None and os.path.exists(JOURNAL_BACKUP_ID_FILE):
         os.remove(JOURNAL_BACKUP_ID_FILE)
     if os.path.exists(BACKUP_PAYLOAD_FILE):
         os.remove(BACKUP_PAYLOAD_FILE)

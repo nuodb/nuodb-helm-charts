@@ -402,64 +402,74 @@ function checkBackupId() {
 function loadFromSnapshot() {
   local recreate_archives="false"
 
-  if [ ! -f "$DB_DIR/state.dat" ]; then
-    local archives=$( find "/var/opt/nuodb/archive" -name info.json )
-    if [ -z "$archives" ] || [ $(echo "$archives" | wc -l) != 1 ]; then 
+  if [ ! -f "$DB_DIR/info.json" ]; then
+    local archives="$(find /var/opt/nuodb/archive -name info.json)"
+    if [ -z "$archives" ] || [ "$(echo "$archives" | wc -l)" != 1 ]; then
+      # Relax check for archive snapshot for SMs other than ordinal 0. It is
+      # possible that a database that was restored from a backup with
+      # pre-provisioned PVCs has been scaled up. In this case, the new SMs will
+      # have empty PVCs, so no archive snapshot will be found.
+      local ordinal="${POD_NAME##*-}"
+      if [ -z "$archives" ] && [ "$ordinal" != 0 ]; then
+        log "No archive snapshot found for $POD_NAME with non-0 ordinal $ordinal"
+        return 0
+      fi
       die 1 "Did not find exactly 1 archive: ${archives}"
     fi
 
-    local archive_path=$( dirname $archives )
+    local archive_path="$(dirname "$archives")"
     log "Found snapshot at ${archive_path}"
 
     if [ -n "$BACKUP_ID" ]; then
-      if ! checkBackupId ${archive_path}/backup.txt ; then
+      if ! checkBackupId "${archive_path}/backup.txt"; then
         die 1 "Incorrect backup id in archive"
       fi
     fi
 
     if [ "$SEPARATE_JOURNAL" == "true" ]; then
-      local relative_archive=$(realpath --relative-base=/var/opt/nuodb/archive $archive_path)
+      local relative_archive="$(realpath --relative-base=/var/opt/nuodb/archive "$archive_path")"
       local expected_journal="/var/opt/nuodb/journal/${relative_archive}"
 
-      if [ ! -d $expected_journal ]; then
+      if [ ! -d "$expected_journal" ]; then
         die 1 "Did not find a journal snapshot at '$expected_journal'"
       fi
-      
+
       if [ -n "$BACKUP_ID" ]; then
-        if ! checkBackupId ${expected_journal}/backup.txt ; then
+        if ! checkBackupId "${expected_journal}/backup.txt"; then
           die 1 "Incorrect backup id in journal"
         fi
       fi
 
-      rm -rf ${JOURNAL_DIR}
-      mv ${expected_journal} ${JOURNAL_DIR}
+      rm -rf "${JOURNAL_DIR}"
+      mv "${expected_journal}" "${JOURNAL_DIR}"
 
     fi
 
     # Don't move the archive until after we have done error checking.
     # Once we move the archive, we are going to be in the `archive already exists` branch
     # when kubernetes retries/restarts the pod.
-    rm -rf ${DB_DIR}
-    mv ${archive_path} ${DB_DIR}
+    rm -rf "${DB_DIR}"
+    mv "${archive_path}" "${DB_DIR}"
 
     local recreate_archives="true"
-  else
-    trace "archive already exists, not looking for snapshot archives"
+  elif [ -n "$BACKUP_ID" ] && [ -f "${DB_DIR}/backup.txt" ]; then
+    # Check backup ID in archive
+    if checkBackupId "${DB_DIR}/backup.txt"; then
+      local recreate_archives="true"
+    else
+      log "Incorrect backup id in archive... Did the SM crash during a snapshot?"
+    fi
 
-    local backup_file=${DB_DIR}/backup.txt
-    if [ -n "$BACKUP_ID" ] && [ -f  $backup_file ] ; then
-      if [ "$(cat $backup_file | tr -d [:space:])" == "$BACKUP_ID" ] ; then
-        local recreate_archives="true"
-      else
-        log "Archive present but with a wrong backupId. Did the SM crash during a snapshot?"
-      fi
+    # Check backup ID in journal
+    if [ "$SEPARATE_JOURNAL" == "true" ] && ! checkBackupId "${JOURNAL_DIR}/backup.txt"; then
+      log "Incorrect backup id in journal... Did the SM crash during a snapshot?"
     fi
   fi
 
-  if [ $recreate_archives == "true" ]; then
-    log "Removing outdated archive metadata"
-    rm ${DB_DIR}/info.json ${DB_DIR}/backup.txt
-    [ -e ${JOURNAL_DIR}/backup.txt ] && rm ${JOURNAL_DIR}/backup.txt
+  if [ "$recreate_archives" == "true" ]; then
+    log "Removing metadata from snapshot archive"
+    rm "${DB_DIR}/info.json" "${DB_DIR}/backup.txt"
+    [ -e "${JOURNAL_DIR}/backup.txt" ] && rm "${JOURNAL_DIR}/backup.txt"
   fi
 }
 

@@ -861,7 +861,11 @@ Validate and render dataSourceRef.
     {{- end -}}
     {{- $namespace := default $.Release.Namespace $ref.namespace -}}
     {{- if not (lookup $apiVersion $ref.kind $namespace $ref.name) -}}
-      {{- fail (printf "Invalid data source: %s/%s/%s not found in namespace %s" $apiVersion $ref.kind $ref.name $namespace) -}}
+      {{- if and $.Release.IsUpgrade (eq (include "defaultfalse" $.Values.database.persistence.preprovisionVolumes) "true") -}}
+        {{- $dataSource = "" -}}
+      {{- else -}}
+        {{- fail (printf "Invalid data source: %s/%s/%s not found in namespace %s" $apiVersion $ref.kind $ref.name $namespace) -}}
+      {{- end -}}
     {{- end -}}
   {{- end -}}
   {{- print $dataSource -}}
@@ -904,4 +908,64 @@ true
 {{- else -}}
 false
 {{- end -}}
+{{- end -}}
+
+{{/*
+Get spec of archive PVC or volumeClaimTemplate of SM statefulset.
+*/}}
+{{- define "database.archivePvcSpec" -}}
+{{- $ := index . 0 -}}
+{{- $includeDataSource := index . 1 -}}
+accessModes:
+{{- range $.Values.database.persistence.accessModes }}
+  - {{ . }}
+{{- end }}
+{{- if $.Values.database.persistence.storageClass }}
+{{- if eq "-" $.Values.database.persistence.storageClass }}
+storageClassName: ""
+{{- else }}
+storageClassName: {{ $.Values.database.persistence.storageClass }}
+{{- end }}
+{{- end }}
+{{- if eq (include "defaultfalse" $includeDataSource) "true" }}
+{{ include "database.archiveDataSource" $ }}
+{{- end }}
+{{- if $.Values.database.isManualVolumeProvisioning }}
+selector:
+  matchLabels:
+    database: {{ $.Values.database.name }}
+{{- end }}
+resources:
+  requests:
+    storage: {{ $.Values.database.persistence.size }}
+{{- end -}}
+
+{{/*
+Get spec of journal PVC or volumeClaimTemplate of SM statefulset.
+*/}}
+{{- define "database.journalPvcSpec" -}}
+{{- $ := index . 0 -}}
+{{- $includeDataSource := index . 1 -}}
+accessModes:
+{{- range $.Values.database.sm.noHotCopy.journalPath.persistence.accessModes }}
+  - {{ . }}
+{{- end }}
+{{- if $.Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
+{{- if eq "-" $.Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
+storageClassName: ""
+{{- else }}
+storageClassName: {{ $.Values.database.sm.noHotCopy.journalPath.persistence.storageClass }}
+{{- end }}
+{{- end }}
+{{- if eq (include "defaultfalse" $includeDataSource) "true" }}
+{{ include "database.journalDataSource" $ }}
+{{- end }}
+{{- if $.Values.database.isManualVolumeProvisioning }}
+selector:
+  matchLabels:
+    database: {{ $.Values.database.name }}
+{{- end }}
+resources:
+  requests:
+    storage: {{ $.Values.database.sm.noHotCopy.journalPath.persistence.size }}
 {{- end -}}
