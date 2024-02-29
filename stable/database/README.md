@@ -190,7 +190,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `name` | Database name | `demo` |
 | `rootUser` | Database root user | `dba` |
 | `rootPassword` | Database root password | `secret` |
-| `archiveType` | Archive Type (either `""`` or `"lsa"``) | `""` |
+| `archiveType` | Archive Type (either `""` or `"lsa"`) | `""` |
 | `priorityClasses.sm` | The `priorityClassName` to specify SM pods | `""` |
 | `priorityClasses.te` | The `priorityClassName` to specify TE pods | `""` |
 | `initContainers.runInitDisk` | Whether to run the `init-disk` init container to set volume permissions | `true` |
