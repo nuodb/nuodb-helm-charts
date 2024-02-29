@@ -65,7 +65,6 @@ $ip demo.nuodb.local" | sudo tee -a /etc/hosts
   kubectl delete pods -l k8s-app=kube-dns -n kube-system
 
   helm version
-
   kubectl version
 
   # get the helm repo for upgrade testing
