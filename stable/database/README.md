@@ -1,6 +1,6 @@
 # NuoDB Database Helm Chart
 
-This chart starts a NuoDB database deployment on a Kubernetes cluster using the Helm package manager. To start a second database under the same NuoDB Admin deployment, start a second database using the same instructions with a new database name. 
+This chart starts a NuoDB database deployment on a Kubernetes cluster using the Helm package manager. To start a second database under the same NuoDB Admin deployment, start a second database using the same instructions with a new database name.
 
 ## Command
 
@@ -153,7 +153,7 @@ The following tables list the configurable admin parameters for a database and t
 
 #### admin.configFiles.*
 
-The purpose of this section is to detail how to provide alternative configuration files for NuoDB. 
+The purpose of this section is to detail how to provide alternative configuration files for NuoDB.
 
 There are two sets of configuration files documented:
 
@@ -190,6 +190,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `name` | Database name | `demo` |
 | `rootUser` | Database root user | `dba` |
 | `rootPassword` | Database root password | `secret` |
+| `archiveType` | Archive Type (either `""`` or `"lsa"``) | `""` |
 | `priorityClasses.sm` | The `priorityClassName` to specify SM pods | `""` |
 | `priorityClasses.te` | The `priorityClassName` to specify TE pods | `""` |
 | `initContainers.runInitDisk` | Whether to run the `init-disk` init container to set volume permissions | `true` |
