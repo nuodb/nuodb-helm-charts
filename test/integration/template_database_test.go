@@ -2196,6 +2196,16 @@ func TestDatabaseConfigChecksum(t *testing.T) {
 	})
 }
 
+func verifyTopologyConstraints(t *testing.T, name string, obj v1.PodSpec, expectedLabels map[string]string) {
+	require.Equal(t, 1, len(obj.TopologySpreadConstraints))
+	constraint := obj.TopologySpreadConstraints[0]
+	assert.Equal(t, int32(1), constraint.MaxSkew)
+	assert.Equal(t, "topology.kubernetes.io/zone", constraint.TopologyKey)
+	assert.Equal(t, v1.DoNotSchedule, constraint.WhenUnsatisfiable)
+	msg, ok := testlib.MapContains(constraint.LabelSelector.MatchLabels, expectedLabels)
+	assert.Truef(t, ok, "Unexpected labels in topologySpreadConstraints for resource %s: %s", name, msg)
+}
+
 func TestDatabaseTopologyConstraints(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
@@ -2203,31 +2213,21 @@ func TestDatabaseTopologyConstraints(t *testing.T) {
 		SetValues: map[string]string{
 			"database.sm.noHotCopy.replicas": "1",
 		},
-		ValuesFiles: []string{"../files/database-zone-spread.yaml"},
-	}
-
-	verifyTopologyConstraints := func(name string, obj v1.PodSpec, expectedLabels map[string]string) {
-		require.Equal(t, 1, len(obj.TopologySpreadConstraints))
-		constraint := obj.TopologySpreadConstraints[0]
-		assert.Equal(t, int32(1), constraint.MaxSkew)
-		assert.Equal(t, "topology.kubernetes.io/zone", constraint.TopologyKey)
-		assert.Equal(t, v1.DoNotSchedule, constraint.WhenUnsatisfiable)
-		msg, ok := testlib.MapContains(constraint.LabelSelector.MatchLabels, expectedLabels)
-		assert.Truef(t, ok, "Unexpected labels in topologySpreadConstraints for resource %s: %s", name, msg)
+		ValuesFiles: []string{"../files/zone-spread.yaml"},
 	}
 
 	// render the SMs and capture the output
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 		expectedLabels := map[string]string{"group": "nuodb", "component": "sm"}
-		verifyTopologyConstraints(obj.Name, obj.Spec.Template.Spec, expectedLabels)
+		verifyTopologyConstraints(t, obj.Name, obj.Spec.Template.Spec, expectedLabels)
 	}
 
 	// render the TEs and capture the output
 	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 		expectedLabels := map[string]string{"group": "nuodb", "component": "te"}
-		verifyTopologyConstraints(obj.Name, obj.Spec.Template.Spec, expectedLabels)
+		verifyTopologyConstraints(t, obj.Name, obj.Spec.Template.Spec, expectedLabels)
 	}
 }
 
