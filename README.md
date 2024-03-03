@@ -66,7 +66,7 @@ This project is still under active development. If you experience any [issues](h
 
 ## Testing
 
-To run the tests in this project, Go 1.12 is required.
+To run the tests in this project, Go 1.21 is required.
 To clone the repository and run a test suite (e.g. `test/integration`), execute the following:
 
 ```bash
