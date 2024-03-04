@@ -168,6 +168,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `affinity` | Affinity rules for NuoDB Admin | `{}` |
 | `nodeSelector` | Node selector rules for NuoDB Admin | `{}` |
 | `tolerations` | Tolerations for NuoDB Admin | `[]` |
+| `topologySpreadConstraints` | Topology spread constraints for NuoDB Admin | `[]` |
 | `configFilesPath` | Directory path where `configFiles.*` are found | `/etc/nuodb` |
 | `configFiles.*` | See below. | `{}` |
 | `persistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteMany` |

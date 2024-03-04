@@ -47,6 +47,10 @@ spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       priorityClassName: {{ default "" .Values.admin.priorityClass }}
       {{- include "securityContext" . | indent 6 }}
+      {{- if .Values.admin.topologySpreadConstraints }}
+      topologySpreadConstraints:
+{{ tpl .Values.admin.topologySpreadConstraints . | trim | indent 8 }}
+      {{- end }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}

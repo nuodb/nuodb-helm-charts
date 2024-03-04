@@ -562,6 +562,21 @@ func TestAdminConfigChecksum(t *testing.T) {
 	})
 }
 
+func TestAdminTopologyConstraints(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+	options := &helm.Options{
+		ValuesFiles: []string{"../files/zone-spread.yaml"},
+	}
+
+	// render the AP statefulset and capture the output
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		expectedLabels := map[string]string{"group": "nuodb", "component": "admin"}
+		verifyTopologyConstraints(t, obj.Name, obj.Spec.Template.Spec, expectedLabels)
+	}
+}
+
 func TestBootstrapServersRenders(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
