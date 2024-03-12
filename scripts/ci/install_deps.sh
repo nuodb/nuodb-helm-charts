@@ -48,9 +48,7 @@ EOF
 
   # Configure DNS entries for Ingress testing
   ip=$(minikube ip)
-  echo "$ip api.nuodb.local
-$ip sql.nuodb.local
-$ip demo.nuodb.local" | sudo tee -a /etc/hosts
+  echo "$ip api.nuodb.local sql.nuodb.local demo.nuodb.local" | sudo tee -a /etc/hosts
 
   # Start 'minikube tunnel' so that services with type LoadBalancer are correctly
   # provisioned and routes to the minikube IP are created;
