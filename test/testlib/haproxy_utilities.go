@@ -21,6 +21,7 @@ func StartHAProxyIngress(t *testing.T, options *helm.Options, namespaceName stri
 
 	defaultOptions := helm.Options{
 		SetValues: map[string]string{
+			"controller.image.tag":                 "1.10.11",
 			"controller.replicaCount":              "1",
 			"controller.service.type":              "NodePort",
 			"controller.ingressClass":              helmChartReleaseName,
