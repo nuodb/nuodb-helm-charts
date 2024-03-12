@@ -42,6 +42,10 @@ def write_file(path, content):
         else:
             json.dump(content, f)
 
+        # Flush buffers and invoke fsync() to make sure data is written to disk
+        f.flush()
+        os.fsync(f.fileno())
+
     # Make sure that file is accessible by nuodb user, which has uid 1000 by
     # default. Making the file group-writable ensures that it is accessible to
     # the nuodb user in OpenShift deployments where an arbitrary uid is used
