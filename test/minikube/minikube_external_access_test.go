@@ -6,7 +6,6 @@ package minikube
 import (
 	"errors"
 	"fmt"
-	"go/build/constraint"
 	"os"
 	"os/exec"
 	"path"
