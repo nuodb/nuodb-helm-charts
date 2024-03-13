@@ -380,7 +380,7 @@ func TestKubernetesIngress(t *testing.T) {
 		require.NoError(t, err)
 		nuosqlVersion := getNuoSQLVersion(t)
 		if !constraint.Check(nuosqlVersion) {
-			t.Skip("Skipping test because nuosql version %s does not support SNI", nuosqlVersion.String())
+			t.Skipf("Skipping test because nuosql version %s does not support SNI", nuosqlVersion.String())
 		}
 
 		var expectedNodeIds []int32
