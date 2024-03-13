@@ -6,6 +6,7 @@ package minikube
 import (
 	"errors"
 	"fmt"
+	"go/build/constraint"
 	"os"
 	"os/exec"
 	"path"
@@ -58,6 +59,26 @@ func findDomainExternalInfo(t *testing.T, namespaceName string, serviceName stri
 		domainPort = servicePort.Port
 	}
 	return domainAddress, domainPort
+}
+
+func getNuoSQLVersion(t *testing.T) *semver.Version {
+	pathToNuoSQL, ok := os.LookupEnv("NUOSQL_PATH")
+	if !ok {
+		pathToNuoSQL = "nuosql"
+	}
+	out, err := exec.Command(pathToNuoSQL, "--version").Output()
+	if exiterr, ok := err.(*exec.ExitError); ok {
+		// nuosql has exited with an non zero exit code; generate better error
+		// message by including the command stderr
+		require.NoError(t, err, string(exiterr.Stderr))
+	} else {
+		require.NoError(t, err)
+	}
+	match := regexp.MustCompile("NuoDB Client build (.*)").FindStringSubmatch(string(out))
+	require.NotNil(t, match, out)
+	version, err := semver.NewVersion(match[1])
+	require.NoError(t, err)
+	return version
 }
 
 func verifyNuoSQLEngine(t *testing.T, address string, port int32, databaseName string,
@@ -354,12 +375,15 @@ func TestKubernetesIngress(t *testing.T) {
 		}
 	}
 
-	// this requires CDriver to support Server Name Indication (SNI); there is
-	// no straightforward way to make this logic conditional because in internal
-	// CI we use the nuosql from the package installation but in CircleCI, we
-	// use the client package
-	// TODO: Change the version once DB-34466 is fixed
-	testlib.RunOnNuoDBVersionCondition(t, ">=5.1", func(version *semver.Version) {
+	// this requires CDriver to support Server Name Indication (SNI)
+	t.Run("sqlIngressConnectivity", func(t *testing.T) {
+		constraint, err := semver.NewConstraint(">=5.0.4")
+		require.NoError(t, err)
+		nuosqlVersion := getNuoSQLVersion(t)
+		if !constraint.Check(nuosqlVersion) {
+			t.Skip("Skipping test because nuosql version %s does not support SNI", nuosqlVersion.String())
+		}
+
 		var expectedNodeIds []int32
 		for _, process := range processes {
 			if process.Type == "TE" {
