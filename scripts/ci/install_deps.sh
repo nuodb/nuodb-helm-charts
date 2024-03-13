@@ -48,9 +48,7 @@ EOF
 
   # Configure DNS entries for Ingress testing
   ip=$(minikube ip)
-  echo "$ip api.nuodb.local
-$ip sql.nuodb.local
-$ip demo.nuodb.local" | sudo tee -a /etc/hosts
+  echo "$ip api.nuodb.local sql.nuodb.local demo.nuodb.local" | sudo tee -a /etc/hosts
 
   # Start 'minikube tunnel' so that services with type LoadBalancer are correctly
   # provisioned and routes to the minikube IP are created;
@@ -151,6 +149,6 @@ fi
 curl -sSL "https://github.com/gotestyourself/gotestsum/releases/download/v"${GOTESTSUM_VERSION}"/gotestsum_${GOTESTSUM_VERSION}_linux_amd64.tar.gz" | sudo tar -xz -C /usr/local/bin gotestsum
 
 # Install NuoDB client on the build host
-curl -sSL "https://github.com/nuodb/nuodb-client/releases/download/v${NUODBCLIENT_VERSION}/nuodb-client-${NUODBCLIENT_VERSION}.lin64.tar.gz" | sudo tar -xz -C $HOME
-echo "export PATH=${HOME}/nuodb-client-${NUODBCLIENT_VERSION}.lin64/bin:\$PATH" >> $HOME/.nuodbrc
+curl -sSL "https://github.com/nuodb/nuodb-client/releases/download/v${NUODBCLIENT_VERSION}/nuodb-client-${NUODBCLIENT_VERSION}.lin-x64.tar.gz" | sudo tar -xz -C $HOME
+echo "export PATH=${HOME}/nuodb-client-${NUODBCLIENT_VERSION}.lin-x64/bin:\$PATH" >> $HOME/.nuodbrc
 echo "echo PATH: \"\$PATH\"" >> $HOME/.nuodbrc
