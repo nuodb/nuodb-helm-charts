@@ -75,7 +75,9 @@ func getNuoSQLVersion(t *testing.T) *semver.Version {
 	}
 	match := regexp.MustCompile("NuoDB Client build (.*)").FindStringSubmatch(string(out))
 	require.NotNil(t, match, out)
-	version, err := semver.NewVersion(match[1])
+	// strip comment from semantic version
+	versionStr := strings.Split(match[1], "-")[0]
+	version, err := semver.NewVersion(versionStr)
 	require.NoError(t, err)
 	return version
 }
