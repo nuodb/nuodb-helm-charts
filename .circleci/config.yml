@@ -1,0 +1,3 @@
+# Trivial CircleCI config to suppress errors
+version: 2.1
+workflows: {}
