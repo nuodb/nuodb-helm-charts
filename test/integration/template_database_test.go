@@ -1912,6 +1912,96 @@ func TestDatabaseSecurityContext(t *testing.T) {
 			assert.Equal(t, true, *securityContext.RunAsNonRoot)
 		}
 	})
+
+	// pod security context should have runAsNotRoot=true if no separate journal
+	t.Run("testRunAsNonRootBackupHooks", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.runAsNonRootGroup": "true",
+				"database.initContainers.runInitDisk":        "false",
+				"database.backupHooks.enabled":               "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+	})
+
+	// pod security context should not have runAsNotRoot=true if separate journal
+	t.Run("testRunAsNonRootBackupHooksSeparateJournal", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.runAsNonRootGroup": "true",
+				"database.initContainers.runInitDisk":        "false",
+				"database.backupHooks.enabled":               "true",
+				"database.sm.noHotCopy.journalPath.enabled":  "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Nil(t, securityContext.RunAsNonRoot)
+		}
+	})
+
+	// pod security context should have runAsNotRoot=true if separate journal and useSuspend=true
+	t.Run("testRunAsNonRootBackupHooksUseSuspend", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.securityContext.runAsNonRootGroup": "true",
+				"database.initContainers.runInitDisk":        "false",
+				"database.backupHooks.enabled":               "true",
+				"database.backupHooks.useSuspend":            "true",
+				"database.sm.noHotCopy.journalPath.enabled":  "true",
+			},
+		}
+
+		// check security context on SM StatefulSets
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+
+		// check security context on TE Deployment
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			securityContext := obj.Spec.Template.Spec.SecurityContext
+			assert.NotNil(t, securityContext)
+			assert.Equal(t, int64(1000), *securityContext.RunAsUser)
+			assert.Equal(t, true, *securityContext.RunAsNonRoot)
+		}
+	})
 }
 
 func TestDatabaseInitContainers(t *testing.T) {
@@ -2566,6 +2656,9 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.NotNil(t, sidecar.SecurityContext)
 		assert.NotNil(t, sidecar.SecurityContext.Privileged)
 		assert.False(t, *sidecar.SecurityContext.Privileged)
+		// runAsUser and runAsGroup should not be overridden
+		assert.Nil(t, sidecar.SecurityContext.RunAsUser)
+		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
 		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "false")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
@@ -2619,6 +2712,10 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.NotNil(t, sidecar.SecurityContext)
 		assert.NotNil(t, sidecar.SecurityContext.Privileged)
 		assert.True(t, *sidecar.SecurityContext.Privileged)
+		// runAsUser and runAsGroup should be overridden to root
+		var id int64 = 0
+		assert.Equal(t, &id, sidecar.SecurityContext.RunAsUser)
+		assert.Equal(t, &id, sidecar.SecurityContext.RunAsGroup)
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_JOURNAL_DIR", "/mnt/journal/nuodb/demo")
 		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "false")
@@ -2662,6 +2759,9 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.NotNil(t, sidecar.SecurityContext)
 		assert.NotNil(t, sidecar.SecurityContext.Privileged)
 		assert.False(t, *sidecar.SecurityContext.Privileged)
+		// runAsUser and runAsGroup should not be overridden
+		assert.Nil(t, sidecar.SecurityContext.RunAsUser)
+		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_JOURNAL_DIR", "/mnt/journal/nuodb/demo")
 		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "true")
