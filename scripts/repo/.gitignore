@@ -1,3 +1,2 @@
-/charts/*.tgz
-/charts/*.yaml
+/charts/
 /kustomization.yaml

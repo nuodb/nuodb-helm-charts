@@ -36,8 +36,9 @@ if ! command -v kustomize >/dev/null; then
 fi
 
 # Package Helm charts from current commit
-rm -rf repo/charts/*.tgz
-rm -rf package/
+rm -rf ../package/
+rm -rf repo/charts/
+mkdir -p repo/charts
 ./package.sh
 find ../package/stable -name \*.tgz -exec cp {} repo/charts/ \;
 

@@ -29,11 +29,11 @@ spec:
               protocol: TCP
           livenessProbe:
             httpGet:
-              path: /
+              path: /index.yaml
               port: http
           readinessProbe:
             httpGet:
-              path: /
+              path: /index.yaml
               port: http
           resources:
             limits:
