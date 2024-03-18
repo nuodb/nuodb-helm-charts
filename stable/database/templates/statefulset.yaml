@@ -285,6 +285,8 @@ spec:
             (not (eq (include "defaultfalse" .Values.database.backupHooks.useSuspend) "true")) }}
         securityContext:
           privileged: true
+          runAsUser: 0
+          runAsGroup: 0
         {{- else }}
         {{- include "sc.containerSecurityContext" . | indent 8 }}
         {{- end }}
