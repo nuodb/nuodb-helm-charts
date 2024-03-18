@@ -2,7 +2,7 @@ apiVersion: v2
 name: cloudbeaver
 description: A web based SQL GUI tool for running queries against NuoDB.
 type: application
-version: 3.8.1
+version: 3.8.2
 keywords:
 - nuodb
 - database
