@@ -251,6 +251,60 @@ func TestDatabaseNodePortServiceRenders(t *testing.T) {
 	}
 }
 
+func TestDatabaseInvalidArchiveType(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.provider":                        "amazon",
+			"database.te.externalAccess.enabled":    "true",
+			"database.te.externalAccess.type":       "NodePort",
+			"database.te.externalAccess.internalIP": "true",
+			"database.archiveType": "invalid",
+		},
+	}
+
+	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
+	assert.Contains(t, err.Error(), "database.archiveType must be one of the following:")
+}
+
+func TestDatabaseLsaArchiveType(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.provider":                        "amazon",
+			"database.te.externalAccess.enabled":    "true",
+			"database.te.externalAccess.type":       "NodePort",
+			"database.te.externalAccess.internalIP": "true",
+			"database.archiveType": "lsa",
+		},
+	}
+
+	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
+	assert.Nil(t, err)
+}
+
+func TestDatabaseEmptyArchiveType(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"cloud.provider":                        "amazon",
+			"database.te.externalAccess.enabled":    "true",
+			"database.te.externalAccess.type":       "NodePort",
+			"database.te.externalAccess.internalIP": "true",
+			"database.archiveType": "",
+		},
+	}
+
+	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
+	assert.Nil(t, err)
+}
+
 func TestDatabaseStatefulSet(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
