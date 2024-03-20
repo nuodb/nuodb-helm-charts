@@ -13,7 +13,10 @@
             "properties": {
                 "archiveType": {
                     "type": "string",
-                    "pattern": "^(|lsa)$"
+                    "enum": [
+                        "",
+                        "lsa"
+                    ]
                 }
             }
         }

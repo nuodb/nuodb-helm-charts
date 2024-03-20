@@ -266,7 +266,7 @@ func TestDatabaseInvalidArchiveType(t *testing.T) {
 	}
 
 	_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
-	assert.Contains(t, err.Error(), "database.archiveType: Does not match pattern")
+	assert.Contains(t, err.Error(), "database.archiveType must be one of the following:")
 }
 
 func TestDatabaseLsaArchiveType(t *testing.T) {
