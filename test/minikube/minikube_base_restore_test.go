@@ -519,7 +519,7 @@ func TestSmRestartPartialSnapshotRestore(t *testing.T) {
 	tmpfile, err := os.CreateTemp("", "partial-restore.yaml")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
-	tmpfile.WriteString(`
+	tmpfile.WriteString(fmt.Sprintf(`
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -530,6 +530,7 @@ spec:
   resources:
     requests:
       storage: 1Gi
+  storageClassName: %s
   volumeMode: Filesystem
 ---
 apiVersion: v1
@@ -552,7 +553,7 @@ spec:
       volumeMounts:
         - mountPath: "/mnt"
           name: volume
-`)
+`, testlib.SNAPSHOTABLE_STORAGE_CLASS))
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "apply", "-f", tmpfile.Name())
 	require.NoError(t, err, output)
