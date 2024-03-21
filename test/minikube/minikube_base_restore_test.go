@@ -646,6 +646,7 @@ func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, in
 	if inPlaceRestore {
 		restoredDb = "demo"
 		// Delete database and archive objects from domain state
+		k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "check", "database", "--db-name", "demo", "--num-processes", "0", "--timeout", "60")
 		k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "delete", "database", "--db-name", "demo")
 		k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "delete", "archive", "--archive-id", "0", "--purge")
 
