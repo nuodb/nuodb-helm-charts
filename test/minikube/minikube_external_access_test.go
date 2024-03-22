@@ -14,7 +14,6 @@ import (
 	"strings"
 	"testing"
 	"time"
-	"unicode"
 
 	"github.com/stretchr/testify/require"
 
