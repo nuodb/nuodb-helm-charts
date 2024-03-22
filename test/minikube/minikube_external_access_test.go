@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"unicode"
 
 	"github.com/stretchr/testify/require"
 
@@ -73,12 +74,30 @@ func getNuoSQLVersion(t *testing.T) *semver.Version {
 	} else {
 		require.NoError(t, err)
 	}
-	match := regexp.MustCompile("NuoDB Client build ([0-9]+[.][0-9]+[.][0-9]+).*").FindStringSubmatch(string(out))
+	match := regexp.MustCompile("NuoDB Client build (.*)").FindStringSubmatch(string(out))
 	require.NotNil(t, match, string(out))
-	versionStr := match[1]
+	versionStr := normalizeNuoSQLVersion(match[1])
 	version, err := semver.NewVersion(versionStr)
 	require.NoError(t, err, version)
 	return version
+}
+
+func normalizeNuoSQLVersion(version string) string {
+	// strip comment from semantic version
+	version = strings.Split(version, "-")[0]
+	// keep only <major>.<minor>.<patch> numerical components
+	normalized := ""
+	for i, part := range strings.Split(version, ".") {
+		// break if we encounter component beyond semver patch or non-digit character
+		if i == 3 || strings.ContainsFunc(part, func(c rune) bool { return c < '0' || c > '9' }) {
+			break
+		}
+		if i != 0 {
+			normalized = normalized + "."
+		}
+		normalized = normalized + part
+	}
+	return normalized
 }
 
 func verifyNuoSQLEngine(t *testing.T, address string, port int32, databaseName string,
