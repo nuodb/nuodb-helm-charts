@@ -402,7 +402,7 @@ function checkBackupId() {
 function loadFromSnapshot() {
   local recreate_archives="false"
 
-  if [ ! -f "$DB_DIR/info.json" ]; then
+  if [ ! -f "$DB_DIR/info.json" ] && [ ! -f "$DB_DIR/restored.txt" ]; then
     local archives="$(find /var/opt/nuodb/archive -name info.json)"
     if [ -z "$archives" ] || [ "$(echo "$archives" | wc -l)" != 1 ]; then
       # Relax check for archive snapshot for SMs other than ordinal 0. It is
@@ -467,9 +467,15 @@ function loadFromSnapshot() {
   fi
 
   if [ "$recreate_archives" == "true" ]; then
+    # Create restored.txt to signal that snapshot preparation is complete. This
+    # is needed in the absence of info.json, which is not created for the
+    # restored archive object until later.
+    echo "$BACKUP_ID" > "${DB_DIR}/restored.txt"
+
     log "Removing metadata from snapshot archive"
-    rm "${DB_DIR}/info.json" "${DB_DIR}/backup.txt"
-    [ -e "${JOURNAL_DIR}/backup.txt" ] && rm "${JOURNAL_DIR}/backup.txt"
+    rm -f "${DB_DIR}/info.json"
+    rm -f "${DB_DIR}/backup.txt"
+    rm -f "${JOURNAL_DIR}/backup.txt"
   fi
 }
 
