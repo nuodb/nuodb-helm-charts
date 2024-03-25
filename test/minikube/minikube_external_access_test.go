@@ -77,7 +77,7 @@ func getNuoSQLVersion(t *testing.T) *semver.Version {
 	require.NotNil(t, match, string(out))
 	versionStr := normalizeNuoSQLVersion(match[1])
 	version, err := semver.NewVersion(versionStr)
-	require.NoError(t, err, version)
+	require.NoError(t, err, versionStr)
 	return version
 }
 
