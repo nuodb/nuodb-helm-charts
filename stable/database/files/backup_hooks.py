@@ -29,6 +29,7 @@ def from_dir(base_dir, *args):
 ARCHIVE_BACKUP_ID_FILE = from_dir(ARCHIVE_DIR, "backup.txt")
 JOURNAL_BACKUP_ID_FILE = from_dir(JOURNAL_DIR, "backup.txt")
 BACKUP_PAYLOAD_FILE = from_dir(ARCHIVE_DIR, "backup_payload.txt")
+RESTORED_FILE = from_dir(ARCHIVE_DIR, "restored.txt")
 
 
 def write_file(path, content):
@@ -168,6 +169,13 @@ def pre_backup(backup_id, payload):
                 ARCHIVE_BACKUP_ID_FILE
             )
         )
+
+    # Delete file that is used by restored database to signal that archive
+    # preparation is complete. This may be present if this database was
+    # restored from a backup and this is the first time that a backup has been
+    # taken on it.
+    if os.path.exists(RESTORED_FILE):
+        os.remove(RESTORED_FILE)
 
     # Write backup ID to archive directory
     write_file(ARCHIVE_BACKUP_ID_FILE, backup_id)

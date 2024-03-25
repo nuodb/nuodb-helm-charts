@@ -503,6 +503,94 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	})
 }
 
+func TestSmRestartPartialSnapshotRestore(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	// Create admin release
+	adminRelease, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+	admin := fmt.Sprintf("%s-nuodb-cluster0", adminRelease)
+	admin0 := fmt.Sprintf("%s-0", admin)
+
+	// Create a PVC that has restored.txt in the archive directory, but no
+	// archive.json or backup.txt. This simulates a failure occurring
+	// between preparation of the archive directory from the snapshot and
+	// creation of the archive object and info.json file for the archive.
+	tmpfile, err := os.CreateTemp("", "partial-restore.yaml")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+	tmpfile.WriteString(fmt.Sprintf(`
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: partial-restore
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  storageClassName: %s
+  volumeMode: Filesystem
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: partial-restore
+spec:
+  restartPolicy: Never
+  volumes:
+    - name: volume
+      persistentVolumeClaim:
+        claimName: partial-restore
+  containers:
+    - name: container
+      image: busybox
+      args:
+        - sh
+        - -c
+        - mkdir -p /mnt/nuodb/demo && echo "abc123" > /mnt/nuodb/demo/restored.txt
+      volumeMounts:
+        - mountPath: "/mnt"
+          name: volume
+`, testlib.SNAPSHOTABLE_STORAGE_CLASS))
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "apply", "-f", tmpfile.Name())
+	require.NoError(t, err, output)
+	// Wait for pod to complete successfully
+	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "wait", "--timeout=60s", "--for", "jsonpath={.status.phase}=Succeeded", "pod/partial-restore")
+	require.NoError(t, err, output)
+
+	// Create a database with the prepared PVC as a data source. When the SM
+	// comes up, it should skip archive preparation from the snapshot and
+	// proceed to creation of the archive object and info.json file.
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.name":                                              "demo",
+			"database.sm.resources.requests.cpu":                         "250m",
+			"database.sm.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                         "250m",
+			"database.te.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.noHotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.persistence.storageClass":                          testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.persistence.archiveDataSource.name":                "partial-restore",
+			"database.persistence.archiveDataSource.kind":                "PersistentVolumeClaim",
+			"database.persistence.archiveDataSource.apiGroup":            "",
+			"database.snapshotRestore.backupId":                          "abc123",
+			"database.sm.noHotCopy.replicas":                             "1",
+			"database.sm.hotCopy.enablePod":                              "false",
+		},
+	}
+	dbRelease := testlib.StartDatabase(t, namespaceName, admin0, options)
+	// Verify that the restored.txt file is found
+	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-0", dbRelease)
+	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
+		"cat", "/var/opt/nuodb/archive/nuodb/demo/restored.txt")
+	require.NoError(t, err, output)
+	require.Equal(t, "abc123", strings.TrimSpace(output))
+}
+
 // Test exercising backup hooks and volume snapshot restore
 func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, inPlaceRestore bool) {
 	testlib.AwaitTillerUp(t)
@@ -558,6 +646,7 @@ func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, in
 	if inPlaceRestore {
 		restoredDb = "demo"
 		// Delete database and archive objects from domain state
+		k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "check", "database", "--db-name", "demo", "--num-processes", "0", "--timeout", "60")
 		k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "delete", "database", "--db-name", "demo")
 		k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "nuocmd", "delete", "archive", "--archive-id", "0", "--purge")
 
@@ -584,6 +673,13 @@ func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, in
 		options.SetValues["database.persistence.preprovisionVolumes"] = "true"
 	}
 	dbRelease := testlib.StartDatabase(t, namespaceName, admin0, options)
+
+	// Verify that the restored.txt file is found
+	restoredSmPod := fmt.Sprintf("sm-%s-nuodb-cluster0-%s-0", dbRelease, restoredDb)
+	output, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", restoredSmPod, "-c", "engine", "--",
+		"cat", "/var/opt/nuodb/archive/nuodb/"+restoredDb+"/restored.txt")
+	require.NoError(t, err, output)
+	require.Equal(t, backupId, strings.TrimSpace(output))
 
 	// Make sure data written to clone is present
 	output, err = testlib.RunSQL(t, namespaceName, admin0, restoredDb, "SELECT id FROM testtbl")
