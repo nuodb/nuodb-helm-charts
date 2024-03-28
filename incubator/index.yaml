@@ -61,6 +61,25 @@ entries:
   cloudbeaver:
   - apiVersion: v2
     appVersion: 22.1.4
+    created: "2024-03-28T16:52:00.229035681Z"
+    description: A web based SQL GUI tool for running queries against NuoDB.
+    digest: 94fa230146bc2e1d403110214df40c72214e4f5c6a840b6d029509b0fdf83e06
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/incubator/cloudbeaver
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: cloudbeaver
+    type: application
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.8.2/cloudbeaver-3.8.2.tgz
+    version: 3.8.2
+  - apiVersion: v2
+    appVersion: 22.1.4
     created: "2024-03-13T16:06:45.889760153Z"
     description: A web based SQL GUI tool for running queries against NuoDB.
     digest: e103d1e4b1d72c27d8213c3f67026e81f545105ac405c8aee17f051626372e1d
@@ -136,6 +155,24 @@ entries:
     - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.6.0/cloudbeaver-3.6.0.tgz
     version: 3.6.0
   demo-ycsb:
+  - apiVersion: v1
+    appVersion: 5.0.4
+    created: "2024-03-28T16:52:00.229410432Z"
+    description: Load YCSB for NuoDB
+    digest: e54f74bf7a95273a8a83ebc70116dddb5b2a9a93784d8e21644f4f3e38f9a7a8
+    home: https://github.com/nuodb/nuodb-helm-charts/tree/master/stable/demo-ycsb
+    icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
+    keywords:
+    - nuodb
+    - database
+    - sql
+    maintainers:
+    - email: support@nuodb.com
+      name: NuoDB
+    name: demo-ycsb
+    urls:
+    - https://github.com/nuodb/nuodb-helm-charts/releases/download/v3.8.2/demo-ycsb-3.8.2.tgz
+    version: 3.8.2
   - apiVersion: v1
     appVersion: 5.0.4
     created: "2024-03-13T16:06:45.890161625Z"
@@ -406,4 +443,4 @@ entries:
     urls:
     - https://github.com/nuodb/nuodb-helm-charts/releases/download/v2.2/demo-ycsb-2.2.tgz
     version: "2.2"
-generated: "2024-03-13T16:06:45.886968821Z"
+generated: "2024-03-28T16:52:00.225506395Z"
