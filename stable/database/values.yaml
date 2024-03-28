@@ -352,15 +352,22 @@ database:
     # ref: http://kubernetes.io/docs/user-guide/compute-resources/
     resources: {}
 
+    # Deprecated: use quiesceMode="suspend" instead.
+    useSuspend: false
+
     # If the non-hotcopy SM is configured with separate archive and journal
     # volumes, writes are frozen to the archive volume when the pre-backup hook
-    # is invoked and unfrozen when the post-backup hook is invoked. If
-    # useSuspend=true, then the SM process is suspended completely rather than
-    # only writes to the archive being frozen. This is to enable usage in
-    # environments where fsfreeze cannot be invoked on the archive filesystem,
-    # e.g. because it is using hostpath-based storage where other processes
-    # would be affected.
-    useSuspend: false
+    # is invoked and unfrozen when the post-backup hook is invoked. Below are
+    # supported ways to stop archive writes: 
+    #   - hotsnap - Uses NuoDB product support for pausing archive writes
+    #     (recommended). Supported from NuoDB versions 7.0.0 and above.
+    #   - fsfreeze - Uses fsfreeze binary to suspend archive reads and writes.
+    #     This mode requires a privileged sidecar container.
+    #   - suspend - The SM process is suspended completely. This is to enable
+    #     usage in environments where fsfreeze cannot be invoked on the archive
+    #     filesystem, e.g. because it is using hostpath-based storage where
+    #     other processes would be affected. 
+    quiesceMode: ""
 
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.

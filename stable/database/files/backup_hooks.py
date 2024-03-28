@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 ARCHIVE_DIR = os.environ.get("NUODB_ARCHIVE_DIR", "/mnt/archive")
 JOURNAL_DIR = os.environ.get("NUODB_JOURNAL_DIR")
-USE_SUSPEND = os.environ.get("USE_SUSPEND") == "true"
+QUIESCE_MODE = os.environ.get("QUIESCE_MODE")
 
 
 def from_dir(base_dir, *args):
@@ -56,10 +56,10 @@ def write_file(path, content):
         os.chmod(path, mode=0o660)
 
 
-def get_nuodb_pids():
-    # Get the pid for the nuodb process, which should be sharing a namespace
-    # with the backup-hooks sidecar
-    pids = []
+def get_nuodb_process_info():
+    # Get the process info for the nuodb process, which should be sharing a
+    # namespace with the backup-hooks sidecar
+    processes = []
     for pid in os.listdir("/proc"):
         # Skip any non-pid directories
         if not pid.isdigit():
@@ -72,15 +72,19 @@ def get_nuodb_pids():
                 # argv[0] with entries delimited by spaces
                 args = f.read().replace(b"\x00", b" ").split()
                 if args and args[0] in [b"nuodb", b"/opt/nuodb/bin/nuodb"]:
-                    pids.append(pid)
+                    sid = None
+                    for arg in args:
+                        parts = arg.split(b":")
+                        if len(parts) == 2 and parts[0] == b"sid":
+                            sid = parts[1]
+                    processes.append({"pid": pid, "sid": sid.decode("utf-8")})
         except FileNotFoundError:
             # Process may have exited
             pass
 
-    if len(pids) > 1:
-        LOGGER.warning("Multiple nuodb processes found: %s", pids)
-    return pids
-
+    if len(processes) > 1:
+        LOGGER.warning("Multiple nuodb processes found: %s", processes)
+    return processes
 
 def check_thread_suspended(pid, tid):
     try:
@@ -127,13 +131,14 @@ def await_suspended(pid, interval=0.25, retries=16):
 
 
 def freeze_archive(unfreeze=False):
-    if USE_SUSPEND:
+    if QUIESCE_MODE == "suspend":
         # Resume or suspend nuodb process. There should be a unique nuodb
         # process, but if there are multiple somehow, suspend all of them.
-        pids = get_nuodb_pids()
-        if not pids:
+        processes = get_nuodb_process_info()
+        if not processes:
             raise RuntimeError("No nuodb process found")
-        for pid in pids:
+        for process in processes:
+            pid = process["pid"]
             if unfreeze:
                 LOGGER.info("Resuming nuodb process with pid %s", pid)
                 os.kill(int(pid), signal.SIGCONT)
@@ -142,7 +147,22 @@ def freeze_archive(unfreeze=False):
                 os.kill(int(pid), signal.SIGSTOP)
                 # Make sure all threads are suspended
                 await_suspended(pid)
-    else:
+    elif QUIESCE_MODE == "hotsnap":
+        # Freeze or unfreeze the archive using hotsnap
+        processes = get_nuodb_process_info()
+        if not processes:
+            raise RuntimeError("No nuodb process found")
+        sid = processes[0]["sid"]
+        if unfreeze:
+            LOGGER.info("Resuming archive writes for nuodb process with startId %s", sid)
+            action = "resume"
+        else:
+            LOGGER.info("Pausing archive writes for nuodb process with startId %s", sid)
+            action = "pause"
+        subprocess.check_output(
+            ["nuocmd", action, "archive-writes", "--start-id", sid], stderr=subprocess.STDOUT
+        )
+    elif QUIESCE_MODE == "fsfreeze":
         # Freeze or unfreeze the archive filesystem using fsfreeze
         if unfreeze:
             LOGGER.info("Unfreezing writes to archive volume")
@@ -153,6 +173,8 @@ def freeze_archive(unfreeze=False):
         subprocess.check_output(
             ["fsfreeze", action, ARCHIVE_DIR], stderr=subprocess.STDOUT
         )
+    else:
+        raise RuntimeError("not supported quiesce mode '{}'".format(QUIESCE_MODE))
 
 
 def pre_backup(backup_id, payload):

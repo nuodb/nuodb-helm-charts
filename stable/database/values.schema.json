@@ -17,6 +17,20 @@
                         "",
                         "lsa"
                     ]
+                },
+                "backupHooks": {
+                    "type": "object",
+                    "properties": {
+                        "quiesceMode": {
+                            "type": "string",
+                            "enum": [
+                                "",
+                                "hotsnap",
+                                "fsfreeze",
+                                "suspend"
+                            ]
+                        }
+                    }
                 }
             }
         }
