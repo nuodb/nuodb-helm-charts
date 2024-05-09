@@ -21,7 +21,7 @@
                 "backupHooks": {
                     "type": "object",
                     "properties": {
-                        "quiesceMode": {
+                        "freezeMode": {
                             "type": "string",
                             "enum": [
                                 "",
@@ -29,6 +29,10 @@
                                 "fsfreeze",
                                 "suspend"
                             ]
+                        },
+                        "timeout": {
+                            "type": "number",
+                            "minimum": 1
                         }
                     }
                 }

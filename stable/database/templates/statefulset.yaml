@@ -270,8 +270,12 @@ spec:
         - containerPort: 8000
           protocol: TCP
         env:
-          - name: QUIESCE_MODE
-            value: {{ include "backupHooks.quiesceMode" . | quote }}
+          - name: FREEZE_MODE
+            value: {{ include "backupHooks.freezeMode" . | quote }}
+          {{- if .Values.database.backupHooks.timeout }}
+          - name: FREEZE_TIMEOUT
+            value: {{ .Values.database.backupHooks.timeout | quote }}
+          {{- end }}
           - name: NUODB_ARCHIVE_DIR
             value: {{ printf "/mnt/archive/%s/%s" .Values.admin.domain .Values.database.name }}
           {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
@@ -282,7 +286,7 @@ spec:
         {{- toYaml .Values.database.backupHooks.resources | trim | nindent 10 }}
         {{- if and
             (eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true")
-            (eq (include "backupHooks.quiesceMode" .) "fsfreeze") }}
+            (eq (include "backupHooks.freezeMode" .) "fsfreeze") }}
         securityContext:
           privileged: true
           runAsUser: 0

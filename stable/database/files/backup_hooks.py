@@ -17,7 +17,8 @@ LOGGER = logging.getLogger(__name__)
 
 ARCHIVE_DIR = os.environ.get("NUODB_ARCHIVE_DIR", "/mnt/archive")
 JOURNAL_DIR = os.environ.get("NUODB_JOURNAL_DIR")
-QUIESCE_MODE = os.environ.get("QUIESCE_MODE")
+FREEZE_MODE = os.environ.get("FREEZE_MODE")
+FREEZE_TIMEOUT = os.environ.get("FREEZE_TIMEOUT")
 
 
 def from_dir(base_dir, *args):
@@ -130,8 +131,8 @@ def await_suspended(pid, interval=0.25, retries=16):
     )
 
 
-def freeze_archive(unfreeze=False):
-    if QUIESCE_MODE == "suspend":
+def freeze_archive(backup_id, unfreeze=False):
+    if FREEZE_MODE == "suspend":
         # Resume or suspend nuodb process. There should be a unique nuodb
         # process, but if there are multiple somehow, suspend all of them.
         processes = get_nuodb_process_info()
@@ -147,22 +148,23 @@ def freeze_archive(unfreeze=False):
                 os.kill(int(pid), signal.SIGSTOP)
                 # Make sure all threads are suspended
                 await_suspended(pid)
-    elif QUIESCE_MODE == "hotsnap":
+    elif FREEZE_MODE == "hotsnap":
         # Freeze or unfreeze the archive using hotsnap
         processes = get_nuodb_process_info()
         if not processes:
             raise RuntimeError("No nuodb process found")
         sid = processes[0]["sid"]
         if unfreeze:
-            LOGGER.info("Resuming archive writes for nuodb process with startId %s", sid)
+            LOGGER.info("Resuming archiving for nuodb process with startId %s", sid)
             action = "resume"
         else:
-            LOGGER.info("Pausing archive writes for nuodb process with startId %s", sid)
+            LOGGER.info("Pausing archiving for nuodb process with startId %s", sid)
             action = "pause"
-        subprocess.check_output(
-            ["nuocmd", action, "archive-writes", "--start-id", sid], stderr=subprocess.STDOUT
-        )
-    elif QUIESCE_MODE == "fsfreeze":
+        args = ["nuocmd", action, "archiving", "--start-id", sid, "--pause-id", backup_id]
+        if FREEZE_TIMEOUT:
+            args += ["--timeout", "{}s".format(FREEZE_TIMEOUT)]
+        subprocess.check_output(args, stderr=subprocess.STDOUT)
+    elif FREEZE_MODE == "fsfreeze":
         # Freeze or unfreeze the archive filesystem using fsfreeze
         if unfreeze:
             LOGGER.info("Unfreezing writes to archive volume")
@@ -174,7 +176,7 @@ def freeze_archive(unfreeze=False):
             ["fsfreeze", action, ARCHIVE_DIR], stderr=subprocess.STDOUT
         )
     else:
-        raise RuntimeError("not supported quiesce mode '{}'".format(QUIESCE_MODE))
+        raise RuntimeError("not supported quiesce mode '{}'".format(FREEZE_MODE))
 
 
 def pre_backup(backup_id, payload):
@@ -217,7 +219,7 @@ def pre_backup(backup_id, payload):
     # If the archive and journal are on separate volumes, block writes to the
     # archive to allow consistent snapshots to be obtained of both
     if JOURNAL_DIR is not None:
-        freeze_archive()
+        freeze_archive(backup_id)
 
 
 def post_backup(backup_id, query):
@@ -241,7 +243,7 @@ def post_backup(backup_id, query):
     # If the archive and journal are on separate volumes, we must unblock
     # writes to the archive
     if JOURNAL_DIR is not None:
-        freeze_archive(unfreeze=True)
+        freeze_archive(backup_id, unfreeze=True)
 
     # Delete backup ID files and payload file
     if os.path.exists(ARCHIVE_BACKUP_ID_FILE):

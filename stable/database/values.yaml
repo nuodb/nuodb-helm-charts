@@ -352,7 +352,7 @@ database:
     # ref: http://kubernetes.io/docs/user-guide/compute-resources/
     resources: {}
 
-    # Deprecated: use quiesceMode="suspend" instead.
+    # Deprecated: use freezeMode="suspend" instead.
     useSuspend: false
 
     # If the non-hotcopy SM is configured with separate archive and journal
@@ -367,7 +367,11 @@ database:
     #     usage in environments where fsfreeze cannot be invoked on the archive
     #     filesystem, e.g. because it is using hostpath-based storage where
     #     other processes would be affected. 
-    quiesceMode: ""
+    freezeMode: ""
+
+    # Timeout in seconds until the SM is automatically unfrozen. Currently, it
+    # is only supported when "hotsnap" mode is selected.
+    timeout: 30
 
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
