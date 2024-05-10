@@ -282,6 +282,9 @@ spec:
           - name: NUODB_JOURNAL_DIR
             value: {{ printf "/mnt/journal/%s/%s" .Values.admin.domain .Values.database.name }}
           {{- end }}
+          {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
+          - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+          {{- end }}
         resources:
         {{- toYaml .Values.database.backupHooks.resources | trim | nindent 10 }}
         {{- if and
@@ -303,6 +306,13 @@ spec:
         {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
         - name: journal-volume
           mountPath: /mnt/journal
+        {{- end }}
+        {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls
+          mountPath: /etc/nuodb/keys
+          readOnly: true
+        {{- end }}
         {{- end }}
       {{- end }}
       {{- include "nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
