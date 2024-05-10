@@ -154,16 +154,18 @@ def freeze_archive(backup_id, unfreeze=False):
         if not processes:
             raise RuntimeError("No nuodb process found")
         sid = processes[0]["sid"]
+        extra_args = []
         if unfreeze:
             LOGGER.info("Resuming archiving for nuodb process with startId %s", sid)
             action = "resume"
         else:
             LOGGER.info("Pausing archiving for nuodb process with startId %s", sid)
             action = "pause"
-        args = ["nuocmd", action, "archiving", "--start-id", sid, "--pause-id", backup_id]
-        if FREEZE_TIMEOUT:
-            args += ["--timeout", "{}s".format(FREEZE_TIMEOUT)]
-        subprocess.check_output(args, stderr=subprocess.STDOUT)
+            if FREEZE_TIMEOUT:
+                extra_args += ["--timeout", "{}s".format(FREEZE_TIMEOUT)]
+        subprocess.check_output(
+            ["nuocmd", action, "archiving", "--start-id", sid, "--pause-id", backup_id] + extra_args,
+            stderr=subprocess.STDOUT)
     elif FREEZE_MODE == "fsfreeze":
         # Freeze or unfreeze the archive filesystem using fsfreeze
         if unfreeze:
