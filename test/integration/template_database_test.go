@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
@@ -261,7 +262,7 @@ func TestDatabaseInvalidArchiveType(t *testing.T) {
 			"database.te.externalAccess.enabled":    "true",
 			"database.te.externalAccess.type":       "NodePort",
 			"database.te.externalAccess.internalIP": "true",
-			"database.archiveType": "invalid",
+			"database.archiveType":                  "invalid",
 		},
 	}
 
@@ -279,7 +280,7 @@ func TestDatabaseLsaArchiveType(t *testing.T) {
 			"database.te.externalAccess.enabled":    "true",
 			"database.te.externalAccess.type":       "NodePort",
 			"database.te.externalAccess.internalIP": "true",
-			"database.archiveType": "lsa",
+			"database.archiveType":                  "lsa",
 		},
 	}
 
@@ -297,7 +298,7 @@ func TestDatabaseEmptyArchiveType(t *testing.T) {
 			"database.te.externalAccess.enabled":    "true",
 			"database.te.externalAccess.type":       "NodePort",
 			"database.te.externalAccess.internalIP": "true",
-			"database.archiveType": "",
+			"database.archiveType":                  "",
 		},
 	}
 
@@ -1996,13 +1997,15 @@ func TestDatabaseSecurityContext(t *testing.T) {
 		}
 	})
 
-	// pod security context should not have runAsNotRoot=true if separate journal
+	// pod security context should not have runAsNotRoot=true if separate
+	// journal and "fsfreeze" mode
 	t.Run("testRunAsNonRootBackupHooksSeparateJournal", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"database.securityContext.runAsNonRootGroup": "true",
 				"database.initContainers.runInitDisk":        "false",
 				"database.backupHooks.enabled":               "true",
+				"database.backupHooks.freezeMode":            "fsfreeze",
 				"database.sm.noHotCopy.journalPath.enabled":  "true",
 			},
 		}
@@ -2681,11 +2684,80 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		}
 	})
 
-	// Make sure sidecar is rendered if backup hooks are enabled
-	t.Run("testEnabled", func(t *testing.T) {
+	// Make sure sidecar is rendered if backup hooks are enabled with hotsnap
+	t.Run("testHotSnapEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.tlsClientPEM.secret": "nuodb-client-pem",
+				"admin.tlsClientPEM.key":    "nuocmd.pem",
+
+				"database.backupHooks.enabled":                "true",
+				"database.securityContext.enabledOnContainer": "true",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		var sidecar *v1.Container
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				if container.Name == "backup-hooks" {
+					sidecar = &container
+					assert.NotContains(t, obj.Name, "hotcopy", "Backup hooks should not be enabled for HCSM statefulset")
+					// Make sure shareProcessNamespace=true for pod
+					assert.NotNil(t, obj.Spec.Template.Spec.ShareProcessNamespace)
+					assert.True(t, *obj.Spec.Template.Spec.ShareProcessNamespace)
+				}
+			}
+		}
+		// Make sure securityContext appears and does not have
+		// privileged=true, which is only required when the journal
+		// volume is separate and fsfreeze mode is enabled
+		assert.NotNil(t, sidecar)
+		assert.NotNil(t, sidecar.SecurityContext)
+		assert.NotNil(t, sidecar.SecurityContext.Privileged)
+		assert.False(t, *sidecar.SecurityContext.Privileged)
+		// runAsUser and runAsGroup should not be overridden
+		assert.Nil(t, sidecar.SecurityContext.RunAsUser)
+		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_MODE", "hotsnap")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_TIMEOUT", "30")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUOCMD_API_SERVER", "nuodb.default.svc:8888")
+		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
+		// Check volume mounts
+		volumes := make([]string, len(sidecar.VolumeMounts))
+		for i, v := range sidecar.VolumeMounts {
+			volumes[i] = v.Name
+		}
+		assert.Contains(t, volumes, "archive-volume")
+		assert.Contains(t, volumes, "backup-hooks")
+		assert.NotContains(t, volumes, "journal-volume")
+		assert.Contains(t, volumes, "eph-volume")
+		assert.Contains(t, volumes, "tls")
+
+		// Check that nuodb/nuodb-ce container image is used
+		assert.Contains(t, sidecar.Image, "docker.io/nuodb/nuodb-ce")
+
+		// Check that configmap for backup_hooks.py was rendered
+		var backupHooksCm *v1.ConfigMap
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
+		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
+			if strings.Contains(cm.Name, "backup-hooks") {
+				backupHooksCm = &cm
+			}
+		}
+		assert.NotNil(t, backupHooksCm)
+	})
+
+	// Make sure sidecar is rendered if backup hooks are enabled with fsfreeze
+	t.Run("testFsFreezeEnabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"database.backupHooks.enabled":                 "true",
+				"database.backupHooks.freezeMode":              "fsfreeze",
+				"database.backupHooks.timeout":                 "60",
 				"database.backupHooks.resources.limits.memory": "5Gi",
 				"database.securityContext.enabledOnContainer":  "true",
 			},
@@ -2705,7 +2777,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		}
 		// Make sure securityContext appears and does not have
 		// privileged=true, which is only required when the journal
-		// volume is separate
+		// volume is separate and fsfreeze mode is enabled
 		assert.NotNil(t, sidecar)
 		assert.NotNil(t, sidecar.SecurityContext)
 		assert.NotNil(t, sidecar.SecurityContext.Privileged)
@@ -2714,7 +2786,8 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Nil(t, sidecar.SecurityContext.RunAsUser)
 		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
-		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "false")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_MODE", "fsfreeze")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_TIMEOUT", "60")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
 		// Check volume mounts
 		volumes := make([]string, len(sidecar.VolumeMounts))
@@ -2738,11 +2811,53 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.NotNil(t, backupHooksCm)
 	})
 
-	// Make sure fsfreeze is enabled if journal volume is separate
-	t.Run("testSeparateJournalVolume", func(t *testing.T) {
+	// Make sure hotsnap is enabled if journal volume is separate
+	t.Run("testHotSnapSeparateJournalVolume", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"database.backupHooks.enabled":                "true",
+				"database.securityContext.enabledOnContainer": "true",
+				"database.sm.noHotCopy.journalPath.enabled":   "true",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		var sidecar *v1.Container
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				if container.Name == "backup-hooks" {
+					sidecar = &container
+					assert.NotContains(t, obj.Name, "hotcopy", "Backup hooks should not be enabled for HCSM statefulset")
+					// Make sure shareProcessNamespace=true for pod
+					assert.NotNil(t, obj.Spec.Template.Spec.ShareProcessNamespace)
+					assert.True(t, *obj.Spec.Template.Spec.ShareProcessNamespace)
+				}
+			}
+		}
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_JOURNAL_DIR", "/mnt/journal/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_MODE", "hotsnap")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_TIMEOUT", "30")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUOCMD_API_SERVER", "nuodb.default.svc:8888")
+		// Check volume mounts
+		volumes := make([]string, len(sidecar.VolumeMounts))
+		for i, v := range sidecar.VolumeMounts {
+			volumes[i] = v.Name
+		}
+		assert.Contains(t, volumes, "archive-volume")
+		assert.Contains(t, volumes, "journal-volume")
+		assert.Contains(t, volumes, "backup-hooks")
+		assert.Contains(t, volumes, "eph-volume")
+	})
+
+	// Make sure fsfreeze is enabled if journal volume is separate
+	t.Run("testFsFreezeSeparateJournalVolume", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                "true",
+				"database.backupHooks.freezeMode":             "fsfreeze",
 				"database.securityContext.enabledOnContainer": "true",
 				"database.sm.noHotCopy.journalPath.enabled":   "true",
 			},
@@ -2772,7 +2887,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Equal(t, &id, sidecar.SecurityContext.RunAsGroup)
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_JOURNAL_DIR", "/mnt/journal/nuodb/demo")
-		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "false")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_MODE", "fsfreeze")
 		// Check volume mounts
 		volumes := make([]string, len(sidecar.VolumeMounts))
 		for i, v := range sidecar.VolumeMounts {
@@ -2784,7 +2899,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 	})
 
 	// Make sure process suspend/resume is enabled if useSuspend=true
-	t.Run("testUseSuspend", func(t *testing.T) {
+	t.Run("testSuspendSeparateJournalVolume", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"database.backupHooks.enabled":                "true",
@@ -2818,7 +2933,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
 		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_JOURNAL_DIR", "/mnt/journal/nuodb/demo")
-		testlib.AssertEnvContains(t, sidecar.Env, "USE_SUSPEND", "true")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_MODE", "suspend")
 		// Check volume mounts
 		volumes := make([]string, len(sidecar.VolumeMounts))
 		for i, v := range sidecar.VolumeMounts {
@@ -3049,6 +3164,9 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"database.snapshotRestore.backupId": backupId,
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
 			},
 		}
 

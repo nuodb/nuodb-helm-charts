@@ -308,6 +308,11 @@ spec:
           mountPath: /mnt/journal
         {{- end }}
         {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
+        - name: eph-volume
+          mountPath: /tmp
+          subPath: tmp-hooks
+        {{- end }}
         {{- if .Values.admin.tlsClientPEM }}
         - name: tls
           mountPath: /etc/nuodb/keys

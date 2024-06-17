@@ -363,14 +363,18 @@ database:
     #     (recommended). Supported from NuoDB versions 7.0.0 and above.
     #   - fsfreeze - Uses fsfreeze binary to suspend archive reads and writes.
     #     This mode requires a privileged sidecar container.
-    #   - suspend - The SM process is suspended completely. This is to enable
-    #     usage in environments where fsfreeze cannot be invoked on the archive
+    #   - suspend - The SM process is suspended completely and then resumed
+    #     using `kill -STOP` and `kill -CONT`. This is to enable usage in
+    #     environments where fsfreeze cannot be invoked on the archive
     #     filesystem, e.g. because it is using hostpath-based storage where
-    #     other processes would be affected. 
+    #     other processes would be affected. If `ping-timeout` is enabled, then
+    #     the time between the pre and post-backup hook invocations should not
+    #     approach the `ping-timeout` value, otherwise there is risk of node
+    #     failure detection being triggered and causing the SM to be
+    #     shutdown/evicted.
     freezeMode: ""
 
-    # Timeout in seconds until the SM is automatically unfrozen. Currently, it
-    # is only supported when "hotsnap" mode is selected.
+    # Timeout in seconds until the SM is automatically unfrozen.
     timeout: 30
 
   sm:

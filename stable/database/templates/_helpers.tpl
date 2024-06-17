@@ -90,8 +90,7 @@ Also, we can't use a single if because lazy evaluation is not an option
 {{- end -}}
 
 {{/*
-Renders the freeze mode for backup hooks. 
-TODO(siv3): Try to guess it based on image version
+Renders the freeze mode for backup hooks.
 */}}
 {{- define "backupHooks.freezeMode" -}}
 {{- if eq .Values.database.backupHooks.freezeMode "" -}}

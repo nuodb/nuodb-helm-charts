@@ -11,6 +11,8 @@ import time
 import urllib
 import wsgiref
 from wsgiref import simple_server
+from threading import Timer
+from shutil import which
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 LOGGER = logging.getLogger(__name__)
@@ -19,7 +21,6 @@ ARCHIVE_DIR = os.environ.get("NUODB_ARCHIVE_DIR", "/mnt/archive")
 JOURNAL_DIR = os.environ.get("NUODB_JOURNAL_DIR")
 FREEZE_MODE = os.environ.get("FREEZE_MODE")
 FREEZE_TIMEOUT = os.environ.get("FREEZE_TIMEOUT")
-
 
 def from_dir(base_dir, *args):
     if base_dir is None:
@@ -30,6 +31,7 @@ def from_dir(base_dir, *args):
 ARCHIVE_BACKUP_ID_FILE = from_dir(ARCHIVE_DIR, "backup.txt")
 JOURNAL_BACKUP_ID_FILE = from_dir(JOURNAL_DIR, "backup.txt")
 BACKUP_PAYLOAD_FILE = from_dir(ARCHIVE_DIR, "backup_payload.txt")
+BACKUP_START_ID_FILE = from_dir(ARCHIVE_DIR, "backup_sid.txt")
 RESTORED_FILE = from_dir(ARCHIVE_DIR, "restored.txt")
 
 
@@ -78,6 +80,8 @@ def get_nuodb_process_info():
                         parts = arg.split(b":")
                         if len(parts) == 2 and parts[0] == b"sid":
                             sid = parts[1]
+                    if not sid:
+                        raise RuntimeError("Unable to find start ID for nuodb process PID " + pid)
                     processes.append({"pid": pid, "sid": sid.decode("utf-8")})
         except FileNotFoundError:
             # Process may have exited
@@ -131,13 +135,10 @@ def await_suspended(pid, interval=0.25, retries=16):
     )
 
 
-def freeze_archive(backup_id, unfreeze=False):
+def freeze_archive(backup_id, processes, unfreeze=False, timeout=None):
     if FREEZE_MODE == "suspend":
         # Resume or suspend nuodb process. There should be a unique nuodb
         # process, but if there are multiple somehow, suspend all of them.
-        processes = get_nuodb_process_info()
-        if not processes:
-            raise RuntimeError("No nuodb process found")
         for process in processes:
             pid = process["pid"]
             if unfreeze:
@@ -150,9 +151,6 @@ def freeze_archive(backup_id, unfreeze=False):
                 await_suspended(pid)
     elif FREEZE_MODE == "hotsnap":
         # Freeze or unfreeze the archive using hotsnap
-        processes = get_nuodb_process_info()
-        if not processes:
-            raise RuntimeError("No nuodb process found")
         sid = processes[0]["sid"]
         extra_args = []
         if unfreeze:
@@ -161,11 +159,18 @@ def freeze_archive(backup_id, unfreeze=False):
         else:
             LOGGER.info("Pausing archiving for nuodb process with startId %s", sid)
             action = "pause"
-            if FREEZE_TIMEOUT:
-                extra_args += ["--timeout", "{}s".format(FREEZE_TIMEOUT)]
-        subprocess.check_output(
-            ["nuocmd", action, "archiving", "--start-id", sid, "--pause-id", backup_id] + extra_args,
-            stderr=subprocess.STDOUT)
+            if timeout:
+                extra_args += ["--timeout", "{}s".format(timeout)]
+        try:
+            subprocess.check_output(
+                ["nuocmd", action, "archiving", "--start-id", sid, "--pause-id", backup_id] + extra_args,
+                stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            # HotSnap supports timeout and will automatic resume. Check the
+            # error message to find out if the automatic resume kicked in
+            if action == "resume" and b"Archiving not paused" in e.output:
+                raise ArchivingNotPausedError(e) from e
+            raise
     elif FREEZE_MODE == "fsfreeze":
         # Freeze or unfreeze the archive filesystem using fsfreeze
         if unfreeze:
@@ -180,21 +185,37 @@ def freeze_archive(backup_id, unfreeze=False):
     else:
         raise RuntimeError("not supported quiesce mode '{}'".format(FREEZE_MODE))
 
-
 def pre_backup(backup_id, payload):
     # Check that backup ID was specified
     if not backup_id:
         raise UserError("Backup ID not specified")
 
+    # Get nuodb processes
+    processes = get_nuodb_process_info()
+    if not processes:
+        raise RuntimeError("No nuodb process found")
+
     # Make sure we do not attempt to execute pre-backup hook if a backup is
     # already in progress, which may block indefinitely if writes to the
     # archive and journal directories are frozen
     if os.path.exists(ARCHIVE_BACKUP_ID_FILE):
-        raise UserError(
-            "Backup ID file {} exists. Execute post-backup hook to complete current backup.".format(
-                ARCHIVE_BACKUP_ID_FILE
+        # Check if the SM process was restarted which will invalidate the
+        # previous pre-backup operation using HotSnap.
+        stored_start_id = get_start_id()
+        if FREEZE_MODE == "hotsnap" and stored_start_id and processes[0]["sid"] != stored_start_id:
+            # Remote the backup files from the previous pre-backup operation
+            LOGGER.warning("Unexpected start ID: current=%s, stored=%s." +
+                            "SM process restarted while execution of backup with ID %s", 
+                            processes[0]["sid"], stored_start_id, get_backup_id())
+            remove_backup_files()
+        else:
+            raise UserError(
+                "Backup ID file {} exists. Execute post-backup hook to complete current backup.".format(
+                    ARCHIVE_BACKUP_ID_FILE
+                )
             )
-        )
+    # Get timeout for the operation if specified
+    timeout = get_backup_timeout(payload)
 
     # Delete file that is used by restored database to signal that archive
     # preparation is complete. This may be present if this database was
@@ -202,6 +223,9 @@ def pre_backup(backup_id, payload):
     # taken on it.
     if os.path.exists(RESTORED_FILE):
         os.remove(RESTORED_FILE)
+
+    # Write the start_id of the SM to a file
+    write_file(BACKUP_START_ID_FILE, processes[0]["sid"])
 
     # Write backup ID to archive directory
     write_file(ARCHIVE_BACKUP_ID_FILE, backup_id)
@@ -221,8 +245,21 @@ def pre_backup(backup_id, payload):
     # If the archive and journal are on separate volumes, block writes to the
     # archive to allow consistent snapshots to be obtained of both
     if JOURNAL_DIR is not None:
-        freeze_archive(backup_id)
+        freeze_archive(backup_id, processes, timeout=timeout)
 
+    # Cancel backup operation after specified timeout
+    if timeout:
+        def cancel_backup():
+            try:
+                current_backup_id = get_backup_id()
+                if current_backup_id and current_backup_id == backup_id:
+                    LOGGER.warning("Canceling backup with ID %s. Timeout after %ds", 
+                                    backup_id, timeout)
+                    post_backup(backup_id, query={})
+            except ArchivingNotPausedError:
+                # Suppress this error during backup cancellation
+                pass
+        Timer(timeout, cancel_backup).start()
 
 def post_backup(backup_id, query):
     # Check that backup ID was specified
@@ -242,25 +279,57 @@ def post_backup(backup_id, query):
         else:
             raise UserError(msg)
 
+    # Get nuodb processes
+    processes = get_nuodb_process_info()
+    if not processes:
+        raise RuntimeError("No nuodb process found")
+
     # If the archive and journal are on separate volumes, we must unblock
     # writes to the archive
     if JOURNAL_DIR is not None:
-        freeze_archive(backup_id, unfreeze=True)
+        try:
+            freeze_archive(backup_id, processes, unfreeze=True)
+        except ArchivingNotPausedError:
+            # Delete backup metadata files to allow new backups
+            remove_backup_files()
+            raise
 
-    # Delete backup ID files and payload file
+    # Delete backup metadata files
+    remove_backup_files()
+
+def remove_backup_files():
     if os.path.exists(ARCHIVE_BACKUP_ID_FILE):
         os.remove(ARCHIVE_BACKUP_ID_FILE)
     if JOURNAL_BACKUP_ID_FILE is not None and os.path.exists(JOURNAL_BACKUP_ID_FILE):
         os.remove(JOURNAL_BACKUP_ID_FILE)
     if os.path.exists(BACKUP_PAYLOAD_FILE):
         os.remove(BACKUP_PAYLOAD_FILE)
-
+    if os.path.exists(BACKUP_START_ID_FILE):
+        os.remove(BACKUP_START_ID_FILE)
 
 def get_backup_id():
     if os.path.exists(ARCHIVE_BACKUP_ID_FILE):
         with open(ARCHIVE_BACKUP_ID_FILE, "r") as f:
             return f.read().strip()
 
+def get_start_id():
+    if os.path.exists(BACKUP_START_ID_FILE):
+        with open(BACKUP_START_ID_FILE, "r") as f:
+            return f.read().strip()
+
+def get_backup_timeout(payload):
+    if payload is not None and payload.get("timeout"):
+        try:
+            return int(payload.get("timeout"))
+        except ValueError as e:
+            raise UserError("Invalid request timeout") from e
+    if FREEZE_TIMEOUT:
+        return int(FREEZE_TIMEOUT)
+
+class ArchivingNotPausedError(subprocess.CalledProcessError):
+    def __init__(self, e):
+        super().__init__(e.returncode, e.cmd, e.output, e.stderr)
+        self.message = "Archiving not paused"
 
 class HttpError(RuntimeError):
     def __init__(self, status, message):
@@ -402,6 +471,15 @@ def start_server(port):
         LOGGER.info("Starting backup hooks server on port %s", port)
         httpd.serve_forever()
 
+def verify_prerequisites():
+    if FREEZE_MODE == "hotsnap":
+        if which("nuocmd") is None:
+            raise RuntimeError("'nuocmd' command not found")
+        if subprocess.call(["nuocmd", "pause", "archiving", "-h"], 
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 2:
+            raise RuntimeError("'nuocmd pause archiving' command not supported")
+    elif FREEZE_MODE == "fsfreeze" and which("fsfreeze") is None:
+        raise RuntimeError("'fsfreeze' command not found")
 
 if __name__ == "__main__":
     # Create CLI parser for direct invocation
@@ -414,10 +492,13 @@ if __name__ == "__main__":
     subparser = subparsers.add_parser("pre-hook")
     subparser.add_argument("--backup-id", required=True)
     subparser.add_argument("--opaque-file", type=argparse.FileType("r"))
+    subparser.add_argument("--timeout", default=int(FREEZE_TIMEOUT))
     # Register post-hook subcommand
     subparser = subparsers.add_parser("post-hook")
     subparser.add_argument("--backup-id", required=True)
     subparser.add_argument("--force", action="store_true")
+
+    verify_prerequisites()
 
     # Parse arguments and invoke correct handler
     args = parser.parse_args(sys.argv[1:])
@@ -428,6 +509,6 @@ if __name__ == "__main__":
         opaque = None
         if args.opaque_file:
             opaque = args.opaque_file.read()
-        pre_backup(args.backup_id, dict(opaque=opaque))
+        pre_backup(args.backup_id, dict(opaque=opaque, timeout=args.timeout))
     elif args.subcommand == "post-hook":
         post_backup(args.backup_id, dict(force=args.force))
