@@ -159,7 +159,7 @@ def freeze_archive(backup_id, processes, unfreeze=False, timeout=None):
         else:
             LOGGER.info("Pausing archiving for nuodb process with startId %s", sid)
             action = "pause"
-            if timeout:
+            if timeout and timeout > 0:
                 extra_args += ["--timeout", "{}s".format(timeout)]
         try:
             subprocess.check_output(
@@ -204,8 +204,8 @@ def pre_backup(backup_id, payload):
         stored_start_id = get_start_id()
         if FREEZE_MODE == "hotsnap" and stored_start_id and processes[0]["sid"] != stored_start_id:
             # Remote the backup files from the previous pre-backup operation
-            LOGGER.warning("Unexpected start ID: current=%s, stored=%s." +
-                            "SM process restarted while execution of backup with ID %s", 
+            LOGGER.warning("Unexpected start ID: current=%s, stored=%s. " +
+                            "SM process restarted while executing backup ID %s", 
                             processes[0]["sid"], stored_start_id, get_backup_id())
             remove_backup_files()
         else:
@@ -248,7 +248,7 @@ def pre_backup(backup_id, payload):
         freeze_archive(backup_id, processes, timeout=timeout)
 
     # Cancel backup operation after specified timeout
-    if timeout:
+    if timeout and timeout > 0:
         def cancel_backup():
             try:
                 current_backup_id = get_backup_id()
@@ -318,7 +318,7 @@ def get_start_id():
             return f.read().strip()
 
 def get_backup_timeout(payload):
-    if payload is not None and payload.get("timeout"):
+    if payload is not None and payload.get("timeout") is not None:
         try:
             return int(payload.get("timeout"))
         except ValueError as e:
@@ -329,7 +329,9 @@ def get_backup_timeout(payload):
 class ArchivingNotPausedError(subprocess.CalledProcessError):
     def __init__(self, e):
         super().__init__(e.returncode, e.cmd, e.output, e.stderr)
-        self.message = "Archiving not paused"
+
+    def __str__(self):
+        return self.output.decode("utf-8").strip()
 
 class HttpError(RuntimeError):
     def __init__(self, status, message):
@@ -475,7 +477,7 @@ def verify_prerequisites():
     if FREEZE_MODE == "hotsnap":
         if which("nuocmd") is None:
             raise RuntimeError("'nuocmd' command not found")
-        if subprocess.call(["nuocmd", "pause", "archiving", "-h"], 
+        elif subprocess.call(["nuocmd", "pause", "archiving", "-h"], 
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 2:
             raise RuntimeError("'nuocmd pause archiving' command not supported")
     elif FREEZE_MODE == "fsfreeze" and which("fsfreeze") is None:
@@ -492,7 +494,7 @@ if __name__ == "__main__":
     subparser = subparsers.add_parser("pre-hook")
     subparser.add_argument("--backup-id", required=True)
     subparser.add_argument("--opaque-file", type=argparse.FileType("r"))
-    subparser.add_argument("--timeout", default=int(FREEZE_TIMEOUT))
+    subparser.add_argument("--timeout", default=0)
     # Register post-hook subcommand
     subparser = subparsers.add_parser("post-hook")
     subparser.add_argument("--backup-id", required=True)

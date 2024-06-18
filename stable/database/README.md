@@ -229,8 +229,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
 | `backupHooks.enabled` | Whether to enable the backup hooks sidecar for non-hotcopy SMs | `false` |
 | `backupHooks.resources` | Kubernetes resource requests and limits set on the backup hook sidecar container | `{}` |
-| `backupHooks.freezeMode` | The freeze mode to be used when executing backup hooks. Supported modes are `hotsnap`, `fsfreeze` and `suspend`. Defaults to `hostsnap` if empty. | `""` |
-
+| `backupHooks.freezeMode` | The freeze mode to be used when executing backup hooks. Supported modes are `hotsnap`, `fsfreeze` and `suspend`. Defaults to `hostsnap` if empty | `""` |
+| `backupHooks.timeout` | Timeout in seconds after which the archive will be automatically unfrozen | `30` |
 | `snapshotRestore.backupId` | The backup ID being restored, which is set to enable restore from data sources | `""` |
 | `snapshotRestore.snapshotNameTemplate` | The template used to resolve the names of snapshots to use as data sources for the archive and journal PVCs. The template can reference `backupId` and `volumeType`, which is one of `archive`, `journal`. | `{{.backupId}}-{{.volumeType}}` |
 | `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |

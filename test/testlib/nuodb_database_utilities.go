@@ -820,13 +820,27 @@ type BackupHookResponse struct {
 	Message string `json:"message"`
 }
 
-func GetBackupHookResponse(t *testing.T, namespaceName, smPod, resourcePath string) *BackupHookResponse {
+func GetBackupHookResponse(t *testing.T, namespaceName, smPod, resourcePath string, payload ...string) *BackupHookResponse {
+	cmdArgs := []string{
+		"exec", smPod, "-c", "engine", "--",
+		"curl", "-s", "-X", "POST", "http://0.0.0.0:8000/" + resourcePath,
+	}
+	// Prepare the payload as map
+	if len(payload) > 0 {
+		require.Equal(t, 0, len(payload)%2, "Backup hook payload must contain even number of entries")
+		payloadMap := make(map[string]string, len(payload)/2)
+		for i := 0; i < len(payload)-1; i++ {
+			payloadMap[payload[i]] = payload[i+1]
+		}
+		payloadJson, err := json.Marshal(payloadMap)
+		require.NoError(t, err, payloadMap)
+		cmdArgs = append(cmdArgs, "-d", string(payloadJson))
+	}
 	// Issue request to backup hook server. The nuodb image has curl, so use
 	// it in the SM container to issue HTTP request against the backup hook
 	// server running in a sidecar container on the same pod.
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
-		"curl", "-s", "-X", "POST", "http://0.0.0.0:8000/"+resourcePath)
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, cmdArgs...)
 	require.NoError(t, err, output)
 
 	// Decode response and make sure request was successful
@@ -842,8 +856,8 @@ func GetBackupHookResponse(t *testing.T, namespaceName, smPod, resourcePath stri
 	return &response
 }
 
-func InvokeBackupHook(t *testing.T, namespaceName, smPod, resourcePath string) {
-	response := GetBackupHookResponse(t, namespaceName, smPod, resourcePath)
+func InvokeBackupHook(t *testing.T, namespaceName, smPod, resourcePath string, payload ...string) {
+	response := GetBackupHookResponse(t, namespaceName, smPod, resourcePath, payload...)
 	require.True(t, response.Success, "Unexpected response: %s", response.Message)
 }
 

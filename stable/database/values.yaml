@@ -360,7 +360,7 @@ database:
     # is invoked and unfrozen when the post-backup hook is invoked. Below are
     # supported ways to stop archive writes: 
     #   - hotsnap - Uses NuoDB product support for pausing archive writes
-    #     (recommended). Supported from NuoDB versions 7.0.0 and above.
+    #     (recommended). Supported from NuoDB versions 6.0.2 and above.
     #   - fsfreeze - Uses fsfreeze binary to suspend archive reads and writes.
     #     This mode requires a privileged sidecar container.
     #   - suspend - The SM process is suspended completely and then resumed
