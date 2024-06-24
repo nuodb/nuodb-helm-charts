@@ -59,19 +59,35 @@ func StartHAProxyIngress(t *testing.T, options *helm.Options, namespaceName stri
 
 	// there are two pods here, the haproxy, the default backend
 	AwaitNrReplicasScheduled(t, namespaceName, helmChartReleaseName, podCount)
-
-	haProxyNameTemplate := fmt.Sprintf("%s-kubernetes-ingress", helmChartReleaseName)
-	haProxyPodName := GetPodName(t, namespaceName, haProxyNameTemplate)
-	AwaitPodUp(t, namespaceName, haProxyPodName, 300*time.Second)
+	haProxyPods := getHAProxyControllerPods(t, namespaceName, helmChartReleaseName)
+	require.True(t, len(haProxyPods) > 0, "unable to find HAProxy controller pod")
+	for _, haProxyPodName := range haProxyPods {
+		AwaitPodUp(t, namespaceName, haProxyPodName, 300*time.Second)
+	}
 
 	AddTeardown(TEARDOWN_HAPROXY, func() {
-		_, err := k8s.GetPodE(t, kubectlOptions, haProxyPodName)
-		if err != nil {
-			t.Logf("HAProxy pod '%s' is not available and logs can not be retrieved", haProxyPodName)
-		} else {
-			go GetAppLog(t, namespaceName, haProxyPodName, "", &v12.PodLogOptions{Follow: true})
+		for _, haProxyPodName := range haProxyPods {
+			if _, err := k8s.GetPodE(t, kubectlOptions, haProxyPodName); err != nil {
+				t.Logf("HAProxy pod '%s' is not available and logs can not be retrieved", haProxyPodName)
+			} else {
+				go GetAppLog(t, namespaceName, haProxyPodName, "", &v12.PodLogOptions{Follow: true})
+			}
 		}
 	})
 
 	return helmChartReleaseName
+}
+
+func getHAProxyControllerPods(t *testing.T, namespaceName string, helmChartReleaseName string) []string {
+	haProxyNameTemplate := fmt.Sprintf("%s-kubernetes-ingress", helmChartReleaseName)
+	pods, err := findPods(t, namespaceName, haProxyNameTemplate)
+	require.NoError(t, err)
+	var names []string
+	for _, pod := range pods {
+		// Filter out Kubernetes jobs
+		if _, ok := pod.GetLabels()["job-name"]; !ok {
+			names = append(names, pod.Name)
+		}
+	}
+	return names
 }
