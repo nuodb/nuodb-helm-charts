@@ -154,10 +154,10 @@ def freeze_archive(backup_id, processes, unfreeze=False, timeout=None):
         sid = processes[0]["sid"]
         extra_args = []
         if unfreeze:
-            LOGGER.info("Resuming archiving for nuodb process with startId %s", sid)
+            LOGGER.info("Resuming archiving for nuodb process with start ID %s", sid)
             action = "resume"
         else:
-            LOGGER.info("Pausing archiving for nuodb process with startId %s", sid)
+            LOGGER.info("Pausing archiving for nuodb process with start ID %s", sid)
             action = "pause"
             if timeout and timeout > 0:
                 extra_args += ["--timeout", "{}s".format(timeout)]
@@ -183,7 +183,7 @@ def freeze_archive(backup_id, processes, unfreeze=False, timeout=None):
             ["fsfreeze", action, ARCHIVE_DIR], stderr=subprocess.STDOUT
         )
     else:
-        raise RuntimeError("not supported quiesce mode '{}'".format(FREEZE_MODE))
+        raise RuntimeError("Unsupported freeze mode '{}'".format(FREEZE_MODE))
 
 def pre_backup(backup_id, payload):
     # Check that backup ID was specified
@@ -477,9 +477,14 @@ def verify_prerequisites():
     if FREEZE_MODE == "hotsnap":
         if which("nuocmd") is None:
             raise RuntimeError("'nuocmd' command not found")
-        elif subprocess.call(["nuocmd", "pause", "archiving", "-h"], 
-                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL) == 2:
-            raise RuntimeError("'nuocmd pause archiving' command not supported")
+        try:
+            subprocess.run(["nuocmd", "pause", "archiving", "-h"], 
+                           check=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        except subprocess.CalledProcessError as e:
+            if e.returncode == 2:
+                raise RuntimeError("'nuocmd pause archiving' command not supported") from e
+            raise RuntimeError(
+                "'nuocmd pause archiving' command failed: " + e.output("utf-8")) from e
     elif FREEZE_MODE == "fsfreeze" and which("fsfreeze") is None:
         raise RuntimeError("'fsfreeze' command not found")
 
