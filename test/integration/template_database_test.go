@@ -2800,6 +2800,10 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		// Check resource limit
 		assert.NotNil(t, sidecar.Resources.Limits.Memory())
 		assert.Equal(t, resource.MustParse("5Gi"), *sidecar.Resources.Limits.Memory())
+
+		// Check that Python container image is used
+		assert.Contains(t, sidecar.Image, "docker.io/library/python:3.12-slim")
+
 		// Check that configmap for backup_hooks.py was rendered
 		var backupHooksCm *v1.ConfigMap
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
@@ -2942,6 +2946,9 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, volumes, "archive-volume")
 		assert.Contains(t, volumes, "journal-volume")
 		assert.Contains(t, volumes, "backup-hooks")
+
+		// Check that Python container image is used
+		assert.Contains(t, sidecar.Image, "docker.io/library/python:3.12-slim")
 	})
 }
 

@@ -254,18 +254,8 @@ func TestHotSnapBackupHook(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
-	// Create admin release
-	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
-
-	// Create database release with CSI driver storage class and backup hooks enabled
-	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
-	admin0 := fmt.Sprintf("%s-0", admin)
-	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-	sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+	options := &helm.Options{
 		SetValues: map[string]string{
-			// HotSnap is available in NuoDB version 6.0.2 and above
-			"nuodb.image.tag":                                            "6.0.2",
 			"database.sm.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.te.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
@@ -278,7 +268,27 @@ func TestHotSnapBackupHook(t *testing.T) {
 			"database.backupHooks.enabled":                               "true",
 			"database.backupHooks.freezeMode":                            "hotsnap",
 		},
-	})
+	}
+
+	testlib.InjectTestValues(t, options)
+	if options.SetValues["nuodb.image.tag"] == "" {
+		// Specify the NuoDB version explicitly
+		options.SetValues["nuodb.image.tag"] = "6.0.2"
+	} else {
+		// NuoDB version is injected by the test framework; skip the test if
+		// HotSnap is not supported
+		testlib.SkipTestOnNuoDBVersionCondition(t, "< 6.0.2")
+	}
+
+	// Create admin release
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	// Create database release with CSI driver storage class and backup hooks enabled
+	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-0", admin)
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, options)
 
 	// Invoke backup hooks on SM pod
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
@@ -328,7 +338,16 @@ func TestHotSnapBackupHook(t *testing.T) {
 				&corev1.PodLogOptions{Container: "backup-hooks"}) > 0
 		}, 10*time.Second)
 		k8s.RunKubectl(t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
-			"sh", "-c", `while [ -f "/var/opt/nuodb/archive/backup.txt" ]; do sleep 1; done`)
+			"sh", "-c", fmt.Sprintf(`
+			i=0; 
+			while [ -f "/var/opt/nuodb/archive/backup.txt" ]; do 
+			if [ $i -ge %s ]; then 
+				echo "ERROR: Backup metadata file not removed: Timeout after ${i}s"
+				exit 1
+			fi
+			sleep 1
+			((i=i+1))
+			done`, timeout))
 
 		// Verify that the archiving can be paused
 		testlib.InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId)

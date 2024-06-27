@@ -829,8 +829,8 @@ func GetBackupHookResponse(t *testing.T, namespaceName, smPod, resourcePath stri
 	if len(payload) > 0 {
 		require.Equal(t, 0, len(payload)%2, "Backup hook payload must contain even number of entries")
 		payloadMap := make(map[string]string, len(payload)/2)
-		for i := 0; i < len(payload)-1; i++ {
-			payloadMap[payload[i]] = payload[i+1]
+		for i := 1; i < len(payload); i += 2 {
+			payloadMap[payload[i-1]] = payload[i]
 		}
 		payloadJson, err := json.Marshal(payloadMap)
 		require.NoError(t, err, payloadMap)

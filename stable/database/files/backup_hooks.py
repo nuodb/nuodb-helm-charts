@@ -22,6 +22,10 @@ JOURNAL_DIR = os.environ.get("NUODB_JOURNAL_DIR")
 FREEZE_MODE = os.environ.get("FREEZE_MODE")
 FREEZE_TIMEOUT = os.environ.get("FREEZE_TIMEOUT")
 
+MODE_HOTSNAP = "hotsnap"
+MODE_FSFREEZE = "fsfreeze"
+MODE_SUSPEND = "suspend"
+
 def from_dir(base_dir, *args):
     if base_dir is None:
         return None
@@ -136,7 +140,7 @@ def await_suspended(pid, interval=0.25, retries=16):
 
 
 def freeze_archive(backup_id, processes, unfreeze=False, timeout=None):
-    if FREEZE_MODE == "suspend":
+    if FREEZE_MODE == MODE_SUSPEND:
         # Resume or suspend nuodb process. There should be a unique nuodb
         # process, but if there are multiple somehow, suspend all of them.
         for process in processes:
@@ -149,7 +153,7 @@ def freeze_archive(backup_id, processes, unfreeze=False, timeout=None):
                 os.kill(int(pid), signal.SIGSTOP)
                 # Make sure all threads are suspended
                 await_suspended(pid)
-    elif FREEZE_MODE == "hotsnap":
+    elif FREEZE_MODE == MODE_HOTSNAP:
         # Freeze or unfreeze the archive using hotsnap
         sid = processes[0]["sid"]
         extra_args = []
@@ -171,7 +175,7 @@ def freeze_archive(backup_id, processes, unfreeze=False, timeout=None):
             if action == "resume" and b"Archiving not paused" in e.output:
                 raise ArchivingNotPausedError(e) from e
             raise
-    elif FREEZE_MODE == "fsfreeze":
+    elif FREEZE_MODE == MODE_FSFREEZE:
         # Freeze or unfreeze the archive filesystem using fsfreeze
         if unfreeze:
             LOGGER.info("Unfreezing writes to archive volume")
@@ -202,7 +206,7 @@ def pre_backup(backup_id, payload):
         # Check if the SM process was restarted which will invalidate the
         # previous pre-backup operation using HotSnap.
         stored_start_id = get_start_id()
-        if FREEZE_MODE == "hotsnap" and stored_start_id and processes[0]["sid"] != stored_start_id:
+        if FREEZE_MODE != MODE_FSFREEZE and stored_start_id and processes[0]["sid"] != stored_start_id:
             # Remote the backup files from the previous pre-backup operation
             LOGGER.warning("Unexpected start ID: current=%s, stored=%s. " +
                             "SM process restarted while executing backup ID %s", 
@@ -474,7 +478,7 @@ def start_server(port):
         httpd.serve_forever()
 
 def verify_prerequisites():
-    if FREEZE_MODE == "hotsnap":
+    if FREEZE_MODE == MODE_HOTSNAP:
         if which("nuocmd") is None:
             raise RuntimeError("'nuocmd' command not found")
         try:
@@ -485,7 +489,7 @@ def verify_prerequisites():
                 raise RuntimeError("'nuocmd pause archiving' command not supported") from e
             raise RuntimeError(
                 "'nuocmd pause archiving' command failed: " + e.output("utf-8")) from e
-    elif FREEZE_MODE == "fsfreeze" and which("fsfreeze") is None:
+    elif FREEZE_MODE == MODE_FSFREEZE and which("fsfreeze") is None:
         raise RuntimeError("'fsfreeze' command not found")
 
 if __name__ == "__main__":
