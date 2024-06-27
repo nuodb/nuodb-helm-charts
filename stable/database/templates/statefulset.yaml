@@ -270,19 +270,26 @@ spec:
         - containerPort: 8000
           protocol: TCP
         env:
-          - name: USE_SUSPEND
-            value: {{ include "defaultfalse" .Values.database.backupHooks.useSuspend | quote }}
+          - name: FREEZE_MODE
+            value: {{ include "backupHooks.freezeMode" . | quote }}
+          {{- if .Values.database.backupHooks.timeout }}
+          - name: FREEZE_TIMEOUT
+            value: {{ .Values.database.backupHooks.timeout | quote }}
+          {{- end }}
           - name: NUODB_ARCHIVE_DIR
             value: {{ printf "/mnt/archive/%s/%s" .Values.admin.domain .Values.database.name }}
           {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
           - name: NUODB_JOURNAL_DIR
             value: {{ printf "/mnt/journal/%s/%s" .Values.admin.domain .Values.database.name }}
           {{- end }}
+          {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
+          - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
+          {{- end }}
         resources:
         {{- toYaml .Values.database.backupHooks.resources | trim | nindent 10 }}
         {{- if and
             (eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true")
-            (not (eq (include "defaultfalse" .Values.database.backupHooks.useSuspend) "true")) }}
+            (eq (include "backupHooks.freezeMode" .) "fsfreeze") }}
         securityContext:
           privileged: true
           runAsUser: 0
@@ -299,6 +306,18 @@ spec:
         {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
         - name: journal-volume
           mountPath: /mnt/journal
+        {{- end }}
+        {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
+        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
+        - name: eph-volume
+          mountPath: /tmp
+          subPath: tmp-hooks
+        {{- end }}
+        {{- if .Values.admin.tlsClientPEM }}
+        - name: tls
+          mountPath: /etc/nuodb/keys
+          readOnly: true
+        {{- end }}
         {{- end }}
       {{- end }}
       {{- include "nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}

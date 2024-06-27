@@ -137,7 +137,7 @@ func GetVolumeClaim(vcp []v1.PersistentVolumeClaim, expectedName string) (*v1.Pe
 
 func SplitAndRender[T any](t *testing.T, output string, expectedNrObjects int, kind string) []T {
 	objects := make([]T, 0)
-	parts := strings.Split(output, "---")
+	parts := strings.Split(output, "---\n")
 	for _, part := range parts {
 		if len(part) == 0 {
 			continue

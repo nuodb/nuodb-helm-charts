@@ -66,6 +66,9 @@ Also, we can't use a single if because lazy evaluation is not an option
 Return the backup hooks sidecar image
 */}}
 {{- define "backupHooks.image" -}}
+{{- if eq (include "backupHooks.freezeMode" .) "hotsnap" -}}
+{{ template "nuodb.image" . }}
+{{- else -}}
 {{- $registryName := .Values.database.backupHooks.image.registry -}}
 {{- $repositoryName := .Values.database.backupHooks.image.repository -}}
 {{- $tag := .Values.database.backupHooks.image.tag | toString -}}
@@ -82,6 +85,22 @@ Also, we can't use a single if because lazy evaluation is not an option
     {{- end -}}
 {{- else -}}
     {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Renders the freeze mode for backup hooks.
+*/}}
+{{- define "backupHooks.freezeMode" -}}
+{{- if eq .Values.database.backupHooks.freezeMode "" -}}
+  {{- if (eq (include "defaultfalse" .Values.database.backupHooks.useSuspend) "true") -}}
+suspend
+  {{- else -}}
+hotsnap
+  {{- end -}}
+{{- else -}}
+{{ .Values.database.backupHooks.freezeMode }}
 {{- end -}}
 {{- end -}}
 
@@ -194,7 +213,7 @@ Get security context runAsNonRoot
 {{- else if .Values.database.backupHooks -}}
   {{- if and
          (eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true")
-         (eq (include "defaultfalse" .Values.database.backupHooks.useSuspend) "false")
+         (eq (include "backupHooks.freezeMode" .) "fsfreeze")
          (eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true") -}}
     {{- $runAsNonRoot = false -}}
   {{- end -}}

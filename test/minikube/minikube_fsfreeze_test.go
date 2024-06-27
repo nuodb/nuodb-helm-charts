@@ -12,7 +12,8 @@ import (
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
@@ -76,7 +77,7 @@ func rolloutRestart(t *testing.T, kubectlOptions *k8s.KubectlOptions, workload s
 func prepareCsiDriver(t *testing.T) {
 	// Get pod for CSI hostpath driver
 	kubectlOptions := k8s.NewKubectlOptions("", "", "")
-	listOptions := corev1.ListOptions{
+	listOptions := metav1.ListOptions{
 		LabelSelector: "app.kubernetes.io/name=csi-hostpathplugin",
 	}
 	csiDriverPods := k8s.ListPods(t, kubectlOptions, listOptions)
@@ -159,6 +160,7 @@ func TestFsFreezeBackupHook(t *testing.T) {
 			"database.sm.noHotCopy.replicas":                             "1",
 			"database.sm.hotCopy.replicas":                               "0",
 			"database.backupHooks.enabled":                               "true",
+			"database.backupHooks.freezeMode":                            "fsfreeze",
 		},
 	})
 
@@ -166,6 +168,12 @@ func TestFsFreezeBackupHook(t *testing.T) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-0", sourceDatabaseChartName)
 	backupId := "123abc"
+
+	// Collect backup hooks logs on test failure
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetAppLog(t, namespaceName, smPod, "_hooks", &corev1.PodLogOptions{Container: "backup-hooks"})
+	})
+
 	t.Run("verifyWritesFrozen", func(t *testing.T) {
 		// Freeze writes to archive and defer invocation of unfreeze
 		testlib.InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId)
@@ -239,5 +247,144 @@ func TestFsFreezeBackupHook(t *testing.T) {
 		response = testlib.GetBackupHookResponse(t, namespaceName, smPod, "pre-backup/"+backupId)
 		require.False(t, response.Success)
 		require.Equal(t, "Backup ID file /mnt/archive/nuodb/demo/backup.txt exists. Execute post-backup hook to complete current backup.", response.Message)
+	})
+}
+
+func TestHotSnapBackupHook(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                         testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.persistence.storageClass":                          testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.sm.noHotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			"database.sm.noHotCopy.journalPath.enabled":                  "true",
+			"database.sm.noHotCopy.replicas":                             "1",
+			"database.sm.hotCopy.replicas":                               "0",
+			"database.backupHooks.enabled":                               "true",
+			"database.backupHooks.freezeMode":                            "hotsnap",
+		},
+	}
+
+	testlib.InjectTestValues(t, options)
+	if options.SetValues["nuodb.image.tag"] == "" {
+		// Specify the NuoDB version explicitly
+		options.SetValues["nuodb.image.tag"] = "6.0.2"
+	} else {
+		// NuoDB version is injected by the test framework; skip the test if
+		// HotSnap is not supported
+		testlib.SkipTestOnNuoDBVersionCondition(t, "< 6.0.2")
+	}
+
+	// Create admin release
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+
+	// Create database release with CSI driver storage class and backup hooks enabled
+	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-0", admin)
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	sourceDatabaseChartName := testlib.StartDatabase(t, namespaceName, admin0, options)
+
+	// Invoke backup hooks on SM pod
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	smPod := fmt.Sprintf("sm-%s-nuodb-cluster0-demo-0", sourceDatabaseChartName)
+	backupId := "1234abc"
+
+	// Collect backup hooks logs on test failure
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetAppLog(t, namespaceName, smPod, "_hooks", &corev1.PodLogOptions{Container: "backup-hooks"})
+	})
+
+	// Collect backup hooks logs before it got restarted
+	go testlib.GetAppLog(t, namespaceName, smPod, "_hooks_pre-restart",
+		&corev1.PodLogOptions{Container: "backup-hooks", Follow: true})
+
+	t.Run("verifyPauseArchiving", func(t *testing.T) {
+		// Pause archiving and defer resume invocation
+		testlib.InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId)
+		defer testlib.InvokeBackupHook(t, namespaceName, smPod, "post-backup/"+backupId)
+
+		// Verify that NuoDB archiving is paused
+		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, smPod,
+			fmt.Sprintf("pause archiving (pause id %s)", backupId), &corev1.PodLogOptions{}),
+			"Expected NuoDB to pause archiving")
+	})
+
+	// Check that backup hook sidecar logged expected messages
+	output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "logs", smPod, "-c", "backup-hooks")
+	require.NoError(t, err, output)
+	require.Contains(t, output, "Pausing archiving for nuodb process")
+	require.Contains(t, output, "Resuming archiving for nuodb process")
+	require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, smPod,
+		fmt.Sprintf("resume archiving (pause id %s)", backupId), &corev1.PodLogOptions{}),
+		"Expected NuoDB to resume archiving")
+
+	t.Run("verifyHooksTimeout", func(t *testing.T) {
+		// Pause archiving with a smaller timeout to speed up the test but do
+		// not invoke the resume hook
+		backupId := strings.ReplaceAll(t.Name(), "/", "-")
+		timeout := "5"
+		testlib.InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId, "timeout", timeout)
+
+		// Wait for the automatic backup canceling and metadata files removal
+		testlib.Await(t, func() bool {
+			return testlib.GetStringOccurrenceInLog(t, namespaceName, smPod,
+				fmt.Sprintf("Canceling backup with ID %s. Timeout after %ss", backupId, timeout),
+				&corev1.PodLogOptions{Container: "backup-hooks"}) > 0
+		}, 10*time.Second)
+		k8s.RunKubectl(t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
+			"sh", "-c", fmt.Sprintf(`
+			i=0; 
+			while [ -f "/var/opt/nuodb/archive/backup.txt" ]; do 
+			if [ $i -ge %s ]; then 
+				echo "ERROR: Backup metadata file not removed: Timeout after ${i}s"
+				exit 1
+			fi
+			sleep 1
+			((i=i+1))
+			done`, timeout))
+
+		// Verify that the archiving can be paused
+		testlib.InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId)
+		defer testlib.InvokeBackupHook(t, namespaceName, smPod, "post-backup/"+backupId)
+	})
+
+	t.Run("verifyMetadataAfterEngineRestart", func(t *testing.T) {
+		backupId := strings.ReplaceAll(t.Name(), "/", "")
+		// Pause archiving and restart the SM
+		pod := testlib.GetPod(t, namespaceName, smPod)
+		testlib.InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId)
+		testlib.DeletePod(t, namespaceName, "pod/"+smPod)
+		testlib.AwaitPodObjectRecreated(t, namespaceName, pod, 30*time.Second)
+		testlib.AwaitPodUp(t, namespaceName, smPod, 120*time.Second)
+
+		// Verify that resume archiving will fail as the previous pause
+		// archiving was invalidated by the SM restart
+		response := testlib.GetBackupHookResponse(t, namespaceName, smPod, "post-backup/"+backupId)
+		require.False(t, response.Success)
+		require.Contains(t, response.Message, "Archiving not paused")
+
+		// Pause archiving and restart the SM again
+		pod = testlib.GetPod(t, namespaceName, smPod)
+		testlib.InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId)
+		testlib.DeletePod(t, namespaceName, "pod/"+smPod)
+		testlib.AwaitPodObjectRecreated(t, namespaceName, pod, 30*time.Second)
+		testlib.AwaitPodUp(t, namespaceName, smPod, 120*time.Second)
+
+		// Verify that pause archiving will succeed as the previous operation
+		// was invalidated by the SM restart
+		testlib.InvokeBackupHook(t, namespaceName, smPod, "pre-backup/"+backupId)
+		defer testlib.InvokeBackupHook(t, namespaceName, smPod, "post-backup/"+backupId)
+
+		// Verify that SM restart was detected
+		require.Equal(t, 1, testlib.GetRegexOccurrenceInLog(t, namespaceName, smPod,
+			fmt.Sprintf("Unexpected start ID: .* SM process restarted while executing backup ID %s", backupId),
+			&corev1.PodLogOptions{Container: "backup-hooks"}),
+			"Expected to detect SM startId change")
 	})
 }
