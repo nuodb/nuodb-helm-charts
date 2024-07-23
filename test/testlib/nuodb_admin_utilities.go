@@ -303,3 +303,22 @@ func AwaitServerState(t *testing.T, namespace string, adminPod string,
 		return false
 	}, timeout)
 }
+
+// VerifyLables checks if adminPod in namespace has label and its value is one of the expectedValues.
+func VerifyLables(t *testing.T, namespace string, adminPod string, label string, expectedValues []string) {
+	fieldName := "labels." + label
+	output, err := k8s.RunKubectlAndGetOutputE(t, k8s.NewKubectlOptions("", "", namespace), "exec", adminPod, "-c", "admin", "--",
+		"nuocmd", "--show-json-fields", fieldName, "get", "servers")
+	require.NoError(t, err, output)
+
+	lines := strings.Split(output, "\n")
+	require.Equal(t, 3, len(lines))
+
+	var actualField string
+	var actualValue string
+	read, err := fmt.Sscan(lines[1], &actualField, &actualValue)
+	require.NoError(t, err)
+	require.Equal(t, 2, read)
+	require.Equal(t, "\""+fieldName+"\":", actualField)
+	require.Contains(t, expectedValues, strings.Trim(actualValue, "\""))
+}
