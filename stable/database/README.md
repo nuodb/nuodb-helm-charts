@@ -99,7 +99,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | ----- | ----------- | ------ |
 | `image.registry` | NuoDB container registry | `docker.io` |
 | `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
-| `image.tag` | NuoDB container image tag | `"5.1"` |
+| `image.tag` | NuoDB container image tag | `"6.0"` |
 | `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | `[]` (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
@@ -379,7 +379,7 @@ The following tables list the configurable parameters for the `nuocollector` opt
 | `enabled` | Whether to enable NuoDB monitoring using sidecar containers |`false`|
 | `image.registry` | NuoDB Collector container registry | `docker.io` |
 | `image.repository` | NuoDB Collector container image name |`nuodb/nuodb-collector`|
-| `image.tag` | NuoDB Collector container image tag | `1.1.0` |
+| `image.tag` | NuoDB Collector container image tag | `2.0.0` |
 | `image.pullPolicy` | NuoDB Collector container pull policy |`IfNotPresent`|
 | `watcher.registry` | ConfigMap watcher container registry | `docker.io` |
 | `watcher.repository` | ConfigMap watcher container image name |`kiwigrid/k8s-sidecar`|
