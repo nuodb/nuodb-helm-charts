@@ -36,6 +36,7 @@ type NuoDBServer struct {
 	PeerMemberState string              `json:"peerMemberState"`
 	PeerState       string              `json:"peerState"`
 	Version         string              `json:"version"`
+	Labels          map[string]string   `json:"labels"`
 }
 
 func UnmarshalDomainServers(s string) (err error, servers map[string]NuoDBServer) {

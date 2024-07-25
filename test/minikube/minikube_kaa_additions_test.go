@@ -140,9 +140,12 @@ func TestKubernetesTopologyDiscover(t *testing.T) {
 	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
 	admin0 := fmt.Sprintf("%s-0", admin)
 
-	testlib.VerifyLables(t, namespaceName, admin0, "hostname", currentNodes)
-	testlib.VerifyLables(t, namespaceName, admin0, "zone", currentZones)
-	testlib.VerifyLables(t, namespaceName, admin0, "region", currentRegions)
+	testlib.VerifyLabels(t, namespaceName, admin0,
+		map[string][]string{
+			"node":   currentNodes,
+			"zone":   currentZones,
+			"region": currentRegions,
+		})
 
 	dbName := "db"
 	options.SetValues = map[string]string{
@@ -162,10 +165,10 @@ func TestKubernetesTopologyDiscover(t *testing.T) {
 	processes, err := testlib.GetDatabaseProcessesE(t, namespaceName, admin0, dbName)
 	require.NoError(t, err)
 	for _, process := range processes {
-		require.Contains(t, currentNodes, process.Labels["hostname"])
+		require.Contains(t, currentNodes, process.Labels["node"])
 		require.Contains(t, currentZones, process.Labels["zone"])
 		require.Contains(t, currentRegions, process.Labels["region"])
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
-			"Looking for admin with labels matching: hostname, zone, region", &v12.PodLogOptions{}))
+			"Looking for admin with labels matching: node, zone, region", &v12.PodLogOptions{}))
 	}
 }
