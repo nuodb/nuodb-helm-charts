@@ -1566,6 +1566,21 @@ func TestClusterRole(t *testing.T) {
 		// Verify that nuodb-kube-inspector ClusterRole is created
 		for _, obj := range testlib.SplitAndRenderClusterRole(t, output, 1) {
 			assert.Equal(t, "nuodb-kube-inspector", obj.Name)
+
+			for _, rule := range obj.Rules {
+				isNode := false
+				for _, resource := range rule.Resources {
+					if resource == "nodes" {
+						isNode = true
+						break
+					}
+				}
+				if !isNode {
+					continue
+				}
+
+				assert.Contains(t, rule.Verbs, "get")
+			}
 		}
 
 		// Verify that nuodb-kube-inspector ClusterRoleBinding is created

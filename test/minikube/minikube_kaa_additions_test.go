@@ -129,7 +129,6 @@ func TestKubernetesTopologyDiscover(t *testing.T) {
 
 	currentRegions := testlib.LabelNodesIfMissing(t, "topology.kubernetes.io/region", "test-region")
 	currentZones := testlib.LabelNodesIfMissing(t, "topology.kubernetes.io/zone", "test-zone")
-	currentNodes := testlib.GetNodeNames(t)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -140,11 +139,13 @@ func TestKubernetesTopologyDiscover(t *testing.T) {
 	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
 	admin0 := fmt.Sprintf("%s-0", admin)
 
-	testlib.VerifyLabels(t, namespaceName, admin0,
-		map[string][]string{
-			"node":   currentNodes,
-			"zone":   currentZones,
-			"region": currentRegions,
+	adminPod := testlib.GetPod(t, namespaceName, admin0)
+	adminNode := adminPod.Spec.NodeName
+	testlib.VerifyAdminLabels(t, namespaceName, admin0,
+		map[string]string{
+			"node":   adminNode,
+			"zone":   currentZones[adminNode],
+			"region": currentRegions[adminNode],
 		})
 
 	dbName := "db"
@@ -165,9 +166,11 @@ func TestKubernetesTopologyDiscover(t *testing.T) {
 	processes, err := testlib.GetDatabaseProcessesE(t, namespaceName, admin0, dbName)
 	require.NoError(t, err)
 	for _, process := range processes {
-		require.Contains(t, currentNodes, process.Labels["node"])
-		require.Contains(t, currentZones, process.Labels["zone"])
-		require.Contains(t, currentRegions, process.Labels["region"])
+		pod := testlib.GetPod(t, namespaceName, process.Hostname)
+		node := pod.Spec.NodeName
+		require.Equal(t, node, process.Labels["node"])
+		require.Equal(t, currentZones[node], process.Labels["zone"])
+		require.Equal(t, currentRegions[node], process.Labels["region"])
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
 			"Looking for admin with labels matching: node, zone, region", &v12.PodLogOptions{}))
 	}

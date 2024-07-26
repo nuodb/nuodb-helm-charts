@@ -1287,24 +1287,26 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 	}
 }
 
-func LabelNodesIfMissing(t *testing.T, labelName string, labelValue string) []string {
+// LabelNodesIfMissing checks if all Nodes in the cluster have a labelName label. Any that do not,
+// have that label set to defaultValue. It returns the list of all current values encountered.
+func LabelNodesIfMissing(t *testing.T, labelName string, defaultValue string) map[string]string {
 	options := k8s.NewKubectlOptions("", "", "")
 
-	labelString := fmt.Sprintf("%s=%s", labelName, labelValue)
+	labelString := fmt.Sprintf("%s=%s", labelName, defaultValue)
 	nodes := k8s.GetNodes(t, options)
 	require.True(t, len(nodes) > 0)
 
-	var values []string
+	values := make(map[string]string)
 
 	for _, node := range nodes {
 		currentValue, present := node.Labels[labelName]
 		if present {
-			values = append(values, currentValue)
+			values[node.Name] = currentValue
 		} else {
 			err := k8s.RunKubectlE(t, options, "label", "node", node.Name, labelString)
 			require.NoError(t, err, "Labeling node %s with '%s' failed", node.Name, labelString)
 
-			values = append(values, labelValue)
+			values[node.Name] = defaultValue
 		}
 	}
 
