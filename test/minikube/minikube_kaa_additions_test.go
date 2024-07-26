@@ -172,6 +172,6 @@ func TestKubernetesTopologyDiscover(t *testing.T) {
 		require.Equal(t, currentZones[node], process.Labels["zone"])
 		require.Equal(t, currentRegions[node], process.Labels["region"])
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
-			"Looking for admin with labels matching: node, zone, region", &v12.PodLogOptions{}))
+			"Looking for admin with labels matching: node zone region", &v12.PodLogOptions{}))
 	}
 }
