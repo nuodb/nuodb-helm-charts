@@ -9,7 +9,10 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+	"github.com/stretchr/testify/require"
+	v12 "k8s.io/api/core/v1"
 )
 
 func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
@@ -55,4 +58,53 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 		verifyPodKill(t, namespaceName, admin1, helmChartReleaseName, 3)
 		verifyPodKill(t, namespaceName, admin2, helmChartReleaseName, 3)
 	})
+}
+
+func TestDatabaseAdminAffinityLabels(t *testing.T) {
+	testlib.SkipTestOnNuoDBVersionCondition(t, "< 6.0.3")
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	options := helm.Options{}
+	options.SetValues = map[string]string{
+		"admin.labels.host": "host1",
+		"admin.labels.zone": "us-east-1",
+	}
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = kubectlOptions
+	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-0", admin)
+
+	testlib.VerifyAdminLabels(t, namespaceName, admin0,
+		map[string]string{
+			"host": "host1",
+			"zone": "us-east-1",
+		})
+
+	dbName := "db"
+	options.SetValues = map[string]string{
+		"admin.affinityLabels": "zone host",
+
+		"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+		"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+		"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		"database.sm.noHotCopy.replicas":        "1",
+		"database.sm.hotCopy.replicas":          "1",
+		"database.name":                         dbName,
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	testlib.StartDatabase(t, namespaceName, admin0, &options)
+
+	processes, err := testlib.GetDatabaseProcessesE(t, namespaceName, admin0, dbName)
+	require.NoError(t, err)
+	for _, process := range processes {
+		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
+			"Looking for admin with labels matching: zone host", &v12.PodLogOptions{}))
+	}
 }

@@ -1328,18 +1328,6 @@ func GetNodesInternalAddresses(t *testing.T) map[string]string {
 	return addresses
 }
 
-// GetNodeNames fetches the names of all nodes in the kubernetes cluster.
-func GetNodeNames(t *testing.T) []string {
-	var addresses []string
-	options := k8s.NewKubectlOptions("", "", "")
-	nodes := k8s.GetNodes(t, options)
-	require.True(t, len(nodes) > 0)
-	for _, node := range nodes {
-		addresses = append(addresses, node.Name)
-	}
-	return addresses
-}
-
 func GetNamespaces(t *testing.T) []corev1.Namespace {
 	clientset, err := k8s.GetKubernetesClientE(t)
 	require.NoError(t, err)

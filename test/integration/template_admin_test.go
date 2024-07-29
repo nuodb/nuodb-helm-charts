@@ -1609,3 +1609,30 @@ func TestClusterRole(t *testing.T) {
 		assert.Empty(t, testlib.SplitAndRenderClusterClusterRoleBinding(t, output, 0))
 	})
 }
+
+func TestAdminStatefulSetAdminLabels(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.labels.host": "host1",
+			"admin.labels.zone": "us-east-1",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+
+		adminContainer := obj.Spec.Template.Spec.Containers[0]
+
+		assert.Equal(t, "nuoadmin", adminContainer.Args[0])
+		assert.Equal(t, "--", adminContainer.Args[1])
+
+		assert.Contains(t, adminContainer.Args[2:], "adminLabels.labels/host=host1")
+		assert.Contains(t, adminContainer.Args[2:], "adminLabels.labels/zone=us-east-1")
+	}
+}

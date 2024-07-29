@@ -97,6 +97,10 @@ spec:
           - "300"
           - "--servers-ready-timeout"
           - "300"
+          {{- if .Values.admin.affinityLabels}}
+          - "--admin-affinity-label-keys"
+          - "{{ .Values.admin.affinityLabels }}"
+          {{- end }}
           - "--options"
           - "mem {{ .Values.database.te.resources.requests.memory}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
           {{- include "database.teLabels" . | indent 10 }}

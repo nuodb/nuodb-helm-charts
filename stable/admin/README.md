@@ -230,6 +230,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `tde.storagePasswordsDir` | Transparent Data Encryption storage passwords mount path | `/etc/nuodb/tde` |
 | `evicted.servers` | A list of evicted servers excluded from RAFT consensus. Used during disaster recovery. | `[]` |
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
+| `labels` | Admin labels to apply to each Admin Process. Supported starting from NuoDB image version 6.0.3 | `{}`|
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 
