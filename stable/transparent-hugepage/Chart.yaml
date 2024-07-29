@@ -13,5 +13,5 @@ maintainers:
   email: support@nuodb.com
 engine: gotpl
 icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
-appVersion: "5.1"
+appVersion: "6.0"
 tillerVersion: ">=2.9"
