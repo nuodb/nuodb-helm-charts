@@ -303,3 +303,15 @@ func AwaitServerState(t *testing.T, namespace string, adminPod string,
 		return false
 	}, timeout)
 }
+
+// VerifyAdminLabels checks if adminPod in namespace has all the label values in expectedLabelValues
+func VerifyAdminLabels(t *testing.T, namespace string, adminPod string, expectedLabelValues map[string]string) {
+	admins, err := GetDomainServersE(t, namespace, adminPod)
+	require.NoError(t, err)
+	require.Contains(t, admins, adminPod)
+
+	labels := admins[adminPod].Labels
+	for label, expectedValue := range expectedLabelValues {
+		require.Equal(t, expectedValue, labels[label])
+	}
+}

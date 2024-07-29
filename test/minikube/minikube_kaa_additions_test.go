@@ -1,3 +1,4 @@
+//go:build short
 // +build short
 
 package minikube
@@ -18,6 +19,7 @@ import (
 	"github.com/ghodss/yaml"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	rbacv1 "k8s.io/api/rbac/v1"
 )
 
@@ -118,4 +120,58 @@ func TestKaaRolebindingDisabled(t *testing.T) {
 	require.True(t, len(config.StatefulSets) == 0)
 	require.True(t, len(config.Volumes) == 0)
 	require.True(t, len(config.Pods) == 0)
+}
+
+func TestKubernetesTopologyDiscover(t *testing.T) {
+	testlib.SkipTestOnNuoDBVersionCondition(t, "< 6.0.3")
+	testlib.AwaitTillerUp(t)
+	defer testlib.VerifyTeardown(t)
+
+	currentRegions := testlib.LabelNodesIfMissing(t, "topology.kubernetes.io/region", "test-region")
+	currentZones := testlib.LabelNodesIfMissing(t, "topology.kubernetes.io/zone", "test-zone")
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	options := helm.Options{}
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = kubectlOptions
+	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
+	admin0 := fmt.Sprintf("%s-0", admin)
+
+	adminPod := testlib.GetPod(t, namespaceName, admin0)
+	adminNode := adminPod.Spec.NodeName
+	testlib.VerifyAdminLabels(t, namespaceName, admin0,
+		map[string]string{
+			"node":   adminNode,
+			"zone":   currentZones[adminNode],
+			"region": currentRegions[adminNode],
+		})
+
+	dbName := "db"
+	options.SetValues = map[string]string{
+		"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+		"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+		"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		"database.sm.noHotCopy.replicas":        "1",
+		"database.sm.hotCopy.replicas":          "0",
+		"database.name":                         dbName,
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	testlib.StartDatabase(t, namespaceName, admin0, &options)
+
+	processes, err := testlib.GetDatabaseProcessesE(t, namespaceName, admin0, dbName)
+	require.NoError(t, err)
+	for _, process := range processes {
+		pod := testlib.GetPod(t, namespaceName, process.Hostname)
+		node := pod.Spec.NodeName
+		require.Equal(t, node, process.Labels["node"])
+		require.Equal(t, currentZones[node], process.Labels["zone"])
+		require.Equal(t, currentRegions[node], process.Labels["region"])
+		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
+			"Looking for admin with labels matching: node zone region", &v12.PodLogOptions{}))
+	}
 }

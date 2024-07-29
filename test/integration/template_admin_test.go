@@ -1554,3 +1554,58 @@ func TestAdminLicenseFromSecret(t *testing.T) {
 		assert.Contains(t, obj.Spec.Template.Spec.Containers[0].Args, "licenseFilePath=/etc/nuodb/license/nuodb.lic")
 	}
 }
+
+func TestClusterRole(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testEnabled", func(t *testing.T) {
+		output := helm.RenderTemplate(t, &helm.Options{}, helmChartPath,
+			"release-name", []string{"templates/role.yaml", "templates/rolebinding.yaml"})
+
+		// Verify that nuodb-kube-inspector ClusterRole is created
+		for _, obj := range testlib.SplitAndRenderClusterRole(t, output, 1) {
+			assert.Equal(t, "nuodb-kube-inspector", obj.Name)
+
+			for _, rule := range obj.Rules {
+				isNode := false
+				for _, resource := range rule.Resources {
+					if resource == "nodes" {
+						isNode = true
+						break
+					}
+				}
+				if !isNode {
+					continue
+				}
+
+				assert.Contains(t, rule.Verbs, "get")
+			}
+		}
+
+		// Verify that nuodb-kube-inspector ClusterRoleBinding is created
+		for _, obj := range testlib.SplitAndRenderClusterClusterRoleBinding(t, output, 1) {
+			assert.Equal(t, "nuodb-kube-inspector", obj.Name)
+			// Verify that it is binding to the correct role
+			assert.Equal(t, "ClusterRole", obj.RoleRef.Kind)
+			assert.Equal(t, "nuodb-kube-inspector", obj.RoleRef.Name)
+			// Verify that it is binding to the correct user
+			subjects := obj.Subjects
+			assert.Equal(t, 1, len(subjects))
+			assert.Equal(t, "ServiceAccount", subjects[0].Kind)
+			assert.Equal(t, "nuodb", subjects[0].Name)
+		}
+	})
+
+	t.Run("testDisabled", func(t *testing.T) {
+		output := helm.RenderTemplate(t, &helm.Options{SetValues: map[string]string{
+			"nuodb.addClusterRoleBinding": "false",
+		}}, helmChartPath, "release-name", []string{"templates/role.yaml", "templates/rolebinding.yaml"})
+
+		// Verify that a ClusterRole is not created
+		assert.Empty(t, testlib.SplitAndRenderClusterRole(t, output, 0))
+
+		// Verify that a ClusterRoleBinding is not created
+		assert.Empty(t, testlib.SplitAndRenderClusterClusterRoleBinding(t, output, 0))
+	})
+}

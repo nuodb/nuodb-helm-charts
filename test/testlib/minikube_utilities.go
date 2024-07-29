@@ -453,7 +453,7 @@ func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName strin
 			if strings.Contains(pod.Name, expectedName) {
 				//ignore all completed pods
 				if pod.Status.Phase == corev1.PodSucceeded {
-					continue;
+					continue
 				}
 
 				if arePodConditionsMet(&pod, corev1.PodScheduled, corev1.ConditionTrue) {
@@ -1287,6 +1287,32 @@ func LabelNodes(t *testing.T, namespaceName string, labelName string, labelValue
 	}
 }
 
+// LabelNodesIfMissing checks if all Nodes in the cluster have a labelName label. Any that do not,
+// have that label set to defaultValue. It returns the list of all current values encountered.
+func LabelNodesIfMissing(t *testing.T, labelName string, defaultValue string) map[string]string {
+	options := k8s.NewKubectlOptions("", "", "")
+
+	labelString := fmt.Sprintf("%s=%s", labelName, defaultValue)
+	nodes := k8s.GetNodes(t, options)
+	require.True(t, len(nodes) > 0)
+
+	values := make(map[string]string)
+
+	for _, node := range nodes {
+		currentValue, present := node.Labels[labelName]
+		if present {
+			values[node.Name] = currentValue
+		} else {
+			err := k8s.RunKubectlE(t, options, "label", "node", node.Name, labelString)
+			require.NoError(t, err, "Labeling node %s with '%s' failed", node.Name, labelString)
+
+			values[node.Name] = defaultValue
+		}
+	}
+
+	return values
+}
+
 func GetNodesInternalAddresses(t *testing.T) map[string]string {
 	addresses := make(map[string]string)
 	options := k8s.NewKubectlOptions("", "", "")
@@ -1298,6 +1324,18 @@ func GetNodesInternalAddresses(t *testing.T) map[string]string {
 				addresses[node.Name] = address.Address
 			}
 		}
+	}
+	return addresses
+}
+
+// GetNodeNames fetches the names of all nodes in the kubernetes cluster.
+func GetNodeNames(t *testing.T) []string {
+	var addresses []string
+	options := k8s.NewKubectlOptions("", "", "")
+	nodes := k8s.GetNodes(t, options)
+	require.True(t, len(nodes) > 0)
+	for _, node := range nodes {
+		addresses = append(addresses, node.Name)
 	}
 	return addresses
 }

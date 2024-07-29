@@ -203,6 +203,14 @@ func SplitAndRenderRole(t *testing.T, output string, expectedNrObjects int) []rb
 	return SplitAndRender[rbacv1.Role](t, output, expectedNrObjects, "Role")
 }
 
+func SplitAndRenderClusterRole(t *testing.T, output string, expectedNrObjects int) []rbacv1.ClusterRole {
+	return SplitAndRender[rbacv1.ClusterRole](t, output, expectedNrObjects, "ClusterRole")
+}
+
+func SplitAndRenderClusterClusterRoleBinding(t *testing.T, output string, expectedNrObjects int) []rbacv1.ClusterRoleBinding {
+	return SplitAndRender[rbacv1.ClusterRoleBinding](t, output, expectedNrObjects, "ClusterRoleBinding")
+}
+
 func SplitAndRenderServiceAccount(t *testing.T, output string, expectedNrObjects int) []v1.ServiceAccount {
 	return SplitAndRender[v1.ServiceAccount](t, output, expectedNrObjects, "ServiceAccount")
 }
