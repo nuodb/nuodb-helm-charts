@@ -69,8 +69,8 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 
 	options := helm.Options{}
 	options.SetValues = map[string]string{
-		"admin.labels.host": "host1",
-		"admin.labels.zone": "us-east-1",
+		"admin.adminLabels.host": "host1",
+		"admin.adminLabels.zone": "us-east-1",
 	}
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
@@ -86,7 +86,11 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 
 	dbName := "db"
 	options.SetValues = map[string]string{
-		"admin.affinityLabels": "zone host",
+		"admin.affinityLabels":    "host zone",
+		"database.te.labels.host": "host2",
+		"database.te.labels.zone": "us-east-1",
+		"database.sm.labels.host": "host2",
+		"database.sm.labels.zone": "us-east-1",
 
 		"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 		"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
@@ -105,6 +109,11 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 	require.NoError(t, err)
 	for _, process := range processes {
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
-			"Looking for admin with labels matching: zone host", &v12.PodLogOptions{}))
+			"Looking for admin with labels matching: host zone", &v12.PodLogOptions{}))
+
+		expectedAffinityLog := fmt.Sprintf("Marking admin %s as an affinity server (matching zone=us-east-1)", admin0)
+		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
+			expectedAffinityLog, &v12.PodLogOptions{}))
+
 	}
 }

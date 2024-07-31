@@ -1616,8 +1616,8 @@ func TestAdminStatefulSetAdminLabels(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.labels.host": "host1",
-			"admin.labels.zone": "us-east-1",
+			"admin.adminLabels.host": "host1",
+			"admin.adminLabels.zone": "us-east-1",
 		},
 	}
 
