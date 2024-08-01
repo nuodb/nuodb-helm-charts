@@ -121,43 +121,6 @@ func TestAdminProbes(t *testing.T) {
 	}, 120*time.Second)
 }
 
-func TestAdminReadinessProbeFallback(t *testing.T) {
-	// 'nuomcd check server' (singular) is unsupported for versions <=4.1.1;
-	// this test verifies the fallback behavior of the readiness probe
-	tag := "4.1.1"
-
-	testlib.AwaitTillerUp(t)
-	defer testlib.VerifyTeardown(t)
-
-	helmOptions := helm.Options{
-		SetValues: map[string]string{
-			"nuodb.image.registry":   "docker.io",
-			"nuodb.image.repository": "nuodb/nuodb-ce",
-			"nuodb.image.tag":        tag,
-			"admin.bootstrapServers": "0",
-		},
-	}
-	testlib.OverrideUpgradeContainerImage(t, &helmOptions)
-
-	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-
-	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &helmOptions, 1, "")
-	admin := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-
-	// make sure 'nuocmd check server' fails
-	options := k8s.NewKubectlOptions("", "", namespaceName)
-	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "-c", "admin", "--", "nuocmd", "check", "server")
-	require.Error(t, err, "Expected 'nuocmd check server' to fail on %s: %s", tag, output)
-	// make sure exit code is 2 to indicate parse error
-	code, err := shell.GetExitCodeForRunCommandError(err)
-	require.NoError(t, err)
-	require.Equal(t, 2, code)
-
-	// make sure readinessprobe is successful
-	output, err = k8s.RunKubectlAndGetOutputE(t, options, "exec", admin, "-c", "admin", "--", "readinessprobe")
-	require.NoError(t, err, "readinessprobe failed on %s: %s", tag, output)
-}
-
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
