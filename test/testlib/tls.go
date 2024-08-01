@@ -32,11 +32,7 @@ spec:
 `
 
 func createTLSGeneratorPod(t *testing.T, namespaceName string, timeout time.Duration) string {
-	// 4.2.2 has Java 11.0.12, which uses default algorithms for signatures
-	// and encryption of private keys that are not available in Java 8, used
-	// by NuoDB up to 4.0.7; to avoid breaking rolling upgrade tests, fix
-	// version at 4.2.1
-	image := "docker.io/nuodb/nuodb-ce:4.2.1"
+	image := "docker.io/nuodb/nuodb-ce:5.0"
 
 	podName := "tls-generator-" + strings.ToLower(random.UniqueId())
 	podTemplateString := fmt.Sprintf(TLS_GENERATOR_POD_TEMPLATE,
