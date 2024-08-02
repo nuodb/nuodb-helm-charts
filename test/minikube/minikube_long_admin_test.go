@@ -62,6 +62,10 @@ func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
 
 func TestDatabaseAdminAffinityLabels(t *testing.T) {
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 6.0.3")
+	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
+		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
+	}
+
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
@@ -77,6 +81,8 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 	options.KubectlOptions = kubectlOptions
 	admin := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
 	admin0 := fmt.Sprintf("%s-0", admin)
+
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
 
 	testlib.VerifyAdminLabels(t, namespaceName, admin0,
 		map[string]string{
