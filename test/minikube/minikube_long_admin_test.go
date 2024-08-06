@@ -117,7 +117,7 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
 			"Looking for admin with labels matching: host zone", &v12.PodLogOptions{}))
 
-		expectedAffinityLog := fmt.Sprintf("Marking admin %s as an affinity server (matching zone=us-east-1)", admin0)
+		expectedAffinityLog := fmt.Sprintf("Selecting among admins ['%s'] with matching label zone=us-east-1", admin0)
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
 			expectedAffinityLog, &v12.PodLogOptions{}))
 
