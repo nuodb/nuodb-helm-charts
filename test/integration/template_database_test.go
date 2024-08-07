@@ -3221,3 +3221,52 @@ func TestDatabaseStatefulSetVolumeSnapshot(t *testing.T) {
 		}
 	})
 }
+func TestDatabaseAdminAffinityLabels(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.affinityLabels":           "zone host",
+			"database.sm.noHotCopy.replicas": "1",
+			"database.sm.hotCopy.replicas":   "1",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+
+		container := obj.Spec.Template.Spec.Containers[0]
+
+		found := false
+		for i, arg := range container.Args {
+			if arg == "--admin-affinity-label-keys" {
+				assert.Equal(t, "zone host", container.Args[i+1])
+				found = true
+			}
+		}
+
+		assert.True(t, found)
+	}
+
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+
+		container := obj.Spec.Template.Spec.Containers[0]
+
+		found := false
+		for i, arg := range container.Args {
+			if arg == "--admin-affinity-label-keys" {
+				assert.Equal(t, "zone host", container.Args[i+1])
+				found = true
+			}
+		}
+
+		assert.True(t, found)
+	}
+}

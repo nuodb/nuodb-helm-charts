@@ -171,6 +171,9 @@ spec:
           {{- range $opt, $val := .Values.admin.options}}
           - "{{$opt}}={{$val}}" 
           {{- end }}
+          {{- range $label, $val := .Values.admin.adminLabels}}
+          - "adminLabels.labels/{{$label}}={{$val}}"
+          {{- end }}
         {{- include "sc.containerSecurityContext" . | indent 8 }}
         {{- if eq (include "defaulttrue" .Values.admin.livenessProbe.enabled) "true" }}
         livenessProbe:

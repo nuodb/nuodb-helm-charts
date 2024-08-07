@@ -150,6 +150,7 @@ The following tables list the configurable admin parameters for a database and t
 | `tlsClientPEM.key` | TLS client PEM secret key | `nil` |
 | `tde.secrets` | Transparent Data Encryption secret names used for different databases | `{}` |
 | `tde.storagePasswordsDir` | Transparent Data Encryption storage passwords mount path | `/etc/nuodb/tde` |
+| `affinityLabels` | List of AP label keys to check for affinity with the engine process, ordered by precedence; the AP with the earliest label key, whose value matches the corresponding engine label, will be chosen to manage the engine process. For example, specifying "zone region" means "find an AP in the same 'zone' and, if there are none, select one in the same 'region'". Supported starting from NuoDB image version 6.0.3 | `"node zone region"` |
 
 #### admin.configFiles.*
 

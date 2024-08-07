@@ -109,6 +109,10 @@ spec:
     {{- if .Values.database.isRestore }}
           - "--restored"
     {{- end }}
+          {{- if .Values.admin.affinityLabels}}
+          - "--admin-affinity-label-keys"
+          - "{{ .Values.admin.affinityLabels }}"
+          {{- end }}
           - "--options"
           - "mem {{ .Values.database.sm.resources.requests.memory}} {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
     {{- $labels := printf "%s %s" (include "database.storageGroup.label" .) (include "opt.key-values" .Values.database.sm.labels) -}}
@@ -513,6 +517,10 @@ spec:
           - "nuosm"
           - "--servers-ready-timeout"
           - "300"
+          {{- if .Values.admin.affinityLabels}}
+          - "--admin-affinity-label-keys"
+          - "{{ .Values.admin.affinityLabels }}"
+          {{- end }}
           - "--options"
           - "mem {{ .Values.database.sm.resources.requests.memory}} {{- if and (eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true") (eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true") }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
           - "--labels"
