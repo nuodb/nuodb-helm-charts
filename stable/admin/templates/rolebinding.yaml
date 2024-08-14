@@ -10,7 +10,8 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ default "nuodb" .Values.nuodb.serviceAccount }}
-{{- if eq (include "defaulttrue" .Values.nuodb.addClusterRoleBinding) "true" }}
+{{- if and (eq (include "defaulttrue" .Values.nuodb.addClusterRoleBinding) "true")
+      (not (lookup "rbac.authorization.k8s.io/v1" "ClusterRoleBinding" "" "nuodb-kube-inspector")) }}}}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

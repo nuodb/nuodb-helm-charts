@@ -33,7 +33,8 @@ rules:
   - get
   - create
   - update
-{{- if eq (include "defaulttrue" .Values.nuodb.addClusterRoleBinding) "true" }}
+{{- if and (eq (include "defaulttrue" .Values.nuodb.addClusterRoleBinding) "true")
+      (not (lookup "rbac.authorization.k8s.io/v1" "ClusterRole" "" "nuodb-kube-inspector")) }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
