@@ -1562,6 +1562,9 @@ func TestClusterRole(t *testing.T) {
 
 	t.Run("testEnabled", func(t *testing.T) {
 		output := helm.RenderTemplate(t, &helm.Options{
+			SetValues: map[string]string{
+				"admin.fullnameOverride": "full-name",
+			},
 			KubectlOptions: &k8s.KubectlOptions{
 				Namespace: "ns-name",
 			},
@@ -1570,7 +1573,7 @@ func TestClusterRole(t *testing.T) {
 
 		// Verify that nuodb-kube-inspector ClusterRole is created
 		for _, obj := range testlib.SplitAndRenderClusterRole(t, output, 1) {
-			assert.Equal(t, "ns-name-release-name-nuodb-kube-inspector", obj.Name)
+			assert.Equal(t, "ns-name-full-name-nuodb-kube-inspector", obj.Name)
 
 			for _, rule := range obj.Rules {
 				isNode := false
@@ -1590,10 +1593,10 @@ func TestClusterRole(t *testing.T) {
 
 		// Verify that nuodb-kube-inspector ClusterRoleBinding is created
 		for _, obj := range testlib.SplitAndRenderClusterClusterRoleBinding(t, output, 1) {
-			assert.Equal(t, "ns-name-release-name-nuodb-kube-inspector", obj.Name)
+			assert.Equal(t, "ns-name-full-name-nuodb-kube-inspector", obj.Name)
 			// Verify that it is binding to the correct role
 			assert.Equal(t, "ClusterRole", obj.RoleRef.Kind)
-			assert.Equal(t, "ns-name-release-name-nuodb-kube-inspector", obj.RoleRef.Name)
+			assert.Equal(t, "ns-name-full-name-nuodb-kube-inspector", obj.RoleRef.Name)
 			// Verify that it is binding to the correct user
 			subjects := obj.Subjects
 			assert.Equal(t, 1, len(subjects))
