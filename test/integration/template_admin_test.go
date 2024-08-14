@@ -1570,7 +1570,7 @@ func TestClusterRole(t *testing.T) {
 
 		// Verify that nuodb-kube-inspector ClusterRole is created
 		for _, obj := range testlib.SplitAndRenderClusterRole(t, output, 1) {
-			assert.Equal(t, "nuodb-kube-inspector-ns-name-release-name", obj.Name)
+			assert.Equal(t, "ns-name-release-name-nuodb-kube-inspector", obj.Name)
 
 			for _, rule := range obj.Rules {
 				isNode := false
@@ -1590,10 +1590,10 @@ func TestClusterRole(t *testing.T) {
 
 		// Verify that nuodb-kube-inspector ClusterRoleBinding is created
 		for _, obj := range testlib.SplitAndRenderClusterClusterRoleBinding(t, output, 1) {
-			assert.Equal(t, "nuodb-kube-inspector-ns-name-release-name", obj.Name)
+			assert.Equal(t, "ns-name-release-name-nuodb-kube-inspector", obj.Name)
 			// Verify that it is binding to the correct role
 			assert.Equal(t, "ClusterRole", obj.RoleRef.Kind)
-			assert.Equal(t, "nuodb-kube-inspector-ns-name-release-name", obj.RoleRef.Name)
+			assert.Equal(t, "ns-name-release-name-nuodb-kube-inspector", obj.RoleRef.Name)
 			// Verify that it is binding to the correct user
 			subjects := obj.Subjects
 			assert.Equal(t, 1, len(subjects))
