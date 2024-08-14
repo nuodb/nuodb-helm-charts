@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
@@ -1560,12 +1561,16 @@ func TestClusterRole(t *testing.T) {
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
 
 	t.Run("testEnabled", func(t *testing.T) {
-		output := helm.RenderTemplate(t, &helm.Options{}, helmChartPath,
+		output := helm.RenderTemplate(t, &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "ns-name",
+			},
+		}, helmChartPath,
 			"release-name", []string{"templates/role.yaml", "templates/rolebinding.yaml"})
 
 		// Verify that nuodb-kube-inspector ClusterRole is created
 		for _, obj := range testlib.SplitAndRenderClusterRole(t, output, 1) {
-			assert.Equal(t, "nuodb-kube-inspector", obj.Name)
+			assert.Equal(t, "nuodb-kube-inspector-ns-name-release-name", obj.Name)
 
 			for _, rule := range obj.Rules {
 				isNode := false
@@ -1585,10 +1590,10 @@ func TestClusterRole(t *testing.T) {
 
 		// Verify that nuodb-kube-inspector ClusterRoleBinding is created
 		for _, obj := range testlib.SplitAndRenderClusterClusterRoleBinding(t, output, 1) {
-			assert.Equal(t, "nuodb-kube-inspector", obj.Name)
+			assert.Equal(t, "nuodb-kube-inspector-ns-name-release-name", obj.Name)
 			// Verify that it is binding to the correct role
 			assert.Equal(t, "ClusterRole", obj.RoleRef.Kind)
-			assert.Equal(t, "nuodb-kube-inspector", obj.RoleRef.Name)
+			assert.Equal(t, "nuodb-kube-inspector-ns-name-release-name", obj.RoleRef.Name)
 			// Verify that it is binding to the correct user
 			subjects := obj.Subjects
 			assert.Equal(t, 1, len(subjects))
