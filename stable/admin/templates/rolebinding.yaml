@@ -11,14 +11,16 @@ subjects:
 - kind: ServiceAccount
   name: {{ default "nuodb" .Values.nuodb.serviceAccount }}
 {{- if eq (include "defaulttrue" .Values.nuodb.addClusterRoleBinding) "true" }}
+{{- $namespace := default .Release.Namespace .Values.admin.namespace | trunc 50 | trimSuffix "-" -}}
+{{- $adminName := include "admin.fullname" . }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: nuodb-kube-inspector
+  name: {{ include "admin.fullclustername" . }}-kube-inspector
 roleRef:
   kind: ClusterRole
-  name: nuodb-kube-inspector
+  name: {{ include "admin.fullclustername" . }}-kube-inspector
   apiGroup: rbac.authorization.k8s.io
 subjects:
 - kind: ServiceAccount

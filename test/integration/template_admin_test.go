@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
@@ -1560,40 +1561,62 @@ func TestClusterRole(t *testing.T) {
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
 
 	t.Run("testEnabled", func(t *testing.T) {
-		output := helm.RenderTemplate(t, &helm.Options{}, helmChartPath,
-			"release-name", []string{"templates/role.yaml", "templates/rolebinding.yaml"})
-
-		// Verify that nuodb-kube-inspector ClusterRole is created
-		for _, obj := range testlib.SplitAndRenderClusterRole(t, output, 1) {
-			assert.Equal(t, "nuodb-kube-inspector", obj.Name)
-
-			for _, rule := range obj.Rules {
-				isNode := false
-				for _, resource := range rule.Resources {
-					if resource == "nodes" {
-						isNode = true
-						break
-					}
-				}
-				if !isNode {
-					continue
-				}
-
-				assert.Contains(t, rule.Verbs, "get")
-			}
+		options := []*helm.Options{
+			{
+				SetValues: map[string]string{
+					"admin.fullnameOverride": "full-name",
+				},
+				KubectlOptions: &k8s.KubectlOptions{
+					Namespace: "ns-name",
+				},
+			},
+			// Override namespace name
+			{
+				SetValues: map[string]string{
+					"admin.fullnameOverride": "full-name",
+					"admin.namespace":        "ns-name",
+				},
+				KubectlOptions: &k8s.KubectlOptions{
+					Namespace: "default",
+				},
+			},
 		}
+		for _, option := range options {
+			output := helm.RenderTemplate(t, option, helmChartPath,
+				"release-name", []string{"templates/role.yaml", "templates/rolebinding.yaml"})
 
-		// Verify that nuodb-kube-inspector ClusterRoleBinding is created
-		for _, obj := range testlib.SplitAndRenderClusterClusterRoleBinding(t, output, 1) {
-			assert.Equal(t, "nuodb-kube-inspector", obj.Name)
-			// Verify that it is binding to the correct role
-			assert.Equal(t, "ClusterRole", obj.RoleRef.Kind)
-			assert.Equal(t, "nuodb-kube-inspector", obj.RoleRef.Name)
-			// Verify that it is binding to the correct user
-			subjects := obj.Subjects
-			assert.Equal(t, 1, len(subjects))
-			assert.Equal(t, "ServiceAccount", subjects[0].Kind)
-			assert.Equal(t, "nuodb", subjects[0].Name)
+			// Verify that nuodb-kube-inspector ClusterRole is created
+			for _, obj := range testlib.SplitAndRenderClusterRole(t, output, 1) {
+				assert.Equal(t, "full-name-ns-name-kube-inspector", obj.Name)
+
+				for _, rule := range obj.Rules {
+					isNode := false
+					for _, resource := range rule.Resources {
+						if resource == "nodes" {
+							isNode = true
+							break
+						}
+					}
+					if !isNode {
+						continue
+					}
+
+					assert.Contains(t, rule.Verbs, "get")
+				}
+			}
+
+			// Verify that nuodb-kube-inspector ClusterRoleBinding is created
+			for _, obj := range testlib.SplitAndRenderClusterClusterRoleBinding(t, output, 1) {
+				assert.Equal(t, "full-name-ns-name-kube-inspector", obj.Name)
+				// Verify that it is binding to the correct role
+				assert.Equal(t, "ClusterRole", obj.RoleRef.Kind)
+				assert.Equal(t, "full-name-ns-name-kube-inspector", obj.RoleRef.Name)
+				// Verify that it is binding to the correct user
+				subjects := obj.Subjects
+				assert.Equal(t, 1, len(subjects))
+				assert.Equal(t, "ServiceAccount", subjects[0].Kind)
+				assert.Equal(t, "nuodb", subjects[0].Name)
+			}
 		}
 	})
 

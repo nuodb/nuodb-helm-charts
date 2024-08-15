@@ -526,3 +526,16 @@ trusted-certificate" command which doesn't require AP restart.
 checksum/tls-passwords: {{ sha256sum $passwords }}
 {{- end }}
 {{- end -}}
+
+{{/*
+Create a cluster unique app name.
+*/}}
+{{- define "admin.fullclustername" -}}
+{{- $name := include "admin.fullname" . -}}
+{{- $ns := default .Release.Namespace .Values.admin.namespace | trunc 50 | trimSuffix "-" -}}
+{{- if contains $name $ns -}}
+  {{- printf "%s" $name -}}
+{{- else -}}
+  {{- printf "%s-%s" $name $ns -}}
+{{- end -}}
+{{- end -}}
