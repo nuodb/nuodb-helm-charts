@@ -29,7 +29,7 @@ You can either create your own TLS keys or create them using the convenience scr
 mkdir /tmp/keys
 
 kubectl run generate-nuodb-certs \
-  --image nuodb/nuodb-ce \
+  --image nuodb/nuodb:5.0 \
   --env="DEFAULT_PASSWORD=changeMe" \
   --command -- 'tail' '-f' '/dev/null'
 

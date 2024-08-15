@@ -127,7 +127,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	options := helm.Options{
 		SetValues: map[string]string{
 			"nuodb.image.registry":   "docker.io",
-			"nuodb.image.repository": "nuodb/nuodb-ce",
+			"nuodb.image.repository": "nuodb/nuodb",
 			"nuodb.image.tag":        OLD_RELEASE,
 			"admin.bootstrapServers": "0",
 		},
@@ -159,7 +159,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 	options := helm.Options{
 		SetValues: map[string]string{
 			"nuodb.image.registry":                  "docker.io",
-			"nuodb.image.repository":                "nuodb/nuodb-ce",
+			"nuodb.image.repository":                "nuodb/nuodb",
 			"nuodb.image.tag":                       OLD_RELEASE,
 			"admin.bootstrapServers":                "0",
 			"database.sm.resources.requests.cpu":    "0.25",
@@ -334,7 +334,7 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 			"admin.replicas":         "3",
 			"admin.bootstrapServers": "0",
 			"nuodb.image.registry":   "docker.io",
-			"nuodb.image.repository": "nuodb/nuodb-ce",
+			"nuodb.image.repository": "nuodb/nuodb",
 			"nuodb.image.tag":        OLD_RELEASE,
 		},
 	}
