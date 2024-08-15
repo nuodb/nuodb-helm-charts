@@ -17,7 +17,7 @@ popd >/dev/null
 
 # nuo way...
 if [ ! -d ${KEYS_DIR} ]; then
-    docker run --rm -d --name create-tls-keys nuodb/nuodb-ce:latest -- tail -f /dev/null
+    docker run --rm -d --name create-tls-keys nuodb/nuodb:5.0 -- tail -f /dev/null
     docker exec -it create-tls-keys bash -c "mkdir /tmp/keys && cd /tmp/keys && DEFAULT_PASSWORD=changeIt setup-keys.sh"
     docker cp create-tls-keys:/tmp/keys ${KEYS_DIR}
     docker stop create-tls-keys
@@ -127,7 +127,7 @@ EOF
 fi
 
 # save off the OOTB certficates for comparisons in tests...
-docker run --rm -it nuodb/nuodb-ce:latest nuocmd show certificate --keystore /etc/nuodb/keys/nuoadmin.p12 --store-password changeIt > ${KEYS_DIR}/default.certificate
+docker run --rm -it nuodb/nuodb:5.0 nuocmd show certificate --keystore /etc/nuodb/keys/nuoadmin.p12 --store-password changeIt > ${KEYS_DIR}/default.certificate
 
 # (aka ca.cert)
 kubectl delete secret nuodb-ca-cert

@@ -13,7 +13,7 @@ spec:
     command: ["sh", "-c", "rm -rf /var/opt/nuodb/archive/nuodb/demo/*"]
   containers:
   - name: restore-checker
-    image: docker.io/nuodb/nuodb-ce:latest
+    image: docker.io/nuodb/nuodb:latest
     # command:
     #   - sleep
     #   - "360000"

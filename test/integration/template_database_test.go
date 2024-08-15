@@ -2737,8 +2737,8 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, volumes, "eph-volume")
 		assert.Contains(t, volumes, "tls")
 
-		// Check that nuodb/nuodb-ce container image is used
-		assert.Contains(t, sidecar.Image, "docker.io/nuodb/nuodb-ce")
+		// Check that nuodb/nuodb container image is used
+		assert.Contains(t, sidecar.Image, "docker.io/nuodb/nuodb")
 
 		// Check that configmap for backup_hooks.py was rendered
 		var backupHooksCm *v1.ConfigMap
