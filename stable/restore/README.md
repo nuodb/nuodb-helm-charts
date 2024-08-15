@@ -125,7 +125,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | Parameter | Description | Default |
 | ----- | ----------- | ------ |
 | `image.registry` | NuoDB container registry | `docker.io` |
-| `image.repository` | NuoDB container image name |`nuodb/nuodb-ce`|
+| `image.repository` | NuoDB container image name |`nuodb/nuodb`|
 | `image.tag` | NuoDB container image tag | `"6.0"` |
 | `image.pullPolicy` | NuoDB container pull policy |`IfNotPresent`|
 | `image.pullSecrets` | Specify docker-registry secret names as an array | [] (does not add image pull secrets to deployed pods) |
@@ -148,7 +148,7 @@ For example:
 nuodb:
   image:
     registry: docker.io
-    repository: nuodb/nuodb-ce
+    repository: nuodb/nuodb
     tag: latest
     pullPolicy: IfNotPresent
 ```

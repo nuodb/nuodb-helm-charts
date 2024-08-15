@@ -48,7 +48,7 @@ NuoDB does not recommend using the pre-generated TLS keys shipped with the NuoDB
 Starting with NuoDB 4.2, the NuoDB container no longer contains pre-generated keys. 
 You can either create your own TLS keys or create them using the convenience script provided with the docker image:
 
-```docker run --rm -d --name create-tls-keys nuodb/nuodb-ce:latest -- \ 
+```docker run --rm -d --name create-tls-keys nuodb/nuodb:5.0 -- \ 
 tail -f /dev/null
 
 docker exec -it create-tls-keys bash -c "mkdir /tmp/keys && \ 
