@@ -6,6 +6,21 @@
 
 . ${NUODB_HOME}/etc/nuodb_setup.sh
 
+get_pod() {
+    local KUBEDIR=/var/run/secrets/kubernetes.io/serviceaccount
+    curl -s -H "Authorization: Bearer $(cat "$KUBEDIR/token")" --cacert "$KUBEDIR/ca.crt" "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat "$KUBEDIR/namespace")/pods/$POD_NAME"
+}
+
+# poll pod status until container shows as started and container and image IDs
+# are available, which are required for automatic database protocol upgrade to
+# work correctly; do five retries before giving up
+for i in {1..5}; do
+    if ! get_pod | grep -q '"started": false' 2>/dev/null; then
+        break
+    fi
+    sleep 1
+done
+
 # attempt to retain the previous crash directory (within the configured window to avoid filling the disk)
 crashcount=$(find $NUODB_CRASHDIR/core* -maxdepth 0 ! -type d 2>/dev/null | wc -l)
 if [ $crashcount -ge 1 ]; then
