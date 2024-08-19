@@ -233,6 +233,8 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 		verifyAllProcessesRunning(t, namespaceName, admin0, 2)
 	})
 
+	// In order to have a protocol upgrade, there has to be a protocol change between
+	// OLD_RELEASE and the version under test.
 	testlib.RunOnNuoDBVersionCondition(t, ">6.0.0", func(version *semver.Version) {
 		// check that KAA will upgrade database protocol version and restart TE
 		// automatically
