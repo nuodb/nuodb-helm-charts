@@ -10,7 +10,7 @@ Sumo Logic is an observability suite offering end-to-end observability and secur
 
 Using the NuoDB [database](https://github.com/nuodb/nuodb-helm-charts/blob/master/stable/database/README.md) helm chart, set in values file the following values for ```nuocollector.*``` section.
 
-Refer to [Sumo Logic Collectors](#Sumo Logic Collectors) to harvest the Sumo Logic endpoint to insert into the yaml snippet below.
+Refer to [Sumo Logic Collectors](#sumo-logic-collectors) to harvest the Sumo Logic endpoint to insert into the yaml snippet below.
 
 Set nuocollector to be enabled.
 
@@ -19,12 +19,12 @@ nuocollector:
    enabled: true
 ```
 
-Set the sumologic output plugin.
+Set the sumologic output configuration in the plugins section.
 
 ```
   plugins:
     ## NuoDB Collector compatible plugins specific for database services
-    database: |
+    database:
       sumologic.conf: |
         [[outputs.sumologic]]
           url = "sumologic endpoint url here"
@@ -43,7 +43,7 @@ Example:
 ```
   plugins:
     ## NuoDB Collector compatible plugins specific for database services
-    database: |
+    database:
       sumologic.conf: |
         [[outputs.sumologic]]
           url = "https://endpoint1.collection.eu.sumologic.com/receiver/v1/http/ZaVnC4dhaV0laeqZ1_FuM8b_P9gPRX4DIJzrJ8eaIy0Lz0rQH5o-bIARKiKf7M09suw6VFJpKSIt_3zv0hq80kcq0VivLeZWM3yXey7EXDG5YFFBaMWqMg=="
@@ -61,11 +61,11 @@ Example:
 
 ---
 
-1. [Sumo Logic Collectors](#Sumo Logic Collectors) for NuoDB Insight data.
+1. [Sumo Logic Collectors](#sumo-logic-collectors) for NuoDB Insight data.
 
-2. [NuoDB Insights graphs](#Insights graphs on Sumo Logic dashboards) in Sumo Logic dashboards.
+2. [NuoDB Insights graphs](#insights-graphs-on-sumo-logic-dashboards) in Sumo Logic dashboards.
 
-3. [Kubernetes Graphs](#Sumo Logic Kubernetes Graphs) in Sumo Logic (Optional)
+3. [Kubernetes Graphs](#sumo-logic-kubernetes-graphs) in Sumo Logic (Optional)
 
 #### Sumo Logic Collectors
 
@@ -76,21 +76,26 @@ Website is https://www.sumologic.com
 Create a new account or use an existing account. For a new account, skip past the introductions and go straight to the dashboard. At the time of writing, the skip link was below the introduction text.
 
 Click on <b>Manage Data</b>: 
+
 ![Manage Data](./images/sumologic0.png)
 
 Click on **Add Collector**
+
 ![Add Collector](./images/sumologic1.png)
 
 Select **Hosted Collector**
+
 ![Hosted Collector](./images/sumologic2.png)
+
 Add an appropriate name for the collector.
 
 Next is to add a source to the newly created collector. At the time of writing, the source was under "Generic" and is  "HTTP logs and metrics"
+
 ![Generic_logs and metrics](./images/sumologic4.png)
 
 Add an appropriate name for the source for the collector. 
 
-Next is to copy and keep safe the Sumo Logic metrics endpoint. This will be needed in the section for demo-insights-sumologic helm chart setup. It will be something like:
+Next is to copy and keep safe the Sumo Logic metrics endpoint. This will be needed in the section for the helm database values file setup. It will be something like:
 
 ```
 https://endpoint1.collection.eu.sumologic.com/receiver/v1/http/ZaVnC4dhaV0laeqZ1_FuM8b_P9gPRX4DIJzrJ8eaIy0Lz0rQH5o-bIARKiKf7M09suw6VFJpKSIt_3zv0hq80kcq0VivLeZWM3yXey7EXDG5YFFBaMWqMg==```
