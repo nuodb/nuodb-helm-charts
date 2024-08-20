@@ -20,7 +20,7 @@ Please visit the **[NuoDB Helm Chart main page](https://github.com/nuodb/nuodb-h
 
 ---
 
-Please review our [guide](./insights-sumologic1.md) on setting up the Sumo Logic dashboards for NuoDB Insights and ensure that the ```sumologic.endpoint``` url is harvested from the Sumo Logic dashboard. When installing NuoDB from the helm charts, ensure that the option ```nuocollector.enabled=true```
+Please review our [guide](./README-insights-sumologic.md) on setting up the Sumo Logic dashboards for NuoDB Insights and ensure that the ```sumologic.endpoint``` url is harvested from the Sumo Logic dashboard. When installing NuoDB from the helm charts, ensure that the option ```nuocollector.enabled=true```
 
 ### Command
 
@@ -65,7 +65,7 @@ helm install insight-sumologic nuodb-incubator/demo-insight-sumologic
 
 **Tip:** Wait until the nuocollector sidecar is re-started with the additional Sumo Logic configuration. This should take a minute or less.
 
-Verify traces in the Sumo Logic [graphs](./insights-sumologic1.md).
+Verify traces in the Sumo Logic [graphs](./README-insights-sumologic.md).
 
 Example of the DBA graph set:
 ![sumologic graph sample](./images/sumologic26.png)
