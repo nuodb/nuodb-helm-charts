@@ -1,0 +1,7 @@
+# Default values for sumologic.
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+sumologic:
+  endpoint: null
+
