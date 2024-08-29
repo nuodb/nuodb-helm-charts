@@ -233,14 +233,26 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 		verifyAllProcessesRunning(t, namespaceName, admin0, 2)
 	})
 
-	testlib.RunOnNuoDBVersionCondition(t, ">4.2.2", func(version *semver.Version) {
+	// In order to have a protocol upgrade, there has to be a protocol change between
+	// OLD_RELEASE and the version under test.
+	testlib.RunOnNuoDBVersionCondition(t, ">6.0.0", func(version *semver.Version) {
 		// check that KAA will upgrade database protocol version and restart TE
 		// automatically
 		t.Run("verifyProtocolVersion", func(t *testing.T) {
 			// start two TEs so that we can supply TE preference query
 			options.SetValues["database.te.replicas"] = "2"
 			helm.Upgrade(t, &options, testlib.DATABASE_HELM_CHART_PATH, databaseHelmChartReleaseName)
-			testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, 3)
+
+			testlib.Await(t, func() bool {
+				// It is possible that the database will (briefly) have 3 processes while the upgrade is in progress
+				// so we need to check that both the database is in the expected state and that there are not
+				// leftover pods.
+				err := k8s.RunKubectlE(t, kubectlOptions, "exec", admin0, "--", "nuocmd", "check", "database",
+					"--db-name", opt.DbName, "--check-running", "--check-liveness", "20",
+					"--num-processes", strconv.Itoa(3))
+				return err == nil && len(testlib.GetPodNames(t, namespaceName, databaseHelmChartReleaseName)) == 3
+			}, 300*time.Second)
+
 			// find the startId of the second TE
 			var toShutdownStartId int64 = -1
 			toShutdownPod := ""
