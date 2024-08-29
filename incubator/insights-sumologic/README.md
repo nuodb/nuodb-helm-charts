@@ -145,6 +145,24 @@ Set the Collector name and Source name to be the same as set in [Sumo Logic Coll
 
 From the App Catalog search for classic apps "kubernetes" -> "Kubernetes" and follow the install instructions. 
 
+The install instructions look similar to the below:
+
+```
+helm -n <sumologic namespace> upgrade --install sumologic sumologic/sumologic \
+  --namespace=<sumologic namespace> \
+  --create-namespace \
+-f - <<EOF
+sumologic:
+  accessId: <access id>
+  accessKey: <very long access key>
+  clusterName: <Kubernetes clustername>
+  collectorName: <Kubernetes collector name>
+  setup:
+    monitors:
+      enabled: false
+EOF
+```
+
 **Tip:** Use a different namespace other than the namespace for the NuoDB install. 
 
 **Tip:** Take care to make a note of the ```accessId```, ```accessKey```, ```clusterName``` and ```collectorName```.  ```accessKey``` is shown only once.
