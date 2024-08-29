@@ -133,7 +133,7 @@ Click "Import" at the bottom of the pane.
 
  ![Nuodb_Dashboard_JSON](./docs/images/sumologic25.png)
 
-Set the Collector name and Source name to be the same as set in section 1.
+Set the Collector name and Source name to be the same as set in [Sumo Logic Collectors setup](#sumo-logic-collectors)
 
 ![Set_Collector_and_Source](./docs/images/sumologic26.png)
 
