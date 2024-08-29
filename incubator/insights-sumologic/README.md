@@ -36,13 +36,15 @@ Select **Hosted Collector**
 
 ![Hosted Collector](./docs/images/sumologic2.png)
 
-Add an appropriate name for the collector.
+Add an appropriate name for the collector. This name can be anything, but will be used in the [Sumo Logic NuoDB graphs](#insights-graphs-on-sumo-logic-dashboards) to select the data collector. 
 
 Next is to add a source to the newly created collector. At the time of writing, the source was under "Generic" and is  "HTTP logs and metrics"
 
 ![Generic_logs and metrics](./docs/images/sumologic4.png)
 
-Add an appropriate name for the source for the collector. 
+Add an appropriate name for the source for the collector. This name can be anything, but will be used in the [Sumo Logic NuoDB graphs](#insights-graphs-on-sumo-logic-dashboards) to select the data source.
+
+**Tip**: A Sumo Logic Collector may have many Data Sources. A ```Source Category``` value may be added to the Data Source meta data to help manage selection of data.
 
 Next is to copy and keep safe the Sumo Logic metrics endpoint. This will be needed in the section for the helm database values file setup. It will be something like:
 
@@ -122,7 +124,9 @@ Click on the 3 dots to the right of the folder name and select Import
 Upload the NuoDB dashboard JSON as a copy paste operation.  The JSON files that can be copy pasted can be found in the following locations
 
 [docs/files/Sumologic_NuoDB_AdHoc.json](docs/files/Sumologic_NuoDB_AdHoc.json)
+
 [docs/files/Sumologic_NuoDB_DBA.json](./docs/files/Sumologic_NuoDB_DBA.json)
+
 [docs/files/Sumologic_NuoDB_NOC.json](./docs/files/Sumologic_NuoDB_NOC.json)
 
 Click "Import" at the bottom of the pane.
