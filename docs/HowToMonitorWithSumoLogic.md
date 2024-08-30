@@ -10,7 +10,7 @@ Sumo Logic is an observability suite offering end-to-end observability and secur
 
 1. [Sumo Logic Collectors](#sumo-logic-collectors) setup for NuoDB Insight data.
 
-2. [NuoDB Helm Charts](#nuodb-helm-charts) modifications to enable data collection.
+2. [NuoDB Helm Charts](#nuodb-helm-charts) configuration to enable data collection.
 
 3. [NuoDB Insights graphs](#insights-graphs-on-sumo-logic-dashboards) install into Sumo Logic dashboards.
 
@@ -182,5 +182,3 @@ A ```nuoadmin.conf``` example snippet might be:
           "org.eclipse.jetty.server.RequestLog" : "error"
         } ,
 ```
-
-
