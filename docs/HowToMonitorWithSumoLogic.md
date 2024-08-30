@@ -26,21 +26,21 @@ Create a new account or use an existing account. For a new account, skip past th
 
 Click on  **Manage Data**: 
 
-![Manage Data](./docs/images/sumologic0.png)
+![Manage Data](../images/sumologic/sumologic0.png)
 
 Click on **Add Collector**
 
-![Add Collector](./docs/images/sumologic1.png)
+![Add Collector](../images/sumologic/sumologic1.png)
 
 Select **Hosted Collector**
 
-![Hosted Collector](./docs/images/sumologic2.png)
+![Hosted Collector](../images/sumologic/sumologic2.png)
 
 Add an appropriate name for the collector. This name can be anything, but will be used in the [Sumo Logic NuoDB graphs](#insights-graphs-on-sumo-logic-dashboards) to select the data collector. 
 
 Next is to add a source to the newly created collector. At the time of writing, the source was under "Generic" and is  "HTTP logs and metrics"
 
-![Generic_logs and metrics](./docs/images/sumologic4.png)
+![Generic_logs and metrics](../images/sumologic/sumologic4.png)
 
 Add an appropriate name for the source for the collector. This name can be anything, but will be used in the [Sumo Logic NuoDB graphs](#insights-graphs-on-sumo-logic-dashboards) to select the data source.
 
@@ -52,7 +52,7 @@ Next is to copy and keep safe the Sumo Logic metrics endpoint. This will be need
 https://endpoint1.collection.eu.sumologic.com/receiver/v1/http/<a very very long ascii string goes here>
 ```
 
-![sumologic endpoint](./docs/images/sumologic6a.png)
+![sumologic endpoint](../images/sumologic/sumologic6a.png)
 
 #### NuoDB Helm Charts
 
@@ -115,27 +115,27 @@ Example:
 
 Click on Personal -> three dots to the right of the side bar and create a new folder.
 
-![Personal_Folder](./docs/images/sumologic21.png)
+![Personal_Folder](../images/sumologic/sumologic21.png)
 
 Click on the 3 dots to the right of the folder name and select Import
 
-![Import](./docs/images/sumologic22.png)
+![Import](../images/sumologic/sumologic22.png)
 
 Upload the NuoDB dashboard JSON as a copy paste operation.  The JSON files that can be copy pasted can be found in the following locations
 
-[docs/files/Sumologic_NuoDB_AdHoc.json](docs/files/Sumologic_NuoDB_AdHoc.json)
+[docs/assets/files/Sumologic_NuoDB_AdHoc.json](assets/files/Sumologic_NuoDB_AdHoc.json)
 
-[docs/files/Sumologic_NuoDB_DBA.json](./docs/files/Sumologic_NuoDB_DBA.json)
+[docs/assets/files/Sumologic_NuoDB_DBA.json](./assets/files/Sumologic_NuoDB_DBA.json)
 
-[docs/files/Sumologic_NuoDB_NOC.json](./docs/files/Sumologic_NuoDB_NOC.json)
+[docs/assets/files/Sumologic_NuoDB_NOC.json](./assets/files/Sumologic_NuoDB_NOC.json)
 
 Click "Import" at the bottom of the pane.
 
- ![Nuodb_Dashboard_JSON](./docs/images/sumologic25.png)
+![Nuodb_Dashboard_JSON](../images/sumologic/sumologic25.png)
 
 Set the Collector name and Source name to be the same as set in [Sumo Logic Collectors setup](#sumo-logic-collectors)
 
-![Set_Collector_and_Source](./docs/images/sumologic26.png)
+![Set_Collector_and_Source](../images/sumologic/sumologic26.png)
 
 **Note:** The Sumo Logic NuoDB graphs are a subset of the graphs that are available in [Insights](https://github.com/nuodb/nuodb-insights/tree/master). Data that is sent to Sumo Logic is a subset of all the data that is sent to Insights. 
 
