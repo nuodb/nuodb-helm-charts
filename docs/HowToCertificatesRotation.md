@@ -309,9 +309,9 @@ PASSWD=changeMe
 mkdir /tmp/keys
 
 kubectl run generate-nuodb-certs \
-  --image nuodb/nuodb-ce \
+  --image nuodb/nuodb \
   --env="PASSWD=changeMe" \
-  --command -- 'tail' '-f' '/dev/null'
+  --command -- tail -f /dev/null
 
 kubectl exec -ti generate-nuodb-certs -- \
   mkdir -p /tmp/keys
