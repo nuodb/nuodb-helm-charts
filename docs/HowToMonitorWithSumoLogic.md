@@ -115,7 +115,7 @@ Example:
 
 Click on Personal -> three dots to the right of the side bar and create a new folder.
 
-![Personal_Folder](./assets/images/sumologic/sumologic21.png)
+![Personal_Folder](./assets/images/sumologic21.png)
 
 Click on the 3 dots to the right of the folder name and select Import
 
@@ -169,16 +169,14 @@ EOF
 
 **Caution:** Some NuoDB logs are duplicated between engine and admin. 
 
-**Tip:** Too much logging? Control [NuoDB logs](https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/host-properties-nuoadmin.conf/) by option ```logging.consoleLogLevels``` in ```nuoadmin.conf```.
+**Tip:** Too much logging? Control [NuoDB logs](https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/host-properties-nuoadmin.conf/) by option ```logging.consoleLogLevels``` 
 
-A ```nuoadmin.conf``` example snippet might be: 
+A example method to add ```logging.consolLogLevels``` for NuoDB [Helm Charts](https://github.com/nuodb/nuodb-helm-charts/blob/master/stable/admin/README.md#admin)  using ```admin.options``` Chart option.
+
+Example snippet for admin values yaml.
 
 ```
-"logging.consoleLogLevels": {
-          "ROOT": "error",
-          "DomainProcessStateMachine" : "info",
-          "TagMessageDispatcherRegistry" : "error",
-          "Server" : "error",
-          "org.eclipse.jetty.server.RequestLog" : "error"
-        } ,
+admin:
+  options:
+    logging.consoleLogLevels: "error,DomainProcessStateMachine:info"
 ```
