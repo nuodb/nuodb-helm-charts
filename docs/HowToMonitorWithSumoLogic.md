@@ -171,7 +171,7 @@ EOF
 
 **Tip:** Too much logging? Control [NuoDB logs](https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/host-properties-nuoadmin.conf/) by option ```logging.consoleLogLevels``` 
 
-A example method to add ```logging.consolLogLevels``` for NuoDB [Helm Charts](https://github.com/nuodb/nuodb-helm-charts/blob/master/stable/admin/README.md#admin)  using ```admin.options``` Chart option.
+A method to add ```logging.consolLogLevels``` to NuoDB [Helm Charts](https://github.com/nuodb/nuodb-helm-charts/blob/master/stable/admin/README.md#admin) is using the ```admin.options``` chart option.
 
 Example snippet for admin values yaml.
 
