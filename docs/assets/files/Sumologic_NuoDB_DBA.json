@@ -1,0 +1,468 @@
+{
+    "type": "DashboardV2SyncDefinition",
+    "name": "NuoDB_DBA",
+    "description": "",
+    "title": "NuoDB_DBA",
+    "theme": "Light",
+    "topologyLabelMap": {
+        "data": {}
+    },
+    "refreshInterval": 0,
+    "timeRange": {
+        "type": "BeginBoundedTimeRange",
+        "from": {
+            "type": "RelativeTimeRangeBoundary",
+            "relativeTime": "-15m"
+        },
+        "to": null
+    },
+    "layout": {
+        "layoutType": "Grid",
+        "layoutStructures": [
+            {
+                "key": "panelPANE-90383DF284AE5846",
+                "structure": "{\"height\":7,\"width\":12,\"x\":0,\"y\":22}"
+            },
+            {
+                "key": "panel3D3B705980D69842",
+                "structure": "{\"height\":7,\"width\":12,\"x\":12,\"y\":22}"
+            },
+            {
+                "key": "panelPANE-DB9283B5809C2B40",
+                "structure": "{\"height\":7,\"width\":12,\"x\":0,\"y\":0}"
+            },
+            {
+                "key": "panelAF9171BF8DB66946",
+                "structure": "{\"height\":7,\"width\":12,\"x\":12,\"y\":0}"
+            },
+            {
+                "key": "panelA78974B3BF713944",
+                "structure": "{\"height\":8,\"width\":24,\"x\":0,\"y\":7}"
+            },
+            {
+                "key": "panel184CFCEBB6E13B4B",
+                "structure": "{\"height\":7,\"width\":24,\"x\":0,\"y\":15}"
+            },
+            {
+                "key": "panelDF60D8E1AB694B47",
+                "structure": "{\"height\":7,\"width\":12,\"x\":0,\"y\":29}"
+            },
+            {
+                "key": "panelF85C8036B0E5694B",
+                "structure": "{\"height\":7,\"width\":12,\"x\":12,\"y\":29}"
+            }
+        ]
+    },
+    "panels": [
+        {
+            "id": null,
+            "key": "panelPANE-90383DF284AE5846",
+            "title": "FSync / Directory - Archive",
+            "visualSettings": "{\"title\":{\"fontSize\":14},\"axes\":{\"axisX\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12},\"axisY\":{\"title\":\"Fsync / Directory\",\"titleFontSize\":12,\"labelFontSize\":12,\"logarithmic\":false,\"unit\":{\"value\":\"%100\",\"isCustom\":false},\"maximum\":100},\"axisY2\":{\"title\":\"WriteThrottleTime\"}},\"legend\":{\"enabled\":false,\"verticalAlign\":\"bottom\",\"fontSize\":12,\"maxHeight\":50,\"showAsTable\":false,\"wrap\":true},\"series\":{},\"general\":{\"type\":\"area\",\"displayType\":\"default\",\"markerSize\":5,\"lineDashType\":\"solid\",\"markerType\":\"none\",\"lineThickness\":1,\"fillOpacity\":0.1,\"mode\":\"timeSeries\"},\"color\":{\"family\":\"Categorical Light\"},\"overrides\":[{\"series\":[],\"queries\":[\"C\"],\"properties\":{\"axisYType\":\"secondary\",\"color\":\"#bf2121\",\"name\":\"{{db}}:writethrottle\"}},{\"series\":[],\"queries\":[\"A\"],\"properties\":{\"name\":\"fsync (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}},{\"series\":[],\"queries\":[\"B\"],\"properties\":{\"name\":\"directory (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}}]}",
+            "keepVisualSettingsConsistentWithParent": true,
+            "panelType": "SumoSearchPanel",
+            "queries": [
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=storage AND metric=ArchiveFsyncTime AND field=value | avg by db, host, pid | quantize to {{Interval}} using avg | eval _value*100",
+                    "queryType": "Metrics",
+                    "queryKey": "A",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=storage AND metric=ArchiveDirectoryTime AND field=value | avg by db, host, pid | quantize to {{Interval}} using avg | eval _value*100 ",
+                    "queryType": "Metrics",
+                    "queryKey": "B",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=WriteThrottleTime AND field=value AND host={{Host}} db={{Database}} AND nodetype=transaction  | quantize to {{Interval}} using avg | avg by db | eval _value*-1",
+                    "queryType": "Metrics",
+                    "queryKey": "C",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                }
+            ],
+            "description": "Above the x-axis shows percentage of time spent in file sync operation and the percentage of time spent in directory (open/close/rename) operation for each SM Archive.  The maximum time spent in all I/O operations is 100% * number of archive threads.\n\nBelow the x-axis gives an indication of the amount of write throttling occurring.  Write throttling is done by the TE when the rate of object changes exceeds the rate at which the objects can be written to the archive. ",
+            "timeRange": null,
+            "coloringRules": null,
+            "linkedDashboards": []
+        },
+        {
+            "id": null,
+            "key": "panel3D3B705980D69842",
+            "title": "FSync / Directory - Journal",
+            "visualSettings": "{\"title\":{\"fontSize\":14},\"axes\":{\"axisX\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12},\"axisY\":{\"title\":\"Fsync / Directory\",\"titleFontSize\":12,\"labelFontSize\":12,\"logarithmic\":false,\"unit\":{\"value\":\"%100\",\"isCustom\":false},\"maximum\":100},\"axisY2\":{\"title\":\"JournalThrottle\"}},\"legend\":{\"enabled\":false,\"verticalAlign\":\"bottom\",\"fontSize\":12,\"maxHeight\":50,\"showAsTable\":false,\"wrap\":true},\"series\":{},\"overrides\":[{\"series\":[],\"queries\":[\"A\"],\"properties\":{\"axisYType\":\"primary\",\"name\":\"fsync (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}},{\"series\":[],\"queries\":[\"B\"],\"properties\":{\"axisYType\":\"primary\",\"name\":\"directory (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}},{\"series\":[],\"queries\":[\"C\"],\"properties\":{\"axisYType\":\"secondary\",\"color\":\"#bf2121\",\"name\":\"{{db}}: JournalThrottle\"}}],\"general\":{\"type\":\"area\",\"displayType\":\"default\",\"markerSize\":5,\"lineDashType\":\"solid\",\"markerType\":\"none\",\"lineThickness\":1,\"fillOpacity\":0.1,\"mode\":\"timeSeries\"},\"color\":{\"family\":\"Categorical Light\"}}",
+            "keepVisualSettingsConsistentWithParent": true,
+            "panelType": "SumoSearchPanel",
+            "queries": [
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=storage AND metric=JournalFsyncTime AND field=value | quantize to {{Interval}} using avg | eval _value*100",
+                    "queryType": "Metrics",
+                    "queryKey": "A",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=storage AND metric=JournalDirectoryTime AND field=value | quantize to {{Interval}} using avg | eval _value*100",
+                    "queryType": "Metrics",
+                    "queryKey": "B",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=JournalBandwidthThrottleTime AND field=value AND host={{Host}} db={{Database}} AND nodetype=transaction  | quantize to {{Interval}} using avg | avg by db | eval _value*-1",
+                    "queryType": "Metrics",
+                    "queryKey": "C",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                }
+            ],
+            "description": "Above the x-axis shows percentage of time spent in file sync operation and the percentage of time spent in directory (open/close/rename) operation for each SM Journal.  The maximum time spent in all I/O operations is 100% * number of archive threads.",
+            "timeRange": null,
+            "coloringRules": null,
+            "linkedDashboards": []
+        },
+        {
+            "id": null,
+            "key": "panelPANE-DB9283B5809C2B40",
+            "title": "Active Connections",
+            "visualSettings": "{\"title\":{\"fontSize\":14},\"axes\":{\"axisX\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12},\"axisY\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12,\"logarithmic\":false}},\"legend\":{\"enabled\":false,\"verticalAlign\":\"bottom\",\"fontSize\":12,\"maxHeight\":50,\"showAsTable\":false,\"wrap\":true},\"series\":{},\"general\":{\"type\":\"area\",\"displayType\":\"stacked\",\"markerSize\":5,\"lineDashType\":\"solid\",\"markerType\":\"none\",\"lineThickness\":1,\"fillOpacity\":0.1,\"mode\":\"timeSeries\"},\"color\":{\"family\":\"Categorical Light\"},\"overrides\":[{\"series\":[],\"queries\":[\"A\"],\"properties\":{\"name\":\"active (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}}]}",
+            "keepVisualSettingsConsistentWithParent": true,
+            "panelType": "SumoSearchPanel",
+            "queries": [
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=SqlListenerSqlProcTime AND field=value | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "A",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                }
+            ],
+            "description": "This graph shows the average number of SQL connections executing within the database for the collection interval.   This is displayed per TE.   The value is calculated as SqlListenerSqlProcTime/Milliseconds  * 1000.  Since the value SqlListenerSqlProcTime is only incremented after a thread completes the transaction,  a long running sql statement will skew these numbers and large spikes will be noticed in the graph. The graph is a stack graph so top line is the average sum across all selected TEs.  The hover tooltip will show the individual values.",
+            "timeRange": null,
+            "coloringRules": null,
+            "linkedDashboards": []
+        },
+        {
+            "id": null,
+            "key": "panelAF9171BF8DB66946",
+            "title": "Commits",
+            "visualSettings": "{\"title\":{\"fontSize\":14},\"axes\":{\"axisX\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12},\"axisY\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12,\"logarithmic\":false}},\"legend\":{\"enabled\":false,\"verticalAlign\":\"bottom\",\"fontSize\":12,\"maxHeight\":50,\"showAsTable\":false,\"wrap\":true},\"series\":{},\"overrides\":[{\"series\":[],\"queries\":[\"A\"],\"properties\":{\"name\":\"commits (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}}],\"general\":{\"type\":\"area\",\"displayType\":\"stacked\",\"markerSize\":5,\"lineDashType\":\"solid\",\"markerType\":\"none\",\"lineThickness\":1,\"fillOpacity\":0.1,\"mode\":\"timeSeries\"},\"color\":{\"family\":\"Categorical Light\"}}",
+            "keepVisualSettingsConsistentWithParent": true,
+            "panelType": "SumoSearchPanel",
+            "queries": [
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=Commits AND field=rate | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "A",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                }
+            ],
+            "description": "Average number of commits per seconds within each selected TE. The graph is a stack graph so top line is the average sum across all selected TEs.  The hover tooltip will show the individual values.",
+            "timeRange": null,
+            "coloringRules": null,
+            "linkedDashboards": []
+        },
+        {
+            "id": null,
+            "key": "panelA78974B3BF713944",
+            "title": "Rows Inserted / Updated / Deleted",
+            "visualSettings": "{\"title\":{\"fontSize\":14},\"axes\":{\"axisX\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12},\"axisY\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12,\"logarithmic\":false}},\"legend\":{\"enabled\":false,\"verticalAlign\":\"bottom\",\"fontSize\":12,\"maxHeight\":50,\"showAsTable\":false,\"wrap\":true},\"series\":{},\"general\":{\"type\":\"area\",\"displayType\":\"stacked\",\"markerSize\":5,\"lineDashType\":\"solid\",\"markerType\":\"none\",\"lineThickness\":1,\"fillOpacity\":0.1,\"mode\":\"timeSeries\"},\"color\":{\"family\":\"Categorical Light\"},\"overrides\":[{\"series\":[],\"queries\":[\"A\"],\"properties\":{\"name\":\"updated (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}},{\"series\":[],\"queries\":[\"B\"],\"properties\":{\"name\":\"inserts (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}}]}",
+            "keepVisualSettingsConsistentWithParent": true,
+            "panelType": "SumoSearchPanel",
+            "queries": [
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=Updates AND field=rate | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "A",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=Inserts AND field=rate | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "B",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=Deletes AND field=rate | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "C",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                }
+            ],
+            "description": "Average number of rows updated  per second for each selected TE. The graph is a stack graph so top line is the average sum across all selected TEs.  The hover tooltip will show the individual values.",
+            "timeRange": null,
+            "coloringRules": null,
+            "linkedDashboards": []
+        },
+        {
+            "id": null,
+            "key": "panel184CFCEBB6E13B4B",
+            "title": "Inserts /Updates Pending",
+            "visualSettings": "{\"title\":{\"fontSize\":14},\"axes\":{\"axisX\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12},\"axisY\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12,\"logarithmic\":false}},\"legend\":{\"enabled\":false,\"verticalAlign\":\"bottom\",\"fontSize\":12,\"maxHeight\":50,\"showAsTable\":false,\"wrap\":true},\"series\":{},\"general\":{\"type\":\"area\",\"displayType\":\"stacked\",\"markerSize\":5,\"lineDashType\":\"solid\",\"markerType\":\"none\",\"lineThickness\":1,\"fillOpacity\":0.1,\"mode\":\"timeSeries\"},\"color\":{\"family\":\"Categorical Light\"},\"overrides\":[{\"series\":[],\"queries\":[\"A\"],\"properties\":{\"name\":\"inserts (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}},{\"series\":[],\"queries\":[\"B\"],\"properties\":{\"name\":\"updates (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}}]}",
+            "keepVisualSettingsConsistentWithParent": true,
+            "panelType": "SumoSearchPanel",
+            "queries": [
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=PendingInsertWaitTime AND field=value | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "A",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=transaction AND metric=PendingUpdateWaitTime AND field=value | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "B",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                }
+            ],
+            "description": "The average number of active transactions that are in a pending insert wait as measured by wait time associated with pending insert relative to interval window.  Pending Insert Wait is when a TE is waiting for acknowledgement from chairman that an insert will not invalidate uniqueness constraint on unique indexes. The graph is a stack graph so top line is the average sum across all selected TEs.  The hover tooltip will show the individual values.",
+            "timeRange": null,
+            "coloringRules": null,
+            "linkedDashboards": []
+        },
+        {
+            "id": null,
+            "key": "panelDF60D8E1AB694B47",
+            "title": "Archive Read/Write Time",
+            "visualSettings": "{\"title\":{\"fontSize\":14},\"axes\":{\"axisX\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12},\"axisY\":{\"title\":\"Read\",\"titleFontSize\":12,\"labelFontSize\":12,\"logarithmic\":false,\"unit\":{\"value\":\"\",\"isCustom\":false}},\"axisY2\":{\"title\":\"Write\",\"hideLabels\":false}},\"legend\":{\"enabled\":false,\"verticalAlign\":\"bottom\",\"fontSize\":12,\"maxHeight\":50,\"showAsTable\":false,\"wrap\":true},\"series\":{},\"general\":{\"type\":\"area\",\"displayType\":\"default\",\"markerSize\":5,\"lineDashType\":\"solid\",\"markerType\":\"none\",\"lineThickness\":1,\"fillOpacity\":0.1,\"mode\":\"timeSeries\"},\"color\":{\"family\":\"Categorical Light\"},\"overrides\":[{\"series\":[],\"queries\":[\"A\"],\"properties\":{\"axisYType\":\"primary\",\"name\":\"read (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}},{\"series\":[],\"queries\":[\"B\"],\"properties\":{\"axisYType\":\"secondary\",\"name\":\"write (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}}]}",
+            "keepVisualSettingsConsistentWithParent": true,
+            "panelType": "SumoSearchPanel",
+            "queries": [
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=storage AND metric=ArchiveReadTime AND field=value | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "A",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=storage AND metric=ArchiveWriteTime AND field=value | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "B",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                }
+            ],
+            "description": "",
+            "timeRange": null,
+            "coloringRules": null,
+            "linkedDashboards": []
+        },
+        {
+            "id": null,
+            "key": "panelF85C8036B0E5694B",
+            "title": "Journal Read/Write Time",
+            "visualSettings": "{\"title\":{\"fontSize\":14},\"axes\":{\"axisX\":{\"title\":\"\",\"titleFontSize\":12,\"labelFontSize\":12},\"axisY\":{\"title\":\"Read\",\"titleFontSize\":12,\"labelFontSize\":12,\"logarithmic\":false,\"unit\":{\"value\":\"\",\"isCustom\":false}},\"axisY2\":{\"title\":\"Write\",\"hideLabels\":false}},\"legend\":{\"enabled\":false,\"verticalAlign\":\"bottom\",\"fontSize\":12,\"maxHeight\":50,\"showAsTable\":false,\"wrap\":true},\"series\":{},\"general\":{\"type\":\"area\",\"displayType\":\"default\",\"markerSize\":5,\"lineDashType\":\"solid\",\"markerType\":\"none\",\"lineThickness\":1,\"fillOpacity\":0.1,\"mode\":\"timeSeries\"},\"color\":{\"family\":\"Categorical Light\"},\"overrides\":[{\"series\":[],\"queries\":[\"A\"],\"properties\":{\"axisYType\":\"primary\",\"name\":\"read (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}},{\"series\":[],\"queries\":[\"B\"],\"properties\":{\"axisYType\":\"secondary\",\"name\":\"write (Host: {{host}} Database: {{db}} StartID: {{startid}})\"}}]}",
+            "keepVisualSettingsConsistentWithParent": true,
+            "panelType": "SumoSearchPanel",
+            "queries": [
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=storage AND metric=JournalReadTime AND field=value | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "A",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                },
+                {
+                    "transient": false,
+                    "queryString": "_collector={{Collector}} AND _sourceCategory={{Source}} AND host={{Host}} AND db={{Database}} AND nodetype=storage AND metric=JournalWriteTime AND field=value | quantize to {{Interval}} using avg",
+                    "queryType": "Metrics",
+                    "queryKey": "B",
+                    "metricsQueryMode": "Advanced",
+                    "metricsQueryData": null,
+                    "tracesQueryData": null,
+                    "spansQueryData": null,
+                    "parseMode": "Auto",
+                    "timeSource": "Message",
+                    "outputCardinalityLimit": 1000
+                }
+            ],
+            "description": "",
+            "timeRange": null,
+            "coloringRules": null,
+            "linkedDashboards": []
+        }
+    ],
+    "variables": [
+        {
+            "id": null,
+            "name": "Interval",
+            "displayName": "Interval",
+            "defaultValue": "10s",
+            "sourceDefinition": {
+                "variableSourceType": "CsvVariableSourceDefinition",
+                "values": "10s,30s,1m,5m,10m,30m,60m"
+            },
+            "allowMultiSelect": false,
+            "includeAllOption": false,
+            "hideFromUI": false,
+            "valueType": "Any"
+        },
+        {
+            "id": null,
+            "name": "Host",
+            "displayName": "Host",
+            "defaultValue": "*",
+            "sourceDefinition": {
+                "variableSourceType": "MetadataVariableSourceDefinition",
+                "filter": "_collector={{Collector}} _source={{Source}}",
+                "key": "host"
+            },
+            "allowMultiSelect": false,
+            "includeAllOption": true,
+            "hideFromUI": false,
+            "valueType": "Any"
+        },
+        {
+            "id": null,
+            "name": "Database",
+            "displayName": "Database",
+            "defaultValue": "*",
+            "sourceDefinition": {
+                "variableSourceType": "MetadataVariableSourceDefinition",
+                "filter": "_collector={{Collector}} _source={{Source}}",
+                "key": "db"
+            },
+            "allowMultiSelect": false,
+            "includeAllOption": true,
+            "hideFromUI": false,
+            "valueType": "Any"
+        },
+        {
+            "id": null,
+            "name": "Collector",
+            "displayName": "Collector",
+            "defaultValue": "nuodb-nonprod",
+            "sourceDefinition": {
+                "variableSourceType": "MetadataVariableSourceDefinition",
+                "filter": "",
+                "key": "_collector"
+            },
+            "allowMultiSelect": false,
+            "includeAllOption": true,
+            "hideFromUI": false,
+            "valueType": "Any"
+        },
+        {
+            "id": null,
+            "name": "Source",
+            "displayName": "Source",
+            "defaultValue": "nuodb",
+            "sourceDefinition": {
+                "variableSourceType": "MetadataVariableSourceDefinition",
+                "filter": "",
+                "key": "_source"
+            },
+            "allowMultiSelect": false,
+            "includeAllOption": true,
+            "hideFromUI": false,
+            "valueType": "Any"
+        }
+    ],
+    "coloringRules": []
+}
