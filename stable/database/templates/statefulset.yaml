@@ -253,14 +253,13 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
-          initialDelaySeconds: 10
-          periodSeconds: 15
+          initialDelaySeconds: {{ default 5 .Values.database.sm.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ default 5 .Values.database.sm.readinessProbe.periodSeconds }}
           exec:
             command: [ "readinessprobe" ]
-          failureThreshold: 58
-          # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
-          successThreshold: 2
-          timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
+          failureThreshold: {{ default 3 .Values.database.sm.readinessProbe.failureThreshold }}
+          successThreshold: {{ default 1 .Values.database.sm.readinessProbe.successThreshold }}
+          timeoutSeconds: {{ default 5 .Values.database.sm.readinessProbe.timeoutSeconds }}
       {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
       - name: backup-hooks
         image: {{ include "backupHooks.image" . }}
@@ -665,14 +664,13 @@ spec:
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
-          initialDelaySeconds: 10
-          periodSeconds: 15
+          initialDelaySeconds: {{ default 5 .Values.database.sm.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ default 5 .Values.database.sm.readinessProbe.periodSeconds }}
           exec:
             command: [ "readinessprobe" ]
-          failureThreshold: 58
-          # the SM becomes unready if it does not start within 15 minutes = 30s + 15s*58
-          successThreshold: 2
-          timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
+          failureThreshold: {{ default 3 .Values.database.sm.readinessProbe.failureThreshold }}
+          successThreshold: {{ default 1 .Values.database.sm.readinessProbe.successThreshold }}
+          timeoutSeconds: {{ default 5 .Values.database.sm.readinessProbe.timeoutSeconds }}
       {{- include "nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
