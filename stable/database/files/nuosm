@@ -513,7 +513,7 @@ fi
 
 # Retry the first request against the admin layer to make sure that Raft
 # commands can be committed and fail fast on error
-retry 3 nuocmd get value --key "$liveness_req" 2>&1
+retry 30 nuocmd get value --key "$liveness_req" 2>&1
 if [ $? -ne 0 ]; then
   die 1 "NuoDB Admin layer liveness check failed"
 fi
