@@ -295,27 +295,72 @@ function perform_restore() {
 }
 
 #=======================================
-# function - retry the provided function
-#
-# Retry the passed function with arguments until succees or max retry count is
-# reached.
+# function - retry the supplied command until it succeed or the supplied retry
+# count is reached.
 #
 function retry() {
   local max="$1"
   shift
   local count=0
   local rc=0
-  while [ "$count" -lt "$max" ]; do
-    [ $count -gt 0 ] && log "'$*' exited with code $rc - retrying ..."
-    "$@"
-    rc=$?
-    if [ $rc -eq 0 ]; then
-      return $rc
+  while true; do
+    # Execute command and check exit code
+    out="$(exec "$@" 2>&1)"
+    rc="$?"
+    if [ "$rc" -eq 0 ]; then
+      return 0
     fi
-    count=$(( count + 1 ))
+    # Check that retry count was not exceeded
+    count="$((count + 1))"
+    if [ "$count" -ge "$max" ]; then
+      log "'$*' failed with exit code $rc and output [$out] after $count tries"
+      return "$rc"
+    fi
+    # Sleep for 1 second and retry
+    log "'$*' failed with exit code $rc and output [$out] - retrying..."
     sleep 1
   done
-  return $rc
+}
+
+#=======================================
+# function - retry the supplied command until it succeeds or the supplied
+# timeout (in seconds) expires.
+#
+function retrySeconds() {
+  # Calculate deadline from timeout
+  local timeout="$1"
+  local start="$(date -u '+%s')"
+  local deadline="$((start + timeout))"
+  shift
+
+  # Start with 1 second interval and increase exponentially
+  local rc=0
+  local interval=1
+  while true; do
+    # Execute command and check exit code
+    out="$(exec "$@" 2>&1)"
+    rc="$?"
+    if [ "$rc" -eq 0 ]; then
+      return 0
+    fi
+
+    # Check that timeout did not expire
+    if [ "$deadline" -le "$(date -u '+%s')" ]; then
+      log "'$*' failed with exit code $rc and output [$out] after $timeout seconds"
+      return "$rc"
+    fi
+
+    # Sleep for polling interval and calculate next interval
+    log "'$*' failed with exit code $rc and output [$out] - retrying in $interval seconds..."
+    sleep "$interval"
+    interval="$((interval * 2))"
+
+    # Clamp interval to 10 seconds or seconds until the timeout expires
+    [ "$interval" -lt 10 ] || interval=10
+    local current="$(date -u '+%s')"
+    local remaining="$((deadline - current))"
+    [ "$interval" -lt "$remaining" ] || interval="$remaining"
+  done
 }
 
 #=======================================
@@ -513,7 +558,7 @@ fi
 
 # Retry the first request against the admin layer to make sure that Raft
 # commands can be committed and fail fast on error
-retry 30 nuocmd get value --key "$liveness_req" 2>&1
+retrySeconds 30 nuocmd get value --key "$liveness_req" 2>&1
 if [ $? -ne 0 ]; then
   die 1 "NuoDB Admin layer liveness check failed"
 fi
