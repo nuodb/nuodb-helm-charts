@@ -16,8 +16,6 @@
 : ${NUODB_DOMAIN:="nuodb"}
 : ${DB_NAME:="demo"}
 
-liveness_req="/nuodb/nuosm/liveness"
-
 DB_DIR=${NUODB_ARCHIVEDIR}
 DB_PARENTDIR=$(dirname ${DB_DIR})
 
@@ -556,11 +554,10 @@ if [ "$SNAPSHOT_RESTORED" == "true" ]; then
   loadFromSnapshot
 fi
 
-# Retry the first request against the admin layer to make sure that Raft
-# commands can be committed and fail fast on error
-retrySeconds 30 nuocmd get value --key "$liveness_req" 2>&1
-if [ $? -ne 0 ]; then
-  die 1 "NuoDB Admin layer liveness check failed"
+# Perform a consistent read of an arbitrary KV-store entry in a polling loop to
+# confirm Raft leadership before proceeding with SM start-up.
+if ! retrySeconds 60 nuocmd get value --key nuosm/readiness; then
+  die 1 "NuoDB Admin readiness check failed"
 fi
 
 [ -f "$DB_DIR/info.json" ] && myArchive=$(sed -e 's|.*"id":\s*\([0-9]\+\).*|\1|' "$DB_DIR/info.json")
