@@ -176,37 +176,45 @@ workflows:
       - go-test:
           name: "Integration tests"
           test-suite: "./test/integration"
+          context: &context
+            - common-config
       - go-test:
           name: "Short tests"
           test-suite: "./test/minikube"
           tag: "short"
           requires-minikube: true
+          context: *context
       - go-test:
           name: "Long tests"
           test-suite: "./test/minikube"
           tag: "long"
           requires-minikube: true
           timeout: "120m"
+          context: *context
       - go-test:
           name: "Diagnostics tests"
           test-suite: "./test/minikube"
           tag: "diagnostics"
           requires-minikube: true
+          context: *context
       - go-test:
           name: "Upgrade tests"
           test-suite: "./test/minikube"
           tag: "upgrade"
           requires-minikube: true
+          context: *context
       - go-test:
           name: "Large Instance Tests"
           test-suite: "./test/minikube"
           tag: "large"
           requires-minikube: true
           resource-class: large
+          context: *context
       - go-test:
           name: "Multi-cluster tests"
           test-suite: "./test/multicluster"
           requires-aws: true
+          context: *context
   # Executes single Go test (disabled by default)
   single-test:
     when: << pipeline.parameters.run_single_test >>
@@ -219,3 +227,4 @@ workflows:
           repeat: << pipeline.parameters.run_single_test_repeat >>
           requires-minikube: << pipeline.parameters.run_single_test_requires_minikube >>
           requires-aws: << pipeline.parameters.run_single_test_requires_aws >>
+          context: *context
