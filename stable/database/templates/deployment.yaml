@@ -187,7 +187,11 @@ spec:
             command: [ "readinessprobe" ]
           failureThreshold: {{ default 3 .Values.database.te.readinessProbe.failureThreshold }}
           successThreshold: {{ default 1 .Values.database.te.readinessProbe.successThreshold }}
-          timeoutSeconds: {{ default 5 .Values.database.te.readinessProbe.timeoutSeconds }}
+          {{- if .Values.database.te.readinessProbe.timeoutSeconds }}
+          timeoutSeconds: {{ .Values.database.te.readinessProbe.timeoutSeconds }}
+          {{- else }}
+          timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
+          {{- end }}
       {{- include "nuodb.sidecar.collector" (list . .Values.database.te) | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       {{- include "database.te.shareProcessNamespace" . | indent 6 }}

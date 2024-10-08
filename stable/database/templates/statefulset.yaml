@@ -259,7 +259,11 @@ spec:
             command: [ "readinessprobe" ]
           failureThreshold: {{ default 3 .Values.database.sm.readinessProbe.failureThreshold }}
           successThreshold: {{ default 1 .Values.database.sm.readinessProbe.successThreshold }}
-          timeoutSeconds: {{ default 5 .Values.database.sm.readinessProbe.timeoutSeconds }}
+          {{- if .Values.database.sm.readinessProbe.timeoutSeconds }}
+          timeoutSeconds: {{ .Values.database.sm.readinessProbe.timeoutSeconds }}
+          {{- else }}
+          timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
+          {{- end }}
       {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
       - name: backup-hooks
         image: {{ include "backupHooks.image" . }}
@@ -670,7 +674,11 @@ spec:
             command: [ "readinessprobe" ]
           failureThreshold: {{ default 3 .Values.database.sm.readinessProbe.failureThreshold }}
           successThreshold: {{ default 1 .Values.database.sm.readinessProbe.successThreshold }}
-          timeoutSeconds: {{ default 5 .Values.database.sm.readinessProbe.timeoutSeconds }}
+          {{- if .Values.database.sm.readinessProbe.timeoutSeconds }}
+          timeoutSeconds: {{ .Values.database.sm.readinessProbe.timeoutSeconds }}
+          {{- else }}
+          timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
+          {{- end }}
       {{- include "nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
