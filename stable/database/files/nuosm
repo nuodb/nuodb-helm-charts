@@ -299,8 +299,8 @@ function perform_restore() {
 function retry() {
   # Calculate deadline from timeout
   local timeout="$1"
-  local start="$(date -u '+%s')"
-  local deadline="$((start + timeout))"
+  local current="$(date -u '+%s')"
+  local deadline="$((current + timeout))"
   shift
 
   # Start with 1 second interval and increase exponentially
@@ -319,22 +319,22 @@ function retry() {
     # more than once, in case the execution time of the initial command
     # invocation consumed the entire timeout.
     failures="$((failures + 1))"
-    if [ "$deadline" -le "$(date -u '+%s')" ] && [ "$failures" -gt 1 ]; then
+    current="$(date -u '+%s')"
+    if [ "$deadline" -le "$current" ] && [ "$failures" -gt 1 ]; then
       log "'$*' failed with exit code $rc and output [$out] after $timeout seconds and $failures tries"
       return "$rc"
     fi
+
+    # Clamp interval to 10 seconds or seconds until the timeout expires
+    [ "$interval" -lt 10 ] || interval=10
+    local remaining="$((deadline - current))"
+    [ "$interval" -lt "$remaining" ] || interval="$remaining"
+    [ "$interval" -ge 1 ] || interval=1
 
     # Sleep for polling interval and calculate next interval
     log "'$*' failed with exit code $rc and output [$out] - retrying in $interval seconds..."
     sleep "$interval"
     interval="$((interval * 2))"
-
-    # Clamp interval to 10 seconds or seconds until the timeout expires
-    [ "$interval" -lt 10 ] || interval=10
-    local current="$(date -u '+%s')"
-    local remaining="$((deadline - current))"
-    [ "$interval" -lt "$remaining" ] || interval="$remaining"
-    [ "$interval" -ge 1 ] || interval=1
   done
 }
 
