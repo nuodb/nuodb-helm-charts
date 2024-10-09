@@ -16,8 +16,6 @@
 : ${NUODB_DOMAIN:="nuodb"}
 : ${DB_NAME:="demo"}
 
-liveness_req="/nuodb/nuosm/liveness"
-
 DB_DIR=${NUODB_ARCHIVEDIR}
 DB_PARENTDIR=$(dirname ${DB_DIR})
 
@@ -277,7 +275,7 @@ function perform_restore() {
   if [ -n "$restore_requested" ] && [ "$myArchive" -ne "-1" ]; then
     # complete restore request for this archive in retry loop because there
     # could be concurrent requests due to all archives restored at the same time
-    retry 5 completeRestoreRequest "$myArchive"
+    retry 10 completeRestoreRequest "$myArchive"
     retval=$?
     if [ $retval -ne 0 ]; then
       $undo
@@ -295,27 +293,49 @@ function perform_restore() {
 }
 
 #=======================================
-# function - retry the provided function
-#
-# Retry the passed function with arguments until succees or max retry count is
-# reached.
+# function - retry the supplied command until it succeeds or the supplied
+# timeout (in seconds) expires.
 #
 function retry() {
-  local max="$1"
+  # Calculate deadline from timeout
+  local timeout="$1"
+  local current="$(date -u '+%s')"
+  local deadline="$((current + timeout))"
   shift
-  local count=0
+
+  # Start with 1 second interval and increase exponentially
   local rc=0
-  while [ "$count" -lt "$max" ]; do
-    [ $count -gt 0 ] && log "'$*' exited with code $rc - retrying ..."
-    "$@"
-    rc=$?
-    if [ $rc -eq 0 ]; then
-      return $rc
+  local interval=1
+  local failures=0
+  while true; do
+    # Execute command and check exit code
+    out="$("$@" 2>&1)"
+    rc="$?"
+    if [ "$rc" -eq 0 ]; then
+      return 0
     fi
-    count=$(( count + 1 ))
-    sleep 1
+
+    # Check that timeout did not expire and that we have executed the command
+    # more than once, in case the execution time of the initial command
+    # invocation consumed the entire timeout.
+    failures="$((failures + 1))"
+    current="$(date -u '+%s')"
+    if [ "$deadline" -le "$current" ] && [ "$failures" -gt 1 ]; then
+      log "'$*' failed with exit code $rc and output [$out] after $timeout seconds and $failures tries"
+      return "$rc"
+    fi
+
+    # Clamp interval to 10 seconds or seconds until the timeout expires
+    [ "$interval" -lt 10 ] || interval=10
+    local remaining="$((deadline - current))"
+    [ "$interval" -lt "$remaining" ] || interval="$remaining"
+    [ "$interval" -ge 1 ] || interval=1
+
+    # Sleep for polling interval and calculate next interval
+    log "'$*' failed with exit code $rc and output [$out] - retrying in $interval seconds..."
+    sleep "$interval"
+    interval="$((interval * 2))"
   done
-  return $rc
 }
 
 #=======================================
@@ -511,11 +531,10 @@ if [ "$SNAPSHOT_RESTORED" == "true" ]; then
   loadFromSnapshot
 fi
 
-# Retry the first request against the admin layer to make sure that Raft
-# commands can be committed and fail fast on error
-retry 3 nuocmd get value --key "$liveness_req" 2>&1
-if [ $? -ne 0 ]; then
-  die 1 "NuoDB Admin layer liveness check failed"
+# Perform a consistent read of an arbitrary KV-store entry in a polling loop to
+# confirm Raft leadership before proceeding with SM start-up.
+if ! retry 60 nuocmd get value --key nuodb/nuosm/readiness; then
+  die 1 "NuoDB Admin readiness check failed"
 fi
 
 [ -f "$DB_DIR/info.json" ] && myArchive=$(sed -e 's|.*"id":\s*\([0-9]\+\).*|\1|' "$DB_DIR/info.json")

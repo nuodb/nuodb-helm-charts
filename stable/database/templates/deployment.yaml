@@ -181,14 +181,17 @@ spec:
           readOnly: true
         {{- end }}
         readinessProbe:
-          initialDelaySeconds: 10
-          periodSeconds: 5
+          initialDelaySeconds: {{ default 5 .Values.database.te.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ default 5 .Values.database.te.readinessProbe.periodSeconds }}
           exec:
             command: [ "readinessprobe" ]
-          failureThreshold: 54
-          # the TE becomes unready if it does not start within 5 minutes = 30s + 5s*54
-          successThreshold: 2
+          failureThreshold: {{ default 3 .Values.database.te.readinessProbe.failureThreshold }}
+          successThreshold: {{ default 1 .Values.database.te.readinessProbe.successThreshold }}
+          {{- if .Values.database.te.readinessProbe.timeoutSeconds }}
+          timeoutSeconds: {{ .Values.database.te.readinessProbe.timeoutSeconds }}
+          {{- else }}
           timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
+          {{- end }}
       {{- include "nuodb.sidecar.collector" (list . .Values.database.te) | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       {{- include "database.te.shareProcessNamespace" . | indent 6 }}

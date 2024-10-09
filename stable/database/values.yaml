@@ -529,8 +529,24 @@ database:
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
 
-    #Some clusters require longer readiness probe timeouts
+    # Deprecated: Use readinessProbe.timeoutSeconds instead
     readinessTimeoutSeconds: 5
+
+    # Configuration for readiness probe, which controls ready status and whether
+    # the pod has traffic from Services dispatched to it.
+    readinessProbe:
+
+      # By default, use 5-second delay/period and mark container as not ready
+      # after three failures.
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 3
+      successThreshold: 1
+
+      # The readiness probe for engines only inspects the /proc filesystem, so
+      # it should not take longer than 5 seconds. This is commented out to
+      # enable fall-back to the deprecated readinessTimeoutSeconds value.
+      #timeoutSeconds: 5
 
     # Table Partitions and Storage Groups (TP/SG) is the mechanism by which a
     # version of an SQL table row is stored only on a subset of Storage Managers
@@ -632,8 +648,25 @@ database:
     # keystore: "/etc/nuodb/keys/nuoadmin.p12"
     otherOptions: {}
 
-    # Some clusters require longer readiness probe timeouts
+    # Deprecated: Use readinessProbe.timeoutSeconds instead
     readinessTimeoutSeconds: 5
+
+    # Configuration for readiness probe, which controls ready status and whether
+    # the pod has traffic from Services dispatched to it.
+    readinessProbe:
+
+      # By default, use 5-second delay/period and mark container as not ready
+      # after three failures.
+      initialDelaySeconds: 5
+      periodSeconds: 5
+      failureThreshold: 3
+      successThreshold: 1
+
+      # The readiness probe for engines only inspects the /proc filesystem, so
+      # it should not take longer than 5 seconds. This is commented out to
+      # enable fall-back to the deprecated readinessTimeoutSeconds value.
+      #timeoutSeconds: 5
+
 
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}

@@ -974,14 +974,117 @@ func TestReadinessProbe(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.readinessProbe.initialDelaySeconds": "10",
+			"database.sm.readinessProbe.periodSeconds":       "10",
+			"database.sm.readinessProbe.failureThreshold":    "5",
+			"database.sm.readinessProbe.successThreshold":    "3",
+			"database.sm.readinessProbe.timeoutSeconds":      "10",
+			"database.te.readinessProbe.initialDelaySeconds": "10",
+			"database.te.readinessProbe.periodSeconds":       "10",
+			"database.te.readinessProbe.failureThreshold":    "5",
+			"database.te.readinessProbe.successThreshold":    "3",
+			"database.te.readinessProbe.timeoutSeconds":      "10",
+		},
+	}
+
+	basicChecks := func(spec v1.PodSpec) {
+		container := spec.Containers[0]
+		require.NotNil(t, container.ReadinessProbe)
+		require.NotNil(t, container.ReadinessProbe.Exec)
+		require.Equal(t, container.ReadinessProbe.Exec.Command, []string{"readinessprobe"})
+		require.EqualValues(t, container.ReadinessProbe.InitialDelaySeconds, 10)
+		require.EqualValues(t, container.ReadinessProbe.PeriodSeconds, 10)
+		require.EqualValues(t, container.ReadinessProbe.FailureThreshold, 5)
+		require.EqualValues(t, container.ReadinessProbe.SuccessThreshold, 3)
+		require.EqualValues(t, container.ReadinessProbe.TimeoutSeconds, 10)
+		require.True(t, testlib.MountContains(container.VolumeMounts, "readinessprobe"))
+		require.True(t, testlib.VolumesContains(spec.Volumes, "readinessprobe"))
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			basicChecks(obj.Spec.Template.Spec)
+		}
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			basicChecks(obj.Spec.Template.Spec)
+		}
+	})
+}
+
+func TestReadinessProbeFallback(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.readinessTimeoutSeconds": "1",
+			"database.te.readinessTimeoutSeconds": "1",
+		},
+	}
+
+	basicChecks := func(spec v1.PodSpec) {
+		container := spec.Containers[0]
+		require.NotNil(t, container.ReadinessProbe)
+		require.NotNil(t, container.ReadinessProbe.Exec)
+		require.Equal(t, container.ReadinessProbe.Exec.Command, []string{"readinessprobe"})
+		require.EqualValues(t, container.ReadinessProbe.TimeoutSeconds, 1)
+		require.True(t, testlib.MountContains(container.VolumeMounts, "readinessprobe"))
+		require.True(t, testlib.VolumesContains(spec.Volumes, "readinessprobe"))
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			basicChecks(obj.Spec.Template.Spec)
+		}
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+			basicChecks(obj.Spec.Template.Spec)
+		}
+	})
+}
+
+func TestReadinessProbeDefault(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
 		SetValues: map[string]string{},
 	}
 
 	basicChecks := func(spec v1.PodSpec) {
 		container := spec.Containers[0]
-		assert.True(t, container.ReadinessProbe != nil)
-		assert.True(t, testlib.MountContains(container.VolumeMounts, "readinessprobe"))
-		assert.True(t, testlib.VolumesContains(spec.Volumes, "readinessprobe"))
+		require.NotNil(t, container.ReadinessProbe)
+		require.NotNil(t, container.ReadinessProbe.Exec)
+		require.Equal(t, container.ReadinessProbe.Exec.Command, []string{"readinessprobe"})
+		require.EqualValues(t, container.ReadinessProbe.InitialDelaySeconds, 5)
+		require.EqualValues(t, container.ReadinessProbe.PeriodSeconds, 5)
+		require.EqualValues(t, container.ReadinessProbe.FailureThreshold, 3)
+		require.EqualValues(t, container.ReadinessProbe.SuccessThreshold, 1)
+		require.EqualValues(t, container.ReadinessProbe.TimeoutSeconds, 5)
+		require.True(t, testlib.MountContains(container.VolumeMounts, "readinessprobe"))
+		require.True(t, testlib.VolumesContains(spec.Volumes, "readinessprobe"))
 	}
 
 	t.Run("testDeployment", func(t *testing.T) {

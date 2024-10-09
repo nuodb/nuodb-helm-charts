@@ -288,7 +288,12 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
 | `sm.topologySpreadConstraints` | Topology spread constraints for NuoDB SM | `[]` |
-| `sm.readinessTimeoutSeconds` | SM readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
+| `sm.otherOptions` | Additional key/value Docker options | `{}` |
+| `sm.readinessProbe.initialDelaySeconds` | The initial delay in seconds for the readiness probe. | `5` |
+| `sm.readinessProbe.periodSeconds` | The period in seconds for the readiness probe. | `5` |
+| `sm.readinessProbe.failureThreshold` | The number of times that the readiness probe must fail before the container is marked as unready. | `3` |
+| `sm.readinessProbe.successThreshold` | The number of times that the readiness probe must success before the container is marked as ready. | `1` |
+| `sm.readinessProbe.timeoutSeconds` | The timeout in seconds for an invocation of the readiness probe. | `5` |
 | `sm.storageGroup.enabled` | Enable Table Partitions and Storage Groups (TPSG) for all SMs in this database Helm release | `false` |
 | `sm.storageGroup.name` | The name of the storage group. Only alphanumeric and underscore (`_`) characters are allowed. By default the Helm release name is used | `{{ .Release.Name }}` |
 | `te.enablePod` | Create deployment for TEs. By default, the TE Deployment is disabled if TP/SG is enabled and this is a "secondary" release. | `nil` |
@@ -316,8 +321,11 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.tolerations` | Tolerations for NuoDB TE | `[]` |
 | `te.topologySpreadConstraints` | Topology spread constraints for NuoDB TE | `[]` |
 | `te.otherOptions` | Additional key/value Docker options | `{}` |
-| `sm.otherOptions` | Additional key/value Docker options | `{}` |
-| `te.readinessTimeoutSeconds` | TE readiness probe timeout, sometimes needs adjusting depending on environment and pod resources | `5` |
+| `te.readinessProbe.initialDelaySeconds` | The initial delay in seconds for the readiness probe. | `5` |
+| `te.readinessProbe.periodSeconds` | The period in seconds for the readiness probe. | `5` |
+| `te.readinessProbe.failureThreshold` | The number of times that the readiness probe must fail before the container is marked as unready. | `3` |
+| `te.readinessProbe.successThreshold` | The number of times that the readiness probe must success before the container is marked as ready. | `1` |
+| `te.readinessProbe.timeoutSeconds` | The timeout in seconds for an invocation of the readiness probe. | `5` |
 | `automaticProtocolUpgrade.enabled` | Enable automatic database protocol upgrade and a Transaction Engine (TE) restart as an upgrade finalization step done by Kubernetes Aware Admin (KAA). Applicable for NuoDB major versions upgrade only. Requires NuoDB 4.2.3+ | `false` |
 | `automaticProtocolUpgrade.tePreferenceQuery` | LBQuery expression to select the TE that will be restarted after a successful database protocol upgrade. Defaults to random Transaction Engine (TE) in MONITORED state | `""` |
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
