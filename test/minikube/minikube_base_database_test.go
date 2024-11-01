@@ -279,6 +279,93 @@ func TestKubernetesAccessWithinPods(t *testing.T) {
 	})
 }
 
+func TestArchivePvcRecreated(t *testing.T) {
+	testlib.AwaitTillerUp(t)
+	options := helm.Options{}
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// Start database and wait for it to become running
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+		},
+	}
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// Suspend admin process so that it cannot handle deletion of the archive PVC
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "bash", "-c",
+		"pgrep -x java | xargs -r kill -STOP")
+
+	// Delete archive PVC and SM pod
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+	archivePvcName := "archive-volume-" + smPodName
+
+	// Save archive PVC UID so that we can detect re-creation
+	archivePvcUid, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "pvc/"+archivePvcName, "-o", "jsonpath={.metadata.uid}")
+	require.NoError(t, err)
+	k8s.RunKubectl(t, kubectlOptions, "delete", "pvc/"+archivePvcName, "pod/"+smPodName)
+
+	// Wait for archive PVC to be re-created, which should happen
+	// automatically due to the SM statefulset
+	testlib.Await(t, func() bool {
+		newArchivePvcUid, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "get", "pvc/"+archivePvcName, "-o", "jsonpath={.metadata.uid}")
+		require.NoError(t, err)
+		return newArchivePvcUid != "" && newArchivePvcUid != archivePvcUid
+	}, 120*time.Second)
+
+	// Resume admin process
+	k8s.RunKubectl(t, kubectlOptions, "exec", admin0, "-c", "admin", "--", "bash", "-c",
+		"pgrep -x java | xargs -r kill -CONT")
+
+	// If `nuodocker start sm` detects PVC re-creation, expect archive for
+	// deleted PVC to be deleted, allowing database restart.
+	// TODO(asz6): Update minimum version after backporting fix
+	minVersion := "7.0"
+	t.Run("testOldArchiveDeleted", func(t *testing.T) {
+		testlib.SkipTestOnNuoDBVersionCondition(t, "<"+minVersion)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+
+		// Check that there is one archive
+		archives, removedArchives := testlib.GetArchives(t, namespaceName, admin0, opt.DbName)
+		require.NoError(t, err)
+		require.Equal(t, 1, len(archives))
+		require.Equal(t, 0, len(removedArchives))
+
+		// Look for expected SM logging
+		out, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "logs", smPodName, "-c", "engine")
+		require.NoError(t, err)
+		require.Contains(t, out, "Deleting archive ID 0 associated with PVC "+archivePvcName)
+	})
+	// Otherwise, database restart will be blocked in
+	// AWAITING_ARCHIVE_HISTORIES_MSG state waiting for the archive for the
+	// deleted PVC to be started.
+	t.Run("testOldArchiveNotDeleted", func(t *testing.T) {
+		testlib.SkipTestOnNuoDBVersionCondition(t, ">="+minVersion)
+		testlib.Await(t, func() bool {
+			out, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--",
+				"nuocmd", "show", "domain", "--process-format", "{hostname} {durable_state}:{engine_state}")
+			require.NoError(t, err)
+			return strings.Contains(out, opt.DbName+" [state = AWAITING_ARCHIVE_HISTORIES_MSG]") &&
+				strings.Contains(out, smPodName+" TRACKED:STARTING_UP")
+		}, 120*time.Second)
+
+		// Check that there are two archives
+		archives, removedArchives := testlib.GetArchives(t, namespaceName, admin0, opt.DbName)
+		require.NoError(t, err)
+		require.Equal(t, 2, len(archives))
+		require.Equal(t, 0, len(removedArchives))
+	})
+}
+
 func TestKubernetesAltAddress(t *testing.T) {
 	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
