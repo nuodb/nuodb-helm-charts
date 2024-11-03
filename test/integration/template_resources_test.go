@@ -6,12 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"k8s.io/apimachinery/pkg/api/resource"
 
-	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 

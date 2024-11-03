@@ -2,8 +2,6 @@ package integration
 
 import (
 	"fmt"
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-	"github.com/stretchr/testify/assert"
 	"math/rand"
 	"regexp"
 	"strconv"
@@ -11,6 +9,9 @@ import (
 	"time"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func init() {
@@ -104,7 +105,6 @@ func TestStorageClassTemplateGcp(t *testing.T) {
 
 	StorageClassTemplateE(t, options, expectedProvisioner)
 }
-
 
 func TestStorageClassTemplateLocal(t *testing.T) {
 	options := &helm.Options{}

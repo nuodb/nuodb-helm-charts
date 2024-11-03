@@ -8,9 +8,10 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 const shebangPattern = "[#][!][ \t]*.+[/ ](sh|bash)"

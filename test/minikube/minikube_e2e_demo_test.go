@@ -5,16 +5,16 @@ package minikube
 
 import (
 	"fmt"
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-	v12 "k8s.io/api/core/v1"
 	"testing"
 	"time"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestKubernetesYCSB(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{}
@@ -42,7 +42,7 @@ func TestKubernetesYCSB(t *testing.T) {
 	testlib.ScaleYCSB(t, namespaceName, 1)
 
 	ycsbPodName := testlib.GetPodName(t, namespaceName, testlib.YCSB_CONTROLLER_NAME)
-	go testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, ycsbPodName, "-ycsb", &corev1.PodLogOptions{Follow: true})
 
 	// let YCSB run for a couple of seconds
 	time.Sleep(5 * time.Second)

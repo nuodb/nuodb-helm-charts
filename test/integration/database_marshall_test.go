@@ -1,15 +1,15 @@
 package integration
 
 import (
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+	"testing"
+
 	"github.com/stretchr/testify/assert"
 
-	"testing"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestDatabaseUnmarshal(t *testing.T) {
-	s := (
-		`{
+	s := (`{
   "incarnation": {
     "major": 1, 
     "minor": 2

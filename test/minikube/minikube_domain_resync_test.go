@@ -15,14 +15,12 @@ import (
 	"testing"
 	"time"
 
-	v12 "k8s.io/api/core/v1"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func verifyProcessLabels(t *testing.T, namespaceName string, adminPod string) (archiveVolumeClaims map[string]int) {
@@ -86,7 +84,6 @@ func checkInitialMembership(t require.TestingT, configJson string, expectedSize 
 }
 
 func TestReprovisionAdmin0(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -102,7 +99,7 @@ func TestReprovisionAdmin0(t *testing.T) {
 	admin1 := adminStatefulSet + "-1"
 
 	// get OLD logs
-	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	// check initial membership on admin-0
 	options := k8s.NewKubectlOptions("", "", namespaceName)
@@ -151,7 +148,6 @@ func TestReprovisionAdmin0(t *testing.T) {
 }
 
 func TestAdminScaleDown(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -166,7 +162,7 @@ func TestAdminScaleDown(t *testing.T) {
 	admin1 := adminStatefulSet + "-1"
 
 	// get OLD logs
-	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	// scale down Admin StatefulSet
 	options := k8s.NewKubectlOptions("", "", namespaceName)
@@ -221,7 +217,6 @@ func TestDomainResync(t *testing.T) {
 		t.Skip("Cannot test resync without the Enterprise Edition")
 	}
 
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -302,7 +297,6 @@ func TestDomainResync(t *testing.T) {
 }
 
 func TestLoadBalancerConfigurationFullResync(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -338,7 +332,6 @@ func TestLoadBalancerConfigurationFullResync(t *testing.T) {
 }
 
 func TestLoadBalancerConfigurationResync(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 

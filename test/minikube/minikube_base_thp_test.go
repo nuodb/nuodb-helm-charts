@@ -1,19 +1,19 @@
+//go:build short
 // +build short
 
 package minikube
 
 import (
 	"fmt"
-	"time"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func scheduleDefault(t *testing.T, helmChartPath string, namespaceName string) {
@@ -89,7 +89,6 @@ func scheduleLabelMismatch(t *testing.T, helmChartPath string, namespaceName str
 }
 
 func TestKubernetesDefaultMinikubeTHP(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())

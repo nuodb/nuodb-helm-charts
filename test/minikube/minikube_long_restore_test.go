@@ -11,14 +11,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func verifyExternalJournal(t *testing.T, namespaceName string, adminPod string,
@@ -68,7 +66,6 @@ func TestKubernetesRestoreMultipleSMs(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -193,7 +190,6 @@ func TestKubernetesRestoreMultipleBackupGroups(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -333,7 +329,6 @@ func TestKubernetesRestoreCustomBackupGroups(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -466,7 +461,6 @@ func TestKubernetesRestoreWithStorageGroups(t *testing.T) {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 5.0.3")
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -595,7 +589,6 @@ func TestKubernetesImportWithStorageGroups(t *testing.T) {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 5.0.3")
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -691,7 +684,6 @@ func TestKubernetesImportWithStorageGroups(t *testing.T) {
 }
 
 func TestKubernetesRestoreDatabaseWithURL(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -760,7 +752,6 @@ func TestKubernetesRestoreDatabaseWithURL(t *testing.T) {
 }
 
 func TestKubernetesImportDatabaseSeparateJournal(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -814,7 +805,6 @@ func TestKubernetesImportDatabaseSeparateJournal(t *testing.T) {
 }
 
 func TestKubernetesRestoreDatabaseSeparateJournal(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -895,7 +885,6 @@ func TestKubernetesRestoreDatabaseSeparateJournal(t *testing.T) {
 // Extensive end to end tests for creating a database off of a VolumeSnapshot
 func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 	// Set up domain
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 

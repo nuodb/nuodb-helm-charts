@@ -2,15 +2,16 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/random"
-	"github.com/stretchr/testify/require"
-	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func StartVault(t *testing.T, options *helm.Options, namespaceName string) string {
@@ -48,7 +49,7 @@ func StartVault(t *testing.T, options *helm.Options, namespaceName string) strin
 		if err != nil {
 			t.Logf("Vault pod '%s' is not available and logs can not be retrieved", vaultName)
 		} else {
-			go GetAppLog(t, namespaceName, vaultName, "", &v12.PodLogOptions{Follow: true})
+			go GetAppLog(t, namespaceName, vaultName, "", &corev1.PodLogOptions{Follow: true})
 		}
 	})
 

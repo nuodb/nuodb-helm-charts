@@ -10,15 +10,13 @@ import (
 	"strings"
 	"testing"
 
-	v1 "k8s.io/api/core/v1"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func verifyAdminCertificates(t *testing.T, info testlib.NuoDBCertificateInfo, expectedDN string) {
@@ -52,7 +50,6 @@ func startDomainWithTLSCertificates(t *testing.T, options *helm.Options, namespa
 }
 
 func TestKubernetesTLSRotation(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
@@ -117,8 +114,8 @@ func TestKubernetesTLSRotation(t *testing.T) {
 	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", adminReleaseName)
 
 	// get the OLD log
-	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v1.PodLogOptions{Follow: true})
-	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	// create the new certs...
 	testlib.GenerateCustomCertificates(t, certGeneratorPodName, namespaceName, newTLSCommands)

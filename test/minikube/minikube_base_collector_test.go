@@ -1,3 +1,4 @@
+//go:build long
 // +build long
 
 package minikube
@@ -7,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	v12 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 const FILE_PLUGIN_CONFIGMAP = `
@@ -39,7 +40,7 @@ func createOutputFilePlugin(t *testing.T, namespaceName string) {
 
 func checkMetricsLine(t *testing.T, namespaceName string, podName string,
 	expectedLine string, minOccurances int) bool {
-	count := testlib.GetRegexOccurrenceInLog(t, namespaceName, podName, expectedLine, &v12.PodLogOptions{Container: "nuocollector"})
+	count := testlib.GetRegexOccurrenceInLog(t, namespaceName, podName, expectedLine, &corev1.PodLogOptions{Container: "nuocollector"})
 	if count >= minOccurances {
 		t.Logf("Found %d occurances of '%s' in pod %s log", count, expectedLine, podName)
 		return true
@@ -96,7 +97,6 @@ func verifyCollectionForDatabase(t *testing.T, namespaceName string, app string,
 }
 
 func TestMetricsCollection(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{

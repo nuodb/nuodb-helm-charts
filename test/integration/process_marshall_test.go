@@ -2,11 +2,11 @@ package integration
 
 import (
 	"encoding/json"
+	"testing"
 
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/assert"
 
-	"testing"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestUnmarshall(t *testing.T) {

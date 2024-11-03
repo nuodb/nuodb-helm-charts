@@ -100,12 +100,7 @@ elif [[ "$REQUIRES_MINISHIFT" == "true" ]]; then
   oc status
 
   kubectl cluster-info
-
-  kubectl -n kube-system create serviceaccount tiller-system
-  kubectl create clusterrolebinding tiller-system --clusterrole cluster-admin --serviceaccount=kube-system:tiller-system
-
   helm version
-
   kubectl version
 
   # disable THP to match minikube

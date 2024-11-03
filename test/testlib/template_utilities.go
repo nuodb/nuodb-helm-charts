@@ -5,19 +5,18 @@ import (
 	"strings"
 	"testing"
 
-	"k8s.io/api/batch/v1beta1"
-	"k8s.io/apimachinery/pkg/api/resource"
-
 	"github.com/google/go-cmp/cmp"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
-	v1 "k8s.io/api/core/v1"
+	batchv1beta1 "k8s.io/api/batch/v1beta1"
+	corev1 "k8s.io/api/core/v1"
 	networkingv1 "k8s.io/api/networking/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	storagev1 "k8s.io/api/storage/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 func ArgContains(args []string, x string) bool {
@@ -29,7 +28,7 @@ func ArgContains(args []string, x string) bool {
 	return false
 }
 
-func EnvGet(envs []v1.EnvVar, key string) (string, bool) {
+func EnvGet(envs []corev1.EnvVar, key string) (string, bool) {
 	for _, n := range envs {
 		if n.Name == key {
 			return n.Value, true
@@ -38,25 +37,25 @@ func EnvGet(envs []v1.EnvVar, key string) (string, bool) {
 	return "", false
 }
 
-func AssertEnvNotContains(t *testing.T, envs []v1.EnvVar, key string) {
+func AssertEnvNotContains(t *testing.T, envs []corev1.EnvVar, key string) {
 	actual, ok := EnvGet(envs, key)
 	assert.False(t, ok, "Unexpected environment variable %s=%s", key, actual)
 }
 
-func AssertEnvContains(t *testing.T, envs []v1.EnvVar, key, expected string) {
+func AssertEnvContains(t *testing.T, envs []corev1.EnvVar, key, expected string) {
 	actual, ok := EnvGet(envs, key)
 	assert.True(t, ok, "Environment variable %s not set", key)
 	assert.Equal(t, expected, actual)
 }
 
-func EnvContains(envs []v1.EnvVar, key string, expected string) bool {
+func EnvContains(envs []corev1.EnvVar, key string, expected string) bool {
 	if actual, ok := EnvGet(envs, key); ok {
 		return actual == expected
 	}
 	return false
 }
 
-func EnvContainsValueFrom(envs []v1.EnvVar, key string, valueFrom *v1.EnvVarSource) bool {
+func EnvContainsValueFrom(envs []corev1.EnvVar, key string, valueFrom *corev1.EnvVarSource) bool {
 	for _, n := range envs {
 		if n.Name == key && cmp.Equal(n.ValueFrom, valueFrom) {
 			return true
@@ -65,7 +64,7 @@ func EnvContainsValueFrom(envs []v1.EnvVar, key string, valueFrom *v1.EnvVarSour
 	return false
 }
 
-func EnvFromSourceContains(envs []v1.EnvFromSource, value string) bool {
+func EnvFromSourceContains(envs []corev1.EnvFromSource, value string) bool {
 	for _, n := range envs {
 		if n.ConfigMapRef.Name == value {
 			return true
@@ -74,7 +73,7 @@ func EnvFromSourceContains(envs []v1.EnvFromSource, value string) bool {
 	return false
 }
 
-func MountContains(mounts []v1.VolumeMount, expectedName string) bool {
+func MountContains(mounts []corev1.VolumeMount, expectedName string) bool {
 	for _, mount := range mounts {
 		if mount.Name == expectedName {
 			return true
@@ -83,7 +82,7 @@ func MountContains(mounts []v1.VolumeMount, expectedName string) bool {
 	return false
 }
 
-func GetMount(mounts []v1.VolumeMount, expectedName string) (*v1.VolumeMount, bool) {
+func GetMount(mounts []corev1.VolumeMount, expectedName string) (*corev1.VolumeMount, bool) {
 	for _, mount := range mounts {
 		if mount.Name == expectedName {
 			return &mount, true
@@ -92,7 +91,7 @@ func GetMount(mounts []v1.VolumeMount, expectedName string) (*v1.VolumeMount, bo
 	return nil, false
 }
 
-func VolumesContains(mounts []v1.Volume, expectedName string) bool {
+func VolumesContains(mounts []corev1.Volume, expectedName string) bool {
 	for _, mount := range mounts {
 		if mount.Name == expectedName {
 			return true
@@ -117,7 +116,7 @@ func MapContains(actual map[string]string, expected map[string]string) (string, 
 	return "", true
 }
 
-func GetVolume(volumes []v1.Volume, expectedName string) (*v1.Volume, bool) {
+func GetVolume(volumes []corev1.Volume, expectedName string) (*corev1.Volume, bool) {
 	for _, volume := range volumes {
 		if volume.Name == expectedName {
 			return &volume, true
@@ -126,7 +125,7 @@ func GetVolume(volumes []v1.Volume, expectedName string) (*v1.Volume, bool) {
 	return nil, false
 }
 
-func GetVolumeClaim(vcp []v1.PersistentVolumeClaim, expectedName string) (*v1.PersistentVolumeClaim, bool) {
+func GetVolumeClaim(vcp []corev1.PersistentVolumeClaim, expectedName string) (*corev1.PersistentVolumeClaim, bool) {
 	for _, volume := range vcp {
 		if volume.Name == expectedName {
 			return &volume, true
@@ -155,16 +154,16 @@ func SplitAndRender[T any](t *testing.T, output string, expectedNrObjects int, k
 	return objects
 }
 
-func SplitAndRenderPersistentVolumeClaim(t *testing.T, output string, expectedNrObjects int) []v1.PersistentVolumeClaim {
-	return SplitAndRender[v1.PersistentVolumeClaim](t, output, expectedNrObjects, "PersistentVolumeClaim")
+func SplitAndRenderPersistentVolumeClaim(t *testing.T, output string, expectedNrObjects int) []corev1.PersistentVolumeClaim {
+	return SplitAndRender[corev1.PersistentVolumeClaim](t, output, expectedNrObjects, "PersistentVolumeClaim")
 }
 
-func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int) []v1.ConfigMap {
-	return SplitAndRender[v1.ConfigMap](t, output, expectedNrObjects, "ConfigMap")
+func SplitAndRenderConfigMap(t *testing.T, output string, expectedNrObjects int) []corev1.ConfigMap {
+	return SplitAndRender[corev1.ConfigMap](t, output, expectedNrObjects, "ConfigMap")
 }
 
-func SplitAndRenderCronJob(t *testing.T, output string, expectedNrObjects int) []v1beta1.CronJob {
-	return SplitAndRender[v1beta1.CronJob](t, output, expectedNrObjects, "CronJob")
+func SplitAndRenderCronJob(t *testing.T, output string, expectedNrObjects int) []batchv1beta1.CronJob {
+	return SplitAndRender[batchv1beta1.CronJob](t, output, expectedNrObjects, "CronJob")
 }
 
 func SplitAndRenderDaemonSet(t *testing.T, output string, expectedNrObjects int) []appsv1.DaemonSet {
@@ -179,16 +178,16 @@ func SplitAndRenderDeployment(t *testing.T, output string, expectedNrObjects int
 	return SplitAndRender[appsv1.Deployment](t, output, expectedNrObjects, "Deployment")
 }
 
-func SplitAndRenderReplicationController(t *testing.T, output string, expectedNrObjects int) []v1.ReplicationController {
-	return SplitAndRender[v1.ReplicationController](t, output, expectedNrObjects, "ReplicationController")
+func SplitAndRenderReplicationController(t *testing.T, output string, expectedNrObjects int) []corev1.ReplicationController {
+	return SplitAndRender[corev1.ReplicationController](t, output, expectedNrObjects, "ReplicationController")
 }
 
-func SplitAndRenderSecret(t *testing.T, output string, expectedNrObjects int) []v1.Secret {
-	return SplitAndRender[v1.Secret](t, output, expectedNrObjects, "Secret")
+func SplitAndRenderSecret(t *testing.T, output string, expectedNrObjects int) []corev1.Secret {
+	return SplitAndRender[corev1.Secret](t, output, expectedNrObjects, "Secret")
 }
 
-func SplitAndRenderService(t *testing.T, output string, expectedNrObjects int) []v1.Service {
-	return SplitAndRender[v1.Service](t, output, expectedNrObjects, "Service")
+func SplitAndRenderService(t *testing.T, output string, expectedNrObjects int) []corev1.Service {
+	return SplitAndRender[corev1.Service](t, output, expectedNrObjects, "Service")
 }
 
 func SplitAndRenderStatefulSet(t *testing.T, output string, expectedNrObjects int) []appsv1.StatefulSet {
@@ -211,8 +210,8 @@ func SplitAndRenderClusterClusterRoleBinding(t *testing.T, output string, expect
 	return SplitAndRender[rbacv1.ClusterRoleBinding](t, output, expectedNrObjects, "ClusterRoleBinding")
 }
 
-func SplitAndRenderServiceAccount(t *testing.T, output string, expectedNrObjects int) []v1.ServiceAccount {
-	return SplitAndRender[v1.ServiceAccount](t, output, expectedNrObjects, "ServiceAccount")
+func SplitAndRenderServiceAccount(t *testing.T, output string, expectedNrObjects int) []corev1.ServiceAccount {
+	return SplitAndRender[corev1.ServiceAccount](t, output, expectedNrObjects, "ServiceAccount")
 }
 
 func SplitAndRenderIngress(t *testing.T, output string, expectedNrObjects int) []networkingv1.Ingress {

@@ -6,16 +6,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
@@ -126,7 +125,7 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		// Only the ClusterIP service targeting only TEs in this TE group will
 		// be rendered by default
-		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
@@ -147,7 +146,7 @@ func TestDatabaseClusterDirectServiceRenders(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service-clusterip.yaml"})
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 2) {
-		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
 
 		if obj.Name == "demo-clusterip" {
@@ -174,7 +173,7 @@ func TestDatabaseHeadlessServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "demo", obj.Name)
-		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Equal(t, "None", obj.Spec.ClusterIP)
 	}
@@ -197,7 +196,7 @@ func TestDatabaseServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
-		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
@@ -209,7 +208,7 @@ func TestDatabaseServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
-		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
 		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-type"], "external")
 		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-nlb-target-type"], "ip")
@@ -221,7 +220,7 @@ func TestDatabaseServiceRenders(t *testing.T) {
 	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-balancer", obj.Name)
-		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-name"], "nuodb-demo-nlb")
 		assert.NotContains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-scheme")
 	}
@@ -246,7 +245,7 @@ func TestDatabaseNodePortServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database-nodeport", obj.Name)
-		assert.Equal(t, v1.ServiceTypeNodePort, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeNodePort, obj.Spec.Type)
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.NotContains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
@@ -410,7 +409,7 @@ func TestDatabaseVolumes(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
-	findEphemeralVolume := func(volumes []v1.Volume) *v1.Volume {
+	findEphemeralVolume := func(volumes []corev1.Volume) *corev1.Volume {
 		for _, volume := range volumes {
 			if volume.Name == "eph-volume" {
 				return &volume
@@ -420,7 +419,7 @@ func TestDatabaseVolumes(t *testing.T) {
 	}
 
 	// Returns a map of mount point to subpath for all eph-volume mounts
-	findEphemeralVolumeMounts := func(mounts []v1.VolumeMount) map[string]string {
+	findEphemeralVolumeMounts := func(mounts []corev1.VolumeMount) map[string]string {
 		ret := make(map[string]string)
 		for _, mount := range mounts {
 			if mount.Name == "eph-volume" {
@@ -430,7 +429,7 @@ func TestDatabaseVolumes(t *testing.T) {
 		return ret
 	}
 
-	assertStorageEquals := func(t *testing.T, volume *v1.Volume, size string) {
+	assertStorageEquals := func(t *testing.T, volume *corev1.Volume, size string) {
 		quantity, err := resource.ParseQuantity(size)
 		assert.NoError(t, err)
 		assert.Equal(t, volume.Ephemeral.VolumeClaimTemplate.Spec.Resources.Requests.Storage(), &quantity)
@@ -811,7 +810,7 @@ func TestDatabaseOtherOptions(t *testing.T) {
 		assert.NotContains(t, args, "")
 	}
 
-	basicEnvChecks := func(args []v1.EnvVar) {
+	basicEnvChecks := func(args []corev1.EnvVar) {
 		assert.True(t, testlib.EnvContains(args, "NUODOCKER_KEYSTORE_PASSWORD", "changeIt"))
 	}
 
@@ -854,9 +853,9 @@ func TestDatabaseCustomEnv(t *testing.T) {
 		ValuesFiles: []string{"../files/database-env.yaml"},
 	}
 
-	basicEnvChecks := func(args []v1.EnvVar) {
-		expectedAltAddress := v1.EnvVarSource{
-			FieldRef: &v1.ObjectFieldSelector{
+	basicEnvChecks := func(args []corev1.EnvVar) {
+		expectedAltAddress := corev1.EnvVarSource{
+			FieldRef: &corev1.ObjectFieldSelector{
 				FieldPath: "status.podIP",
 			},
 		}
@@ -897,8 +896,8 @@ func TestDatabaseVPNRenders(t *testing.T) {
 		},
 	}
 
-	basicChecks := func(args []v1.Container) {
-		assert.Contains(t, args[0].SecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+	basicChecks := func(args []corev1.Container) {
+		assert.Contains(t, args[0].SecurityContext.Capabilities.Add, corev1.Capability("NET_ADMIN"))
 		assert.True(t, testlib.EnvFromSourceContains(args[0].EnvFrom, "test-config"))
 	}
 
@@ -989,7 +988,7 @@ func TestReadinessProbe(t *testing.T) {
 		},
 	}
 
-	basicChecks := func(spec v1.PodSpec) {
+	basicChecks := func(spec corev1.PodSpec) {
 		container := spec.Containers[0]
 		require.NotNil(t, container.ReadinessProbe)
 		require.NotNil(t, container.ReadinessProbe.Exec)
@@ -1035,7 +1034,7 @@ func TestReadinessProbeFallback(t *testing.T) {
 		},
 	}
 
-	basicChecks := func(spec v1.PodSpec) {
+	basicChecks := func(spec corev1.PodSpec) {
 		container := spec.Containers[0]
 		require.NotNil(t, container.ReadinessProbe)
 		require.NotNil(t, container.ReadinessProbe.Exec)
@@ -1074,7 +1073,7 @@ func TestReadinessProbeDefault(t *testing.T) {
 		SetValues: map[string]string{},
 	}
 
-	basicChecks := func(spec v1.PodSpec) {
+	basicChecks := func(spec corev1.PodSpec) {
 		container := spec.Containers[0]
 		require.NotNil(t, container.ReadinessProbe)
 		require.NotNil(t, container.ReadinessProbe.Exec)
@@ -1356,7 +1355,7 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 
 			claim, ok := testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
 			assert.True(t, ok, "volume journal-volume not found")
-			assert.Equal(t, v1.ReadWriteOnce, claim.Spec.AccessModes[0])
+			assert.Equal(t, corev1.ReadWriteOnce, claim.Spec.AccessModes[0])
 			assert.Nil(t, claim.Spec.StorageClassName)
 		}
 	})
@@ -1387,7 +1386,7 @@ func TestDatabaseSeparateJournal(t *testing.T) {
 
 			claim, ok := testlib.GetVolumeClaim(obj.Spec.VolumeClaimTemplates, "journal-volume")
 			assert.True(t, ok, "volume journal-volume not found")
-			assert.Equal(t, v1.ReadWriteMany, claim.Spec.AccessModes[0])
+			assert.Equal(t, corev1.ReadWriteMany, claim.Spec.AccessModes[0])
 			assert.EqualValues(t, "non-default", *claim.Spec.StorageClassName)
 		}
 	})
@@ -1732,13 +1731,13 @@ func TestDatabaseSecurityContext(t *testing.T) {
 			},
 		}
 
-		checkContainer := func(t *testing.T, container v1.Container) {
+		checkContainer := func(t *testing.T, container corev1.Container) {
 			containerSecurityContext := container.SecurityContext
 			assert.NotNil(t, containerSecurityContext)
 			assert.True(t, *containerSecurityContext.ReadOnlyRootFilesystem)
 
 			// Check that /tmp directory has ephemeral volume mounted to it
-			var tmpVolumeMount *v1.VolumeMount
+			var tmpVolumeMount *corev1.VolumeMount
 			for _, volumeMount := range container.VolumeMounts {
 				if volumeMount.MountPath == "/tmp" {
 					tmpVolumeMount = volumeMount.DeepCopy()
@@ -1774,7 +1773,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
 			assert.NotNil(t, containerSecurityContext)
-			assert.Contains(t, containerSecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+			assert.Contains(t, containerSecurityContext.Capabilities.Add, corev1.Capability("NET_ADMIN"))
 			assert.Nil(t, containerSecurityContext.Capabilities.Drop)
 		}
 		// check security context on TE Deployment
@@ -1782,7 +1781,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
 			assert.NotNil(t, containerSecurityContext)
-			assert.Contains(t, containerSecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+			assert.Contains(t, containerSecurityContext.Capabilities.Add, corev1.Capability("NET_ADMIN"))
 			assert.Nil(t, containerSecurityContext.Capabilities.Drop)
 		}
 	})
@@ -1799,7 +1798,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
 			assert.NotNil(t, containerSecurityContext)
-			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
+			assert.Contains(t, containerSecurityContext.Capabilities.Drop, corev1.Capability("CAP_NET_RAW"))
 			assert.Nil(t, containerSecurityContext.Capabilities.Add)
 		}
 		// check security context on TE Deployment
@@ -1807,7 +1806,7 @@ func TestDatabaseSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
 			assert.NotNil(t, containerSecurityContext)
-			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
+			assert.Contains(t, containerSecurityContext.Capabilities.Drop, corev1.Capability("CAP_NET_RAW"))
 			assert.Nil(t, containerSecurityContext.Capabilities.Add)
 		}
 	})
@@ -2447,12 +2446,12 @@ func TestDatabaseConfigChecksum(t *testing.T) {
 	})
 }
 
-func verifyTopologyConstraints(t *testing.T, name string, obj v1.PodSpec, expectedLabels map[string]string) {
+func verifyTopologyConstraints(t *testing.T, name string, obj corev1.PodSpec, expectedLabels map[string]string) {
 	require.Equal(t, 1, len(obj.TopologySpreadConstraints))
 	constraint := obj.TopologySpreadConstraints[0]
 	assert.Equal(t, int32(1), constraint.MaxSkew)
 	assert.Equal(t, "topology.kubernetes.io/zone", constraint.TopologyKey)
-	assert.Equal(t, v1.DoNotSchedule, constraint.WhenUnsatisfiable)
+	assert.Equal(t, corev1.DoNotSchedule, constraint.WhenUnsatisfiable)
 	msg, ok := testlib.MapContains(constraint.LabelSelector.MatchLabels, expectedLabels)
 	assert.Truef(t, ok, "Unexpected labels in topologySpreadConstraints for resource %s: %s", name, msg)
 }
@@ -2697,9 +2696,9 @@ func TestDatabaseTLSConfig(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
 			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
-				"NUODOCKER_KEYSTORE_PASSWORD", &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				"NUODOCKER_KEYSTORE_PASSWORD", &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: options.SetValues["admin.tlsKeyStore.secret"],
 						},
 						Key: "password",
@@ -2712,9 +2711,9 @@ func TestDatabaseTLSConfig(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
 			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
-				"NUODOCKER_KEYSTORE_PASSWORD", &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				"NUODOCKER_KEYSTORE_PASSWORD", &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: options.SetValues["admin.tlsKeyStore.secret"],
 						},
 						Key: "password",
@@ -2741,9 +2740,9 @@ func TestDatabaseTLSConfig(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
 			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
-				"NUODOCKER_KEYSTORE_PASSWORD", &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				"NUODOCKER_KEYSTORE_PASSWORD", &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: options.SetValues["admin.tlsKeyStore.secret"],
 						},
 						Key: options.SetValues["admin.tlsKeyStore.passwordKey"],
@@ -2756,9 +2755,9 @@ func TestDatabaseTLSConfig(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
 			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
-				"NUODOCKER_KEYSTORE_PASSWORD", &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				"NUODOCKER_KEYSTORE_PASSWORD", &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: options.SetValues["admin.tlsKeyStore.secret"],
 						},
 						Key: options.SetValues["admin.tlsKeyStore.passwordKey"],
@@ -2917,7 +2916,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
-		var sidecar *v1.Container
+		var sidecar *corev1.Container
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			for _, container := range obj.Spec.Template.Spec.Containers {
 				if container.Name == "backup-hooks" {
@@ -2959,7 +2958,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, sidecar.Image, "docker.io/nuodb/nuodb")
 
 		// Check that configmap for backup hooks was rendered
-		var backupHooksCm *v1.ConfigMap
+		var backupHooksCm *corev1.ConfigMap
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
 			if strings.HasSuffix(cm.Name, "backup-hooks") {
@@ -2985,7 +2984,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
-		var sidecar *v1.Container
+		var sidecar *corev1.Container
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			for _, container := range obj.Spec.Template.Spec.Containers {
 				if container.Name == "backup-hooks" {
@@ -3027,7 +3026,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, sidecar.Image, "docker.io/library/python:3.12-slim")
 
 		// Check that configmap for backup hooks was rendered
-		var backupHooksCm *v1.ConfigMap
+		var backupHooksCm *corev1.ConfigMap
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
 			if strings.HasSuffix(cm.Name, "backup-hooks") {
@@ -3054,7 +3053,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
-		var sidecar *v1.Container
+		var sidecar *corev1.Container
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			for _, container := range obj.Spec.Template.Spec.Containers {
 				if container.Name == "backup-hooks" {
@@ -3093,7 +3092,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
-		var sidecar *v1.Container
+		var sidecar *corev1.Container
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			for _, container := range obj.Spec.Template.Spec.Containers {
 				if container.Name == "backup-hooks" {
@@ -3139,7 +3138,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
-		var sidecar *v1.Container
+		var sidecar *corev1.Container
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			for _, container := range obj.Spec.Template.Spec.Containers {
 				if container.Name == "backup-hooks" {

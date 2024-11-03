@@ -4,7 +4,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,13 +11,12 @@ import (
 	"testing"
 	"time"
 
-	v12 "k8s.io/api/core/v1"
-
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func getFunctionCallerName() string {
@@ -123,7 +121,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 					_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminName, "-c", "admin", "--", "bash", "-c", "pgrep -x java | xargs -r kill -3")
 				}
 				// collect logs
-				go GetAppLog(t, namespaceName, adminName, "", &v12.PodLogOptions{Follow: true})
+				go GetAppLog(t, namespaceName, adminName, "", &corev1.PodLogOptions{Follow: true})
 				GetAdminEventLog(t, namespaceName, adminName)
 			}
 		})
@@ -239,7 +237,7 @@ func ApplyLicense(t *testing.T, namespace string, adminPod string, licenseType L
 	if licenseContent != "" {
 		licenseContentBytes, err := base64.StdEncoding.DecodeString(licenseContent)
 		require.NoError(t, err)
-		tmpfile, err := ioutil.TempFile("", "license")
+		tmpfile, err := os.CreateTemp("", "license")
 		require.NoError(t, err)
 		defer os.Remove(tmpfile.Name())
 		_, err = tmpfile.Write(licenseContentBytes)

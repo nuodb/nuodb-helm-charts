@@ -1,15 +1,14 @@
 package integration
 
 import (
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-	"github.com/stretchr/testify/assert"
 	"strings"
 	"testing"
 
-
-	v1 "k8s.io/api/core/v1"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/stretchr/testify/assert"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestYcsbConfigMapRenders(t *testing.T) {
@@ -35,7 +34,7 @@ func TestYcsbConfigMapRenders(t *testing.T) {
 			continue
 		}
 
-		var object v1.ConfigMap
+		var object corev1.ConfigMap
 		helm.UnmarshalK8SYaml(t, part, &object)
 
 		configMapCount += 1
