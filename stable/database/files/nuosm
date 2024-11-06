@@ -206,8 +206,8 @@ function perform_restore() {
     [ -n "$restore_credentials" -a "$restore_credentials" != ":" ] && curl_creds="--user $restore_credentials"
     [ -n "$curl_creds" ] && curl_opts="--user *:*"
 
-    log "curl -k $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $download_dir"
-    curl -k $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $download_dir
+    log "curl -k --connect-timeout 10 $curl_opts $restore_source | tar xzf - --strip-components $strip_levels -C $download_dir"
+    curl -k --connect-timeout 10 $curl_creds "$restore_source" | tar xzf - --strip-components $strip_levels -C $download_dir
 
     retval=$?
     if [ $retval -ne 0 ]; then
