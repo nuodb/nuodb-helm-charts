@@ -328,8 +328,7 @@ func TestArchivePvcRecreated(t *testing.T) {
 
 	// If `nuodocker start sm` detects PVC re-creation, expect archive for
 	// deleted PVC to be deleted, allowing database restart.
-	// TODO(asz6): Update minimum version after backporting fix
-	minVersion := "7.0"
+	minVersion := "6.0.3"
 	t.Run("testOldArchiveDeleted", func(t *testing.T) {
 		testlib.SkipTestOnNuoDBVersionCondition(t, "<"+minVersion)
 		testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
