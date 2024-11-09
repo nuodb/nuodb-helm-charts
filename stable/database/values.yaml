@@ -377,6 +377,35 @@ database:
     # Timeout in seconds until the SM is automatically unfrozen.
     timeout: 30
 
+    # Register scripts to be invoked on HTTP requests. Path parameters can
+    # appear in the request path, which are exported as environment variables
+    # available within the script. Query parameters are also made available as
+    # environment variables. If a request payload is supplied, it can be
+    # referenced using the `${payload}` variable. A mapping can also be defined
+    # from process exit codes to HTTP status codes. See the examples below.
+    customHandlers: []
+
+    #customHandlers:
+    #- method: GET
+    #  path: /backup-id
+    #  script: |
+    #    [ -e "$NUODB_ARCHIVE_DIR/backup.txt" ] || exit 1
+    #    cat "$NUODB_ARCHIVE_DIR/backup.txt"
+    #- method: GET
+    #  path: /pid/{command}
+    #  script: |
+    #    pgrep -x "$command"
+    #  statusMappings:
+    #    "1": 404
+    #- method: POST
+    #  path: /operation/{script}/execute
+    #  script: |
+    #    "$script" $payload
+    #  statusMappings:
+    #    "0": 200
+    #    "1": 400
+    #    "*": 500
+
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
     logPersistence:

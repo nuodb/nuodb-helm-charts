@@ -232,6 +232,11 @@ The following tables list the configurable parameters of the `database` chart an
 | `backupHooks.resources` | Kubernetes resource requests and limits set on the backup hook sidecar container | `{}` |
 | `backupHooks.freezeMode` | The freeze mode to be used when executing backup hooks. Supported modes are `hotsnap`, `fsfreeze` and `suspend`. Defaults to `hostsnap` if empty | `""` |
 | `backupHooks.timeout` | Timeout in seconds after which the archive will be automatically unfrozen | `30` |
+| `backupHooks.customHandlers` | Custom handlers to register on HTTP server in sidecar | `[]` |
+| `backupHooks.customHandlers[*].method` | The HTTP request method to match on | |
+| `backupHooks.customHandlers[*].path` | The HTTP request path to match on, which may contain path parameters in the form `{param_name}` | |
+| `backupHooks.customHandlers[*].script` | The script to invoke when handling the matched request, which may reference path parameters, query parameters, or the request payload (as `$payload`) | |
+| `backupHooks.customHandlers[*].statusMappings` | Mapping of script exit codes to HTTP status codes | |
 | `snapshotRestore.backupId` | The backup ID being restored, which is set to enable restore from data sources | `""` |
 | `snapshotRestore.snapshotNameTemplate` | The template used to resolve the names of snapshots to use as data sources for the archive and journal PVCs. The template can reference `backupId` and `volumeType`, which is one of `archive`, `journal`. | `{{.backupId}}-{{.volumeType}}` |
 | `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |

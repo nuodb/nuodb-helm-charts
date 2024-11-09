@@ -308,6 +308,9 @@ spec:
         - name: backup-hooks
           mountPath: /backup_hooks.py
           subPath: backup_hooks.py
+        - name: backup-hooks
+          mountPath: /etc/nuodb/handlers.json
+          subPath: handlers.json
         - name: archive-volume
           mountPath: /mnt/archive
         {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
