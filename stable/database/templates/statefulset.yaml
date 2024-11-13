@@ -26,11 +26,11 @@ spec:
   template:
     metadata:
       annotations:
-      {{- $configChecksum := "0" -}}
       {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled) }}
-        {{- $configChecksum = (dict "configFiles" .Values.database.configFiles "customHandlers" .Values.database.backupHooks.customHandlers | toYaml | sha256sum) }}
-      {{- end }}
-        checksum/config: {{ $configChecksum }}
+        checksum/config: {{ dict "configFiles" .Values.database.configFiles "customHandlers" .Values.database.backupHooks.customHandlers | toYaml | sha256sum }}
+      {{- else }}
+        checksum/config: "0"
+      {{- end -}}
       {{- include "database.tlsConfigAnnotations" . | nindent 8 }}
       {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
