@@ -456,43 +456,43 @@ class ScriptHandler(object):
         self.status_mappings = dict(self.DEFAULT_STATUS_MAPPING)
         if "statusMappings" in kwargs:
             self.status_mappings.update(kwargs["statusMappings"])
-        self.path_params = {}
 
     def matches(self, method, path_components):
         # Check that method matches
         if method != self.method:
-            return False
+            return False, None
 
         # Check that path matches and extract path parameters
+        path_params = {}
         handler_components = normalize_path(self.path).split("/")
         for i in range(0, len(path_components)):
             # If we have more path components in request than in handler path,
             # then request does not match
             if i >= len(handler_components):
-                return False
+                return False, None
             # If handler path component is a parameter, extract value from
             # request path
             handler_component = handler_components[i]
             if handler_component.startswith("{") and handler_component.endswith("}"):
-                self.path_params[handler_component[1:-1]] = path_components[i]
+                path_params[handler_component[1:-1]] = path_components[i]
                 continue
             # If handler path component is literal, check that it matches
             if path_components[i] != handler_component:
-                return False
+                return False, None
 
         # Check that there are no remaining handler path components
-        return i + 1 == len(handler_components)
+        return i + 1 == len(handler_components), path_params
 
-    def execute(self, query_params, payload):
+    def execute(self, path_params, query_params, payload):
         # Build environment variables to supply for script invocation
         env = dict(os.environ)
         if query_params:
             env.update(query_params)
         if payload:
             env.update(payload=payload)
-        env.update(self.path_params)
+        env.update(path_params)
         # Run script and capture output. Combine both stdout and stderr into
-        # one stream, which should be in JSON format.
+        # one stream, which is supplied as the HTTP response.
         proc = subprocess.run(
             self.script,
             shell=True,
@@ -639,8 +639,9 @@ class HooksHandler(object):
             # Dispatch to matching script handler
             req = RequestInfo(environ)
             for handler in self.handlers:
-                if handler.matches(req.method, req.components):
-                    return handler.execute(req.query_params, req.payload)
+                matches, path_params = handler.matches(req.method, req.components)
+                if matches:
+                    return handler.execute(path_params, req.query_params, req.payload)
             # Dispatch to matching built-in handler
             handle_method(req)
             return http.HTTPStatus.OK, dict(success=True)
