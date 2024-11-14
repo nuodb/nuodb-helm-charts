@@ -235,7 +235,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `backupHooks.customHandlers` | Custom handlers to register on HTTP server in sidecar | `[]` |
 | `backupHooks.customHandlers[*].method` | The HTTP request method to match on | |
 | `backupHooks.customHandlers[*].path` | The HTTP request path to match on, which may contain path parameters in the form `{param_name}` | |
-| `backupHooks.customHandlers[*].script` | The script to invoke when handling the matched request, which may reference path parameters, query parameters, or the request payload (as `$payload`) | |
+| `backupHooks.customHandlers[*].script` | The script to invoke when handling the matched request, which may reference path parameters, query parameters, or the request payload (as `$payload`). If the same variable name appears as a query and path parameter, or a path parameter appears named `$payload`, the path parameter takes precedence. | |
 | `backupHooks.customHandlers[*].statusMappings` | Mapping of script exit codes to HTTP status codes | |
 | `snapshotRestore.backupId` | The backup ID being restored, which is set to enable restore from data sources | `""` |
 | `snapshotRestore.snapshotNameTemplate` | The template used to resolve the names of snapshots to use as data sources for the archive and journal PVCs. The template can reference `backupId` and `volumeType`, which is one of `archive`, `journal`. | `{{.backupId}}-{{.volumeType}}` |
