@@ -26,13 +26,11 @@ spec:
   template:
     metadata:
       annotations:
-      {{- if .Values.database.configFiles }}
-        {{- with .Values.database.configFiles }}
-        checksum/config: {{ toYaml . | sha256sum }}
-        {{- end }}
+      {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled) }}
+        checksum/config: {{ dict "configFiles" .Values.database.configFiles "customHandlers" .Values.database.backupHooks.customHandlers | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
-      {{- end }}
+      {{- end -}}
       {{- include "database.tlsConfigAnnotations" . | nindent 8 }}
       {{- if .Values.database.podAnnotations }}
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
@@ -308,6 +306,9 @@ spec:
         - name: backup-hooks
           mountPath: /backup_hooks.py
           subPath: backup_hooks.py
+        - name: backup-hooks
+          mountPath: /etc/nuodb/handlers.json
+          subPath: handlers.json
         - name: archive-volume
           mountPath: /mnt/archive
         {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
