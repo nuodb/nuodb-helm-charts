@@ -1,3 +1,4 @@
+//go:build long
 // +build long
 
 package minikube
@@ -8,13 +9,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func checkUser(t *testing.T, namespaceName string, podName string, container string, expectedUid int, expectedGid int, expectedSupplementaryGid int) {
@@ -58,7 +58,6 @@ func securityContextTest(t *testing.T, adminUid int, adminGid int, adminFsGroup 
 	// owner gid for volumes; this test specifically checks secrets because
 	// the hostpath storage-class used by Minikube does not support fsGroup
 
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
@@ -111,7 +110,7 @@ func securityContextTest(t *testing.T, adminUid int, adminGid int, adminFsGroup 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	helmChartReleaseName, _ := testlib.StartAdmin(t, &options, 1, namespaceName)
 	adminStatefulSet := fmt.Sprintf("%s-nuodb-cluster0", helmChartReleaseName)
-	admin0 := adminStatefulSet+"-0"
+	admin0 := adminStatefulSet + "-0"
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
@@ -141,7 +140,7 @@ func TestSecurityContextEnabled(t *testing.T) {
 	databaseUid := 5678
 	databaseGid := 0
 	databaseFsGroup := 4000
-	optionOverrides := map[string]string {
+	optionOverrides := map[string]string{
 		"admin.securityContext.enabled":    "true",
 		"database.securityContext.enabled": "true",
 	}
@@ -159,7 +158,7 @@ func TestSecurityContextRunAsNonRootGroup(t *testing.T) {
 	databaseUid := 1000
 	databaseGid := 1000
 	databaseFsGroup := 1000
-	optionOverrides := map[string]string {
+	optionOverrides := map[string]string{
 		"admin.securityContext.runAsNonRootGroup":    "true",
 		"database.securityContext.runAsNonRootGroup": "true",
 	}
@@ -175,7 +174,7 @@ func TestSecurityContextFsGroupOnly(t *testing.T) {
 	databaseUid := 1000
 	databaseGid := 0
 	databaseFsGroup := 4000
-	optionOverrides := map[string]string {
+	optionOverrides := map[string]string{
 		"admin.securityContext.fsGroupOnly":    "true",
 		"database.securityContext.fsGroupOnly": "true",
 	}

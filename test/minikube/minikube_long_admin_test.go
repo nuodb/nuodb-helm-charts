@@ -10,13 +10,13 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
-	v12 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestKubernetesBasicAdminThreeReplicas(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -66,7 +66,6 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
 
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -115,11 +114,11 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 	require.NoError(t, err)
 	for _, process := range processes {
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
-			"Looking for admin with labels matching: host zone", &v12.PodLogOptions{}))
+			"Looking for admin with labels matching: host zone", &corev1.PodLogOptions{}))
 
 		expectedAffinityLog := fmt.Sprintf("Preferring APs %s due to matching label zone=us-east-1", admin0)
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
-			expectedAffinityLog, &v12.PodLogOptions{}), "Did not find expected log message %s", expectedAffinityLog)
+			expectedAffinityLog, &corev1.PodLogOptions{}), "Did not find expected log message %s", expectedAffinityLog)
 
 	}
 }

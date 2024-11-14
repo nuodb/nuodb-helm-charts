@@ -5,44 +5,40 @@ package minikube
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	v12 "k8s.io/api/core/v1"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"github.com/ghodss/yaml"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func modifyKubeInspectorRoleInPlace(t *testing.T, modificationFunc func(role *rbacv1.Role)) {
 	inspectorRoleFile := filepath.Join(testlib.ADMIN_HELM_CHART_PATH, "templates", "role.yaml")
-	originalData, err := ioutil.ReadFile(inspectorRoleFile)
+	originalData, err := os.ReadFile(inspectorRoleFile)
 	require.NoError(t, err)
-	testlib.AddTeardown(testlib.TEARDOWN_ADMIN, func() { ioutil.WriteFile(inspectorRoleFile, originalData, 0644) })
+	testlib.AddTeardown(testlib.TEARDOWN_ADMIN, func() { os.WriteFile(inspectorRoleFile, originalData, 0644) })
 
 	output := helm.RenderTemplate(t, &helm.Options{}, testlib.ADMIN_HELM_CHART_PATH, "release-name", []string{"templates/role.yaml"})
 	roles := testlib.SplitAndRenderRole(t, output, 1)
 	modificationFunc(&roles[0])
 	roleBytes, err := yaml.Marshal(&roles[0])
 	require.NoError(t, err)
-	err = ioutil.WriteFile(inspectorRoleFile, roleBytes, 0644)
+	err = os.WriteFile(inspectorRoleFile, roleBytes, 0644)
 	require.NoError(t, err)
-	out, _ := ioutil.ReadFile(inspectorRoleFile)
+	out, _ := os.ReadFile(inspectorRoleFile)
 	t.Log("Modified roles file:\n" + string(out))
 }
 
 func TestKaaLimitedPermissions(t *testing.T) {
 	// This test requires NuoDB 4.1.1+
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -72,17 +68,17 @@ func TestKaaLimitedPermissions(t *testing.T) {
 	// Verify that KAA will not register informer for daemonsets
 	testlib.Await(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
-			"Informer for resource 'daemonsets' not registered", &v12.PodLogOptions{}) == 1
+			"Informer for resource 'daemonsets' not registered", &corev1.PodLogOptions{}) == 1
 	}, 30*time.Second)
 	// Verify that KAA will not register informer for pods
 	testlib.Await(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
-			"Informer for resource 'pods' not registered", &v12.PodLogOptions{}) == 1
+			"Informer for resource 'pods' not registered", &corev1.PodLogOptions{}) == 1
 	}, 30*time.Second)
 	// Verify that KAA will not register informer for PVCs
 	testlib.Await(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
-			"Informer for resource 'persistentvolumeclaims' not registered", &v12.PodLogOptions{}) == 1
+			"Informer for resource 'persistentvolumeclaims' not registered", &corev1.PodLogOptions{}) == 1
 	}, 30*time.Second)
 
 	// Verify that resources that KAA have permissions for are available
@@ -96,7 +92,6 @@ func TestKaaLimitedPermissions(t *testing.T) {
 }
 
 func TestKaaRolebindingDisabled(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -112,7 +107,7 @@ func TestKaaRolebindingDisabled(t *testing.T) {
 	// Verify that KAA won't start due to limited mandatory permissions
 	testlib.Await(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
-			"Not registering event listeners: service account unauthorized for resource 'leases'", &v12.PodLogOptions{}) == 1
+			"Not registering event listeners: service account unauthorized for resource 'leases'", &corev1.PodLogOptions{}) == 1
 	}, 30*time.Second)
 
 	// Verify that no resources are avaialble via KAA
@@ -124,7 +119,6 @@ func TestKaaRolebindingDisabled(t *testing.T) {
 
 func TestKubernetesTopologyDiscover(t *testing.T) {
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 6.0.3")
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	currentRegions := testlib.LabelNodesIfMissing(t, "topology.kubernetes.io/region", "test-region")
@@ -172,6 +166,6 @@ func TestKubernetesTopologyDiscover(t *testing.T) {
 		require.Equal(t, currentZones[node], process.Labels["zone"])
 		require.Equal(t, currentRegions[node], process.Labels["region"])
 		require.Equal(t, 1, testlib.GetStringOccurrenceInLog(t, namespaceName, process.Hostname,
-			"Looking for admin with labels matching: node zone region", &v12.PodLogOptions{}))
+			"Looking for admin with labels matching: node zone region", &corev1.PodLogOptions{}))
 	}
 }

@@ -15,14 +15,12 @@ import (
 	"text/template"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-	v12 "k8s.io/api/core/v1"
-
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 )
 
 const UPGRADE_STRATEGY = `
@@ -219,7 +217,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 			pods, _ := findPods(t, namespaceName, tePodNameTemplate)
 			for _, tePod := range pods {
 				t.Logf("Getting log from TE pod: %s", tePod.Name)
-				go GetAppLog(t, namespaceName, tePod.Name, "", &v12.PodLogOptions{Follow: true})
+				go GetAppLog(t, namespaceName, tePod.Name, "", &corev1.PodLogOptions{Follow: true})
 			}
 		})
 		// the TEs will become RUNNING after the SMs as they need an entry node
@@ -236,7 +234,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 				pods, _ := findPods(t, namespaceName, smPodNameTemplate)
 				for _, smPod := range pods {
 					t.Logf("Getting log from SM pod: %s", smPod.Name)
-					go GetAppLog(t, namespaceName, smPod.Name, "", &v12.PodLogOptions{Follow: true})
+					go GetAppLog(t, namespaceName, smPod.Name, "", &corev1.PodLogOptions{Follow: true})
 				}
 			})
 			AwaitPodUp(t, namespaceName, smPodName0, readyTimeout)
@@ -282,11 +280,11 @@ func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName st
 	// get the OLD log
 	tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 	tePod := GetPod(t, namespaceName, tePodName)
-	go GetAppLog(t, namespaceName, tePodName, "-previous", &v12.PodLogOptions{Follow: true})
+	go GetAppLog(t, namespaceName, tePodName, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	smPodName0 := GetPodName(t, namespaceName, smPodName)
 	smPod0 := GetPod(t, namespaceName, smPodName0)
-	go GetAppLog(t, namespaceName, smPodName0, "-previous", &v12.PodLogOptions{Follow: true})
+	go GetAppLog(t, namespaceName, smPodName0, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	AddDiagnosticTeardown(TEARDOWN_DATABASE, t, func() {
 		_ = k8s.RunKubectlE(t, kubectlOptions, "exec", adminPod, "--", "nuocmd", "show", "domain")
@@ -354,7 +352,7 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		AddDiagnosticTeardown(TEARDOWN_RESTORE, t, func() {
 			restorePodName := GetPodName(t, namespaceName, "restore-demo-")
 			k8s.RunKubectl(t, kubectlOptions, "describe", "pod", restorePodName)
-			GetAppLog(t, namespaceName, restorePodName, "restore-job", &v12.PodLogOptions{})
+			GetAppLog(t, namespaceName, restorePodName, "restore-job", &corev1.PodLogOptions{})
 		})
 		// Remove restore job if exist as it's not unique for a restore chart release
 		k8s.RunKubectlE(t, kubectlOptions, "delete", "job", "restore-"+options.SetValues["database.name"])
@@ -403,7 +401,7 @@ func BackupDatabaseE(
 	defer func() {
 		// Get backup logs and delete the job
 		if pod, err := FindPod(t, namespaceName, jobName); err == nil {
-			GetAppLog(t, namespaceName, pod.Name, "", &v12.PodLogOptions{Container: "nuodb"})
+			GetAppLog(t, namespaceName, pod.Name, "", &corev1.PodLogOptions{Container: "nuodb"})
 		}
 		k8s.RunKubectl(t, opts, "delete", "job", jobName)
 	}()

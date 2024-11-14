@@ -11,17 +11,14 @@ import (
 	"testing"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 
-	v12 "k8s.io/api/core/v1"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 const OLD_RELEASE = "5.0"
@@ -38,7 +35,6 @@ func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod stri
 }
 
 func TestAdminProbes(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -121,7 +117,6 @@ func TestAdminProbes(t *testing.T) {
 }
 
 func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -140,7 +135,7 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	// get the OLD log
-	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	expectedNewVersion := testlib.GetUpgradedReleaseVersion(t, &options)
 
@@ -153,7 +148,6 @@ func TestKubernetesUpgradeAdminMinorVersion(t *testing.T) {
 }
 
 func TestKubernetesUpgradeFullDatabase(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -187,7 +181,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminHelmChartReleaseName)
 
 	// get the OLD log
-	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
 
@@ -208,7 +202,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 		expectedNumberReconnects := 2
 
 		testlib.Await(t, func() bool {
-			return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0, "Reconnected with process with connectKey", &v12.PodLogOptions{}) == expectedNumberReconnects
+			return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0, "Reconnected with process with connectKey", &corev1.PodLogOptions{}) == expectedNumberReconnects
 		}, 30*time.Second)
 
 	})
@@ -338,7 +332,6 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	t.Skip("4.0.7+ Admin is not rolling upgradeable from pre-4.0.7")
 
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -370,9 +363,9 @@ func TestKubernetesRollingUpgradeAdminMinorVersion(t *testing.T) {
 	admin1 := fmt.Sprintf("%s-nuodb-cluster0-1", helmChartReleaseName)
 	admin2 := fmt.Sprintf("%s-nuodb-cluster0-2", helmChartReleaseName)
 
-	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
-	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &v12.PodLogOptions{Follow: true})
-	go testlib.GetAppLog(t, namespaceName, admin2, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin1, "-previous", &corev1.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin2, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	testlib.AwaitBalancerTerminated(t, namespaceName, "job-lb-policy")
 

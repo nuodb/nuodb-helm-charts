@@ -5,8 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func verifyAdminService(t *testing.T, namespaceName string, podName string, serviceName string, ping bool) {

@@ -13,13 +13,13 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestChangingJournalLocationFails(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{}
@@ -57,7 +57,6 @@ func TestChangingJournalLocationWithMultipleSMs(t *testing.T) {
 		t.Skip("Cannot test autoRestore without the Enterprise Edition")
 	}
 
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{}

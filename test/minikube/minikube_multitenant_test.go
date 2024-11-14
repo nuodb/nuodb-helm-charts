@@ -8,27 +8,23 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-	"github.com/stretchr/testify/require"
-
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestKubernetesMultiTenantDatabase(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
-
-	options := helm.Options{}
-
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
+	options := helm.Options{}
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
-
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 
 	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
@@ -57,7 +53,6 @@ func TestKubernetesMultiTenantDatabase(t *testing.T) {
 }
 
 func TestKubernetesNamespaceCoexistence(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)

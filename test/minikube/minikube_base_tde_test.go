@@ -1,25 +1,23 @@
+//go:build long
 // +build long
 
 package minikube
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
-	corev1 "k8s.io/api/core/v1"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func applyStoragePasswordSecret(t *testing.T, namespaceName string, name string, passwords []string) {
@@ -33,7 +31,7 @@ func applyStoragePasswordSecret(t *testing.T, namespaceName string, name string,
 	}
 	secret, err := k8s.RunKubectlAndGetOutputE(t, opts, kubectlArgs...)
 	require.NoError(t, err)
-	tmpfile, err := ioutil.TempFile("", "tde_secret")
+	tmpfile, err := os.CreateTemp("", "tde_secret")
 	require.NoError(t, err)
 	defer os.Remove(tmpfile.Name())
 	_, err = tmpfile.WriteString(secret)
@@ -69,7 +67,6 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 	if os.Getenv("NUODB_DEV") != "true" {
 		t.Skip("'tde_monitor' service is not supported in released versions")
 	}
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -134,7 +131,6 @@ func TestAdminColdStartWithTDE(t *testing.T) {
 
 func TestRestoreInPlaceWithTDE(t *testing.T) {
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 4.1.2")
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{

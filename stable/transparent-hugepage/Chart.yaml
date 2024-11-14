@@ -14,4 +14,3 @@ maintainers:
 engine: gotpl
 icon: https://raw.githubusercontent.com/nuodb/nuodb-helm-charts/master/images/nuodb.svg
 appVersion: "6.0"
-tillerVersion: ">=2.9"

@@ -6,11 +6,12 @@ import (
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func verifyBackupResourceLabels(t *testing.T, options *helm.Options, obj metav1.Object) {
@@ -323,7 +324,7 @@ func TestDatabaseBackupCronJobRestartPolicyDefault(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
 
 	for _, job := range testlib.SplitAndRenderCronJob(t, output, 2) {
-		assert.Equal(t, job.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy, v1.RestartPolicyOnFailure)
+		assert.Equal(t, job.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy, corev1.RestartPolicyOnFailure)
 	}
 }
 
@@ -341,7 +342,7 @@ func TestDatabaseBackupCronJobRestartPolicyOverride(t *testing.T) {
 	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/cronjob.yaml"})
 
 	for _, job := range testlib.SplitAndRenderCronJob(t, output, 2) {
-		assert.Equal(t, job.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy, v1.RestartPolicyNever)
+		assert.Equal(t, job.Spec.JobTemplate.Spec.Template.Spec.RestartPolicy, corev1.RestartPolicyNever)
 	}
 }
 

@@ -1,7 +1,7 @@
 package testlib
 
 import (
-	"gopkg.in/yaml.v3"
+	"github.com/ghodss/yaml"
 )
 
 type Registry struct {
@@ -15,10 +15,8 @@ type Registry struct {
 }
 
 // UnmarshalImageYAML is used to unmarshal into map[string]string
-func UnmarshalImageYAML(s string) (err error, registry Registry) {
-	registry = Registry{}
-
-	err = yaml.Unmarshal([]byte(s), &registry)
-
-	return
+func UnmarshalImageYAML(s string) (Registry, error) {
+	registry := Registry{}
+	err := yaml.Unmarshal([]byte(s), &registry)
+	return registry, err
 }

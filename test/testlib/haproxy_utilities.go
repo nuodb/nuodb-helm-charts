@@ -11,7 +11,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/stretchr/testify/require"
-	v12 "k8s.io/api/core/v1"
+	corev1 "k8s.io/api/core/v1"
 )
 
 func StartHAProxyIngress(t *testing.T, options *helm.Options, namespaceName string) string {
@@ -70,7 +70,7 @@ func StartHAProxyIngress(t *testing.T, options *helm.Options, namespaceName stri
 			if _, err := k8s.GetPodE(t, kubectlOptions, haProxyPodName); err != nil {
 				t.Logf("HAProxy pod '%s' is not available and logs can not be retrieved", haProxyPodName)
 			} else {
-				go GetAppLog(t, namespaceName, haProxyPodName, "", &v12.PodLogOptions{Follow: true})
+				go GetAppLog(t, namespaceName, haProxyPodName, "", &corev1.PodLogOptions{Follow: true})
 			}
 		}
 	})

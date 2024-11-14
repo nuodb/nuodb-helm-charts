@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"math"
 	"net"
+	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -16,7 +16,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/stretchr/testify/require"
-	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const CONTEXT_CLUSTER_KEY = CONTEXT_KEY("cluster")
@@ -90,7 +90,7 @@ func CopyMap(m map[string]string) map[string]string {
  *
  */
 func InjectClusters(t *testing.T, cluster K8sCluster) K8sCluster {
-	dat, err := ioutil.ReadFile(INJECT_CLUSTERS_FILE)
+	dat, err := os.ReadFile(INJECT_CLUSTERS_FILE)
 	if err != nil {
 		return cluster
 	}
@@ -312,7 +312,7 @@ func updateDnsConfig(t *testing.T, ctx context.Context, kubectlOptions *k8s.Kube
 	// Create K8s client and get configmap for CoreDNS
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, kubectlOptions)
 	require.NoError(t, err, "Unable to create K8s client")
-	cm, err := clientset.CoreV1().ConfigMaps(COREDNS_NS).Get(ctx, COREDNS_CM, v1.GetOptions{})
+	cm, err := clientset.CoreV1().ConfigMaps(COREDNS_NS).Get(ctx, COREDNS_CM, metav1.GetOptions{})
 	require.NoError(t, err, "Unable to get CoreDNS configmap")
 	config, ok := cm.Data[COREFILE_KEY]
 	require.True(t, ok, "Did not find key %s in CoreDNS configmap", COREFILE_KEY)
@@ -329,7 +329,7 @@ func updateDnsConfig(t *testing.T, ctx context.Context, kubectlOptions *k8s.Kube
 	}
 	t.Logf("Adding DNS config snippet %s", dnsConfigSnippet)
 	cm.Data[COREFILE_KEY] = updatedConfig
-	_, err = clientset.CoreV1().ConfigMaps(COREDNS_NS).Update(ctx, cm, v1.UpdateOptions{})
+	_, err = clientset.CoreV1().ConfigMaps(COREDNS_NS).Update(ctx, cm, metav1.UpdateOptions{})
 	require.NoError(t, err)
 }
 

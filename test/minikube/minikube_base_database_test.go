@@ -9,13 +9,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 const LABEL_CLOUD = "minikube"
@@ -153,7 +152,6 @@ func verifyEngineAltAddress(t *testing.T, namespaceName string, adminPod string,
 }
 
 func TestKubernetesBasicDatabase(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{}
@@ -189,7 +187,6 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 }
 
 func TestSmVolumePermissionChange(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	options := helm.Options{}
@@ -240,7 +237,6 @@ func TestSmVolumePermissionChange(t *testing.T) {
 }
 
 func TestKubernetesAccessWithinPods(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 
 	options := helm.Options{}
 
@@ -280,7 +276,6 @@ func TestKubernetesAccessWithinPods(t *testing.T) {
 }
 
 func TestArchivePvcRecreated(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	options := helm.Options{}
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
@@ -448,7 +443,6 @@ func TestHooksCustomHandlers(t *testing.T) {
 }
 
 func TestKubernetesAltAddress(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{}
@@ -479,7 +473,6 @@ func TestKubernetesAltAddress(t *testing.T) {
 }
 
 func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -529,7 +522,6 @@ func TestKubernetesStartDatabaseShrinkedAdmin(t *testing.T) {
 }
 
 func TestKubernetesSeparateJournalLocation(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{}
@@ -563,7 +555,6 @@ func TestKubernetesSeparateJournalLocation(t *testing.T) {
 }
 
 func TestKubernetesRestrictedDatabase(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{

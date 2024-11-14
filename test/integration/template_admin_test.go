@@ -6,16 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
-	appsv1 "k8s.io/api/apps/v1"
-	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
@@ -50,7 +48,7 @@ func verifyAdminResourceLabels(t *testing.T, releaseName string, options *helm.O
 	}
 }
 
-func findProjectedSecret(name string, sources []v1.VolumeProjection) (*v1.SecretProjection, bool) {
+func findProjectedSecret(name string, sources []corev1.VolumeProjection) (*corev1.SecretProjection, bool) {
 	for _, src := range sources {
 		if src.Secret != nil && src.Secret.Name == name {
 			return src.Secret, true
@@ -59,7 +57,7 @@ func findProjectedSecret(name string, sources []v1.VolumeProjection) (*v1.Secret
 	return nil, false
 }
 
-func verifyTLSSecrets(t assert.TestingT, spec v1.PodSpec, options *helm.Options) {
+func verifyTLSSecrets(t assert.TestingT, spec corev1.PodSpec, options *helm.Options) {
 	tlsVolume, found := testlib.GetVolume(spec.Volumes, "tls")
 	assert.True(t, found, "Expected to find tls volume")
 	assert.NotNil(t, tlsVolume.Projected)
@@ -108,7 +106,7 @@ func TestAdminDefaultLicense(t *testing.T) {
 		if strings.Contains(part, "nuodb-admin-configuration") {
 			found = true
 
-			var object v1.ConfigMap
+			var object corev1.ConfigMap
 			helm.UnmarshalK8SYaml(t, part, &object)
 
 			assert.Equal(t, len(object.Data), 0)
@@ -146,7 +144,7 @@ func TestAdminLicenseCanBeSet(t *testing.T) {
 		if strings.Contains(part, "nuodb-cluster0-admin-configuration") {
 			found = true
 
-			var object v1.ConfigMap
+			var object corev1.ConfigMap
 			helm.UnmarshalK8SYaml(t, part, &object)
 
 			val, ok := object.Data["nuodb.lic"]
@@ -182,7 +180,7 @@ func TestAdminStatefulSetVPNRenders(t *testing.T) {
 		adminContainer := obj.Spec.Template.Spec.Containers[0]
 
 		assert.True(t, adminContainer.EnvFrom[0].ConfigMapRef.LocalObjectReference.Name == "test-config")
-		assert.Contains(t, adminContainer.SecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+		assert.Contains(t, adminContainer.SecurityContext.Capabilities.Add, corev1.Capability("NET_ADMIN"))
 
 		assert.Equal(t, "nuoadmin", adminContainer.Args[0])
 		assert.Equal(t, "--", adminContainer.Args[1])
@@ -248,7 +246,7 @@ func TestAdminClusterServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb-clusterip", obj.Name)
-		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
 	}
 }
@@ -266,7 +264,7 @@ func TestAdminHeadlessServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb", obj.Name)
-		assert.Equal(t, v1.ServiceTypeClusterIP, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Equal(t, "None", obj.Spec.ClusterIP)
 	}
 }
@@ -288,7 +286,7 @@ func TestAdminServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb-balancer", obj.Name)
-		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-scheme")
@@ -300,7 +298,7 @@ func TestAdminServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb-balancer", obj.Name)
-		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
 		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-scheme"], "internet-facing")
 	}
@@ -310,7 +308,7 @@ func TestAdminServiceRenders(t *testing.T) {
 	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/service.yaml"})
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb-balancer", obj.Name)
-		assert.Equal(t, v1.ServiceTypeLoadBalancer, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeLoadBalancer, obj.Spec.Type)
 		assert.Equal(t, obj.Annotations["service.beta.kubernetes.io/aws-load-balancer-name"], "nuodb-admin-nlb")
 		assert.NotContains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-scheme")
 	}
@@ -334,7 +332,7 @@ func TestAdminNodePortServiceRenders(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderService(t, output, 1) {
 		assert.Equal(t, "nuodb-nodeport", obj.Name)
-		assert.Equal(t, v1.ServiceTypeNodePort, obj.Spec.Type)
+		assert.Equal(t, corev1.ServiceTypeNodePort, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
 		assert.NotContains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
 	}
@@ -344,7 +342,7 @@ func TestAdminStatefulSetVolumes(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := "../../stable/admin"
 
-	findEphemeralVolume := func(volumes []v1.Volume) *v1.Volume {
+	findEphemeralVolume := func(volumes []corev1.Volume) *corev1.Volume {
 		for _, volume := range volumes {
 			if volume.Name == "eph-volume" {
 				return &volume
@@ -354,7 +352,7 @@ func TestAdminStatefulSetVolumes(t *testing.T) {
 	}
 
 	// Returns a map of mount point to subpath for all eph-volume mounts
-	findEphemeralVolumeMounts := func(mounts []v1.VolumeMount) map[string]string {
+	findEphemeralVolumeMounts := func(mounts []corev1.VolumeMount) map[string]string {
 		ret := make(map[string]string)
 		for _, mount := range mounts {
 			if mount.Name == "eph-volume" {
@@ -364,7 +362,7 @@ func TestAdminStatefulSetVolumes(t *testing.T) {
 		return ret
 	}
 
-	assertStorageEquals := func(t *testing.T, volume *v1.Volume, size string) {
+	assertStorageEquals := func(t *testing.T, volume *corev1.Volume, size string) {
 		quantity, err := resource.ParseQuantity(size)
 		assert.NoError(t, err)
 		assert.Equal(t, volume.Ephemeral.VolumeClaimTemplate.Spec.Resources.Requests.Storage(), &quantity)
@@ -974,7 +972,7 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.True(t, *containerSecurityContext.ReadOnlyRootFilesystem)
 
 			// Check that /tmp directory has ephemeral volume mounted to it
-			var tmpVolumeMount *v1.VolumeMount
+			var tmpVolumeMount *corev1.VolumeMount
 			for _, volumeMount := range container.VolumeMounts {
 				if volumeMount.MountPath == "/tmp" {
 					tmpVolumeMount = volumeMount.DeepCopy()
@@ -985,7 +983,7 @@ func TestAdminSecurityContext(t *testing.T) {
 			assert.Equal(t, "tmp", tmpVolumeMount.SubPath)
 
 			// Check that NUODOCKER_CONF_DIR=/tmp for generated nuoadmin.conf
-			var confDirEnv *v1.EnvVar
+			var confDirEnv *corev1.EnvVar
 			for _, env := range container.Env {
 				if env.Name == "NUODOCKER_CONF_DIR" {
 					confDirEnv = env.DeepCopy()
@@ -1008,7 +1006,7 @@ func TestAdminSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
 			assert.NotNil(t, containerSecurityContext)
-			assert.Contains(t, containerSecurityContext.Capabilities.Add, v1.Capability("NET_ADMIN"))
+			assert.Contains(t, containerSecurityContext.Capabilities.Add, corev1.Capability("NET_ADMIN"))
 			assert.Nil(t, containerSecurityContext.Capabilities.Drop)
 		}
 	})
@@ -1025,7 +1023,7 @@ func TestAdminSecurityContext(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			containerSecurityContext := obj.Spec.Template.Spec.Containers[0].SecurityContext
 			assert.NotNil(t, containerSecurityContext)
-			assert.Contains(t, containerSecurityContext.Capabilities.Drop, v1.Capability("CAP_NET_RAW"))
+			assert.Contains(t, containerSecurityContext.Capabilities.Drop, corev1.Capability("CAP_NET_RAW"))
 			assert.Nil(t, containerSecurityContext.Capabilities.Add)
 		}
 	})
@@ -1175,7 +1173,7 @@ func TestAdminSecurityContext(t *testing.T) {
 	})
 }
 
-func getContainerNamed(containers []v1.Container, name string) (*v1.Container, error) {
+func getContainerNamed(containers []corev1.Container, name string) (*corev1.Container, error) {
 	var containerNames string
 	for _, container := range containers {
 		if container.Name == name {
@@ -1458,18 +1456,18 @@ func TestAdminTLSConfig(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
 			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
-				"NUODB_KEYSTORE_PASSWORD", &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				"NUODB_KEYSTORE_PASSWORD", &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: options.SetValues["admin.tlsKeyStore.secret"],
 						},
 						Key: "password",
 					},
 				}))
 			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
-				"NUODB_TRUSTSTORE_PASSWORD", &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				"NUODB_TRUSTSTORE_PASSWORD", &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: options.SetValues["admin.tlsTrustStore.secret"],
 						},
 						Key: "password",
@@ -1499,18 +1497,18 @@ func TestAdminTLSConfig(t *testing.T) {
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			verifyTLSSecrets(t, obj.Spec.Template.Spec, options)
 			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
-				"NUODB_KEYSTORE_PASSWORD", &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				"NUODB_KEYSTORE_PASSWORD", &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: options.SetValues["admin.tlsKeyStore.secret"],
 						},
 						Key: options.SetValues["admin.tlsKeyStore.passwordKey"],
 					},
 				}))
 			assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
-				"NUODB_TRUSTSTORE_PASSWORD", &v1.EnvVarSource{
-					SecretKeyRef: &v1.SecretKeySelector{
-						LocalObjectReference: v1.LocalObjectReference{
+				"NUODB_TRUSTSTORE_PASSWORD", &corev1.EnvVarSource{
+					SecretKeyRef: &corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
 							Name: options.SetValues["admin.tlsTrustStore.secret"],
 						},
 						Key: options.SetValues["admin.tlsTrustStore.passwordKey"],

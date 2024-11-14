@@ -15,15 +15,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/random"
-
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func findServicePortE(service *corev1.Service, portName string) (*corev1.ServicePort, error) {
@@ -225,7 +223,6 @@ func verifyProcessExternalAccessLabels(t *testing.T, namespaceName string, admin
 
 func TestKubernetesMultipleTEGroups(t *testing.T) {
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 4.2.4")
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	deployMultipleTEGroups := func(t *testing.T, serviceType corev1.ServiceType) {
@@ -328,7 +325,6 @@ func TestKubernetesMultipleTEGroups(t *testing.T) {
 func TestKubernetesIngress(t *testing.T) {
 	// this requires support for "external-address" and "external-port" labels
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 4.2.3")
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())

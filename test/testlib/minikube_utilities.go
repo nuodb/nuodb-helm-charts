@@ -6,7 +6,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -20,14 +19,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Masterminds/semver"
-	"github.com/stretchr/testify/require"
-
+	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-
-	v1 "k8s.io/api/apps/v1"
-
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -219,7 +215,7 @@ func InjectOpenShiftOverrides(t *testing.T, options *helm.Options) {
 }
 
 func InjectTestValuesFile(t *testing.T, options *helm.Options) {
-	dat, err := ioutil.ReadFile(INJECT_VALUES_FILE)
+	dat, err := os.ReadFile(INJECT_VALUES_FILE)
 	if err != nil {
 		return
 	}
@@ -228,7 +224,7 @@ func InjectTestValuesFile(t *testing.T, options *helm.Options) {
 }
 
 func InjectTestVersion(t *testing.T, options *helm.Options) {
-	dat, err := ioutil.ReadFile(INJECT_FILE)
+	dat, err := os.ReadFile(INJECT_FILE)
 	if err != nil {
 		return
 	}
@@ -244,7 +240,7 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 
 	t.Log("Using injected values:\n", string(dat))
 
-	err, image := UnmarshalImageYAML(string(dat))
+	image, err := UnmarshalImageYAML(string(dat))
 	require.NoError(t, err)
 
 	if options.SetValues == nil {
@@ -265,14 +261,14 @@ func InjectTestVersion(t *testing.T, options *helm.Options) {
 }
 
 func OverrideUpgradeContainerImage(t *testing.T, options *helm.Options) {
-	dat, err := ioutil.ReadFile(UPGRADE_INJECT_FILE)
+	dat, err := os.ReadFile(UPGRADE_INJECT_FILE)
 	if err != nil {
 		return
 	}
 
 	t.Log("Overriding upgrade container image with injected values:\n", string(dat))
 
-	err, image := UnmarshalImageYAML(string(dat))
+	image, err := UnmarshalImageYAML(string(dat))
 	require.NoError(t, err)
 
 	if options.SetValues == nil {
@@ -414,28 +410,6 @@ func AwaitE(t *testing.T, lmbd func() bool, timeout time.Duration) error {
 			time.Sleep(1 * time.Second)
 		}
 	}
-}
-
-func AwaitTillerUp(t *testing.T) {
-	version, err := helm.RunHelmCommandAndGetOutputE(t, &helm.Options{}, "version", "--short")
-	require.NoError(t, err)
-
-	t.Logf("Using Helm %s", version)
-
-	if strings.Contains(version, "v3.") {
-		return
-	}
-
-	Await(t, func() bool {
-		for _, pod := range FindAllPodsInSchema(t, "kube-system") {
-			if strings.Contains(pod.Name, "tiller-deploy") {
-				if arePodConditionsMet(&pod, corev1.PodReady, corev1.ConditionTrue) {
-					return true
-				}
-			}
-		}
-		return false
-	}, 30*time.Second)
 }
 
 func AwaitNrReplicasScheduled(t *testing.T, namespace string, expectedName string, nrReplicas int) {
@@ -880,7 +854,7 @@ func VerifyLicenseIsCommunity(t *testing.T, namespace string, podName string) {
 }
 
 func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, expectError bool) {
-	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
+	buf, err := io.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
 	require.NoError(t, err)
 
 	fullLog := string(buf)
@@ -889,7 +863,7 @@ func VerifyLicensingErrorsInLog(t *testing.T, namespace string, podName string, 
 }
 
 func GetStringOccurrenceInLog(t *testing.T, namespace string, podName string, expectedLogLine string, podLogOptions *corev1.PodLogOptions) int {
-	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, podLogOptions))
+	buf, err := io.ReadAll(getAppLogStream(t, namespace, podName, podLogOptions))
 	require.NoError(t, err)
 
 	fullLog := string(buf)
@@ -899,7 +873,7 @@ func GetStringOccurrenceInLog(t *testing.T, namespace string, podName string, ex
 }
 
 func GetRegexOccurrenceInLog(t *testing.T, namespace string, podName string, expectedLogLine string, podLogOptions *corev1.PodLogOptions) int {
-	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, podLogOptions))
+	buf, err := io.ReadAll(getAppLogStream(t, namespace, podName, podLogOptions))
 	require.NoError(t, err)
 
 	fullLog := string(buf)
@@ -912,7 +886,7 @@ func GetRegexOccurrenceInLog(t *testing.T, namespace string, podName string, exp
 }
 
 func VerifyCertificateInLog(t *testing.T, namespace string, podName string, expectedLogLine string) {
-	buf, err := ioutil.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
+	buf, err := io.ReadAll(getAppLogStream(t, namespace, podName, &corev1.PodLogOptions{}))
 	require.NoError(t, err)
 
 	fullLog := string(buf)
@@ -1115,7 +1089,7 @@ func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret
 	return k8s.GetSecret(t, options, secretName)
 }
 
-func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *v1.DaemonSet {
+func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *appsv1.DaemonSet {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
@@ -1194,7 +1168,7 @@ func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDB
 
 	k8s.RunKubectl(t, options, "cp", podName+":/tmp/nuodb-dump.json", targetFile)
 
-	content, err := ioutil.ReadFile(targetFile)
+	content, err := os.ReadFile(targetFile)
 	require.NoError(t, err)
 	err, unmarshalledDump := UnmarshalNuoDBKubeConfig(string(content))
 	require.NoError(t, err)
@@ -1203,7 +1177,7 @@ func GetNuoDBK8sConfigDump(t *testing.T, namespace string, podName string) NuoDB
 }
 
 func ExecuteCommandsInPod(t *testing.T, namespaceName string, podName string, commands []string) {
-	tmpfile, err := ioutil.TempFile("", "script")
+	tmpfile, err := os.CreateTemp("", "script")
 	if err != nil {
 		require.NoError(t, err)
 	}
@@ -1337,7 +1311,7 @@ func GetNamespaces(t *testing.T) []corev1.Namespace {
 	return namespaces.Items
 }
 
-func GetStatefulSets(t *testing.T, namespaceName string) *v1.StatefulSetList {
+func GetStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
@@ -1348,7 +1322,7 @@ func GetStatefulSets(t *testing.T, namespaceName string) *v1.StatefulSetList {
 	return statefulSets
 }
 
-func GetStatefulSet(t *testing.T, namespaceName, name string) *v1.StatefulSet {
+func GetStatefulSet(t *testing.T, namespaceName, name string) *appsv1.StatefulSet {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
@@ -1419,9 +1393,9 @@ func GetDatabaseLoadBalancerConfigE(t *testing.T, dbName string, loadBalancerCon
 }
 
 type NuoDBStatefulSets struct {
-	AdminSet   v1.StatefulSet
-	SmNonHCSet v1.StatefulSet
-	SmHCSet    v1.StatefulSet
+	AdminSet   appsv1.StatefulSet
+	SmNonHCSet appsv1.StatefulSet
+	SmHCSet    appsv1.StatefulSet
 }
 
 func FindAllStatefulSets(t *testing.T, namespaceName string) NuoDBStatefulSets {

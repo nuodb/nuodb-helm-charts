@@ -1,3 +1,4 @@
+//go:build short
 // +build short
 
 package minikube
@@ -6,9 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/stretchr/testify/require"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )

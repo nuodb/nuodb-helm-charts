@@ -4,13 +4,13 @@ import (
 	"bufio"
 	"encoding/base64"
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"io/ioutil"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
 
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/stretchr/testify/require"
 )
 
 const TLS_SECRET_PASSWORD_YAML_TEMPLATE = `---
@@ -44,7 +44,7 @@ func ReadAll(path string) ([]byte, error) {
 	defer file.Close()
 
 	reader := bufio.NewReader(file)
-	content, rerr := ioutil.ReadAll(reader)
+	content, rerr := io.ReadAll(reader)
 	if rerr != nil {
 		return nil, rerr
 	}

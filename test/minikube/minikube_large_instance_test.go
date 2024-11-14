@@ -1,3 +1,4 @@
+//go:build large
 // +build large
 
 package minikube
@@ -7,14 +8,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/random"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func TestHashiCorpVault(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())

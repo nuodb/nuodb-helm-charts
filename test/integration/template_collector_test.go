@@ -5,17 +5,15 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	v1 "k8s.io/api/core/v1"
-
-	"github.com/gruntwork-io/terratest/modules/helm"
+	corev1 "k8s.io/api/core/v1"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
-func checkSidecarContainers(t *testing.T, containers []v1.Container, options *helm.Options, chartPath string) {
+func checkSidecarContainers(t *testing.T, containers []corev1.Container, options *helm.Options, chartPath string) {
 	require.NotEmpty(t, containers)
 	found := 0
 	securityContextEnabled := options.SetValues["admin.securityContext.enabledOnContainer"] == "true" ||
@@ -38,21 +36,21 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 				options.SetValues["nuocollector.watcher.registry"],
 				options.SetValues["nuocollector.watcher.repository"],
 				options.SetValues["nuocollector.watcher.tag"]))
-			assert.Contains(t, container.Env, v1.EnvVar{
+			assert.Contains(t, container.Env, corev1.EnvVar{
 				Name:  "FOLDER",
 				Value: "/etc/telegraf/telegraf.d/dynamic/",
 			})
-			assert.Contains(t, container.Env, v1.EnvVar{
+			assert.Contains(t, container.Env, corev1.EnvVar{
 				Name:  "REQ_URL",
 				Value: "http://127.0.0.1:5000/reload",
 			})
 			if chartPath == testlib.ADMIN_HELM_CHART_PATH {
-				assert.Contains(t, container.Env, v1.EnvVar{
+				assert.Contains(t, container.Env, corev1.EnvVar{
 					Name:  "LABEL",
 					Value: "nuodb.com/nuocollector-plugin in (release-name-nuodb-cluster0-admin, insights)",
 				})
 			} else {
-				assert.Contains(t, container.Env, v1.EnvVar{
+				assert.Contains(t, container.Env, corev1.EnvVar{
 					Name:  "LABEL",
 					Value: "nuodb.com/nuocollector-plugin in (release-name-nuodb-cluster0-demo-database, insights)",
 				})
@@ -61,18 +59,18 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 			// This is probably the main container
 			continue
 		}
-		assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
+		assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{
 			Name:      "eph-volume",
 			MountPath: "/etc/telegraf/telegraf.d/dynamic/",
 			SubPath:   "telegraf",
 		})
 		if logPersistenceEnabled {
-			assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
+			assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{
 				Name:      "log-volume",
 				MountPath: "/var/log/nuodb",
 			})
 		} else {
-			assert.Contains(t, container.VolumeMounts, v1.VolumeMount{
+			assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{
 				Name:      "eph-volume",
 				MountPath: "/var/log/nuodb",
 				SubPath:   "log",
@@ -96,7 +94,7 @@ func checkSidecarContainers(t *testing.T, containers []v1.Container, options *he
 	assert.Equal(t, expectedContainersCount, found)
 }
 
-func checkSpecVolumes(t *testing.T, volumes []v1.Volume, options *helm.Options, chartPath string) {
+func checkSpecVolumes(t *testing.T, volumes []corev1.Volume, options *helm.Options, chartPath string) {
 	if options.SetValues["nuocollector.enabled"] == "false" {
 		return
 	}
@@ -109,7 +107,7 @@ func checkSpecVolumes(t *testing.T, volumes []v1.Volume, options *helm.Options, 
 	assert.Fail(t, "eph-volume should be declared as volume")
 }
 
-func checkPluginsRendered(t *testing.T, configMaps []v1.ConfigMap, options *helm.Options, chartPath string, expectedNrPlugins int) {
+func checkPluginsRendered(t *testing.T, configMaps []corev1.ConfigMap, options *helm.Options, chartPath string, expectedNrPlugins int) {
 	found := 0
 	for _, cm := range configMaps {
 		if labelValue, ok := cm.Labels["nuodb.com/nuocollector-plugin"]; ok {

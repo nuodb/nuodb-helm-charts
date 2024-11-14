@@ -1,20 +1,21 @@
+//go:build long
 // +build long
 
 package minikube
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
-	v12 "k8s.io/api/core/v1"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 const ENGINE_CERTIFICATE_LOG_TEMPLATE = `Engine Certificate: Certificate #%d CN %s`
@@ -34,7 +35,6 @@ func verifyKeystore(t *testing.T, namespace string, podName string, keystore str
 }
 
 func TestKubernetesTLS(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
@@ -97,7 +97,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 		tePodNameTemplate := fmt.Sprintf("te-%s", databaseReleaseName)
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-		go testlib.GetAppLog(t, namespaceName, tePodName, "", &v12.PodLogOptions{Follow: true})
+		go testlib.GetAppLog(t, namespaceName, tePodName, "", &corev1.PodLogOptions{Follow: true})
 
 		// TE certificate is signed by the admin and the DN entry is the pod name
 		// this is the 4th pod name because: #0 and #1 are trusted certs, #2 is CA, #3 is admin, #4 is engine
@@ -122,7 +122,7 @@ func TestKubernetesTLS(t *testing.T) {
 
 		tePodNameTemplate := fmt.Sprintf("te-%s", databaseReleaseName)
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
-		go testlib.GetAppLog(t, namespaceName, tePodName, "", &v12.PodLogOptions{Follow: true})
+		go testlib.GetAppLog(t, namespaceName, tePodName, "", &corev1.PodLogOptions{Follow: true})
 
 		// TE certificate is not signed by the admin and the DN entry is the generic admin name
 		// this is the 3rd pod name because: #0 and #1 are trusted certs, #2 is CA, #3 is admin (and engine)

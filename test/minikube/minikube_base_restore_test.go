@@ -10,16 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
-	corev1 "k8s.io/api/core/v1"
-
-	"github.com/Masterminds/semver"
+	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func verifyBackup(t *testing.T, namespaceName string, podName string, databaseName string, options *helm.Options) {
@@ -37,7 +35,6 @@ func verifyBackup(t *testing.T, namespaceName string, podName string, databaseNa
 }
 
 func TestKubernetesBackupDatabase(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	adminOptions := helm.Options{}
@@ -87,7 +84,6 @@ func TestKubernetesBackupDatabase(t *testing.T) {
 }
 
 func TestKubernetesBackupHistory(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	adminOptions := helm.Options{}
@@ -150,7 +146,6 @@ func TestKubernetesJournalBackupSuspended(t *testing.T) {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 4.3")
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
@@ -315,7 +310,6 @@ func restoreDatabaseByArchiveType(t *testing.T, options helm.Options, namespaceN
 }
 
 func TestKubernetesRestoreDatabase(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -353,7 +347,6 @@ func TestKubernetesRestoreDatabase(t *testing.T) {
 }
 
 func TestKubernetesImportDatabase(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	adminOptions := helm.Options{}
@@ -417,7 +410,6 @@ func TestKubernetesAutoRestore(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test autoRestore without the Enterprise Edition")
 	}
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -504,7 +496,6 @@ func TestKubernetesAutoRestore(t *testing.T) {
 }
 
 func TestSmRestartPartialSnapshotRestore(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	// Create admin release
@@ -593,7 +584,6 @@ spec:
 
 // Test exercising backup hooks and volume snapshot restore
 func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, inPlaceRestore bool) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	// Create admin release

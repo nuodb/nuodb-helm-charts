@@ -2,7 +2,6 @@ package testlib
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -10,12 +9,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/require"
-
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
 	"github.com/otiai10/copy"
+	"github.com/stretchr/testify/require"
 )
 
 const TLS_GENERATOR_POD_TEMPLATE = `---
@@ -56,7 +54,7 @@ func verifyCertificateFiles(t *testing.T, directory string) {
 		NUOCMD_FILE,
 	}
 
-	files, err := ioutil.ReadDir(directory)
+	files, err := os.ReadDir(directory)
 	require.NoError(t, err)
 
 	set := make(map[string]bool)
@@ -85,7 +83,7 @@ func CopyCertificatesToControlHost(t *testing.T, podName string, namespaceName s
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
 	prefix := "tls-keys"
-	targetDirectory, err := ioutil.TempDir("", prefix)
+	targetDirectory, err := os.MkdirTemp("", prefix)
 	require.NoError(t, err, "Unable to create TMP directory with prefix ", prefix)
 	AddTeardown(TEARDOWN_SECRETS, func() { os.RemoveAll(targetDirectory) })
 

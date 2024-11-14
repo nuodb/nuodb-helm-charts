@@ -8,14 +8,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Masterminds/semver"
-	"github.com/stretchr/testify/require"
-
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-
+	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
+
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func verifyNuoSQL(t *testing.T, namespaceName string, adminPod string, databaseName string) {
@@ -31,7 +30,6 @@ func TestKubernetesRemoveOrphanNamespaces(t *testing.T) {
 	// and all methods in our test framework rely on passing *testing.T
 	// instance. Execute this cleanup tasks as separate test case for simplicity
 	// as it's only needed in multi-cluster infrastructure.
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	context := context.Background()
@@ -58,7 +56,6 @@ func TestKubernetesBasicMultiCluster(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE") != "ENTERPRISE" && os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot test multiple SMs without the Enterprise Edition")
 	}
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	// For multi-cluster deployment to work correctly, there are two prerequisites:

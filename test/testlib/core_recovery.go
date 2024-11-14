@@ -2,13 +2,13 @@ package testlib
 
 import (
 	"fmt"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/stretchr/testify/require"
-
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
+
+	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/stretchr/testify/require"
 )
 
 const DEBUG_POD = `

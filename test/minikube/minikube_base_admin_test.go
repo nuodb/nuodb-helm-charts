@@ -23,7 +23,6 @@ import (
 )
 
 func TestKubernetesBasicAdminSingleReplica(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := helm.Options{
@@ -65,7 +64,6 @@ func TestKubernetesAdminLicenseSecret(t *testing.T) {
 	if os.Getenv("NUODB_LICENSE_CONTENT") == "" {
 		t.Skip("Cannot run this test without a valid license")
 	}
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	randomSuffix := strings.ToLower(random.UniqueId())
@@ -122,7 +120,6 @@ func TestKubernetesAdminLicenseSecret(t *testing.T) {
 
 func TestKubernetesInvalidLicense(t *testing.T) {
 	testlib.SkipTestOnNuoDBVersionCondition(t, ">= 6.0.0")
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	licenseString := "red-riding-hood"
@@ -156,7 +153,6 @@ func TestKubernetesInvalidLicense(t *testing.T) {
 }
 
 func TestKubernetesBasicNameOverride(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := &helm.Options{
@@ -174,7 +170,6 @@ func TestKubernetesBasicNameOverride(t *testing.T) {
 }
 
 func TestKubernetesFullNameOverride(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	nonDefaultName := "nondefault-adminname"

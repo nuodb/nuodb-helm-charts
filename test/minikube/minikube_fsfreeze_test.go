@@ -10,14 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
+	"github.com/gruntwork-io/terratest/modules/helm"
+	"github.com/gruntwork-io/terratest/modules/k8s"
+	shellquote "github.com/kballard/go-shellquote"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/gruntwork-io/terratest/modules/helm"
-	"github.com/gruntwork-io/terratest/modules/k8s"
-	shellquote "github.com/kballard/go-shellquote"
+	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
 func isMinikube(t *testing.T) bool {
@@ -133,7 +133,6 @@ func TestFsFreezeBackupHook(t *testing.T) {
 		t.Skip("Can only run test on Minikube or Docker Desktop")
 	}
 
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	// Prepare CSI driver to enable fsfreeze
@@ -251,7 +250,6 @@ func TestFsFreezeBackupHook(t *testing.T) {
 }
 
 func TestHotSnapBackupHook(t *testing.T) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := &helm.Options{

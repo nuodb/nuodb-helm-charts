@@ -13,12 +13,12 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	corev1 "k8s.io/api/core/v1"
+
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
-	v12 "k8s.io/api/core/v1"
 )
 
 func upgradeAdminTest(t *testing.T, fromHelmVersion string, upgradeOptions *testlib.UpgradeOptions) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := &helm.Options{
@@ -45,7 +45,7 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, upgradeOptions *test
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	// get the OLD log
-	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	adminPod := testlib.GetPod(t, namespaceName, admin0)
 
@@ -64,7 +64,6 @@ func upgradeAdminTest(t *testing.T, fromHelmVersion string, upgradeOptions *test
 }
 
 func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, enableCron bool, upgradeOptions *testlib.UpgradeOptions) {
-	testlib.AwaitTillerUp(t)
 	defer testlib.VerifyTeardown(t)
 
 	options := &helm.Options{
@@ -97,7 +96,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, enableCron bool, 
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
 
 	// get the OLD log
-	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &v12.PodLogOptions{Follow: true})
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &corev1.PodLogOptions{Follow: true})
 
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
@@ -123,7 +122,7 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, enableCron bool, 
 	err := testlib.AwaitE(t, func() bool {
 		return testlib.GetStringOccurrenceInLog(t, namespaceName, admin0,
 			"Reconnected with process with connectKey",
-			&v12.PodLogOptions{
+			&corev1.PodLogOptions{
 				Container: "admin",
 			}) == 2
 	}, 120*time.Second)
@@ -142,8 +141,8 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, enableCron bool, 
 		tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
 		smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
 
-		go testlib.GetAppLog(t, namespaceName, tePodName, "-pre-kill", &v12.PodLogOptions{Follow: true})
-		go testlib.GetAppLog(t, namespaceName, smPodName, "-pre-kill", &v12.PodLogOptions{Follow: true})
+		go testlib.GetAppLog(t, namespaceName, tePodName, "-pre-kill", &corev1.PodLogOptions{Follow: true})
+		go testlib.GetAppLog(t, namespaceName, smPodName, "-pre-kill", &corev1.PodLogOptions{Follow: true})
 
 		testlib.KillProcess(t, namespaceName, tePodName)
 		testlib.KillProcess(t, namespaceName, smPodName)
@@ -160,52 +159,30 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, enableCron bool, 
 
 func TestUpgradeHelm(t *testing.T) {
 
-	t.Run("NuoDB_From330_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.3.0", &testlib.UpgradeOptions{
-			AdminPodShouldGetRecreated: true,
-		})
+	t.Run("NuoDB_From370_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "3.7.0", &testlib.UpgradeOptions{})
 	})
 
-	t.Run("NuoDB_From340_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.4.0", &testlib.UpgradeOptions{
-			AdminPodShouldGetRecreated: true,
-		})
+	t.Run("NuoDB_From382_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "3.8.2", &testlib.UpgradeOptions{})
 	})
 
-	t.Run("NuoDB_From350_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.5.0", &testlib.UpgradeOptions{
-			AdminPodShouldGetRecreated: true,
-		})
-	})
-
-	t.Run("NuoDB_From360_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.6.0", &testlib.UpgradeOptions{})
+	t.Run("NuoDB_From390_ToLocal", func(t *testing.T) {
+		upgradeAdminTest(t, "3.9.0", &testlib.UpgradeOptions{})
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
 
-	t.Run("NuoDB_From330_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.3.0", false, &testlib.UpgradeOptions{
-			AdminPodShouldGetRecreated: true,
-		})
+	t.Run("NuoDB_From370_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "3.7.0", false, &testlib.UpgradeOptions{})
 	})
 
-	t.Run("NuoDB_From340_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.4.0", false, &testlib.UpgradeOptions{
-			AdminPodShouldGetRecreated: true,
-		})
+	t.Run("NuoDB_From382_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "3.8.2", true, &testlib.UpgradeOptions{})
 	})
 
-	t.Run("NuoDB_From350_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.5.0", true, &testlib.UpgradeOptions{
-			AdminPodShouldGetRecreated: true,
-		})
-	})
-
-	t.Run("NuoDB_From360_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.6.0", true, &testlib.UpgradeOptions{
-			AdminPodShouldGetRecreated: true,
-		})
+	t.Run("NuoDB_From390_ToLocal", func(t *testing.T) {
+		upgradeDatabaseTest(t, "3.9.0", true, &testlib.UpgradeOptions{})
 	})
 }
