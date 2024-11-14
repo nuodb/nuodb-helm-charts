@@ -2,6 +2,7 @@ package integration
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
 	"testing"
 
@@ -2768,6 +2769,120 @@ func TestDatabaseTLSConfig(t *testing.T) {
 
 }
 
+func TestBackupHooksCustomHandlersNegative(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	t.Run("testBadMethod", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                  "true",
+				"database.backupHooks.customHandlers[0].method": "BOGUS",
+				"database.backupHooks.customHandlers[0].path":   "/operation",
+				"database.backupHooks.customHandlers[0].script": "command",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.method: database.backupHooks.customHandlers.0.method must be one of the following: "GET", "POST", "PUT", "PATCH", "DELETE"`)
+	})
+
+	t.Run("testBadPath", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                  "true",
+				"database.backupHooks.customHandlers[0].method": "POST",
+				"database.backupHooks.customHandlers[0].path":   "/operation-{param}",
+				"database.backupHooks.customHandlers[0].script": "command",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.path: Does not match pattern '^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$'`)
+	})
+
+	t.Run("testNoScript", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                  "true",
+				"database.backupHooks.customHandlers[0].method": "POST",
+				"database.backupHooks.customHandlers[0].path":   "/operation",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0: script is required`)
+	})
+
+	t.Run("testBadStatusCodeType", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                            "true",
+				"database.backupHooks.customHandlers[0].method":           "POST",
+				"database.backupHooks.customHandlers[0].path":             "/operation",
+				"database.backupHooks.customHandlers[0].script":           "command",
+				"database.backupHooks.customHandlers[0].statusMappings.0": "OK",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.0: Invalid type. Expected: integer, given: string`)
+	})
+
+	t.Run("testStatusCodeTooLow", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                            "true",
+				"database.backupHooks.customHandlers[0].method":           "POST",
+				"database.backupHooks.customHandlers[0].path":             "/operation",
+				"database.backupHooks.customHandlers[0].script":           "command",
+				"database.backupHooks.customHandlers[0].statusMappings.0": "199",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.0: Must be greater than or equal to 200`)
+	})
+
+	t.Run("testStatusCodeTooHigh", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                            "true",
+				"database.backupHooks.customHandlers[0].method":           "POST",
+				"database.backupHooks.customHandlers[0].path":             "/operation",
+				"database.backupHooks.customHandlers[0].script":           "command",
+				"database.backupHooks.customHandlers[0].statusMappings.1": "600",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.1: Must be less than or equal to 599`)
+	})
+}
+
 func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
@@ -2780,7 +2895,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 				assert.NotEqual(t, "backup-hooks", container.Name)
 			}
 		}
-		// Check that configmap for backup_hooks.py was not rendered
+		// Check that configmap for backup hooks was not rendered
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 5) {
 			assert.NotContains(t, cm.Name, "backup-hooks")
@@ -2843,7 +2958,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		// Check that nuodb/nuodb container image is used
 		assert.Contains(t, sidecar.Image, "docker.io/nuodb/nuodb")
 
-		// Check that configmap for backup_hooks.py was rendered
+		// Check that configmap for backup hooks was rendered
 		var backupHooksCm *v1.ConfigMap
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
@@ -2852,6 +2967,9 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			}
 		}
 		assert.NotNil(t, backupHooksCm)
+		// Assert that configmap has backup_hooks.py and handlers.json
+		assert.Contains(t, backupHooksCm.Data, "backup_hooks.py")
+		assert.Contains(t, backupHooksCm.Data, "handlers.json")
 	})
 
 	// Make sure sidecar is rendered if backup hooks are enabled with fsfreeze
@@ -2907,7 +3025,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		// Check that Python container image is used
 		assert.Contains(t, sidecar.Image, "docker.io/library/python:3.12-slim")
 
-		// Check that configmap for backup_hooks.py was rendered
+		// Check that configmap for backup hooks was rendered
 		var backupHooksCm *v1.ConfigMap
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
@@ -2916,6 +3034,9 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			}
 		}
 		assert.NotNil(t, backupHooksCm)
+		// Assert that configmap has backup_hooks.py and handlers.json
+		assert.Contains(t, backupHooksCm.Data, "backup_hooks.py")
+		assert.Contains(t, backupHooksCm.Data, "handlers.json")
 	})
 
 	// Make sure hotsnap is enabled if journal volume is separate
