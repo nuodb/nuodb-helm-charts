@@ -2962,8 +2962,9 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		var backupHooksCm *v1.ConfigMap
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
-			if strings.Contains(cm.Name, "backup-hooks") {
+			if strings.HasSuffix(cm.Name, "backup-hooks") {
 				backupHooksCm = &cm
+				break
 			}
 		}
 		assert.NotNil(t, backupHooksCm)
@@ -3029,8 +3030,9 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		var backupHooksCm *v1.ConfigMap
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
-			if strings.Contains(cm.Name, "backup-hooks") {
+			if strings.HasSuffix(cm.Name, "backup-hooks") {
 				backupHooksCm = &cm
+				break
 			}
 		}
 		assert.NotNil(t, backupHooksCm)
