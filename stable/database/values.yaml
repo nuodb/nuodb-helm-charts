@@ -385,12 +385,17 @@ database:
     # from process exit codes to HTTP status codes. See the examples below.
     customHandlers: []
 
-    #customHandlers:
-    #- method: GET
-    #  path: /backup-id
-    #  script: |
-    #    [ -e "$NUODB_ARCHIVE_DIR/backup.txt" ] || exit 1
-    #    cat "$NUODB_ARCHIVE_DIR/backup.txt"
+    customHandlers:
+    - method: POST
+      path: /operation/preBackup/execute
+      script: |
+        nuocmd pause archiving > /tmp/123.txt
+        echo "$?" > /tmp/123-exit-code.txt
+        echo '{"logPath": "123/logs"}'
+    - method: GET
+      path: /{id}/logs
+      script: |
+        echo '{"output": "...", "succeed": true, "ended": true, "exitValue": 0}'
     #- method: GET
     #  path: /pid/{command}
     #  script: |
