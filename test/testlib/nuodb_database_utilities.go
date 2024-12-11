@@ -660,7 +660,7 @@ func GetNuoDBVersion(t *testing.T, namespaceName string, options *helm.Options) 
 		"--image-pull-policy=IfNotPresent", "--",
 		"nuodb", "--version")
 	require.NoError(t, err, "Unable to check NuoDB version in helper pod")
-	match := regexp.MustCompile("NuoDB Server build (.*)").FindStringSubmatch(output)
+	match := regexp.MustCompile(`\bbuild\s+([0-9][^\s]+)`).FindStringSubmatch(output)
 	require.NotNil(t, match, "Unable to match NuoDB version from output")
 	nuoDBVersionMap[options.SetValues["nuodb.image.tag"]] = match[1]
 	return match[1]
