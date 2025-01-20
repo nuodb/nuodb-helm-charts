@@ -232,10 +232,10 @@ func TestFsFreezeBackupHook(t *testing.T) {
 
 		// Freeze writes to archive using direct invocation instead of HTTP
 		k8s.RunKubectl(t, kubectlOptions, "exec", smPod, "-c", "backup-hooks", "--",
-			"python", "/backup_hooks.py", "pre-hook", "--backup-id", backupId)
+			"python", "/opt/nuodb-operations/backup_hooks.py", "pre-hook", "--backup-id", backupId)
 		// Defer unfreeze using direct invocation
 		defer k8s.RunKubectl(t, kubectlOptions, "exec", smPod, "-c", "backup-hooks", "--",
-			"python", "/backup_hooks.py", "post-hook", "--backup-id", backupId)
+			"python", "/opt/nuodb-operations/backup_hooks.py", "post-hook", "--backup-id", backupId)
 
 		// Negative test: invoke post-backup hook with incorrect backup ID
 		response = testlib.GetBackupHookResponse(t, namespaceName, smPod, "post-backup/bogus")
@@ -337,9 +337,9 @@ func TestHotSnapBackupHook(t *testing.T) {
 		}, 10*time.Second)
 		k8s.RunKubectl(t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
 			"sh", "-c", fmt.Sprintf(`
-			i=0; 
-			while [ -f "/var/opt/nuodb/archive/backup.txt" ]; do 
-			if [ $i -ge %s ]; then 
+			i=0;
+			while [ -f "/var/opt/nuodb/archive/backup.txt" ]; do
+			if [ $i -ge %s ]; then
 				echo "ERROR: Backup metadata file not removed: Timeout after ${i}s"
 				exit 1
 			fi

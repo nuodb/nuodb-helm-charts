@@ -2967,8 +2967,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			}
 		}
 		assert.NotNil(t, backupHooksCm)
-		// Assert that configmap has backup_hooks.py and handlers.json
-		assert.Contains(t, backupHooksCm.Data, "backup_hooks.py")
+		// Assert that configmap has handlers.json
 		assert.Contains(t, backupHooksCm.Data, "handlers.json")
 	})
 
@@ -3023,7 +3022,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Equal(t, resource.MustParse("5Gi"), *sidecar.Resources.Limits.Memory())
 
 		// Check that Python container image is used
-		assert.Contains(t, sidecar.Image, "docker.io/library/python:3.12-slim")
+		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar:latest")
 
 		// Check that configmap for backup hooks was rendered
 		var backupHooksCm *corev1.ConfigMap
@@ -3035,8 +3034,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 			}
 		}
 		assert.NotNil(t, backupHooksCm)
-		// Assert that configmap has backup_hooks.py and handlers.json
-		assert.Contains(t, backupHooksCm.Data, "backup_hooks.py")
+		// Assert that configmap has handlers.json
 		assert.Contains(t, backupHooksCm.Data, "handlers.json")
 	})
 
@@ -3173,7 +3171,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, volumes, "backup-hooks")
 
 		// Check that Python container image is used
-		assert.Contains(t, sidecar.Image, "docker.io/library/python:3.12-slim")
+		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar:latest")
 	})
 }
 

@@ -38,6 +38,9 @@
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
     name: eph-volume
     subPath: telegraf
+  - mountPath: /tmp
+    name: eph-volume
+    subPath: tmp-watcher
   - mountPath: /var/log/nuodb
     {{- if eq (include "defaultfalse" $engine.logPersistence.enabled) "true" }}
     name: log-volume

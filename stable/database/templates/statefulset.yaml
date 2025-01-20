@@ -267,9 +267,7 @@ spec:
         image: {{ include "backupHooks.image" . }}
         imagePullPolicy: {{ default "" .Values.database.backupHooks.image.pullPolicy }}
         args:
-          - python
-          - /backup_hooks.py
-          - server
+          - nuodb-operations
           - --port=8000
         ports:
         - containerPort: 8000
@@ -303,9 +301,6 @@ spec:
         {{- include "sc.containerSecurityContext" . | indent 8 }}
         {{- end }}
         volumeMounts:
-        - name: backup-hooks
-          mountPath: /backup_hooks.py
-          subPath: backup_hooks.py
         - name: backup-hooks
           mountPath: /etc/nuodb/handlers.json
           subPath: handlers.json
