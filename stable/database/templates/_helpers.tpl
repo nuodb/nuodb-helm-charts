@@ -66,9 +66,6 @@ Also, we can't use a single if because lazy evaluation is not an option
 Return the backup hooks sidecar image
 */}}
 {{- define "backupHooks.image" -}}
-{{- if eq (include "backupHooks.freezeMode" .) "hotsnap" -}}
-{{ template "nuodb.image" . }}
-{{- else -}}
 {{- $registryName := .Values.database.backupHooks.image.registry -}}
 {{- $repositoryName := .Values.database.backupHooks.image.repository -}}
 {{- $tag := .Values.database.backupHooks.image.tag | toString -}}
@@ -85,7 +82,6 @@ Also, we can't use a single if because lazy evaluation is not an option
     {{- end -}}
 {{- else -}}
     {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
-{{- end -}}
 {{- end -}}
 {{- end -}}
 
@@ -307,7 +303,7 @@ Return the hotcopy group prefix
 {{- end -}}
 
 {{/*
-Return the hotcopy cronjob schedule by backup group and hot copy type. It will take 
+Return the hotcopy cronjob schedule by backup group and hot copy type. It will take
 into account any schedule overrides configured per backup group.
 */}}
 {{- define "hotcopy.group.schedule" -}}
@@ -337,7 +333,7 @@ Renders the name of the HotCopy CronJob
 {{/*
 Return labels for a specific backup group. If there is no user-defined backup
 groups, return the pod name of a single HCSM by extracting the pod ordinal from
-the automatically generated backup group name. Otherwise return the configured 
+the automatically generated backup group name. Otherwise return the configured
 backup group labels or empty value (representing all HCSMs in the database).
 */}}
 {{- define "hotcopy.group.labels" -}}

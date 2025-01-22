@@ -344,7 +344,7 @@ database:
     image:
       registry: ghcr.io
       repository: nuodb/nuodb-sidecar
-      tag: latest
+      tag: 1.0.3
       pullPolicy: IfNotPresent
 
     # Kubernetes resource requests and limits used for the backup hooks sidecar
@@ -752,7 +752,7 @@ nuocollector:
   watcher:
     registry: ghcr.io
     repository: nuodb/nuodb-sidecar
-    tag: latest
+    tag: 1.0.3
     pullPolicy: IfNotPresent
 
   # Kubernetes resource requests and limits used for the nuocollector sidecar

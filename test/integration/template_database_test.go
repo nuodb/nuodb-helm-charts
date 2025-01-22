@@ -2954,8 +2954,8 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, volumes, "eph-volume")
 		assert.Contains(t, volumes, "tls")
 
-		// Check that nuodb/nuodb container image is used
-		assert.Contains(t, sidecar.Image, "docker.io/nuodb/nuodb")
+		// Check that ghcr.io/nuodb/nuodb-sidecar container image is used
+		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar")
 
 		// Check that configmap for backup hooks was rendered
 		var backupHooksCm *corev1.ConfigMap
@@ -3022,7 +3022,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Equal(t, resource.MustParse("5Gi"), *sidecar.Resources.Limits.Memory())
 
 		// Check that Python container image is used
-		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar:latest")
+		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar")
 
 		// Check that configmap for backup hooks was rendered
 		var backupHooksCm *corev1.ConfigMap
@@ -3171,7 +3171,7 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, volumes, "backup-hooks")
 
 		// Check that Python container image is used
-		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar:latest")
+		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar")
 	})
 }
 
