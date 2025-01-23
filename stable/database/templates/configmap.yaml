@@ -43,7 +43,6 @@ metadata:
     {{- include "database.resourceLabels" . | nindent 4 }}
   name: {{ template "database.fullname" . }}-backup-hooks
 data:
-{{ (.Files.Glob "files/backup_hooks.py").AsConfig | indent 2 }}
   handlers.json: |
     {
       "handlers": {{ .Values.database.backupHooks.customHandlers | toJson }}

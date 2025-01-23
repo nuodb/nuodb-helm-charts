@@ -342,9 +342,9 @@ database:
     # journal directories.
     enabled: false
     image:
-      registry: docker.io
-      repository: library/python
-      tag: 3.12-slim
+      registry: ghcr.io
+      repository: nuodb/nuodb-sidecar
+      tag: 1.0.3
       pullPolicy: IfNotPresent
 
     # Kubernetes resource requests and limits used for the backup hooks sidecar
@@ -358,7 +358,7 @@ database:
     # If the non-hotcopy SM is configured with separate archive and journal
     # volumes, writes are frozen to the archive volume when the pre-backup hook
     # is invoked and unfrozen when the post-backup hook is invoked. Below are
-    # supported ways to stop archive writes: 
+    # supported ways to stop archive writes:
     #   - hotsnap - Uses NuoDB product support for pausing archive writes
     #     (recommended). Supported from NuoDB versions 6.0.2 and above.
     #   - fsfreeze - Uses fsfreeze binary to suspend archive reads and writes.
@@ -750,9 +750,9 @@ nuocollector:
     tag: 2.0.0
     pullPolicy: IfNotPresent
   watcher:
-    registry: docker.io
-    repository: kiwigrid/k8s-sidecar
-    tag: 1.10.8
+    registry: ghcr.io
+    repository: nuodb/nuodb-sidecar
+    tag: 1.0.3
     pullPolicy: IfNotPresent
 
   # Kubernetes resource requests and limits used for the nuocollector sidecar

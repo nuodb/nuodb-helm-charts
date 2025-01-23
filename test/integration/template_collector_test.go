@@ -55,6 +55,11 @@ func checkSidecarContainers(t *testing.T, containers []corev1.Container, options
 					Value: "nuodb.com/nuocollector-plugin in (release-name-nuodb-cluster0-demo-database, insights)",
 				})
 			}
+			assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{
+				Name:      "eph-volume",
+				MountPath: "/tmp",
+				SubPath:   "tmp-watcher",
+			})
 		} else {
 			// This is probably the main container
 			continue
