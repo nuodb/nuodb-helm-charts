@@ -338,7 +338,7 @@ func TestHotSnapBackupHook(t *testing.T) {
 		k8s.RunKubectl(t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
 			"sh", "-c", fmt.Sprintf(`
 			i=0;
-			while [ -f "/var/opt/nuodb/archive/backup.txt" ]; do
+			while [ -f "/var/opt/nuodb/archive/nuodb/demo/backup.txt" ]; do
 			if [ $i -ge %s ]; then
 				echo "ERROR: Backup metadata file not removed: Timeout after ${i}s"
 				exit 1
