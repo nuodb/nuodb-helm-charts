@@ -23,7 +23,7 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   sudo apt-get install -y libncurses5 libncursesw5
 
   # Download minikube.
-  curl -Lo minikube https://github.com/kubernetes/minikube/releases/v"${MINIKUBE_VERSION}"/download/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
+  curl -Lo minikube https://github.com/kubernetes/minikube/releases/download/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
 
   # start minikube
   minikube start --vm-driver=docker --kubernetes-version=v"${KUBERNETES_VERSION}" --cpus=max --memory=max
