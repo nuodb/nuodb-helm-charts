@@ -8,6 +8,7 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	coreosv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -3492,4 +3493,108 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 
 		assert.True(t, found)
 	}
+}
+
+func TestDatabasePodMonitor(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	t.Run("testDefault", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.podMonitor.enabled": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/podmonitor.yaml"})
+		for _, obj := range testlib.SplitAndRenderPodMonitor(t, output, 1) {
+			assert.Equal(t, "app", obj.Spec.JobLabel)
+			assert.NotNil(t, obj.Spec.Selector.MatchLabels)
+			assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector.MatchLabels["app"])
+			assert.Contains(t, obj.Spec.NamespaceSelector.MatchNames, "default")
+			assert.Equal(t, 1, len(obj.Spec.PodMetricsEndpoints))
+			endpoint := obj.Spec.PodMetricsEndpoints[0]
+			assert.NotNil(t, endpoint.Port)
+			assert.Equal(t, "http-metrics", *endpoint.Port)
+			assert.Equal(t, coreosv1.Duration("10s"), endpoint.Interval)
+			assert.Equal(t, "/metrics", endpoint.Path)
+			assert.Equal(t, "http", endpoint.Scheme)
+		}
+	})
+
+	t.Run("testRelabelings", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.podMonitor.enabled": "true",
+				// Target relabeling config
+				"database.podMonitor.relabelings[0].sourceLabels[0]": "__meta_kubernetes_pod_label_cp_nuodb_com_organization",
+				"database.podMonitor.relabelings[0].targetLabel":     "label_cp_nuodb_com_organization",
+				// Metrics relabeling config
+				"database.podMonitor.metricRelabelings[0].sourceLabels[0]": "nodetype",
+				"database.podMonitor.metricRelabelings[0].targetLabel":     "nodetype",
+				"database.podMonitor.metricRelabelings[0].action":          "lowercase",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/podmonitor.yaml"})
+		for _, obj := range testlib.SplitAndRenderPodMonitor(t, output, 1) {
+			assert.Equal(t, 1, len(obj.Spec.PodMetricsEndpoints))
+			endpoint := obj.Spec.PodMetricsEndpoints[0]
+			assert.Equal(t, 1, len(endpoint.RelabelConfigs))
+			assert.Equal(t, "label_cp_nuodb_com_organization", endpoint.RelabelConfigs[0].TargetLabel)
+			assert.Contains(t, endpoint.RelabelConfigs[0].SourceLabels, coreosv1.LabelName("__meta_kubernetes_pod_label_cp_nuodb_com_organization"))
+			assert.Equal(t, 1, len(endpoint.MetricRelabelConfigs))
+			assert.Equal(t, "nodetype", endpoint.MetricRelabelConfigs[0].TargetLabel)
+			assert.Contains(t, endpoint.MetricRelabelConfigs[0].SourceLabels, coreosv1.LabelName("nodetype"))
+			assert.Equal(t, "lowercase", endpoint.MetricRelabelConfigs[0].Action)
+		}
+	})
+
+	t.Run("testPodTargetLabels", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.podMonitor.enabled":            "true",
+				"database.podMonitor.podTargetLabels[0]": "cp.nuodb.com/organization",
+				"database.podMonitor.podTargetLabels[1]": "cp.nuodb.com/project",
+				"database.podMonitor.podTargetLabels[3]": "cp.nuodb.com/database",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/podmonitor.yaml"})
+		for _, obj := range testlib.SplitAndRenderPodMonitor(t, output, 1) {
+			assert.Contains(t, obj.Spec.PodTargetLabels, "cp.nuodb.com/organization")
+			assert.Contains(t, obj.Spec.PodTargetLabels, "cp.nuodb.com/project")
+			assert.Contains(t, obj.Spec.PodTargetLabels, "cp.nuodb.com/database")
+		}
+	})
+
+	t.Run("testSecurity", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.podMonitor.enabled": "true",
+				// Enable basic authentication
+				"database.podMonitor.basicAuth.username.name": "john",
+				"database.podMonitor.basicAuth.password.name": "telegraf-creds",
+				"database.podMonitor.basicAuth.password.key":  "password",
+				// Enable TLS on the client side
+				"database.podMonitor.tlsConfig.ca.secret.name":     "telegraf-tls",
+				"database.podMonitor.tlsConfig.ca.secret.key":      "ca",
+				"database.podMonitor.tlsConfig.insecureSkipVerify": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/podmonitor.yaml"})
+		for _, obj := range testlib.SplitAndRenderPodMonitor(t, output, 1) {
+			assert.Equal(t, 1, len(obj.Spec.PodMetricsEndpoints))
+			endpoint := obj.Spec.PodMetricsEndpoints[0]
+			assert.NotNil(t, endpoint.BasicAuth)
+			assert.Equal(t, "john", endpoint.BasicAuth.Username.Name)
+			assert.Equal(t, "telegraf-creds", endpoint.BasicAuth.Password.Name)
+			assert.Equal(t, "password", endpoint.BasicAuth.Password.Key)
+			assert.NotNil(t, endpoint.TLSConfig)
+			assert.NotNil(t, endpoint.TLSConfig.CA.Secret)
+			assert.Equal(t, "telegraf-tls", endpoint.TLSConfig.CA.Secret.Name)
+			assert.Equal(t, "ca", endpoint.TLSConfig.CA.Secret.Key)
+			assert.NotNil(t, endpoint.TLSConfig.InsecureSkipVerify)
+			assert.Equal(t, true, *endpoint.TLSConfig.InsecureSkipVerify)
+		}
+	})
 }

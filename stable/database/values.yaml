@@ -406,6 +406,54 @@ database:
     #    "1": 400
     #    "*": 500
 
+  podMonitor:
+    # Whether to enable PodMonitor resource for database pods.
+    enabled: false
+
+    # Labels to assign to the PodMonitor resource. Prometheus must be configured
+    # with label selector that matches the defined labels on the resource.
+    labels: {}
+
+    # The label to use to retrieve the job name from.
+    jobLabel: app
+
+    # The labels which are transferred from the associated Kubernetes Pod object
+    # onto the ingested metrics.
+    podTargetLabels: []
+
+    # The Pod port name which exposes the endpoint.
+    portName: http-metrics
+
+    # Interval at which Prometheus scrapes the metrics from the database pods.
+    interval: 10s
+
+    # HTTP path from which to scrape for metrics.
+    path: /metrics
+
+    # Timeout after which Prometheus considers the scrape to be failed. If
+    # empty, Prometheus uses the global scrape timeout unless it is less than
+    # the target’s scrape interval value in which the latter is used.
+    scrapeTimeout: ""
+
+    # HTTP scheme to use for scraping.
+    scheme: http
+
+    # TLS configuration to use when scraping the target. See
+    # https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.SafeTLSConfig
+    tlsConfig: {}
+
+    # The relabeling rules to apply to the samples before ingestion. See
+    # https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.RelabelConfig
+    relabelings: []
+
+    # The relabeling rules to apply to the samples before ingestion. See
+    # https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.RelabelConfig
+    metricRelabelings: []
+
+    # Configures the Basic Authentication credentials to use when scraping. See
+    # https://prometheus-operator.dev/docs/api-reference/api/#monitoring.coreos.com/v1.BasicAuth
+    basicAuth: {}
+
   sm:
     ## Enable persistent log volumes to retain logs when an external logging solution is not used.
     logPersistence:
@@ -759,6 +807,15 @@ nuocollector:
   # container
   # ref: http://kubernetes.io/docs/user-guide/compute-resources/
   resources: {}
+
+  ## Import environment variables inside nuocollector container. See:
+  ## https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core
+  ##
+  env: []
+
+  # Ports to expose on the nuocollector container. See
+  # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#containerport-v1-core
+  ports: []
 
   plugins:
     ## NuoDB Collector compatible plugins specific for database services
