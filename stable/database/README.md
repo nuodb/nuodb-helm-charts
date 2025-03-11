@@ -373,6 +373,27 @@ To restore a database from volume snapshots within a different namespace or usin
 | `kind` | Data source kind | `VolumeSnapshot` |
 | `apiGroup` | APIGroup is the group for the resource. If APIGroup is not specified, the specified Kind must be in the core API group. | `snapshot.storage.k8s.io` |
 
+#### database.podMonitor.*
+
+The purpose of this section is to allow metrics from database pods to be scraped by Prometheus server.
+
+| Key | Description | Default |
+| ----- | ----------- | ------ |
+| `enabled` | Whether to enable PodMonitor resource for database pods. | `false` |
+| `labels` | Labels to assign to the PodMonitor resource. Prometheus must be configured with label selector that matches the defined labels on the resource. | `{}` |
+| `jobLabel` | The label to use to retrieve the job name from. | `app` |
+| `podTargetLabels` | The labels which are transferred from the associated Kubernetes Pod object onto the ingested metrics. | `[]` |
+| `portName` | The Pod port name which exposes the endpoint. | `http-metrics` |
+| `interval` | Interval at which Prometheus scrapes the metrics from the database pods. | `10s` |
+| `path` | HTTP path from which to scrape for metrics. | `/metrics` |
+| `interval` | Interval at which Prometheus scrapes the metrics from the database pods. | `10s` |
+| `scrapeTimeout` | Timeout after which Prometheus considers the scrape to be failed. If empty, Prometheus uses the global scrape timeout unless it is less than the target’s scrape interval value in which the latter is used. | `""` |
+| `scheme` | HTTP scheme to use for scraping. | `http` |
+| `tlsConfig` | TLS configuration to use when scraping the target. | `{}` |
+| `relabelings` | The relabeling rules to apply to the samples before ingestion. | `[]` |
+| `metricRelabelings` | The relabeling rules to apply to the samples before ingestion. | `[]` |
+| `basicAuth` | Configures the Basic Authentication credentials to use when scraping. | `{}` |
+
 #### database.legacy
 
 Features in this section have been deprecated but not yet removed.
@@ -401,6 +422,8 @@ The following tables list the configurable parameters for the `nuocollector` opt
 | `watcher.pullPolicy` | ConfigMap watcher container pull policy |`IfNotPresent`|
 | `plugins.database` | NuoDB Collector additional plugins for database services |`{}`|
 | `resources` | Kubernetes resource requests and limits used for the nuocollector sidecar |`{}`|
+| `ports` | Ports to expose on the nuocollector container |`[]`|
+| `env` | Import environment variables inside nuocollector container |`[]`|
 
 ### Running
 

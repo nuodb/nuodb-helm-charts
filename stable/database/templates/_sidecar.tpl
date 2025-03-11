@@ -10,6 +10,14 @@
   resources:
   {{- toYaml $.Values.nuocollector.resources | trim | nindent 4 }}
   {{- include "sc.containerSecurityContext" $ | indent 2 }}
+  {{- with $.Values.nuocollector.env }}
+  env:
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
+  {{- with $.Values.nuocollector.ports }}
+  ports:
+  {{- toYaml . | nindent 2 }}
+  {{- end }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
     name: eph-volume

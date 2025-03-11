@@ -1,0 +1,52 @@
+{{- if .Values.database.podMonitor }}
+{{- if eq (include "defaultfalse" .Values.database.podMonitor.enabled) "true" }}
+apiVersion: monitoring.coreos.com/v1
+kind: PodMonitor
+metadata:
+  name: {{ template "database.fullname" . }}
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
+    {{- with .Values.database.podMonitor.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  podMetricsEndpoints:
+  - port: {{ .Values.database.podMonitor.portName }}
+    {{- with .Values.database.podMonitor.interval }}
+    interval: {{ . }}
+    {{- end }}
+    {{- with .Values.database.podMonitor.scrapeTimeout }}
+    scrapeTimeout: {{ . }}
+    {{- end }}
+    honorLabels: true
+    path: {{ .Values.database.podMonitor.path }}
+    scheme: {{ .Values.database.podMonitor.scheme }}
+    {{- with .Values.database.podMonitor.tlsConfig }}
+    tlsConfig:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.database.podMonitor.relabelings }}
+    relabelings:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.database.podMonitor.metricRelabelings }}
+    metricRelabelings:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+    {{- with .Values.database.podMonitor.basicAuth }}
+    basicAuth:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+  jobLabel: {{ .Values.database.podMonitor.jobLabel | default "app" }}
+  namespaceSelector:
+    matchNames:
+    - {{ .Release.Namespace }}
+  selector:
+    matchLabels:
+      app: {{ template "database.fullname" . }}
+  {{- with .Values.database.podMonitor.podTargetLabels }}
+  podTargetLabels:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+{{- end }}
+{{- end }}

@@ -142,7 +142,9 @@ func checkPluginsRendered(t *testing.T, configMaps []corev1.ConfigMap, options *
 	assert.Equal(t, expectedNrPlugins, found)
 }
 
-func executeSidecarTests(t *testing.T, options *helm.Options) {
+type assertFunction func(chartPath string, volumes []corev1.Volume, containers []corev1.Container)
+
+func executeSidecarTestsWithAsserts(t *testing.T, options *helm.Options, assertFn assertFunction) {
 	t.Run("testAdminSidecars", func(t *testing.T) {
 		// Run RenderTemplate to render the template and inspect admin statefulset
 		helmChartPath := testlib.ADMIN_HELM_CHART_PATH
@@ -150,8 +152,7 @@ func executeSidecarTests(t *testing.T, options *helm.Options) {
 
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			t.Logf("Inspecting admin statefulset: %s", obj.Name)
-			checkSpecVolumes(t, obj.Spec.Template.Spec.Volumes, options, helmChartPath)
-			checkSidecarContainers(t, obj.Spec.Template.Spec.Containers, options, helmChartPath)
+			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers)
 		}
 	})
 
@@ -162,8 +163,7 @@ func executeSidecarTests(t *testing.T, options *helm.Options) {
 
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			t.Logf("Inspecting database statefulset: %s", obj.Name)
-			checkSpecVolumes(t, obj.Spec.Template.Spec.Volumes, options, helmChartPath)
-			checkSidecarContainers(t, obj.Spec.Template.Spec.Containers, options, helmChartPath)
+			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers)
 		}
 	})
 
@@ -174,9 +174,15 @@ func executeSidecarTests(t *testing.T, options *helm.Options) {
 
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			t.Logf("Inspecting database deployment: %s", obj.Name)
-			checkSpecVolumes(t, obj.Spec.Template.Spec.Volumes, options, helmChartPath)
-			checkSidecarContainers(t, obj.Spec.Template.Spec.Containers, options, helmChartPath)
+			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers)
 		}
+	})
+}
+
+func executeSidecarTests(t *testing.T, options *helm.Options) {
+	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container) {
+		checkSpecVolumes(t, volumes, options, chartPath)
+		checkSidecarContainers(t, containers, options, chartPath)
 	})
 }
 
@@ -303,4 +309,68 @@ func TestNuoDBCollectorResources(t *testing.T) {
 		},
 	}
 	executeSidecarTests(t, options)
+}
+
+func TestNuoDBCollectorEnv(t *testing.T) {
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"nuocollector.enabled":                            "true",
+			"nuocollector.env[0].name":                        "foo",
+			"nuocollector.env[0].value":                       "bar",
+			"nuocollector.env[1].name":                        "baz",
+			"nuocollector.env[1].valueFrom.secretKeyRef.name": "telegraf-creds",
+			"nuocollector.env[1].valueFrom.secretKeyRef.key":  "password",
+		},
+	}
+	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container) {
+		if chartPath != testlib.DATABASE_HELM_CHART_PATH {
+			// environment variables are supported only for the database chart
+			return
+		}
+		var nuocollector *corev1.Container
+		for i := range containers {
+			if containers[i].Name == "nuocollector" {
+				nuocollector = &containers[i]
+			}
+		}
+		assert.NotNil(t, nuocollector)
+		testlib.AssertEnvContains(t, nuocollector.Env, "foo", "bar")
+		testlib.AssertEnvContainsValueFrom(t, nuocollector.Env, "baz", corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: "telegraf-creds",
+				},
+				Key: "password",
+			},
+		})
+	})
+}
+
+func TestNuoDBCollectorPorts(t *testing.T) {
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"nuocollector.enabled":                "true",
+			"nuocollector.ports[0].name":          "http-metrics",
+			"nuocollector.ports[0].containerPort": "9001",
+			"nuocollector.ports[0].protocol":      "TCP",
+		},
+	}
+	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container) {
+		if chartPath != testlib.DATABASE_HELM_CHART_PATH {
+			// ports are supported only for the database chart
+			return
+		}
+		var nuocollector *corev1.Container
+		for i := range containers {
+			if containers[i].Name == "nuocollector" {
+				nuocollector = &containers[i]
+			}
+		}
+		assert.NotNil(t, nuocollector)
+		assert.Contains(t, nuocollector.Ports, corev1.ContainerPort{
+			Name:          "http-metrics",
+			ContainerPort: 9001,
+			Protocol:      corev1.ProtocolTCP,
+		})
+	})
 }

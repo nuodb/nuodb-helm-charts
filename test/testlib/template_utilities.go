@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/gruntwork-io/terratest/modules/helm"
+	coreosv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
@@ -37,6 +38,15 @@ func EnvGet(envs []corev1.EnvVar, key string) (string, bool) {
 	return "", false
 }
 
+func EnvGetValueFrom(envs []corev1.EnvVar, key string) (*corev1.EnvVarSource, bool) {
+	for _, n := range envs {
+		if n.Name == key {
+			return n.ValueFrom, true
+		}
+	}
+	return nil, false
+}
+
 func AssertEnvNotContains(t *testing.T, envs []corev1.EnvVar, key string) {
 	actual, ok := EnvGet(envs, key)
 	assert.False(t, ok, "Unexpected environment variable %s=%s", key, actual)
@@ -62,6 +72,15 @@ func EnvContainsValueFrom(envs []corev1.EnvVar, key string, valueFrom *corev1.En
 		}
 	}
 	return false
+}
+
+func AssertEnvContainsValueFrom(t *testing.T, envs []corev1.EnvVar, key string, expected corev1.EnvVarSource) {
+	actual, ok := EnvGetValueFrom(envs, key)
+	assert.True(t, ok, "Environment variable %s not set", key)
+	assert.NotNil(t, actual, "Environment variable %s valueFrom not set")
+	if actual != nil {
+		assert.Equal(t, expected, *actual)
+	}
 }
 
 func EnvFromSourceContains(envs []corev1.EnvFromSource, value string) bool {
@@ -216,6 +235,10 @@ func SplitAndRenderServiceAccount(t *testing.T, output string, expectedNrObjects
 
 func SplitAndRenderIngress(t *testing.T, output string, expectedNrObjects int) []networkingv1.Ingress {
 	return SplitAndRender[networkingv1.Ingress](t, output, expectedNrObjects, "Ingress")
+}
+
+func SplitAndRenderPodMonitor(t *testing.T, output string, expectedNrObjects int) []coreosv1.PodMonitor {
+	return SplitAndRender[coreosv1.PodMonitor](t, output, expectedNrObjects, "PodMonitor")
 }
 
 func IsStatefulSetHotCopyEnabled(ss *appsv1.StatefulSet) bool {
