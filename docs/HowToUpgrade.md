@@ -92,7 +92,7 @@ For example:
 ```shell
 helm upgrade -n nuodb <release> <chart> \
 --set nuodb.image.registry=docker.io \
---set nuodb.image.repository=nuodb/nuodb-ce \
+--set nuodb.image.repository=nuodb/nuodb \
 --set nuodb.image.tag=4.2.1 \
 -f values.yaml
 ```
@@ -112,7 +112,7 @@ Upgrade the `database` Helm releases on all clusters one after the other.
 ```shell
 helm upgrade -n nuodb database nuodb/database \
 --set nuodb.image.registry=docker.io \
---set nuodb.image.repository=nuodb/nuodb-ce \
+--set nuodb.image.repository=nuodb/nuodb \
 --set nuodb.image.tag=4.2.1 \
 -f values.yaml
 ```
@@ -147,7 +147,7 @@ Upgrade the `admin` Helm releases on all clusters one after the other.
 ```shell
 helm upgrade -n nuodb admin nuodb/admin \
   --set nuodb.image.registry=docker.io \
-  --set nuodb.image.repository=nuodb/nuodb-ce \
+  --set nuodb.image.repository=nuodb/nuodb \
   --set nuodb.image.tag=4.2.1 \
   -f values.yaml
 ```
@@ -255,7 +255,7 @@ For example, the below command will roll back the _database_ release to NuoDB 4.
 ```shell
 helm upgrade -n nuodb database nuodb/database \
 --set nuodb.image.registry=docker.io \
---set nuodb.image.repository=nuodb/nuodb-ce \
+--set nuodb.image.repository=nuodb/nuodb \
 --set nuodb.image.tag=4.1.3 \
 -f values.yaml
 ```
