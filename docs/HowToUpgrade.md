@@ -26,7 +26,7 @@ An example of a multi-cluster NuoDB deployment scenario is shown in the diagram 
 
 ![NuoDB Deployment Example](../images/nuodb-deployment-example.png)
 
-This document focs on upgrading NuoDB software and providing details on the upgrade mechanics specific to Kubernetes Deployments.
+This document focuses on upgrading NuoDB software and providing details on the upgrade mechanics specific to Kubernetes Deployments.
 
 For more information on upgrading a NuoDB database in a Physical or VMware Environments, refer to the official [NuoDB Documentation](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/upgrading-to-a-new-release/).
 The documentation in this repository expands on the product documentation and is specific to this Helm chart repository.
@@ -39,7 +39,7 @@ StatefulSet controller will proceed in the same order as pod termination (from t
 The Deployment controller will first start a new pod and wait for it to become `Ready` before shutting down an old one.
 For more information, refer to official Kubernetes documentation on [Rolling Upgrade Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment) and [Rolling Upgrade StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 Some changes do not trigger a rolling upgrade and require manual restart of the Pods.
-For example, updates on ConfigMaps that are d by the Pods.
+For example, updates on ConfigMaps that are used by the Pods.
 
 Since Kubernetes will perform a rolling upgrade for every Kubernetes workload independently, three database processes can be restarted at once.
 Upgrade without downtime is only possible if all databases in the domain have sufficient redundancy.
@@ -51,11 +51,11 @@ The default value of `--max-lost-archives` is `0`.
 - There must be more than one AP in the domain.
   >**NOTE**: To retain Raft majority during the upgrade, configure three or more APs.
 
-> **Note**: The `pendingReconnectTimeout` setting specifies the duration for which the NuoDB Admin will wait for the database processes to reconnect.
-In certain situations, the default timeout (60 sec.) may need to be increased to get a reliable upgrade.
+> **Note**: The `pendingReconnectTimeout` setting specifies how long the NuoDB Admin will wait for the database processes to reconnect.
+In certain situations, the default timeout (60 s) may need to be increased to get a reliable upgrade.
 
 The `spec.replicas` count can be configured separately for each Kubernetes workload to meet the desired redundancy requirements.
-The table below shows Several replica number examples for single cluster NuoDB deployment depending on the `max-lost-archives` setting.
+The table below shows several replica number examples for single cluster NuoDB deployment depending on the `max-lost-archives` setting.
 
 | max-lost-archives | AP | TE | HCSM | SM | Notes |
 |-------------------|----|----|------|----|-------|
@@ -73,7 +73,7 @@ Follow these best practices before upgrading to a newer NuoDB release:
 
 - Ensure that a recent valid backup is available for every database.
 For more information, refer to [NuoDB Backup and Restore in Kubernetes](./BackupAndRestore.md).
-- Determine if any NuoDB Helm charts options or NuoDB product configuration files need to be modified to take advantage of new features or changes to features.
+- Determine if any NuoDB Helm chart options or NuoDB product configuration files need modification to take advantage of new features or changes to features.
 For more information, refer to [NuoDB Helm Chart Release Notes](https://github.com/nuodb/nuodb-helm-charts/releases), [NuoDB Release Notes](https://doc.nuodb.com/nuodb/latest/release-notes/), and [NuoDB Configuration Files](https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/).
 - Check for any additional upgrade requirements in [NuoDB documentation](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/upgrading-to-a-new-release/preparing-to-upgrade/).
 - Ensure that the Kubernetes cluster has enough resources to schedule new TE Pods.
@@ -82,7 +82,7 @@ For more information, refer to [NuoDB Helm Chart Release Notes](https://github.c
 
 ### Overview
 
-NuoDB software upgrade in Kubernetes environments is done by changing the NuoDB image d by every Helm release installed with the `admin` or the `database` Helm chart.
+NuoDB software upgrade in Kubernetes environments is done by changing the NuoDB image used by every Helm release installed with the `admin` or the `database` Helm chart.
 To list all installed Helm releases in the _nuodb_ namespace, use the `helm list -n nuodb` command.
 
 The `helm upgrade <release> <chart>` command is used for upgrading to a new chart version and a new NuoDB image.
@@ -97,13 +97,13 @@ helm upgrade -n nuodb <helm_release> <helm_chart> \
 
 It is recommended to always upgrade to the latest version of NuoDB Helm charts when upgrading the NuoDB image.
 The `values.yaml` file includes values that will overwrite the default variables included in the chart.
-Update the NuoDB image either in the `values.yaml` file or set it using the `--set` option.
-The `--reuse-values` option can be used if the original `values.yaml` file is not available.
+Update the NuoDB image either in the `values.yaml` file or set it using the `set` option.
+The `reuse-values` option can be used if the original `values.yaml` file is not available.
 For more information, refer to [Helm Upgrade](https://helm.sh/docs/helm/helm_upgrade/).
 
 ## Steps to upgrade the NuoDB deployment installed with NuoDB Helm charts
 
-> **Note**: In the examples used, the Helm release installed using the `admin` chart is called _admin_, and the one installed with the `database` chart is called _database_. 
+> **Note**: In the examples, the Helm release installed using the `admin` chart is called _admin_, and the one installed with the `database` chart is called _database_. 
 
 To upgrade the NuoDB deployment installed with NuoDB Helm charts:
 ### 1. Upgrade the database
@@ -113,7 +113,7 @@ To upgrade the database, upgrade the `database` Helm releases sequentially on al
 For example:
 
 ```shell
-helm upgrade -n nuodb database nuodb/database \
+helm upgrade -n nuodb demo nuodb/database \
 --set nuodb.image.registry=docker.io \
 --set nuodb.image.repository=nuodb/nuodb \
 --set nuodb.image.tag=7.0.0 \
@@ -198,7 +198,7 @@ Process versions:
 ```
 
 After upgrading the protocol, one of the TEs will automatically restart.
-A TE selection preference can be configured using the `database.automaticProtocolUpgrade.tePreferenceQuery` option with a valid Load Balancer Query (LBQuery) expression.
+A TE selection preference can be configured using the `database.automaticProtocolUpgrade.tePreferenceQuery` option, which must be assigned a valid Load Balancer Query (LBQuery) expression.
 
 For more information, refer to [Automatic Database Protocol Upgrade](https://doc.nuodb.com/nuodb/latest/deployment-models/kubernetes-environments/kubernetes-aware-admin.html#automatic-database-protocol-upgrade).
 
@@ -216,8 +216,9 @@ Waiting for 1 pods to be ready...
 partitioned roll out complete: 2 new pods have been updated...
 ```
 
-If the rollout doesn't progress for a long time, view the list of running NuoDB pods using `kubectl get pods -n nuodb` to watch for upgrade failures.
-The upgrade may fail due to a problem with the application startup if there are `Running` pods in which containers are _not_ `Ready`, or if there are pods that are _not_ transitioning to `Running` or reporting `Error`, `ErrImagePull`, or `CrashLoopBackOff`.
+If the rollout doesn't progress for a long time, refer to the NuoDB pods using `kubectl get pods -n nuodb`.
+Watch for `Running` pods in which containers are _not_ `Ready`, which usually means that there is a problem with the application startup.
+Another indication for upgrade failure is having pods _not_ transiting to `Running` or reported `Error`, `ErrImagePull` or `CrashLoopBackOff`.
 
 The database processes and their versions can be viewed using `nuocmd show database-versions`.
 While the rolling upgrade progresses there will be more database processes using the new NuoDB release until all of them are upgraded.
