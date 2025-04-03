@@ -5,11 +5,11 @@
 A rolling upgrade updates a NuoDB domain, which may include multiple databases, to a new NuoDB release without shutting down the database(s).
 Rolling upgrades ensure continuous database availability throughout the upgrade process.
 
-A NuoDB domain deployed in Kubernetes using the NuoDB Helm charts contains multiple Helm releases.
+A NuoDB domain deployed in Kubernetes, using the NuoDB Helm charts, contains multiple Helm releases.
 The resources are deployed by the [admin](../stable/admin) and the [database](../stable/database) Helm charts.
-Depending on the database requirements, high availability configuration, and the number of target Kubernetes clusters, different types of deployment scenarios are supported:
+Depending on the database requirements, the high availability configuration, and the number of target Kubernetes clusters, different types of deployment scenarios are supported:
 
-- A domain in a single cluster with an _admin_ Helm deployment and a _database_ helm deployment
+- A domain in a single cluster with an _admin_ Helm deployment and a _database_ Helm deployment
 - A domain spread across multiple clusters, each with an _admin_ Helm deployment and _database_ Helm deployment
 - Both scenarios above could have more than one _database_ Helm deployment in the domain
 
@@ -26,7 +26,7 @@ An example of a multi-cluster NuoDB deployment scenario is shown in the diagram 
 
 ![NuoDB Deployment Example](../images/nuodb-deployment-example.png)
 
-This document focuses on upgrading NuoDB software and providing details on the upgrade mechanics specific to Kubernetes Deployments.
+This document describes the NuoDB software upgrade process and provides details on the upgrade mechanics specific to Kubernetes Deployments.
 
 For more information on upgrading a NuoDB database in a Physical or VMware Environments, refer to the official [NuoDB Documentation](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/upgrading-to-a-new-release/).
 The documentation in this repository expands on the product documentation and is specific to this Helm chart repository.
@@ -35,14 +35,14 @@ The documentation in this repository expands on the product documentation and is
 
 The Kubernetes resources described in the previous section support a rolling upgrade strategy.
 Any change on the Deployment or StatefulSet `.spec.template` YAML will trigger a rolling upgrade, causing the controller to delete and recreate its pods.
-StatefulSet controller will proceed in the same order as pod termination (from the largest ordinal to the smallest), updating each pod one at a time.
+The StatefulSet controller will proceed in the same order as pod termination (from the largest ordinal to the smallest), updating each pod one at a time.
 The Deployment controller will first start a new pod and wait for it to become `Ready` before shutting down an old one.
 For more information, refer to official Kubernetes documentation on [Rolling Upgrade Deployment](https://kubernetes.io/docs/concepts/workloads/controllers/deployment/#rolling-update-deployment) and [Rolling Upgrade StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/#rolling-updates).
 Some changes do not trigger a rolling upgrade and require manual restart of the Pods.
 For example, updates on ConfigMaps that are used by the Pods.
 
 Since Kubernetes will perform a rolling upgrade for every Kubernetes workload independently, three database processes can be restarted at once.
-Upgrade without downtime is only possible if all databases in the domain have sufficient redundancy.
+An upgrade without downtime is only possible if all databases in the domain have sufficient redundancy.
 
 Requirements for an upgrade without downtime are:
 - Every database must have more than `max-lost-archives + 1` SMs, and these SMs must be part of the same StatefulSet or on different clusters.
@@ -75,14 +75,14 @@ Follow these best practices before upgrading to a newer NuoDB release:
 For more information, refer to [NuoDB Backup and Restore in Kubernetes](./BackupAndRestore.md).
 - Determine if any NuoDB Helm chart options or NuoDB product configuration files need modification to take advantage of new features or changes to features.
 For more information, refer to [NuoDB Helm Chart Release Notes](https://github.com/nuodb/nuodb-helm-charts/releases), [NuoDB Release Notes](https://doc.nuodb.com/nuodb/latest/release-notes/), and [NuoDB Configuration Files](https://doc.nuodb.com/nuodb/latest/reference-information/configuration-files/).
-- Check for any additional upgrade requirements in [NuoDB documentation](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/upgrading-to-a-new-release/preparing-to-upgrade/).
+- Check for any additional upgrade requirements in the [NuoDB documentation](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/upgrading-to-a-new-release/preparing-to-upgrade/).
 - Ensure that the Kubernetes cluster has enough resources to schedule new TE Pods.
 
 ## Upgrading existing domains
 
 ### Overview
 
-NuoDB software upgrade in Kubernetes environments is done by changing the NuoDB image used by every Helm release installed with the `admin` or the `database` Helm chart.
+A NuoDB software upgrade in Kubernetes environments is done by changing the NuoDB image used by every Helm release installed with the `admin` or the `database` Helm chart.
 To list all installed Helm releases in the _nuodb_ namespace, use the `helm list -n nuodb` command.
 
 The `helm upgrade <release> <chart>` command is used for upgrading to a new chart version and a new NuoDB image.
@@ -97,8 +97,8 @@ helm upgrade -n nuodb <helm_release> <helm_chart> \
 
 It is recommended to always upgrade to the latest version of NuoDB Helm charts when upgrading the NuoDB image.
 The `values.yaml` file includes values that will overwrite the default variables included in the chart.
-Update the NuoDB image either in the `values.yaml` file or set it using the `set` option.
-The `reuse-values` option can be used if the original `values.yaml` file is not available.
+Update the NuoDB image either in the `values.yaml` file or set it using the `--set` option.
+The `--reuse-values` option can be used if the original `values.yaml` file is not available.
 For more information, refer to [Helm Upgrade](https://helm.sh/docs/helm/helm_upgrade/).
 
 ## Steps to upgrade the NuoDB deployment installed with NuoDB Helm charts
@@ -128,7 +128,7 @@ Before proceeding with the next cluster or with the next step, verify that the d
 
 ### 2. Upgrade the admin services
 
-Back up the durable domain state from all APs before upgrading the NuoDB Admin Tier.
+Back up the durable domain state from all APs before upgrading the NuoDB Admin tier.
 It is safe to copy the `raftlog` file while the AP is running.
 An example script to copy the file locally from all APs in a single cluster is shown below.
 
@@ -166,9 +166,9 @@ A new version of NuoDB database software may also introduce a new version of the
 NuoDB supports explicit database protocol version upgrade which is performed after upgrading the NuoDB image for all database processes.
 For more information on how to upgrade the database protocol manually, refer to [Upgrade the Database Protocol](https://doc.nuodb.com/nuodb/latest/deployment-models/physical-or-vmware-environments-with-nuodb-admin/installing-nuodb/upgrade-to-a-new-release/upgrade-the-database-protocol).
 
-To simplify the NuoDB version rollout, Kubernetes Aware Admin (KAA) is used to automatically upgrade database protocol and restart a Transaction Engine (TE) as an upgrade finalization step.
+To simplify the NuoDB version rollout, the Kubernetes Aware Admin (KAA) is used to automatically upgrade database protocol and restart a Transaction Engine (TE) as an upgrade finalization step.
 The feature is available in NuoDB Helm charts 3.4.0 and later.
-To enable automatic database protocol upgrade for a database Helm release, use the `set database.automaticProtocolUpgrade.enabled=true` option.
+To enable automatic database protocol upgrade for a database Helm release, use the `--set database.automaticProtocolUpgrade.enabled=true` option.
 
 For example:
 
@@ -188,7 +188,6 @@ For example:
 ```shell
 $ kubectl exec admin-nuodb-cluster0-0 -- nuocmd show database-versions --db-name demo
 
-kubectl exec admin-nuodb-cluster0-0 -- nuocmd show database-versions --db-name demo
 Defaulted container "admin" out of: admin, nuocollector, nuocollector-config, init-disk (init)
 effective version ID: 1769472, effective version: 7.0, max version ID: 1769472
 Available versions:
@@ -218,7 +217,7 @@ partitioned roll out complete: 2 new pods have been updated...
 
 If the rollout doesn't progress for a long time, refer to the NuoDB pods using `kubectl get pods -n nuodb`.
 Watch for `Running` pods in which containers are _not_ `Ready`, which usually means that there is a problem with the application startup.
-Another indication for upgrade failure is having pods _not_ transiting to `Running` or reported `Error`, `ErrImagePull` or `CrashLoopBackOff`.
+Another indication of upgrade failure is having pods _not_ transiting to `Running` or reported `Error`, `ErrImagePull` or `CrashLoopBackOff`.
 
 The database processes and their versions can be viewed using `nuocmd show database-versions`.
 While the rolling upgrade progresses there will be more database processes using the new NuoDB release until all of them are upgraded.
@@ -239,9 +238,9 @@ Process versions:
 
 ## Rollback
 
-NuoDB Admin Tier and database rollback can be performed separately as needed.
+NuoDB Admin tier and database rollback can be performed separately as needed.
 
-It is possible to downgrade the database between NuoDB maintenance releases within the same `major.minor` release.
+It is possible to downgrade a database between NuoDB maintenance releases within the same `major.minor` release.
 It is also possible to downgrade between NuoDB major and minor releases if the database protocol has not yet been upgraded.
 
 > **IMPORTANT**: After the database protocol version has been upgraded, the NuoDB Archive cannot be used with NuoDB software versions that only support the previous database protocol version.
@@ -249,11 +248,11 @@ As a result, downgrading after the database protocol version has been changed wi
 This results in a loss of data that was produced during the upgrade itself.
 Make sure that a recent and valid database backup is available before processing with the NuoDB upgrade and be aware of this danger when enabling _Automatic Database Protocol Upgrade_.
 
-It is possible to downgrade the NuoDB Admin Tier during the rolling upgrade and before all APs are upgraded to the new release.
+It is possible to downgrade the NuoDB Admin tier during the rolling upgrade and before all APs are upgraded to the new release.
 The AP will automatically upgrade its local server version until all APs in the domain start using the newest possible version.
 
 > **IMPORTANT**: After the effective version of the domain has been upgraded, new Raft commands and features will start to be exercised resulting in committing new commands in the durable domain state.
-To downgrade the NuoDB Admin Tier after this happens, the corresponding `raftlog` backup for each AP should be restored.
+To downgrade the NuoDB Admin tier after this happens, the corresponding `raftlog` backup for each AP should be restored.
 If there is no backup the NuoDB domain state should be reset which will require all database processes to be restarted.
 
 Kubernetes will not automatically perform a rollback if a rollout is stuck and the pods using the new image are not _ready_ or the cluster doesn't have enough resources for the new Pods to be scheduled.
