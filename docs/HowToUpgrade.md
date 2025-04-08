@@ -49,7 +49,7 @@ Requirements for an upgrade without downtime are:
 The default value of `--max-lost-archives` is `0`.
 - Every database must have more than one TE that can be deployed in one or multiple TE groups.
 - There must be more than one AP in the domain.
-  >**NOTE**: To retain Raft majority during the upgrade, configure three or more APs.
+  >**NOTE**: To retain the Raft majority during the upgrade, configure three or more APs.
 
 > **Note**: The `pendingReconnectTimeout` setting specifies how long the NuoDB Admin will wait for the database processes to reconnect.
 In certain situations, the default timeout (60 s) may need to be increased to get a reliable upgrade.
@@ -103,7 +103,7 @@ For more information, refer to [Helm Upgrade](https://helm.sh/docs/helm/helm_upg
 
 ## Steps to upgrade the NuoDB deployment installed with NuoDB Helm charts
 
-> **Note**: In the examples, the Helm release installed using the `admin` chart is called _admin_, and the one installed with the `database` chart is called _database_. 
+> **Note**: In the examples, the Helm release installed using the `admin` chart is called _admin_, and the one installed with the `database` chart is called _demo_. 
 
 To upgrade the NuoDB deployment installed with NuoDB Helm charts:
 ### 1. Upgrade the database
@@ -123,10 +123,10 @@ helm upgrade -n nuodb demo nuodb/database \
 Monitor the rolling upgrade status for TE, SM, and HCSM database resources as described in [Monitoring Upgrade](#monitoring-upgrade).
 Before proceeding with the next cluster or with the next step, verify that the database processes use the newly specified image.
 
-> **Note**: During rolling upgrade of Pods, the database remains available.
+> **Note**: During the rolling upgrade of Pods, the database remains available.
 >  However, the application must be able to handle transient connectivity exceptions and re-balance connections periodically.
 
-### 2. Upgrade the admin services
+### 2. Upgrade NuoDB Admin
 
 Back up the durable domain state from all APs before upgrading the NuoDB Admin tier.
 It is safe to copy the `raftlog` file while the AP is running.
