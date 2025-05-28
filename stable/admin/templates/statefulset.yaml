@@ -12,19 +12,17 @@ metadata:
     {{- end }}
   labels:
     {{- include "admin.resourceLabels" . | nindent 4 }}
-    component: admin
     {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
     bootstrapServers: {{ default 0 .Values.admin.bootstrapServers | quote }}
     {{- end }}
   name: {{ template "admin.fullname" . }}
 spec:
-  serviceName: {{ .Values.admin.domain }}
+  serviceName: {{ include "admin.domainName" . }}
   podManagementPolicy: Parallel
-  replicas: {{ .Values.admin.replicas }}
+  replicas: {{ include "admin.replicas" . }}
   selector:
     matchLabels:
-      app: {{ template "admin.fullname" . }}
-      component: admin
+      {{- include "admin.selectorLabels" . | nindent 6 }}
   template:
     metadata:
       name: {{ template "admin.fullname" . }}
@@ -41,16 +39,16 @@ spec:
 {{ toYaml .Values.admin.podAnnotations | trim | indent 8}}
       {{- end }}
       labels:
-        {{- include "admin.resourceLabels" . | nindent 8 }}
-        component: admin
+        {{- include "admin.podLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       priorityClassName: {{ default "" .Values.admin.priorityClass }}
-      {{- include "securityContext" . | indent 6 }}
+      {{- include "admin.securityContext" . | indent 6 }}
       {{- if .Values.admin.topologySpreadConstraints }}
       topologySpreadConstraints:
 {{ tpl .Values.admin.topologySpreadConstraints . | trim | indent 8 }}
       {{- end }}
+      {{- include "admin.podSpecExtras" . | trim | nindent 6 }}
       {{- with .Values.admin.nodeSelector }}
       nodeSelector:
 {{ toYaml . | trim | indent 8 }}
@@ -99,7 +97,7 @@ spec:
         - { containerPort: 48004, protocol: TCP }
         - { containerPort: 48005, protocol: TCP }
         resources:
-{{ toYaml .Values.admin.resources | trim | indent 10 }}
+{{ ( include "admin.resources" . ) | trim | indent 10 }}
     {{- include "admin.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -174,7 +172,7 @@ spec:
           {{- range $label, $val := .Values.admin.adminLabels}}
           - "adminLabels.labels/{{$label}}={{$val}}"
           {{- end }}
-        {{- include "sc.containerSecurityContext" . | indent 8 }}
+        {{- include "admin.sc.containerSecurityContext" . | indent 8 }}
         {{- if eq (include "defaulttrue" .Values.admin.livenessProbe.enabled) "true" }}
         livenessProbe:
           initialDelaySeconds: {{ default 60 .Values.admin.livenessProbe.initialDelaySeconds }}
@@ -244,7 +242,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
-      {{- include "nuodb.sidecar.collector" . | nindent 6 }}
+      {{- include "admin.nuodb.sidecar.collector" . | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.admin.tde }}
@@ -293,7 +291,7 @@ spec:
   - metadata:
       name: raftlog
       labels:
-        {{- include "admin.resourceLabels" . | nindent 8 }}
+        {{- include "admin.volumeLabels" . | nindent 8 }}
     spec:
     {{- if .Values.admin.persistence.storageClass }}
       {{- if (eq "-" .Values.admin.persistence.storageClass) }}

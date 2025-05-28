@@ -42,7 +42,7 @@ spec:
     spec:
       template:
         spec:
-          {{- include "securityContext" . | indent 10 }}
+          {{- include "database.securityContext" . | indent 10 }}
           containers:
           - name: nuodb
             image: {{ template "nuodb.image" . }}
@@ -52,7 +52,7 @@ spec:
             - "--type"
             - "full"
             - "--db-name"
-            - "{{ .Values.database.name }}"
+            - "{{ include "database.dbName" . }}"
             - "--group"
             - "{{ $backupGroup }}"
             - "--timeout"
@@ -83,12 +83,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - { name: DB_NAME,             value: "{{ .Values.database.name }}"     }
+            - { name: DB_NAME,             value: "{{ include "database.dbName" . }}"     }
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             {{- include "database.env" . | nindent 12 }}
-            {{- include "sc.containerSecurityContext" . | indent 12 }}
+            {{- include "database.sc.containerSecurityContext" . | indent 12 }}
             resources:
             {{- toYaml .Values.database.sm.hotCopy.jobResources | trim | nindent 14 }}
             volumeMounts:
@@ -151,7 +151,7 @@ spec:
     spec:
       template:
         spec:
-          {{- include "securityContext" . | indent 10 }}
+          {{- include "database.securityContext" . | indent 10 }}
           containers:
           - name: nuodb
             image: {{ template "nuodb.image" . }}
@@ -161,7 +161,7 @@ spec:
             - "--type"
             - "incremental"
             - "--db-name"
-            - "{{ .Values.database.name }}"
+            - "{{ include "database.dbName" . }}"
             - "--group"
             - "{{ $backupGroup }}"
             - "--timeout"
@@ -188,12 +188,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - { name: DB_NAME,             value: "{{ .Values.database.name }}"     }
+            - { name: DB_NAME,             value: "{{ include "database.dbName" . }}"     }
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             {{- include "database.env" . | nindent 12 }}
-            {{- include "sc.containerSecurityContext" . | indent 12 }}
+            {{- include "database.sc.containerSecurityContext" . | indent 12 }}
             resources:
             {{- toYaml .Values.database.sm.hotCopy.jobResources | trim | nindent 14 }}
             volumeMounts:
@@ -258,7 +258,7 @@ spec:
     spec:
       template:
         spec:
-          {{- include "securityContext" . | indent 10 }}
+          {{- include "database.securityContext" . | indent 10 }}
           containers:
           - name: nuodb
             image: {{ template "nuodb.image" . }}
@@ -268,7 +268,7 @@ spec:
             - "--type"
             - "journal"
             - "--db-name"
-            - "{{ .Values.database.name }}"
+            - "{{ include "database.dbName" . }}"
             - "--group"
             - "{{ $backupGroup }}"
             - "--timeout"
@@ -295,12 +295,12 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
-            - { name: DB_NAME,             value: "{{ .Values.database.name }}"     }
+            - { name: DB_NAME,             value: "{{ include "database.dbName" . }}"     }
             - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
             - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
             - { name: BACKUP_DIR,          value: "{{ .Values.database.sm.hotCopy.backupDir }}" }
             {{- include "database.env" . | nindent 12 }}
-            {{- include "sc.containerSecurityContext" . | indent 12 }}
+            {{- include "database.sc.containerSecurityContext" . | indent 12 }}
             resources:
             {{- toYaml .Values.database.sm.hotCopy.jobResources | trim | nindent 14 }}
             volumeMounts:

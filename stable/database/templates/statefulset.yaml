@@ -15,14 +15,14 @@ metadata:
     role: nohotcopy
   name: {{ include "database.statefulset.name" (printf "sm-%s" (include "database.fullname" .)) }}
 spec:
-  replicas: {{ .Values.database.sm.noHotCopy.replicas }}
+  replicas: {{ include "database.sm.noHotCopy.replicas" . }}
   selector:
     matchLabels:
-      app: {{ template "database.fullname" . }}
+      {{- include "database.selectorLabels" . | nindent 6 }}
       component: sm
       role: nohotcopy
   podManagementPolicy: Parallel
-  serviceName: {{ .Values.database.name }}
+  serviceName: {{ include "database.dbName" . }}
   template:
     metadata:
       annotations:
@@ -36,7 +36,7 @@ spec:
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.podLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
         component: sm
         role: nohotcopy
@@ -46,7 +46,8 @@ spec:
       {{- if .Values.database.priorityClasses }}
       priorityClassName: {{ default "" .Values.database.priorityClasses.sm }}
       {{- end }}
-      {{- include "securityContext" . | indent 6 }}
+      {{- include "database.securityContext" . | indent 6 }}
+      {{- include "database.podSpecExtras" . | trim | nindent 6 }}
       {{- if .Values.database.sm.topologySpreadConstraints }}
       topologySpreadConstraints:
 {{ tpl .Values.database.sm.topologySpreadConstraints . | trim | indent 8 }}
@@ -101,7 +102,7 @@ spec:
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
         args:
-          - "nuosm"
+          - {{ include "database.sm.entryPoint" . | trim | quote }}
           - "--servers-ready-timeout"
           - "300"
     {{- if .Values.database.isRestore }}
@@ -112,7 +113,7 @@ spec:
           - "{{ .Values.admin.affinityLabels }}"
           {{- end }}
           - "--options"
-          - "mem {{ .Values.database.sm.resources.requests.memory}} {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
+          - "mem $(MEMORY_REQUEST) {{ include "opt.key-values" .Values.database.sm.engineOptions }}"
     {{- $labels := printf "%s %s" (include "database.storageGroup.label" .) (include "opt.key-values" .Values.database.sm.labels) -}}
     {{- if trim $labels }}
           - "--labels"
@@ -124,7 +125,7 @@ spec:
     {{- end }}
     {{- include "database.storageGroup.args" . | indent 10 }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
-    {{- include "sc.containerSecurityContext" . | indent 8 }}
+    {{- include "database.sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -143,6 +144,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: MEMORY_REQUEST
+          valueFrom:
+            resourceFieldRef:
+              containerName: engine
+              resource: requests.memory
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
@@ -169,7 +175,7 @@ spec:
             secretKeyRef:
               name: {{ template "database.secretName" . }}
               key: database-restore-credentials
-        - { name: NUODB_DOMAIN,        value: "{{ .Values.admin.domain }}" }
+        - { name: NUODB_DOMAIN,        value: "{{ include "admin.domainName" . }}" }
         - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
         - { name: COMPONENT_NAME,      value: "sm" }
@@ -194,7 +200,7 @@ spec:
         - containerPort: 48006
           protocol: TCP
         resources:
-        {{- toYaml .Values.database.sm.resources | trim | nindent 10 }}
+        {{- ( include "database.sm.resources" . ) | trim | nindent 10 }}
         volumeMounts:
         {{- with .Values.database.configFiles }}
         {{- range $key, $val := . }}
@@ -237,9 +243,9 @@ spec:
         {{- end }}
         {{- if .Values.admin.tde }}
         {{- if .Values.admin.tde.secrets }}
-        {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+        {{- if hasKey .Values.admin.tde.secrets ( include "database.dbName" . ) }}
         {{- range $dbName, $secret := .Values.admin.tde.secrets }}
-        {{- if eq $dbName $.Values.database.name }}
+        {{- if eq $dbName ( include "database.dbName" $ ) }}
         - name: tde-volume-{{ $dbName }}
           mountPath: {{ default "/etc/nuodb/tde" $.Values.admin.tde.storagePasswordsDir }}/{{ $dbName }}
           readOnly: true
@@ -248,6 +254,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
@@ -280,16 +287,17 @@ spec:
             value: {{ .Values.database.backupHooks.timeout | quote }}
           {{- end }}
           - name: NUODB_ARCHIVE_DIR
-            value: {{ printf "/mnt/archive/%s/%s" .Values.admin.domain .Values.database.name }}
+            value: {{ printf "/mnt/archive/%s/%s" ( include "admin.domainName" . ) ( include "database.dbName" . ) }}
           {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
           - name: NUODB_JOURNAL_DIR
-            value: {{ printf "/mnt/journal/%s/%s" .Values.admin.domain .Values.database.name }}
+            value: {{ printf "/mnt/journal/%s/%s" ( include "admin.domainName" . ) ( include "database.dbName" . ) }}
           {{- end }}
           {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
           {{- end }}
+          {{- include "database.backupHooks.env" . | indent 10 }}
         resources:
-        {{- toYaml .Values.database.backupHooks.resources | trim | nindent 10 }}
+        {{- ( include "database.backupHooks.resources" . ) | trim | nindent 10 }}
         {{- if and
             (eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true")
             (eq (include "backupHooks.freezeMode" .) "fsfreeze") }}
@@ -298,7 +306,7 @@ spec:
           runAsUser: 0
           runAsGroup: 0
         {{- else }}
-        {{- include "sc.containerSecurityContext" . | indent 8 }}
+        {{- include "database.sc.containerSecurityContext" . | indent 8 }}
         {{- end }}
         volumeMounts:
         - name: backup-hooks
@@ -323,7 +331,8 @@ spec:
         {{- end }}
         {{- end }}
       {{- end }}
-      {{- include "nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
+      {{- include "database.nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
+      {{- include "database.sm.extraSidecars" . | nindent 6  }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}
@@ -333,7 +342,7 @@ spec:
       {{- end }}
       {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
       - name: eph-volume
-        {{- include "database.ephemeralVolume" (list . .Values.database.sm) | indent 8 }}
+        {{- include "database.ephemeralVolume" (list . .Values.database.sm "sm") | indent 8 }}
       {{- end }}
       - name: nuosm
         configMap:
@@ -356,9 +365,9 @@ spec:
       {{- include "database.tlsVolume" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}
-      {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+      {{- if hasKey .Values.admin.tde.secrets ( include "database.dbName" . ) }}
       {{- range $dbName, $secret := .Values.admin.tde.secrets }}
-      {{- if eq $dbName $.Values.database.name }}
+      {{- if eq $dbName ( include "database.dbName" $ ) }}
       - name: tde-volume-{{ $dbName }}
         secret:
           secretName: {{ $secret }}
@@ -367,11 +376,12 @@ spec:
       {{- end }}
       {{- end }}
       {{- end }}
+      {{- include "database.sm.extraVolumes" . | nindent 6  }}
   volumeClaimTemplates:
   - metadata:
       name: archive-volume
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.volumeLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       {{- $includeDataSource := eq (include "defaultfalse" .Values.database.persistence.preprovisionVolumes) "false" -}}
@@ -380,7 +390,7 @@ spec:
   - metadata:
       name: journal-volume
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.volumeLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       {{- include "database.journalPvcSpec" (list . $includeDataSource) | nindent 6 }}
@@ -389,7 +399,7 @@ spec:
   - metadata:
       name: log-volume
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.volumeLabels" . | nindent 8 }}
     spec:
       accessModes:
       {{- range .Values.database.sm.logPersistence.accessModes }}
@@ -423,14 +433,14 @@ metadata:
     role: hotcopy
   name: {{ include "database.statefulset.name" (printf "sm-%s-hotcopy" (include "database.fullname" .)) }}
 spec:
-  replicas: {{ .Values.database.sm.hotCopy.replicas }}
+  replicas: {{ include "database.sm.hotCopy.replicas" . }}
   selector:
     matchLabels:
-      app: {{ template "database.fullname" . }}
+      {{- include "database.selectorLabels" . | nindent 6 }}
       component: sm
       role: hotcopy
   podManagementPolicy: Parallel
-  serviceName: {{ .Values.database.name }}
+  serviceName: {{ include "database.dbName" . }}
   template:
     metadata:
       annotations:
@@ -446,7 +456,7 @@ spec:
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.podLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
         component: sm
         role: hotcopy
@@ -456,7 +466,8 @@ spec:
       {{- if .Values.database.priorityClasses }}
       priorityClassName: {{ default "" .Values.database.priorityClasses.sm }}
       {{- end }}
-      {{- include "securityContext" . | indent 6 }}
+      {{- include "database.securityContext" . | indent 6 }}
+      {{- include "database.podSpecExtras" . | trim | nindent 6 }}
       {{- if .Values.database.sm.topologySpreadConstraints }}
       topologySpreadConstraints:
 {{ tpl .Values.database.sm.topologySpreadConstraints . | trim | indent 8 }}
@@ -513,7 +524,7 @@ spec:
         image: {{ template "nuodb.image" . }}
         imagePullPolicy: {{ .Values.nuodb.image.pullPolicy }}
         args:
-          - "nuosm"
+          - {{ include "database.sm.entryPoint" . | trim | quote }}
           - "--servers-ready-timeout"
           - "300"
           {{- if .Values.admin.affinityLabels}}
@@ -521,7 +532,7 @@ spec:
           - "{{ .Values.admin.affinityLabels }}"
           {{- end }}
           - "--options"
-          - "mem {{ .Values.database.sm.resources.requests.memory}} {{- if and (eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true") (eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true") }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
+          - "mem $(MEMORY_REQUEST) {{- if and (eq (include "defaulttrue" .Values.database.sm.hotCopy.enableBackups) "true") (eq (include "defaultfalse" .Values.database.sm.hotCopy.journalBackup.enabled) "true") }} journal-hot-copy enable {{- end }} {{- include "opt.key-values" .Values.database.sm.engineOptions}}"
           - "--labels"
           - "role hotcopy backup {{ include "hotcopy.groupPrefix" . }} {{ include "database.storageGroup.label" . }} {{- include "opt.key-values" .Values.database.sm.labels }}"
 {{- with .Values.database.options}}
@@ -530,7 +541,7 @@ spec:
 {{- end}}
     {{- include "database.storageGroup.args" . | indent 10 }}
     {{- include "database.otherOptions" .Values.database.sm.otherOptions | indent 10 }}
-    {{- include "sc.containerSecurityContext" . | indent 8 }}
+    {{- include "database.sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
         - name: NODE_NAME
@@ -549,6 +560,11 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.namespace
+        - name: MEMORY_REQUEST
+          valueFrom:
+            resourceFieldRef:
+              containerName: engine
+              resource: requests.memory
         - name: DB_NAME
           valueFrom:
             secretKeyRef:
@@ -580,7 +596,7 @@ spec:
             secretKeyRef:
               name: {{ template "database.secretName" . }}
               key: database-backup-credentials
-        - { name: NUODB_DOMAIN,      value: "{{ .Values.admin.domain }}" }
+        - { name: NUODB_DOMAIN,      value: "{{ include "admin.domainName" . }}" }
         - { name: NUOCMD_API_SERVER, value: "{{ template "admin.address" . }}:8888" }
         - { name: PEER_ADDRESS,      value: "{{ template "admin.address" . }}" }
         - { name: COMPONENT_NAME,    value: "sm" }
@@ -605,7 +621,7 @@ spec:
         - containerPort: 48006
           protocol: TCP
         resources:
-{{ toYaml .Values.database.sm.resources | trim | indent 10 }}
+{{ ( include "database.sm.resources" . ) | trim | indent 10 }}
         volumeMounts:
         {{- with .Values.database.configFiles }}
         {{- range $key, $val := . }}
@@ -650,9 +666,9 @@ spec:
         {{- end }}
         {{- if .Values.admin.tde }}
         {{- if .Values.admin.tde.secrets }}
-        {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+        {{- if hasKey .Values.admin.tde.secrets ( include "database.dbName" . ) }}
         {{- range $dbName, $secret := .Values.admin.tde.secrets }}
-        {{- if eq $dbName $.Values.database.name }}
+        {{- if eq $dbName ( include "database.dbName" $ ) }}
         - name: tde-volume-{{ $dbName }}
           mountPath: {{ default "/etc/nuodb/tde" $.Values.admin.tde.storagePasswordsDir }}/{{ $dbName }}
           readOnly: true
@@ -661,6 +677,7 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
@@ -675,7 +692,7 @@ spec:
           {{- else }}
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
           {{- end }}
-      {{- include "nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
+      {{- include "database.nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
       {{- if .Values.database.configFiles }}
@@ -685,7 +702,7 @@ spec:
       {{- end }}
       {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
       - name: eph-volume
-        {{- include "database.ephemeralVolume" (list . .Values.database.sm) | indent 8 }}
+        {{- include "database.ephemeralVolume" (list . .Values.database.sm "sm") | indent 8 }}
       {{- end }}
       - name: nuosm
         configMap:
@@ -702,9 +719,9 @@ spec:
       {{- include "database.tlsVolume" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}
-      {{- if hasKey .Values.admin.tde.secrets .Values.database.name }}
+      {{- if hasKey .Values.admin.tde.secrets ( include "database.dbName" . ) }}
       {{- range $dbName, $secret := .Values.admin.tde.secrets }}
-      {{- if eq $dbName $.Values.database.name }}
+      {{- if eq $dbName ( include "database.dbName" $ ) }}
       - name: tde-volume-{{ $dbName }}
         secret:
           secretName: {{ $secret }}
@@ -713,11 +730,12 @@ spec:
       {{- end }}
       {{- end }}
       {{- end }}
+      {{- include "database.sm.extraVolumes" . | nindent 6  }}
   volumeClaimTemplates:
   - metadata:
       name: archive-volume
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.volumeLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -735,7 +753,7 @@ spec:
       {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
         matchLabels:
-          database: {{ .Values.database.name }}
+          database: {{ include "database.dbName" . }}
       {{- end }}
       resources:
         requests:
@@ -744,7 +762,7 @@ spec:
   - metadata:
       name: journal-volume
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.volumeLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -762,7 +780,7 @@ spec:
       {{- if .Values.database.isManualVolumeProvisioning }}
       selector:
         matchLabels:
-          database: {{ .Values.database.name }}
+          database: {{ include "database.dbName" . }}
       {{- end }}
       resources:
         requests:
@@ -771,7 +789,7 @@ spec:
   - metadata:
       name: backup-volume
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.volumeLabels" . | nindent 8 }}
         {{- include "database.storageGroupLabels" . | nindent 8 }}
     spec:
       accessModes:
@@ -792,7 +810,7 @@ spec:
   - metadata:
       name: log-volume
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.sm.volumeLabels" . | nindent 8 }}
     spec:
       accessModes:
       {{- range .Values.database.sm.logPersistence.accessModes }}
