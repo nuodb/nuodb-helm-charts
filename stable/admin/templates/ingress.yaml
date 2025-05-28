@@ -22,7 +22,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: {{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.clusterip }}
+            name: {{ include "admin.domainName" . }}-{{ .Values.admin.serviceSuffix.clusterip }}
             port:
               name: 8888-tcp
 {{- end }}
@@ -50,7 +50,7 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: {{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.clusterip }}
+            name: {{ include "admin.domainName" . }}-{{ .Values.admin.serviceSuffix.clusterip }}
             port:
               name: 48004-tcp
 {{- end }}
