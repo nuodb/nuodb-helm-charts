@@ -609,14 +609,14 @@ Renders the labels for TE pods deployed by this Helm chart
 {{- end -}}
 
 {{/*
-Renders the labels for volumes deployed by this Helm chart
+Renders the labels for SM pod volumes deployed by this Helm chart
 */}}
 {{- define "database.sm.volumeLabels" -}}
 {{- include "database.resourceLabels" .}}
 {{- end -}}
 
 {{/*
-Renders the labels for volumes deployed by this Helm chart
+Renders the labels for TE pod volumes deployed by this Helm chart
 */}}
 {{- define "database.te.volumeLabels" -}}
 {{- include "database.resourceLabels" .}}
@@ -1148,7 +1148,7 @@ Nothing here yet, but this is overridden in the 3DS version.
 {{- end }}
 
 {{/*
-SM resources requested and limited
+Backup hooks sidecar container resources requested and limited
 */}}
 {{- define "database.backupHooks.resources" -}}
 {{- toYaml .Values.database.backupHooks.resources  -}}
