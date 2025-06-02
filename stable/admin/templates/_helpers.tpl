@@ -375,7 +375,7 @@ Renders the labels for all resources deployed by this Helm chart
 {{- define "admin.labels" -}}
 {{- if not .Root}}{{fail "<nuodb.env> Root is required"}}{{end}}
 {{- $extras := .ExtraLabels | default (dict) -}}
-{{ include "admin.selectorLabels" .Root }}
+app: {{ template "admin.fullname" .Root }}
 group: nuodb
 domain: {{ include "admin.domainName" .Root }}
 chart: {{ template "admin.chart" .Root }}

@@ -12,6 +12,7 @@ metadata:
     {{- end }}
   labels:
     {{- include "admin.resourceLabels" . | nindent 4 }}
+    {{ include "admin.selectorLabels" . | nindent 4 }}
     {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
     bootstrapServers: {{ default 0 .Values.admin.bootstrapServers | quote }}
     {{- end }}
@@ -40,6 +41,7 @@ spec:
       {{- end }}
       labels:
         {{- include "admin.podLabels" . | nindent 8 }}
+        {{ include "admin.selectorLabels" . | nindent 8 }}
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       priorityClassName: {{ default "" .Values.admin.priorityClass }}
