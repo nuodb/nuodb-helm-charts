@@ -44,7 +44,7 @@ Also, we can't use a single if because lazy evaluation is not an option
 {{- end -}}
 {{- end -}}
 
-{{- define "nuodb.sidecar.collector" -}}
+{{- define "admin.nuodb.sidecar.collector" -}}
 {{- if .Values.nuocollector }}
 {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" }}
 - name: nuocollector
@@ -53,7 +53,7 @@ Also, we can't use a single if because lazy evaluation is not an option
   tty: true
   resources:
   {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
-  {{- include "sc.containerSecurityContext" . | indent 2 }}
+  {{- include "admin.sc.containerSecurityContext" . | indent 2 }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
     name: eph-volume
@@ -70,7 +70,7 @@ Also, we can't use a single if because lazy evaluation is not an option
   imagePullPolicy: {{ $.Values.nuocollector.watcher.pullPolicy }}
   resources:
   {{- toYaml .Values.nuocollector.resources | trim | nindent 4 }}
-  {{- include "sc.containerSecurityContext" . | indent 2 }}
+  {{- include "admin.sc.containerSecurityContext" . | indent 2 }}
   env:
   - name: LABEL
     value: "nuodb.com/nuocollector-plugin in ({{ template "admin.fullname" $ }}, insights)"

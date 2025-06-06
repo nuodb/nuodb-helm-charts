@@ -1,4 +1,4 @@
-{{- define "nuodb.sidecar.collector" -}}
+{{- define "database.nuodb.sidecar.collector" -}}
 {{- $ := index . 0 -}}
 {{- $engine := index . 1 -}}
 {{- if $.Values.nuocollector }}
@@ -9,7 +9,7 @@
   tty: true
   resources:
   {{- toYaml $.Values.nuocollector.resources | trim | nindent 4 }}
-  {{- include "sc.containerSecurityContext" $ | indent 2 }}
+  {{- include "database.sc.containerSecurityContext" $ | indent 2 }}
   {{- with $.Values.nuocollector.env }}
   env:
   {{- toYaml . | nindent 2 }}
@@ -34,7 +34,7 @@
   imagePullPolicy: {{ $.Values.nuocollector.watcher.pullPolicy }}
   resources:
   {{- toYaml $.Values.nuocollector.resources | trim | nindent 4 }}
-  {{- include "sc.containerSecurityContext" $ | indent 2 }}
+  {{- include "database.sc.containerSecurityContext" $ | indent 2 }}
   env:
   - name: LABEL
     value: "nuodb.com/nuocollector-plugin in ({{ template "database.fullname" $ }}, insights)"
