@@ -8,7 +8,7 @@
 set -ex
 
 # Download kubectl, which is a requirement for using minikube.
-curl -Lo kubectl https://storage.googleapis.com/kubernetes-release/release/v"${KUBERNETES_VERSION}"/bin/linux/amd64/kubectl && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
+curl -LO "https://dl.k8s.io/release/v${KUBERNETES_VERSION}/bin/linux/amd64/kubectl" && chmod +x kubectl && sudo mv kubectl /usr/local/bin/
 
 # Download Helm
 wget https://get.helm.sh/helm-"${HELM_VERSION}"-linux-amd64.tar.gz -O /tmp/helm.tar.gz
@@ -26,7 +26,7 @@ if [[ "$REQUIRES_MINIKUBE" == "true" ]]; then
   curl -Lo minikube https://storage.googleapis.com/minikube/releases/v"${MINIKUBE_VERSION}"/minikube-linux-amd64 && chmod +x minikube && sudo mv minikube /usr/local/bin/
 
   # start minikube
-  minikube start --vm-driver=docker --kubernetes-version=v"${KUBERNETES_VERSION}" --cpus=max --memory=max
+  minikube start --vm-driver=docker --kubernetes-version=v"${KUBERNETES_VERSION}" --cpus=max --memory=max --cni="${MINIKUBE_CNI_DRIVER:-auto}"
   minikube status
   kubectl cluster-info
 

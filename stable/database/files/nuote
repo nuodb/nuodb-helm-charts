@@ -8,7 +8,7 @@
 
 get_pod() {
     local KUBEDIR=/var/run/secrets/kubernetes.io/serviceaccount
-    curl -s -H "Authorization: Bearer $(cat "$KUBEDIR/token")" --cacert "$KUBEDIR/ca.crt" "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat "$KUBEDIR/namespace")/pods/$POD_NAME"
+    curl -s -H "Authorization: Bearer $(cat "$KUBEDIR/token")" --cacert "$KUBEDIR/ca.crt" "https://$KUBERNETES_SERVICE_HOST:$KUBERNETES_SERVICE_PORT/api/v1/namespaces/$(cat "$KUBEDIR/namespace")/pods/$POD_NAME" --connect-timeout 5
 }
 
 # poll pod status until container shows as started and container and image IDs
