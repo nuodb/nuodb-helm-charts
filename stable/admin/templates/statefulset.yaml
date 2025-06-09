@@ -12,7 +12,7 @@ metadata:
     {{- end }}
   labels:
     {{- include "admin.resourceLabels" . | nindent 4 }}
-    {{ include "admin.selectorLabels" . | nindent 4 }}
+    component: admin
     {{- if (eq (default "cluster0" .Values.cloud.cluster.name) (default "cluster0" .Values.cloud.cluster.entrypointName)) }}
     bootstrapServers: {{ default 0 .Values.admin.bootstrapServers | quote }}
     {{- end }}
