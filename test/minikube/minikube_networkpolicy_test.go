@@ -24,15 +24,8 @@ import (
 func TestConnectivityWithNetworkPolicy(t *testing.T) {
 	testlib.SkipTestOnNuoDBVersionCondition(t, "< 8.0.0")
 
-	// Create nuodb/admin release with two APs and wait for them to become ready
 	defer testlib.VerifyTeardown(t)
-	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
-	adminReleaseName, namespace := testlib.StartAdmin(t, &helm.Options{
-		SetValues: map[string]string{
-			"admin.replicas": "2",
-		},
-	}, 2, "")
-	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
+	namespace := testlib.CreateNamespaceForTest(t, true)
 
 	// Create network policy that limits connectivity to group=nuodb
 	kubeOptions := k8s.NewKubectlOptions("", "", namespace)
@@ -46,6 +39,15 @@ func TestConnectivityWithNetworkPolicy(t *testing.T) {
 	}()
 	_, err = networkPolicyClient.Create(ctx, networkPolicy, metav1.CreateOptions{})
 	require.NoError(t, err)
+
+	// Create nuodb/admin release with two APs and wait for them to become ready
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	adminReleaseName, _ := testlib.StartAdmin(t, &helm.Options{
+		SetValues: map[string]string{
+			"admin.replicas": "2",
+		},
+	}, 2, namespace)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
 
 	// Create nuodb/database release and wait for database to become ready
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
