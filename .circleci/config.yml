@@ -102,9 +102,10 @@ jobs:
       MINIKUBE_WANTUPDATENOTIFICATION: false
       MINIKUBE_WANTREPORTERRORPROMPT: false
       MINIKUBE_CNI_DRIVER: "cilium"
+      KUBECTL_REMOTE_COMMAND_WEBSOCKETS: "false"  # workaround for issue affecting `kubectl exec` ("Unknown stream id 1, discarding message")
       AZURE_AKS_RESOURCE_GROUP: "orca-ying-yang"
       CLUSTER_CONTEXTS: "yin yang"
-      TEST_RESULTS: /tmp/test-results # path to where test results will be saved
+      TEST_RESULTS: /tmp/test-results  # path to where test results will be saved
 
     steps:
       - checkout
