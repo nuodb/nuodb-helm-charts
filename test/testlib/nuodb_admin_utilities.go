@@ -19,8 +19,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-func getFunctionCallerName() string {
-	pc, _, _, _ := runtime.Caller(3)
+func getFunctionCallerName(skip int) string {
+	pc, _, _, _ := runtime.Caller(skip)
 	nameFull := runtime.FuncForPC(pc).Name() // main.foo
 	nameEnd := filepath.Ext(nameFull)        // .foo
 	name := strings.TrimPrefix(nameEnd, ".") // foo
@@ -45,6 +45,16 @@ func CreateNamespace(t *testing.T, namespaceName string) {
 	})
 }
 
+func CreateNamespaceForTest(t *testing.T, unique bool) string {
+	callerName := getFunctionCallerName(2)
+	namespace := strings.ToLower(callerName)
+	if unique {
+		namespace += "-" + strings.ToLower(random.UniqueId())
+	}
+	CreateNamespace(t, namespace)
+	return namespace
+}
+
 type AdminInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
 
 func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, namespace string, releaseName string, installStep AdminInstallationStep, awaitRunning bool) (helmChartReleaseName string, namespaceName string) {
@@ -56,7 +66,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 	}
 
 	if namespace == "" {
-		callerName := getFunctionCallerName()
+		callerName := getFunctionCallerName(3)
 		namespaceName = fmt.Sprintf("%s-%s", strings.ToLower(callerName), randomSuffix)
 
 		CreateNamespace(t, namespaceName)
