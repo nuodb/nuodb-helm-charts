@@ -61,7 +61,7 @@ func kubeHostSsh(t *testing.T, args ...string) string {
 		require.Fail(t, msg)
 	}
 	ret := string(output)
-	t.Logf(ret)
+	t.Log(ret)
 	return ret
 }
 

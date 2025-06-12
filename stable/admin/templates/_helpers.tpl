@@ -20,16 +20,16 @@ and we need to allow space for any suffixes that may be added, and the "-NN" whe
 If release name contains chart name it will be used as a full name.
 */}}
 {{- define "admin.fullname" -}}
-{{- $domain := default "domain" .Values.admin.domain -}}
+{{- $domain := default "domain" ( include "admin.domainName" . ) -}}
 {{- $cluster := default "cluster0" .Values.cloud.cluster.name -}}
 {{- if .Values.admin.fullnameOverride -}}
 {{- .Values.admin.fullnameOverride | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name .Values.admin.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s" .Release.Name .Values.admin.domain $cluster | trunc 50 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s" .Release.Name $domain $cluster | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s" .Release.Name .Values.admin.domain $cluster $name | trunc 50 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster $name | trunc 50 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -92,7 +92,7 @@ Create a default fully qualified admin address.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "admin.address" -}}
-{{- $domain := default "nuodb" .Values.admin.domain -}}
+{{- $domain := default "nuodb" ( include "admin.domainName" . ) -}}
 {{- printf "%s.%s.svc" $domain .Release.Namespace  | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
@@ -134,7 +134,7 @@ imagePullSecrets:
 {{/*
 Get Pod securityContext
 */}}
-{{- define "securityContext" -}}
+{{- define "admin.securityContext" -}}
 {{- if or (eq (include "defaultfalse" .Values.admin.securityContext.enabled) "true") (eq (include "defaultfalse" .Values.admin.securityContext.runAsNonRootGroup) "true") (eq (include "defaultfalse" .Values.admin.securityContext.fsGroupOnly) "true") }}
 securityContext:
   fsGroup: {{ default 1000 .Values.admin.securityContext.fsGroup }}
@@ -174,7 +174,7 @@ fsGroupChangePolicy: OnRootMismatch
 {{/*
 Get the Container securityContext (core/v1/SecurityContext)
 */}}
-{{- define "sc.containerSecurityContext" }}
+{{- define "admin.sc.containerSecurityContext" }}
   {{- if eq (include "defaultfalse" .Values.admin.securityContext.enabledOnContainer) "true" }}
 securityContext:
   privileged: {{ include "defaultfalse" .Values.admin.securityContext.privileged }}
@@ -235,26 +235,26 @@ Define the cluster domains
 Define the fully qualified NuoDB Admin address for the domain entrypoint.
 */}}
 {{- define "admin.entrypointFullname" -}}
-{{- $domain := default "domain" .Values.admin.domain -}}
+{{- $domain := default "domain" ( include "admin.domainName" . ) -}}
 {{- $cluster := default "cluster0" .Values.cloud.cluster.entrypointName -}}
 {{- if .Values.admin.fullnameOverride -}}
 {{- .Values.admin.fullnameOverride | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name .Values.admin.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s" .Release.Name .Values.admin.domain $cluster | trunc 50 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s" .Release.Name $domain $cluster | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s" .Release.Name .Values.admin.domain $cluster $name | trunc 50 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster $name | trunc 50 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
 
 {{- define "nuodb.domainEntrypoint" -}}
-{{ include "admin.entrypointFullname" . }}-0.{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.entrypointDomain" . }}
+{{ include "admin.entrypointFullname" . }}-0.{{ include "admin.domainName" . }}.$(NAMESPACE).svc.{{ include "cluster.entrypointDomain" . }}
 {{- end -}}
 
 {{- define "nuodb.altAddress" -}}
-$(POD_NAME).{{ .Values.admin.domain }}.$(NAMESPACE).svc.{{ include "cluster.domain" . }}
+$(POD_NAME).{{ include "admin.domainName" . }}.$(NAMESPACE).svc.{{ include "cluster.domain" . }}
 {{- end -}}
 
 {{/*
@@ -326,11 +326,11 @@ Renders the admin service name for external access based on the service type
 {{- define "admin.externalServiceName" -}}
   {{- $serviceType := (default "LoadBalancer" .Values.admin.externalAccess.type) -}}
   {{- if eq $serviceType "LoadBalancer" -}}
-{{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.balancer }}
+{{ include "admin.domainName" . }}-{{ .Values.admin.serviceSuffix.balancer }}
   {{- else if eq $serviceType "NodePort" -}}
-{{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.nodeport }}
+{{ include "admin.domainName" . }}-{{ .Values.admin.serviceSuffix.nodeport }}
   {{- else -}}
-{{ .Values.admin.domain }}
+{{ include "admin.domainName" . }}
   {{- end }}
 {{- end }}
 
@@ -369,14 +369,44 @@ networking.gke.io/load-balancer-type: "Internal"
 Renders the labels for all resources deployed by this Helm chart
 */}}
 {{- define "admin.resourceLabels" -}}
-app: {{ template "admin.fullname" . }}
+{{- include "admin.labels" (list . .Values.admin.resourceLabels ) -}}
+{{- end -}}
+
+{{- define "admin.labels" -}}
+{{- $root := index . 0 -}}
+{{- $extraLabels := index . 1 -}}
+{{- if not $root}}{{fail "root argument is required"}}{{end}}
+{{- $extras := $extraLabels | default (dict) -}}
+app: {{ template "admin.fullname" $root }}
 group: nuodb
-domain: {{ .Values.admin.domain }}
-chart: {{ template "admin.chart" . }}
-release: {{ .Release.Name | quote }}
-{{- range $k, $v := .Values.admin.resourceLabels }}
+domain: {{ include "admin.domainName" $root }}
+chart: {{ template "admin.chart" $root }}
+release: {{ $root.Release.Name | quote }}
+{{- range $k, $v := $extras }}
 "{{ $k }}": "{{ $v }}"
 {{- end }}
+{{- end -}}
+
+{{/*
+Selector labels
+*/}}
+{{- define "admin.selectorLabels" -}}
+app: {{ template "admin.fullname" . }}
+component: admin
+{{- end }}
+
+{{/*
+Renders the labels for pods deployed by this Helm chart
+*/}}
+{{- define "admin.podLabels" -}}
+{{- include "admin.resourceLabels" .}}
+{{- end -}}
+
+{{/*
+Renders the labels for volumes deployed by this Helm chart
+*/}}
+{{- define "admin.volumeLabels" -}}
+{{- include "admin.resourceLabels" .}}
 {{- end -}}
 
 {{/*
@@ -388,7 +418,7 @@ ephemeral:
   volumeClaimTemplate:
     metadata:
       labels:
-        {{- include "admin.resourceLabels" . | nindent 8 }}
+        {{- include "admin.volumeLabels" . | nindent 8 }}
     spec:
       accessModes:
       - ReadWriteOnce
@@ -538,4 +568,34 @@ Create a cluster unique app name.
 {{- else -}}
   {{- printf "%s-%s" $name $ns -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Any additional fields that need to go into the admin container spec.
+*/}}
+{{- define "admin.podSpecExtras"}}
+{{/*
+Extension point that can be overriden by an embedding chart.
+*/}}
+{{- end }}
+
+{{/*
+Name of the domain deployed by this chart.
+*/}}
+{{- define "admin.domainName" -}}
+{{- .Values.admin.domain -}}
+{{- end -}}
+
+{{/*
+Number of replicas to deploy.
+*/}}
+{{- define "admin.replicas" -}}
+{{- .Values.admin.replicas -}}
+{{- end -}}
+
+{{/*
+Resources requested and limited
+*/}}
+{{- define "admin.resources" -}}
+{{- toYaml .Values.admin.resources -}}
 {{- end -}}

@@ -9,13 +9,13 @@ metadata:
       Cluster IP service permitting us to load balance within the cluster.
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
-  name: {{ .Values.database.name }}-{{ default .Values.admin.serviceSuffix.clusterip .Values.database.serviceSuffix.clusterip }}
+  name: {{ include "database.dbName" . }}-{{ default .Values.admin.serviceSuffix.clusterip .Values.database.serviceSuffix.clusterip }}
 spec:
   ports:
   - { name: 48006-tcp,  port: 48006,  protocol: TCP,  targetPort: 48006 }
   selector:
-    domain: {{ .Values.admin.domain }}
-    database: {{ .Values.database.name }}
+    domain: {{ include "admin.domainName" . }}
+    database: {{ include "database.dbName" . }}
     component: te
   sessionAffinity: None
   type: ClusterIP

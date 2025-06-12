@@ -8,7 +8,7 @@ metadata:
     "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true"
   labels:
     {{- include "admin.resourceLabels" . | nindent 4 }}
-  name: {{ .Values.admin.domain }}
+  name: {{ include "admin.domainName" . }}
 spec:
   publishNotReadyAddresses: true
   clusterIP: None

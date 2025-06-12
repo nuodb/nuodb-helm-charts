@@ -9,6 +9,8 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
@@ -100,7 +102,13 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
 		assert.EqualValues(t, 16*1024*1024*1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem 8Gi"))
+		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem $(MEMORY_REQUEST)"))
+		assert.True(t, testlib.EnvContainsValueFrom((*containers)[0].Env, "MEMORY_REQUEST", &v1.EnvVarSource{
+			ResourceFieldRef: &v1.ResourceFieldSelector{
+				ContainerName: (*containers)[0].Name,
+				Resource:      "requests.memory",
+			},
+		}))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
@@ -157,8 +165,6 @@ func TestResourcesDatabaseOverridden(t *testing.T) {
 
 		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
 		assert.EqualValues(t, 16*1024*1024*1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
-
-		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem 4Gi"))
 
 		// make sure the replica counts are correct
 		if testlib.IsStatefulSetHotCopyEnabled(&obj) {
