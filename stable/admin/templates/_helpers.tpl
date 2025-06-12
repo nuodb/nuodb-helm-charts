@@ -369,17 +369,19 @@ networking.gke.io/load-balancer-type: "Internal"
 Renders the labels for all resources deployed by this Helm chart
 */}}
 {{- define "admin.resourceLabels" -}}
-{{- include "admin.labels" (dict "Root" . "ExtraLabels" .Values.admin.resourceLabels ) -}}
+{{- include "admin.labels" (list . .Values.admin.resourceLabels ) -}}
 {{- end -}}
 
 {{- define "admin.labels" -}}
-{{- if not .Root}}{{fail "<nuodb.env> Root is required"}}{{end}}
-{{- $extras := .ExtraLabels | default (dict) -}}
-app: {{ template "admin.fullname" .Root }}
+{{- $root := index . 0 -}}
+{{- $extraLabels := index . 1 -}}
+{{- if not $root}}{{fail "root argument is required"}}{{end}}
+{{- $extras := $extraLabels | default (dict) -}}
+app: {{ template "admin.fullname" $root }}
 group: nuodb
-domain: {{ include "admin.domainName" .Root }}
-chart: {{ template "admin.chart" .Root }}
-release: {{ .Root.Release.Name | quote }}
+domain: {{ include "admin.domainName" $root }}
+chart: {{ template "admin.chart" $root }}
+release: {{ $root.Release.Name | quote }}
 {{- range $k, $v := $extras }}
 "{{ $k }}": "{{ $v }}"
 {{- end }}
@@ -573,7 +575,7 @@ Any additional fields that need to go into the admin container spec.
 */}}
 {{- define "admin.podSpecExtras"}}
 {{/*
-Nothing here yet, but this is overridden in the 3DS version.
+Extension point that can be overriden by an embedding chart.
 */}}
 {{- end }}
 

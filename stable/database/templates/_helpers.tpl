@@ -1067,7 +1067,7 @@ Any additional fields that need to go into the database container spec.
 */}}
 {{- define "database.podSpecExtras"}}
 {{/*
-Nothing here yet, but this is overridden in the 3DS version.
+Extension point that can be overriden by an embedding chart.
 */}}
 {{- end }}
 
@@ -1125,7 +1125,7 @@ Any additional volumes that need to go into the SM pod spec.
 */}}
 {{- define "database.sm.extraVolumes"}}
 {{/*
-Nothing here yet, but this is overridden in the 3DS version.
+Extension point that can be overriden by an embedding chart.
 */}}
 {{- end }}
 
@@ -1134,7 +1134,7 @@ Any additional volume mounts that need to go into the SM container.
 */}}
 {{- define "database.sm.extraMounts"}}
 {{/*
-Nothing here yet, but this is overridden in the 3DS version.
+Extension point that can be overriden by an embedding chart.
 */}}
 {{- end }}
 
@@ -1143,7 +1143,7 @@ Any additional sidecar containers that need to go into the SM pod.
 */}}
 {{- define "database.sm.extraSidecars"}}
 {{/*
-Nothing here yet, but this is overridden in the 3DS version.
+Extension point that can be overriden by an embedding chart.
 */}}
 {{- end }}
 
