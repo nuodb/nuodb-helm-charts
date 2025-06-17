@@ -7,7 +7,7 @@ metadata:
       Cluster IP service permitting us to load balance within the cluster.
   labels:
     {{- include "admin.resourceLabels" . | nindent 4 }}
-  name: {{ .Values.admin.domain }}-{{ .Values.admin.serviceSuffix.clusterip }}
+  name: {{ include "admin.domainName" . }}-{{ .Values.admin.serviceSuffix.clusterip }}
 spec:
   ports:
   - { name: 8888-tcp,   port: 8888,   protocol: TCP,  targetPort: 8888  }

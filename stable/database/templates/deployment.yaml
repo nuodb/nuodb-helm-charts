@@ -17,10 +17,10 @@ metadata:
     component: te
   name: te-{{ template "database.fullname" . }}
 spec:
-  replicas: {{ .Values.database.te.replicas }}
+  replicas: {{ include "database.te.replicas" . }}
   selector:
     matchLabels:
-      app: {{ template "database.fullname" . }}
+      {{- include "database.selectorLabels" . | nindent 6 }}
       component: te
   strategy:
     type: RollingUpdate
@@ -39,14 +39,15 @@ spec:
 {{ toYaml .Values.database.podAnnotations | trim | indent 8 }}
       {{- end }}
       labels:
-        {{- include "database.resourceLabels" . | nindent 8 }}
+        {{- include "database.te.podLabels" . | nindent 8 }}
         component: te
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- if .Values.database.priorityClasses }}
       priorityClassName: {{ default "" .Values.database.priorityClasses.te }}
       {{- end }}
-      {{- include "securityContext" . | indent 6 }}
+      {{- include "database.securityContext" . | indent 6 }}
+      {{- include "database.podSpecExtras" . | trim | nindent 6 }}
       {{- if .Values.database.te.topologySpreadConstraints }}
       topologySpreadConstraints:
 {{ tpl .Values.database.te.topologySpreadConstraints . | trim | indent 8 }}
@@ -102,10 +103,10 @@ spec:
           - "{{ .Values.admin.affinityLabels }}"
           {{- end }}
           - "--options"
-          - "mem {{ .Values.database.te.resources.requests.memory}} {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
+          - "mem $(MEMORY_REQUEST) {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
           {{- include "database.teLabels" . | indent 10 }}
     {{- include "database.otherOptions" .Values.database.te.otherOptions | indent 10 }}
-    {{- include "sc.containerSecurityContext" . | indent 8 }}
+    {{- include "database.sc.containerSecurityContext" . | indent 8 }}
     {{- include "database.envFrom" . | indent 8 }}
         env:
           - name: NODE_NAME
@@ -124,7 +125,12 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - { name: DB_NAME,             value: {{ .Values.database.name | quote }} }
+          - name: MEMORY_REQUEST
+            valueFrom:
+              resourceFieldRef:
+                containerName: engine
+                resource: requests.memory
+          - { name: DB_NAME,             value: {{ ( include "database.dbName" . ) | quote }} }
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
           - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }
           - { name: COMPONENT_NAME,      value: "te" }
@@ -146,7 +152,7 @@ spec:
         - containerPort: 48006
           protocol: TCP
         resources:
-{{ toYaml .Values.database.te.resources | trim | indent 10 }}
+{{ ( include "database.te.resources" . ) | trim | indent 10 }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         volumeMounts:
@@ -192,7 +198,7 @@ spec:
           {{- else }}
           timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
           {{- end }}
-      {{- include "nuodb.sidecar.collector" (list . .Values.database.te) | nindent 6 }}
+      {{- include "database.nuodb.sidecar.collector" (list . .Values.database.te) | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       {{- include "database.te.shareProcessNamespace" . | indent 6 }}
       volumes:
@@ -208,7 +214,7 @@ spec:
         {{- end }}
         {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.te)) "true" }}
         - name: eph-volume
-          {{- include "database.ephemeralVolume" (list . .Values.database.te) | indent 10 }}
+          {{- include "database.ephemeralVolume" (list . .Values.database.te "te") | indent 10 }}
         {{- end }}
         - name: nuote
           configMap:

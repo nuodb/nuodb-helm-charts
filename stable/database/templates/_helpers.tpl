@@ -11,16 +11,16 @@ We truncate at 50 chars because some Kubernetes name fields are limited to 63 ch
 and we have to allow for added suffixes including "-hotcopy" and "-NN" where NN is the pod number.
 */}}
 {{- define "database.fullname" -}}
-{{- $domain := default "domain" .Values.admin.domain -}}
+{{- $domain := default "domain" ( include "admin.domainName" . ) -}}
 {{- $cluster := default "cluster0" .Values.cloud.cluster.name -}}
 {{- if .Values.database.fullnameOverride -}}
 {{- .Values.database.fullnameOverride | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
 {{- $name := default .Chart.Name .Values.database.nameOverride -}}
 {{- if contains $name .Release.Name -}}
-{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name | trunc 50 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s" .Release.Name $domain $cluster ( include "database.dbName" . ) | trunc 50 | trimSuffix "-" -}}
 {{- else -}}
-{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster .Values.database.name $name | trunc 50 | trimSuffix "-" -}}
+{{- printf "%s-%s-%s-%s-%s" .Release.Name $domain $cluster ( include "database.dbName" . ) $name | trunc 50 | trimSuffix "-" -}}
 {{- end -}}
 {{- end -}}
 {{- end -}}
@@ -128,9 +128,20 @@ Create a default fully qualified admin address.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 */}}
 {{- define "admin.address" -}}
-{{- $domain := default "nuodb" .Values.admin.domain -}}
+{{- $domain := default "nuodb" ( include "admin.domainName" . ) -}}
 {{- $namespace := default .Release.Namespace .Values.admin.namespace -}}
 {{- printf "%s.%s.svc" $domain $namespace  | trunc 63 | trimSuffix "-" -}}
+{{- end -}}
+
+{{/*
+Create a default fully qualified admin clusterip address.
+We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
+*/}}
+{{- define "admin.clusterip" -}}
+{{- $domain := default "nuodb" ( include "admin.domainName" . ) -}}
+{{- $suffix := default "clusterip" .Values.admin.serviceSuffix.clusterip -}}
+{{- $namespace := default .Release.Namespace .Values.admin.namespace -}}
+{{- printf "%s-%s.%s.svc" $domain $suffix $namespace  | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
 {{/*
@@ -171,7 +182,7 @@ imagePullSecrets:
 {{/*
 Get Pod securityContext (core/v1/PodSecurityContext)
 */}}
-{{- define "securityContext" -}}
+{{- define "database.securityContext" -}}
 {{- if or (eq (include "defaultfalse" .Values.database.securityContext.enabled) "true") (eq (include "defaultfalse" .Values.database.securityContext.runAsNonRootGroup) "true") (eq (include "defaultfalse" .Values.database.securityContext.fsGroupOnly) "true") }}
 securityContext:
   fsGroup: {{ default 1000 .Values.database.securityContext.fsGroup }}
@@ -231,7 +242,7 @@ fsGroupChangePolicy: OnRootMismatch
 {{/*
 Get the Container securityContext (core/v1/SecurityContext)
 */}}
-{{- define "sc.containerSecurityContext" }}
+{{- define "database.sc.containerSecurityContext" }}
   {{- if eq (include "defaultfalse" .Values.database.securityContext.enabledOnContainer) "true" }}
 securityContext:
   privileged: {{ include "defaultfalse" .Values.database.securityContext.privileged }}
@@ -326,7 +337,7 @@ into account any schedule overrides configured per backup group.
 Renders the name of the HotCopy CronJob
 */}}
 {{- define "hotcopy.cronjob.name" -}}
-{{- $name := printf "%s-hotcopy-%s-%s-%s" .hotCopyType .Values.admin.domain .Values.database.name .backupGroup -}}
+{{- $name := printf "%s-hotcopy-%s-%s-%s" .hotCopyType ( include "admin.domainName" . ) ( include "database.dbName" . ) .backupGroup -}}
 {{ template "truncWithHash" (list $name 52) }}
 {{- end -}}
 
@@ -559,15 +570,56 @@ if Ingress is enabled
 Renders the labels for all resources deployed by this Helm chart
 */}}
 {{- define "database.resourceLabels" -}}
-app: {{ template "database.fullname" . }}
+{{- include "database.labels" (dict "Root" . "ExtraLabels" .Values.database.resourceLabels ) -}}
+{{- end -}}
+
+{{- define "database.labels" -}}
+{{- if not .Root}}{{fail "<nuodb.env> Root is required"}}{{end}}
+{{- $extras := .ExtraLabels | default (dict) -}}
+{{- include "database.selectorLabels" .Root }}
 group: nuodb
-database: {{ .Values.database.name }}
-domain: {{ .Values.admin.domain }}
-chart: {{ template "database.chart" . }}
-release: {{ .Release.Name | quote }}
-{{- range $k, $v := .Values.database.resourceLabels }}
+database: {{ include "database.dbName" .Root }}
+domain: {{ include "admin.domainName" .Root }}
+chart: {{ template "database.chart" .Root }}
+release: {{ .Root.Release.Name | quote }}
+{{- range $k, $v := $extras }}
 "{{ $k }}": "{{ $v }}"
 {{- end }}
+{{- end -}}
+
+{{/*
+Selector labels
+*/}}
+{{- define "database.selectorLabels" -}}
+app: {{ template "database.fullname" . }}
+{{- end }}
+
+{{/*
+Renders the labels for SM pods deployed by this Helm chart
+*/}}
+{{- define "database.sm.podLabels" -}}
+{{- include "database.resourceLabels" .}}
+{{- end -}}
+
+{{/*
+Renders the labels for TE pods deployed by this Helm chart
+*/}}
+{{- define "database.te.podLabels" -}}
+{{- include "database.resourceLabels" .}}
+{{- end -}}
+
+{{/*
+Renders the labels for SM pod volumes deployed by this Helm chart
+*/}}
+{{- define "database.sm.volumeLabels" -}}
+{{- include "database.resourceLabels" .}}
+{{- end -}}
+
+{{/*
+Renders the labels for TE pod volumes deployed by this Helm chart
+*/}}
+{{- define "database.te.volumeLabels" -}}
+{{- include "database.resourceLabels" .}}
 {{- end -}}
 
 {{/*
@@ -587,7 +639,7 @@ storage-group: {{ include "database.storageGroup.name" . | quote }}
 Renders the name of the Secret for this database
 */}}
 {{- define "database.secretName" -}}
-{{ .Values.admin.domain }}-{{ .Values.database.name }}
+{{ include "admin.domainName" . }}-{{ include "database.dbName" . }}
 {{- end -}}
 
 {{/*
@@ -651,12 +703,17 @@ Renders an ephemeral volume for an engine process.
 {{- define "database.ephemeralVolume" -}}
 {{- $ := index . 0 -}}
 {{- $engine := index . 1 -}}
+{{- $engine_type := index . 2 -}}
 {{- if eq (include "defaultfalse" $.Values.database.ephemeralVolume.enabled) "true" }}
 ephemeral:
   volumeClaimTemplate:
     metadata:
       labels:
-        {{- include "database.resourceLabels" $ | nindent 10 }}
+        {{- if (eq "te" $engine_type) }}
+          {{- include "database.te.volumeLabels" $ | nindent 10 }}
+        {{- else }}
+          {{- include "database.sm.volumeLabels" $ | nindent 10 }}
+        {{- end }}
     spec:
       accessModes:
       - ReadWriteOnce
@@ -968,7 +1025,7 @@ storageClassName: {{ $.Values.database.persistence.storageClass }}
 {{- if $.Values.database.isManualVolumeProvisioning }}
 selector:
   matchLabels:
-    database: {{ $.Values.database.name }}
+    database: {{ include "database.dbName" . }}
 {{- end }}
 resources:
   requests:
@@ -998,9 +1055,117 @@ storageClassName: {{ $.Values.database.sm.noHotCopy.journalPath.persistence.stor
 {{- if $.Values.database.isManualVolumeProvisioning }}
 selector:
   matchLabels:
-    database: {{ $.Values.database.name }}
+    database: {{ include "database.dbName" . }}
 {{- end }}
 resources:
   requests:
     storage: {{ $.Values.database.sm.noHotCopy.journalPath.persistence.size }}
+{{- end -}}
+
+{{/*
+Any additional fields that need to go into the database container spec.
+*/}}
+{{- define "database.podSpecExtras"}}
+{{/*
+Extension point that can be overriden by an embedding chart.
+*/}}
+{{- end }}
+
+{{/*
+Name of the domain to connect to.
+*/}}
+{{- define "admin.domainName" -}}
+{{- .Values.admin.domain -}}
+{{- end -}}
+
+{{/*
+Database name
+*/}}
+{{- define "database.dbName" -}}
+{{- .Values.database.name -}}
+{{- end -}}
+
+{{/*
+Number of TE replicas to deploy.
+*/}}
+{{- define "database.te.replicas" -}}
+{{ .Values.database.te.replicas }}
+{{- end -}}
+
+{{/*
+Number of non-hotcopy SM replicas to deploy.
+*/}}
+{{- define "database.sm.noHotCopy.replicas" -}}
+{{ .Values.database.sm.noHotCopy.replicas }}
+{{- end -}}
+
+{{/*
+Number of hotcopy SM replicas to deploy.
+*/}}
+{{- define "database.sm.hotCopy.replicas" -}}
+{{ .Values.database.sm.hotCopy.replicas }}
+{{- end -}}
+
+{{/*
+SM resources requested and limited
+*/}}
+{{- define "database.sm.resources" -}}
+{{- toYaml .Values.database.sm.resources  -}}
+{{- end -}}
+
+{{/*
+TE resources requested and limited
+*/}}
+{{- define "database.te.resources" -}}
+{{- toYaml .Values.database.te.resources  -}}
+{{- end -}}
+
+{{/*
+Any additional volumes that need to go into the SM pod spec.
+*/}}
+{{- define "database.sm.extraVolumes"}}
+{{/*
+Extension point that can be overriden by an embedding chart.
+*/}}
+{{- end }}
+
+{{/*
+Any additional volume mounts that need to go into the SM container.
+*/}}
+{{- define "database.sm.extraMounts"}}
+{{/*
+Extension point that can be overriden by an embedding chart.
+*/}}
+{{- end }}
+
+{{/*
+Any additional sidecar containers that need to go into the SM pod.
+*/}}
+{{- define "database.sm.extraSidecars"}}
+{{/*
+Extension point that can be overriden by an embedding chart.
+*/}}
+{{- end }}
+
+{{/*
+Backup hooks sidecar container resources requested and limited
+*/}}
+{{- define "database.backupHooks.resources" -}}
+{{- toYaml .Values.database.backupHooks.resources  -}}
+{{- end -}}
+
+{{/*
+Command name to start the SM engine.
+*/}}
+{{- define "database.sm.entryPoint" -}}
+nuosm
+{{- end -}}
+
+{{/*
+Import user defined ENV vars for the backup hooks sidecar
+*/}}
+{{- define "database.backupHooks.env" }}
+{{- if not (empty .Values.database.backupHooks.env) }}
+{{ toYaml .Values.database.backupHooks.env | trim }}
+{{- end }}
 {{- end -}}

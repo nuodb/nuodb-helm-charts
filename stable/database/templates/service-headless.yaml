@@ -9,14 +9,14 @@ metadata:
       Headless service permitting us to retrieve DNS A records that point directly to the pods backing the service.
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
-  name: {{ .Values.database.name }}
+  name: {{ include "database.dbName" . }}
 spec:
   clusterIP: None
   ports:
   - { name: 48006-tcp,  port: 48006,  protocol: TCP,  targetPort: 48006 }
   selector:
-    domain: {{ .Values.admin.domain }}
-    database: {{ .Values.database.name }}
+    domain: {{ include "admin.domainName" . }}
+    database: {{ include "database.dbName" . }}
     component: te
   sessionAffinity: None
   type: ClusterIP

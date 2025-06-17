@@ -157,7 +157,7 @@ func verifyDomainProcesses(t *testing.T, api_server string, databaseName string,
 		if exiterr, ok := err.(*exec.ExitError); ok {
 			// nuocmd has exited with an non zero exit code; generate better error
 			// message by including the command stderr
-			return fmt.Errorf(string(exiterr.Stderr))
+			return errors.New(string(exiterr.Stderr))
 		} else {
 			return err
 		}
