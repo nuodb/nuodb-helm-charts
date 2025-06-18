@@ -15,7 +15,6 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -311,7 +310,7 @@ func getDnsConfigSnippet(t *testing.T, context context.Context) string {
 
 func updateDnsConfig(t *testing.T, ctx context.Context, kubectlOptions *k8s.KubectlOptions, dnsConfigSnippet string) {
 	// Create K8s client and get configmap for CoreDNS
-	clientset, err := testlib.GetKubernetesClientFromOptionsE(t, kubectlOptions)
+	clientset, err := GetKubernetesClientFromOptionsE(t, kubectlOptions)
 	require.NoError(t, err, "Unable to create K8s client")
 	cm, err := clientset.CoreV1().ConfigMaps(COREDNS_NS).Get(ctx, COREDNS_CM, metav1.GetOptions{})
 	require.NoError(t, err, "Unable to get CoreDNS configmap")
