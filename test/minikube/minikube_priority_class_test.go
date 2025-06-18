@@ -125,7 +125,7 @@ func TestPriorityClass(t *testing.T) {
 
 func createPriorityClass(t *testing.T, name string, value int32, description string) {
 	options := k8s.NewKubectlOptions("", "", "")
-	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	client, err := testlib.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 
 	var priorityClass schedulingv1.PriorityClass
@@ -138,7 +138,7 @@ func createPriorityClass(t *testing.T, name string, value int32, description str
 
 func deletePriorityClass(t *testing.T, name string) {
 	options := k8s.NewKubectlOptions("", "", "")
-	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	client, err := testlib.GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 
 	err = client.SchedulingV1().PriorityClasses().Delete(context.TODO(), name, metav1.DeleteOptions{})

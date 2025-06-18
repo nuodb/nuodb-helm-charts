@@ -28,7 +28,7 @@ func TestConnectivityWithNetworkPolicy(t *testing.T) {
 
 	// Create network policy that limits connectivity to group=nuodb
 	kubeOptions := k8s.NewKubectlOptions("", "", namespace)
-	client, err := k8s.GetKubernetesClientFromOptionsE(t, kubeOptions)
+	client, err := testlib.GetKubernetesClientFromOptionsE(t, kubeOptions)
 	require.NoError(t, err)
 	ctx := context.Background()
 	networkPolicy := getNetworkPolicy(namespace)

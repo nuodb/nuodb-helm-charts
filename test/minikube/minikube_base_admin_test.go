@@ -87,8 +87,7 @@ func TestKubernetesAdminLicenseSecret(t *testing.T) {
 		},
 	}
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, kubectlOptions)
+	clientset, err := testlib.GetKubernetesClientFromOptionsE(t, kubectlOptions)
 	require.NoError(t, err)
 	clientset.CoreV1().Secrets(namespaceName).Create(ctx, secret, metav1.CreateOptions{})
 

@@ -22,12 +22,15 @@ import (
 	"github.com/Masterminds/semver/v3"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	"github.com/gruntwork-io/terratest/modules/logger"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1beta1 "k8s.io/api/batch/v1beta1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 )
 
 const NAMESPACE_NAME_PREFIX = "test"
@@ -937,12 +940,63 @@ func shouldGetDiagnose() bool {
 
 func GetEvents(t *testing.T, namespace string, filter metav1.ListOptions) []corev1.Event {
 	options := k8s.NewKubectlOptions("", "", namespace)
-	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	client, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 
 	events, err := client.CoreV1().Events(namespace).List(context.TODO(), filter)
 	require.NoError(t, err)
 	return events.Items
+}
+
+// GetKubernetesClientE returns a Kubernetes API client that can be used to make requests.
+func GetKubernetesClientE(t *testing.T) (*kubernetes.Clientset, error) {
+	kubeConfigPath, err := k8s.GetKubeConfigPathE(t)
+	if err != nil {
+		return nil, err
+	}
+
+	options := k8s.NewKubectlOptions("", kubeConfigPath, "default")
+	return GetKubernetesClientFromOptionsE(t, options)
+}
+
+// GetKubernetesClientFromOptionsE returns a Kubernetes API client given a configured KubectlOptions object.
+func GetKubernetesClientFromOptionsE(t *testing.T, options *k8s.KubectlOptions) (*kubernetes.Clientset, error) {
+	var err error
+	var config *rest.Config
+	var log *logger.Logger = options.Logger
+	if log == nil {
+		log = logger.Default
+	}
+
+	if options.InClusterAuth {
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			return nil, err
+		}
+	} else if options.RestConfig != nil {
+		config = options.RestConfig
+	} else {
+		kubeConfigPath, err := options.GetConfigPath(t)
+		if err != nil {
+			return nil, err
+		}
+		// Load API config (instead of more low level ClientConfig)
+		config, err = k8s.LoadApiClientConfigE(kubeConfigPath, options.ContextName)
+		if err != nil {
+			log.Logf(t, "Error loading api client config, falling back to in-cluster authentication via serviceaccount token: %s", err)
+			config, err = rest.InClusterConfig()
+			if err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	clientset, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+
+	return clientset, nil
 }
 
 func GetK8sEventLog(t *testing.T, namespace string) {
@@ -956,17 +1010,13 @@ func GetK8sEventLog(t *testing.T, namespace string) {
 	defer f.Close()
 
 	options := k8s.NewKubectlOptions("", "", namespace)
-
-	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	client, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 
 	var opts metav1.ListOptions
-
 	events, err := client.CoreV1().Events(namespace).Watch(context.TODO(), opts)
 	require.NoError(t, err)
-
 	writer := io.Writer(f)
-
 	for event := range events.ResultChan() {
 		_, err = fmt.Fprintln(writer, event)
 		require.NoError(t, err)
@@ -1014,7 +1064,7 @@ func (e *ContainersNotStarted) Error() string {
 func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) (reader io.ReadCloser, err error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	client, err := GetKubernetesClientFromOptionsE(t, options)
 
 	if podLogOptions.Container == "" {
 		// Select first container if not specified; otherwise the GetLogs method will fail if there are sidecars
@@ -1092,7 +1142,7 @@ func GetSecret(t *testing.T, namespace string, secretName string) *corev1.Secret
 func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *appsv1.DaemonSet {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	clientset, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	daemonSet, _ := clientset.AppsV1().DaemonSets(namespace).Get(context.TODO(), daemonSetName, metav1.GetOptions{})
 	return daemonSet
@@ -1101,7 +1151,7 @@ func GetDaemonSet(t *testing.T, namespace string, daemonSetName string) *appsv1.
 func GetPvc(t *testing.T, namespace string, pvcName string) *corev1.PersistentVolumeClaim {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	clientset, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	pvc, err := clientset.CoreV1().PersistentVolumeClaims(namespace).Get(context.TODO(), pvcName, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -1110,7 +1160,7 @@ func GetPvc(t *testing.T, namespace string, pvcName string) *corev1.PersistentVo
 
 func GetReplicationController(t *testing.T, namespace string, replicationControllerName string) *corev1.ReplicationController {
 	options := k8s.NewKubectlOptions("", "", namespace)
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	clientset, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	controller, _ := clientset.CoreV1().ReplicationControllers(namespace).Get(context.TODO(), replicationControllerName, metav1.GetOptions{})
 	return controller
@@ -1118,7 +1168,7 @@ func GetReplicationController(t *testing.T, namespace string, replicationControl
 
 func ListCronJobs(t *testing.T, namespace string) []batchv1beta1.CronJob {
 	options := k8s.NewKubectlOptions("", "", namespace)
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	clientset, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	cronJobList, err := clientset.BatchV1beta1().CronJobs(namespace).List(context.TODO(), metav1.ListOptions{})
 	require.NoError(t, err)
@@ -1303,7 +1353,7 @@ func GetNodesInternalAddresses(t *testing.T) map[string]string {
 }
 
 func GetNamespaces(t *testing.T) []corev1.Namespace {
-	clientset, err := k8s.GetKubernetesClientE(t)
+	clientset, err := GetKubernetesClientE(t)
 	require.NoError(t, err)
 	namespaces, err := clientset.CoreV1().Namespaces().List(context.TODO(), metav1.ListOptions{})
 	require.NoError(t, err)
@@ -1314,7 +1364,7 @@ func GetNamespaces(t *testing.T) []corev1.Namespace {
 func GetStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	clientset, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	statefulSets, err := clientset.AppsV1().StatefulSets(namespaceName).List(context.TODO(), metav1.ListOptions{})
 	require.NoError(t, err)
@@ -1325,7 +1375,7 @@ func GetStatefulSets(t *testing.T, namespaceName string) *appsv1.StatefulSetList
 func GetStatefulSet(t *testing.T, namespaceName, name string) *appsv1.StatefulSet {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	clientset, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	statefulSet, err := clientset.AppsV1().StatefulSets(namespaceName).Get(context.TODO(), name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -1336,7 +1386,7 @@ func GetStatefulSet(t *testing.T, namespaceName, name string) *appsv1.StatefulSe
 func DeleteStatefulSet(t *testing.T, namespaceName string, name string) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	clientset, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	err = clientset.AppsV1().StatefulSets(namespaceName).Delete(context.TODO(), name, metav1.DeleteOptions{})
 	require.NoError(t, err)
@@ -1345,7 +1395,7 @@ func DeleteStatefulSet(t *testing.T, namespaceName string, name string) {
 func DeletePVC(t *testing.T, namespaceName string, name string) {
 	options := k8s.NewKubectlOptions("", "", namespaceName)
 
-	clientset, err := k8s.GetKubernetesClientFromOptionsE(t, options)
+	clientset, err := GetKubernetesClientFromOptionsE(t, options)
 	require.NoError(t, err)
 	gracefulDeleteSeconds := int64(120)
 	err = clientset.CoreV1().PersistentVolumeClaims(namespaceName).
@@ -1354,7 +1404,7 @@ func DeletePVC(t *testing.T, namespaceName string, name string) {
 }
 
 func AwaitPvDeleted(t *testing.T, name string, timeout time.Duration) {
-	clientset, err := k8s.GetKubernetesClientE(t)
+	clientset, err := GetKubernetesClientE(t)
 	require.NoError(t, err)
 	Await(t, func() bool {
 		_, err := clientset.CoreV1().PersistentVolumes().Get(context.TODO(), name, metav1.GetOptions{})
