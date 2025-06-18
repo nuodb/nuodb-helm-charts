@@ -961,6 +961,7 @@ func TestCornerCaseKubernetesSnapshotRestore(t *testing.T) {
 				testlib.DeletePod(t, namespaceName, "pod/"+smPod)
 				testlib.AwaitNrReplicasScheduled(t, namespaceName, smPod, 1)
 				testlib.AwaitPodUp(t, namespaceName, smPod, 90*time.Second)
+				testlib.AwaitDatabaseUp(t, namespaceName, admin0, dbName, 2)
 
 				output, err = testlib.RunSQL(t, namespaceName, admin0, dbName, "SELECT id FROM testtbl")
 				require.NoError(t, err, output)
