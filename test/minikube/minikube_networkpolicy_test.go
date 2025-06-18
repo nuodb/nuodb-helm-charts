@@ -10,7 +10,6 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
-	"github.com/gruntwork-io/terratest/modules/shell"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/api/networking/v1"
@@ -51,7 +50,7 @@ func TestConnectivityWithNetworkPolicy(t *testing.T) {
 
 	// Create nuodb/database release and wait for database to become ready
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
-	testlib.StartDatabase(t, namespace, admin0, &helm.Options{
+	databaseReleaseName := testlib.StartDatabase(t, namespace, admin0, &helm.Options{
 		SetValues: map[string]string{
 			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
 			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
@@ -60,17 +59,21 @@ func TestConnectivityWithNetworkPolicy(t *testing.T) {
 		},
 	})
 
-	// Verify that connectivity is enabled between AP pods
-	err = k8s.RunKubectlE(t, kubeOptions, "exec", admin0, "-c", "admin", "--",
-		"nuocmd", "check", "servers", "--wait-for-acks", "--timeout", "10")
-	require.NoError(t, err)
+	// Check that AP logged expected warning message
+	adminLogs := k8s.GetPodLogs(t, kubeOptions, testlib.GetPod(t, namespace, admin0), "admin")
+	require.Contains(t, adminLogs, "Error registering event listeners")
 
-	// Verify that connectivity (egress) is disabled out of domain
-	err = k8s.RunKubectlE(t, kubeOptions, "exec", admin0, "-c", "admin", "--",
-		"curl", "--silent", "--show-error", "--connect-timeout", "1", "https://google.com")
-	errWithOutput, ok := err.(*shell.ErrWithCmdOutput)
-	require.Truef(t, ok, "Expected shell.ErrWithCmdOutput, got: %+v", err)
-	require.Contains(t, errWithOutput.Output.Stderr(), "Failed to connect to google.com port 443: Connection timed out")
+	// Check that `nuocmd start sm` logged expected warning message
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-cluster0-demo", databaseReleaseName)
+	smPod := testlib.GetPod(t, namespace, testlib.GetPodName(t, namespace, smPodNameTemplate))
+	smLogs := k8s.GetPodLogs(t, kubeOptions, smPod, "engine")
+	require.Contains(t, smLogs, "Failed to invoke GET method on Kubernetes resource")
+
+	// Check that `nuocmd start te` logged expected warning message
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-cluster0-demo", databaseReleaseName)
+	tePod := testlib.GetPod(t, namespace, testlib.GetPodName(t, namespace, tePodNameTemplate))
+	teLogs := k8s.GetPodLogs(t, kubeOptions, tePod, "engine")
+	require.Contains(t, teLogs, "Failed to invoke GET method on Kubernetes resource")
 }
 
 func getNetworkPolicy(namespace string) *v1.NetworkPolicy {
