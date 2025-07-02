@@ -1,0 +1,35 @@
+{{- if eq (include "database.keda.enabled" .) "true" }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: te-{{ template "database.fullname" . }}
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: te-{{ template "database.fullname" . }}
+  minReplicaCount: {{ include "database.hpa.minReplicas" . }}
+  maxReplicaCount: {{ include "database.hpa.maxReplicas" . }}
+  pollingInterval: {{ .Values.database.te.autoscaling.keda.pollingInterval }}
+  cooldownPeriod: {{ .Values.database.te.autoscaling.keda.cooldownPeriod }}
+  {{- with .Values.database.te.autoscaling.keda.fallback }}
+  fallback: {{ toYaml . | nindent 4 }}
+  {{- end }}
+  {{- if .Values.database.te.autoscaling.hpa.behavior }}
+  advanced:
+    horizontalPodAutoscalerConfig:
+      behavior: {{ include "database.hpa.behavior" . | nindent 8 }}
+  {{- end }}
+  triggers:
+  {{- if .Values.database.te.autoscaling.keda.triggers }}
+  {{- include "database.keda.triggers" . | nindent 2 }}
+  {{ else }}
+  - type: cpu
+    metricType: Utilization
+    metadata:
+      containerName: engine
+      value: {{ include "database.hpa.targetCpuUtilization" . | quote }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,35 @@
+database:
+  te:
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      hpa:
+        behavior:
+          scaleUp:
+            stabilizationWindowSeconds: 600
+          scaleDown:
+            stabilizationWindowSeconds: 600
+      keda:
+        enabled: true
+        pollingInterval: 60
+        cooldownPeriod: 600
+        fallback:
+          failureThreshold: 10
+          replicas: 3
+        triggers:
+        - type: prometheus
+          metadata:
+            serverAddress: http://prometheus:9090
+            threshold: "40"
+            query: |-
+              avg(
+                  max by (pod) (
+                      irate(container_cpu_cfs_throttled_periods_total{namespace="{{ .Release.Namespace }}", pod=~"te-{{ template "database.fullname" . }}-.*", container="engine"}[5m])
+                    /
+                      irate(container_cpu_cfs_periods_total{namespace="{{ .Release.Namespace }}", pod=~"te-{{ template "database.fullname" . }}-.*", container="engine"}[5m])
+                  )
+                *
+                  100
+              )
+        
