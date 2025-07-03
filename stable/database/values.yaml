@@ -744,6 +744,55 @@ database:
       # enable fall-back to the deprecated readinessTimeoutSeconds value.
       #timeoutSeconds: 5
 
+    ## Configures auto-scaling (scale-out) for TE deployment.
+    autoscaling:
+      # Whether to enable auto-scaling for TE deployment.
+      enabled: false
+
+      # The lower limit for the number of TE replicas to which the autoscaler
+      # can scale down.
+      minReplicas: 1
+
+      # The upper limit for the number of TE replicas to which the autoscaler
+      # can scale up. It cannot be less than the minReplicas.
+      maxReplicas: 3
+
+      # Configuration for the HorizontalPodAutoscaler resource.
+      hpa:
+        # The target average CPU utilization value across all TE pods,
+        # represented as a percentage.
+        targetCpuUtilization: 80
+
+        # Configures the scaling behavior of the target in both Up and Down
+        # directions. See:
+        # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling
+        behavior:
+          scaleUp:
+            # The number of seconds for which past recommendations should be
+            # considered while scaling up.
+            stabilizationWindowSeconds: 300
+
+      # Configuration for the ScaledObject resource managed by KEDA.
+      keda:
+        # Whether to enable auto-scaling for TE deployment by using KEDA
+        # ScaledObject resource instead of HPA.
+        enabled: false
+
+        # This is the interval in seconds to check each trigger on.
+        pollingInterval: 30
+
+        # The period in seconds to wait after the last trigger reported active
+        # before scaling the resource back to 0.
+        cooldownPeriod: 300
+
+        # The fallback section is optional. It defines a number of replicas to
+        # fall back to if a scaler is in an error state. See:
+        # https://keda.sh/docs/latest/reference/scaledobject-spec/
+        fallback: {}
+
+        # List of triggers to activate scaling of the target resource. See:
+        # https://keda.sh/docs/latest/scalers/
+        triggers: []
 
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}

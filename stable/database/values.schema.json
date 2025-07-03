@@ -73,6 +73,34 @@
                             }
                         }
                     }
+                },
+                "te": {
+                    "type": "object",
+                    "required": [
+                        "autoscaling"
+                    ],
+                    "properties": {
+                        "autoscaling": {
+                            "type": "object",
+                            "required": [
+                                "hpa"
+                            ],
+                            "properties": {
+                                "hpa": {
+                                    "type": "object",
+                                    "required": [
+                                        "targetCpuUtilization"
+                                    ],
+                                    "properties": {
+                                        "targetCPU": {
+                                            "type": "number",
+                                            "minimum": 0
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
