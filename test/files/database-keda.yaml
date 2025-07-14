@@ -1,7 +1,6 @@
 database:
   te:
     autoscaling:
-      enabled: true
       minReplicas: 2
       maxReplicas: 5
       hpa:
@@ -11,7 +10,6 @@ database:
           scaleDown:
             stabilizationWindowSeconds: 600
       keda:
-        enabled: true
         pollingInterval: 60
         cooldownPeriod: 600
         fallback:

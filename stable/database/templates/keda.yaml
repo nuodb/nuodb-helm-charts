@@ -30,6 +30,6 @@ spec:
     metricType: Utilization
     metadata:
       containerName: engine
-      value: {{ include "database.hpa.targetCpuUtilization" . | quote }}
+      value: {{ include "database.targetCpuUtilization" . | quote }}
   {{- end }}
 {{- end }}

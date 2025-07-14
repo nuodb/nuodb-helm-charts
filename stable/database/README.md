@@ -331,17 +331,17 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.readinessProbe.failureThreshold` | The number of times that the readiness probe must fail before the container is marked as unready. | `3` |
 | `te.readinessProbe.successThreshold` | The number of times that the readiness probe must success before the container is marked as ready. | `1` |
 | `te.readinessProbe.timeoutSeconds` | The timeout in seconds for an invocation of the readiness probe. | `5` |
-| `te.autoscaling.enabled` | Whether to enable auto-scaling for TE deployment. | `false` |
 | `te.autoscaling.minReplicas` | The lower limit for the number of TE replicas to which the autoscaler can scale down. | `1` |
 | `te.autoscaling.maxReplicas` | The upper limit for the number of TE replicas to which the autoscaler can scale up. It cannot be less than the minReplicas. | `3` |
+| `te.autoscaling.hpa.enabled` | Whether to enable auto-scaling for TE deployment by using HPA resource. | `false` |
 | `te.autoscaling.hpa.targetCpuUtilization` | The target average CPU utilization value across all TE pods, represented as a percentage. | `80` |
 | `te.autoscaling.hpa.behavior` | Configures the scaling behavior of the target in both Up and Down directions. | `...` |
 | `te.autoscaling.hpa.behavior.scaleUp.stabilizationWindowSeconds` | The number of seconds for which past recommendations should be considered while scaling up. | `300` |
-| `te.autoscaling.keda.enabled` | Whether to enable auto-scaling for TE deployment by using KEDA ScaledObject resource instead of HPA. | `false` |
-| `te.autoscaling.keda.pollingInterval` | This is the interval in seconds to check each trigger on. | `30` |
+| `te.autoscaling.keda.enabled` | Whether to enable auto-scaling for TE deployment by using KEDA ScaledObject resource. | `false` |
+| `te.autoscaling.keda.pollingInterval` | The interval in seconds to check each trigger on. | `30` |
 | `te.autoscaling.keda.cooldownPeriod` | The period in seconds to wait after the last trigger reported active before scaling the resource back to 0. | `300` |
-| `te.autoscaling.keda.fallback` | The fallback section is optional. It defines a number of replicas to fall back to if a scaler is in an error state. | `{}` |
-| `te.autoscaling.keda.triggers` | List of triggers to activate scaling of the target resource. | `[]` |
+| `te.autoscaling.keda.fallback` | The number of replicas to fall back to if a scaler is in an error state. See https://keda.sh/docs/latest/reference/scaledobject-spec/ | `{}` |
+| `te.autoscaling.keda.triggers` | List of triggers to activate scaling of the target resource. See https://keda.sh/docs/latest/scalers/ | `[]` |
 | `automaticProtocolUpgrade.enabled` | Enable automatic database protocol upgrade and a Transaction Engine (TE) restart as an upgrade finalization step done by Kubernetes Aware Admin (KAA). Applicable for NuoDB major versions upgrade only. Requires NuoDB 4.2.3+ | `false` |
 | `automaticProtocolUpgrade.tePreferenceQuery` | LBQuery expression to select the TE that will be restarted after a successful database protocol upgrade. Defaults to random Transaction Engine (TE) in MONITORED state | `""` |
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |

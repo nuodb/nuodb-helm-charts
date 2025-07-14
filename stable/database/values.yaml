@@ -746,9 +746,6 @@ database:
 
     ## Configures auto-scaling (scale-out) for TE deployment.
     autoscaling:
-      # Whether to enable auto-scaling for TE deployment.
-      enabled: false
-
       # The lower limit for the number of TE replicas to which the autoscaler
       # can scale down.
       minReplicas: 1
@@ -759,6 +756,10 @@ database:
 
       # Configuration for the HorizontalPodAutoscaler resource.
       hpa:
+        # Whether to enable auto-scaling for TE deployment by using HPA
+        # resource.
+        enabled: false
+
         # The target average CPU utilization value across all TE pods,
         # represented as a percentage.
         targetCpuUtilization: 80
@@ -775,19 +776,18 @@ database:
       # Configuration for the ScaledObject resource managed by KEDA.
       keda:
         # Whether to enable auto-scaling for TE deployment by using KEDA
-        # ScaledObject resource instead of HPA.
+        # ScaledObject resource.
         enabled: false
 
-        # This is the interval in seconds to check each trigger on.
+        # The interval in seconds to check each trigger on.
         pollingInterval: 30
 
         # The period in seconds to wait after the last trigger reported active
         # before scaling the resource back to 0.
         cooldownPeriod: 300
 
-        # The fallback section is optional. It defines a number of replicas to
-        # fall back to if a scaler is in an error state. See:
-        # https://keda.sh/docs/latest/reference/scaledobject-spec/
+        # The number of replicas to fall back to if a scaler is in an error
+        # state. See: https://keda.sh/docs/latest/reference/scaledobject-spec/
         fallback: {}
 
         # List of triggers to activate scaling of the target resource. See:

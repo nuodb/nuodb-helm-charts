@@ -3622,8 +3622,8 @@ func TestDatabaseAutoscaling(t *testing.T) {
 				Namespace: "default",
 			},
 			SetValues: map[string]string{
-				"database.resourceLabels.foo":     "bar",
-				"database.te.autoscaling.enabled": "true",
+				"database.resourceLabels.foo":         "bar",
+				"database.te.autoscaling.hpa.enabled": "true",
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
@@ -3659,7 +3659,7 @@ func TestDatabaseAutoscaling(t *testing.T) {
 				Namespace: "default",
 			},
 			SetValues: map[string]string{
-				"database.te.autoscaling.enabled":                                           "true",
+				"database.te.autoscaling.hpa.enabled":                                       "true",
 				"database.te.autoscaling.minReplicas":                                       "2",
 				"database.te.autoscaling.maxReplicas":                                       "5",
 				"database.te.autoscaling.hpa.targetCpuUtilization":                          "85",
@@ -3699,7 +3699,6 @@ func TestDatabaseAutoscaling(t *testing.T) {
 			},
 			SetValues: map[string]string{
 				"database.resourceLabels.foo":          "bar",
-				"database.te.autoscaling.enabled":      "true",
 				"database.te.autoscaling.keda.enabled": "true",
 			},
 		}
@@ -3742,7 +3741,6 @@ func TestDatabaseAutoscaling(t *testing.T) {
 			},
 			ValuesFiles: []string{"../files/database-keda.yaml"},
 			SetValues: map[string]string{
-				"database.te.autoscaling.enabled":      "true",
 				"database.te.autoscaling.keda.enabled": "true",
 			},
 		}
@@ -3778,5 +3776,22 @@ func TestDatabaseAutoscaling(t *testing.T) {
 				assert.Equal(t, expectedQuery, trigger.Metadata["query"])
 			}
 		}
+	})
+
+	t.Run("testNegativeEnableBoth", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			ValuesFiles: []string{"../files/database-keda.yaml"},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled":  "true",
+				"database.te.autoscaling.keda.enabled": "true",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/keda.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		require.NotNil(t, err)
+		require.Contains(t, err.Error(), "Can not enable both HPA and KEDA for TE autoscaling")
 	})
 }

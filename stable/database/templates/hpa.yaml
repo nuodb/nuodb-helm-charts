@@ -24,9 +24,9 @@ spec:
       {{- if $.Capabilities.APIVersions.Has "autoscaling/v2/HorizontalPodAutoscaler" }}
       target:
         type: Utilization
-        averageUtilization: {{ include "database.hpa.targetCpuUtilization" . }}
+        averageUtilization: {{ include "database.targetCpuUtilization" . }}
       {{- else }}
-      targetAverageUtilization: {{ include "database.hpa.targetCpuUtilization" . }}
+      targetAverageUtilization: {{ include "database.targetCpuUtilization" . }}
       {{- end }}
   {{- end }}
 {{- end }}

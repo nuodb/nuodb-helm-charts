@@ -1174,9 +1174,7 @@ Import user defined ENV vars for the backup hooks sidecar
 Returns true if HPA resource is enabled
 */}}
 {{- define "database.hpa.enabled" -}}
-{{- if and
-  (eq (include "defaultfalse" .Values.database.te.autoscaling.enabled) "true")
-  (eq (include "defaultfalse" .Values.database.te.autoscaling.keda.enabled) "false") -}}
+{{- if eq (include "defaultfalse" .Values.database.te.autoscaling.hpa.enabled) "true" -}}
 true
 {{- else -}}
 false
@@ -1187,9 +1185,10 @@ false
 Returns true if KEDA ScaledObject resource is enabled
 */}}
 {{- define "database.keda.enabled" -}}
-{{- if and
-  (eq (include "defaultfalse" .Values.database.te.autoscaling.enabled) "true")
-  (eq (include "defaultfalse" .Values.database.te.autoscaling.keda.enabled) "true") -}}
+{{- if eq (include "defaultfalse" .Values.database.te.autoscaling.keda.enabled) "true" -}}
+{{- if eq (include "defaultfalse" .Values.database.te.autoscaling.hpa.enabled) "true" -}}
+{{- fail "Can not enable both HPA and KEDA for TE autoscaling" }}
+{{- end -}}
 true
 {{- else -}}
 false
@@ -1229,9 +1228,9 @@ Return the behaviors setting for HPA
 {{- end -}}
 
 {{/*
-Return the targetCpuUtilization setting for HPA
+Return the targetCpuUtilization setting
 */}}
-{{- define "database.hpa.targetCpuUtilization" -}}
+{{- define "database.targetCpuUtilization" -}}
 {{ .Values.database.te.autoscaling.hpa.targetCpuUtilization }}
 {{- end -}}
 
