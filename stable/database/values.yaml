@@ -693,7 +693,8 @@ database:
     dbServices: {}
       # enabled: false
 
-    # Number of transaction engines (TE) nodes.  Limit is 3 in CE version of NuoDB
+    # Number of Transaction Engine (TE) replicas. A non-zero value is discarded
+    # if TE autoscaling is enabled.
     replicas: 1
 
     ## resources
@@ -773,6 +774,9 @@ database:
             # considered while scaling up.
             stabilizationWindowSeconds: 300
 
+        # Custom annotations set on the HPA resource
+        annotations: {}
+
       # Configuration for the ScaledObject resource managed by KEDA.
       keda:
         # Whether to enable auto-scaling for TE deployment by using KEDA
@@ -793,6 +797,9 @@ database:
         # List of triggers to activate scaling of the target resource. See:
         # https://keda.sh/docs/latest/scalers/
         triggers: []
+
+        # Custom annotations set on the ScaledObject resource
+        annotations: {}
 
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}

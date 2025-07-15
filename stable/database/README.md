@@ -317,7 +317,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class).  This is expected to be ReadWriteMany.  Not all storage providers support this mode. | `ReadWriteMany` |
 | `te.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
 | `te.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
-| `te.replicas` | TE replicas | `1` |
+| `te.replicas` | Number of Transaction Engine (TE) replicas. A non-zero value is discarded if TE autoscaling is enabled. | `1` |
 | `te.labels` | Labels given to the TEs started | `""` |
 | `te.engineOptions` | Additional NuoDB engine options | `""` |
 | `te.resources` | Labels to apply to all resources | `{}` |
@@ -336,12 +336,14 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.autoscaling.hpa.enabled` | Whether to enable auto-scaling for TE deployment by using HPA resource. | `false` |
 | `te.autoscaling.hpa.targetCpuUtilization` | The target average CPU utilization value across all TE pods, represented as a percentage. | `80` |
 | `te.autoscaling.hpa.behavior` | Configures the scaling behavior of the target in both Up and Down directions. | `...` |
+| `te.autoscaling.hpa.annotations` | Custom annotations set on the HPA resource | `{}` |
 | `te.autoscaling.hpa.behavior.scaleUp.stabilizationWindowSeconds` | The number of seconds for which past recommendations should be considered while scaling up. | `300` |
 | `te.autoscaling.keda.enabled` | Whether to enable auto-scaling for TE deployment by using KEDA ScaledObject resource. | `false` |
 | `te.autoscaling.keda.pollingInterval` | The interval in seconds to check each trigger on. | `30` |
 | `te.autoscaling.keda.cooldownPeriod` | The period in seconds to wait after the last trigger reported active before scaling the resource back to 0. | `300` |
 | `te.autoscaling.keda.fallback` | The number of replicas to fall back to if a scaler is in an error state. See https://keda.sh/docs/latest/reference/scaledobject-spec/ | `{}` |
 | `te.autoscaling.keda.triggers` | List of triggers to activate scaling of the target resource. See https://keda.sh/docs/latest/scalers/ | `[]` |
+| `te.autoscaling.keda.annotations` | Custom annotations set on the ScaledObject resource | `{}` |
 | `automaticProtocolUpgrade.enabled` | Enable automatic database protocol upgrade and a Transaction Engine (TE) restart as an upgrade finalization step done by Kubernetes Aware Admin (KAA). Applicable for NuoDB major versions upgrade only. Requires NuoDB 4.2.3+ | `false` |
 | `automaticProtocolUpgrade.tePreferenceQuery` | LBQuery expression to select the TE that will be restarted after a successful database protocol upgrade. Defaults to random Transaction Engine (TE) in MONITORED state | `""` |
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |

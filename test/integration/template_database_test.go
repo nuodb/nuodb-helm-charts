@@ -3651,6 +3651,11 @@ func TestDatabaseAutoscaling(t *testing.T) {
 			assert.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
 			assert.Equal(t, int32(80), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
 		}
+
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Nil(t, obj.Spec.Replicas)
+		}
 	})
 
 	t.Run("testCustomHPA", func(t *testing.T) {
@@ -3665,6 +3670,7 @@ func TestDatabaseAutoscaling(t *testing.T) {
 				"database.te.autoscaling.hpa.targetCpuUtilization":                          "85",
 				"database.te.autoscaling.hpa.behavior.scaleUp.stabilizationWindowSeconds":   "600",
 				"database.te.autoscaling.hpa.behavior.scaleDown.stabilizationWindowSeconds": "600",
+				"database.te.autoscaling.hpa.annotations.foo":                               "bar",
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
@@ -3689,6 +3695,7 @@ func TestDatabaseAutoscaling(t *testing.T) {
 			assert.Equal(t, autoscalingv2.UtilizationMetricType, obj.Spec.Metrics[0].ContainerResource.Target.Type)
 			assert.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
 			assert.Equal(t, int32(85), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			assert.Equal(t, "bar", obj.Annotations["foo"])
 		}
 	})
 
@@ -3732,6 +3739,11 @@ func TestDatabaseAutoscaling(t *testing.T) {
 				assert.Equal(t, "80", trigger.Metadata["value"])
 			}
 		}
+
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			assert.Nil(t, obj.Spec.Replicas)
+		}
 	})
 
 	t.Run("testCustomKEDA", func(t *testing.T) {
@@ -3741,7 +3753,8 @@ func TestDatabaseAutoscaling(t *testing.T) {
 			},
 			ValuesFiles: []string{"../files/database-keda.yaml"},
 			SetValues: map[string]string{
-				"database.te.autoscaling.keda.enabled": "true",
+				"database.te.autoscaling.keda.enabled":         "true",
+				"database.te.autoscaling.keda.annotations.foo": "bar",
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/keda.yaml"},
@@ -3775,6 +3788,51 @@ func TestDatabaseAutoscaling(t *testing.T) {
 					"default", "release-name-nuodb-cluster0-demo-database"))
 				assert.Equal(t, expectedQuery, trigger.Metadata["query"])
 			}
+			assert.Equal(t, "bar", obj.Annotations["foo"])
+		}
+	})
+
+	t.Run("testShutdownWithHPA", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.replicas":                "0",
+				"database.te.autoscaling.hpa.enabled": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		objList := testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler")
+		assert.Len(t, objList, 1)
+
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			require.NotNil(t, obj.Spec.Replicas, obj.Spec.Replicas)
+			assert.Equal(t, int32(0), *obj.Spec.Replicas)
+		}
+	})
+
+	t.Run("testShutdownWithKEDA", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			ValuesFiles: []string{"../files/database-keda.yaml"},
+			SetValues: map[string]string{
+				"database.te.replicas":                 "0",
+				"database.te.autoscaling.keda.enabled": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/keda.yaml"})
+		objList := testlib.SplitAndRender[kedav1alpha1.ScaledObject](t, output, 1, "ScaledObject")
+		assert.Len(t, objList, 1)
+
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			require.NotNil(t, obj.Spec.Replicas, obj.Spec.Replicas)
+			assert.Equal(t, int32(0), *obj.Spec.Replicas)
 		}
 	})
 

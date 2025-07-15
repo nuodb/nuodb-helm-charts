@@ -3,6 +3,8 @@ apiVersion: {{ include "database.hpa.apiVersion" . }}
 kind: HorizontalPodAutoscaler
 metadata:
   name: te-{{ template "database.fullname" . }}
+  annotations:
+    {{- toYaml .Values.database.te.autoscaling.hpa.annotations | trim | nindent 4 }}
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
 spec:
