@@ -1,0 +1,32 @@
+{{- if eq (include "database.hpa.enabled" .) "true" }}
+apiVersion: {{ include "database.hpa.apiVersion" . }}
+kind: HorizontalPodAutoscaler
+metadata:
+  name: te-{{ template "database.fullname" . }}
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: te-{{ template "database.fullname" . }}
+  minReplicas: {{ include "database.hpa.minReplicas" . }}
+  maxReplicas: {{ include "database.hpa.maxReplicas" . }}
+  {{- if .Values.database.te.autoscaling.hpa.behavior }}
+  behavior: {{ include "database.hpa.behavior" . | nindent 4 }}
+  {{- end }}
+  metrics:
+  {{- if .Values.database.te.autoscaling.hpa.targetCpuUtilization }}
+  - type: ContainerResource
+    containerResource:
+      name: cpu
+      container: engine
+      {{- if $.Capabilities.APIVersions.Has "autoscaling/v2/HorizontalPodAutoscaler" }}
+      target:
+        type: Utilization
+        averageUtilization: {{ include "database.targetCpuUtilization" . }}
+      {{- else }}
+      targetAverageUtilization: {{ include "database.targetCpuUtilization" . }}
+      {{- end }}
+  {{- end }}
+{{- end }}

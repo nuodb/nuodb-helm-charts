@@ -8,10 +8,12 @@ import (
 
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
+	kedav1alpha1 "github.com/kedacore/keda/v2/apis/keda/v1alpha1"
 	coreosv1 "github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -3596,5 +3598,200 @@ func TestDatabasePodMonitor(t *testing.T) {
 			assert.NotNil(t, endpoint.TLSConfig.InsecureSkipVerify)
 			assert.Equal(t, true, *endpoint.TLSConfig.InsecureSkipVerify)
 		}
+	})
+}
+
+const cpuThrottlePercentageFmt = `
+avg(
+    max by (pod) (
+        irate(container_cpu_cfs_throttled_periods_total{namespace="%[1]s", pod=~"te-%[2]s-.*", container="engine"}[5m])
+      /
+        irate(container_cpu_cfs_periods_total{namespace="%[1]s", pod=~"te-%[2]s-.*", container="engine"}[5m])
+    )
+  *
+    100
+)
+`
+
+func TestDatabaseAutoscaling(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	t.Run("testDefaultHPA", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.resourceLabels.foo":         "bar",
+				"database.te.autoscaling.hpa.enabled": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			assert.Equal(t, "demo", obj.Labels["database"])
+			assert.Equal(t, "bar", obj.Labels["foo"])
+			assert.Equal(t, "apps/v1", obj.Spec.ScaleTargetRef.APIVersion)
+			assert.Equal(t, "Deployment", obj.Spec.ScaleTargetRef.Kind)
+			assert.Equal(t, "te-release-name-nuodb-cluster0-demo-database", obj.Spec.ScaleTargetRef.Name)
+			assert.NotNil(t, obj.Spec.Behavior)
+			assert.Nil(t, obj.Spec.Behavior.ScaleDown)
+			assert.NotNil(t, obj.Spec.Behavior.ScaleUp)
+			assert.NotNil(t, obj.Spec.Behavior.ScaleUp.StabilizationWindowSeconds)
+			assert.Equal(t, int32(300), *obj.Spec.Behavior.ScaleUp.StabilizationWindowSeconds)
+			assert.NotNil(t, obj.Spec.MinReplicas)
+			assert.Equal(t, int32(1), *obj.Spec.MinReplicas)
+			assert.Equal(t, int32(3), obj.Spec.MaxReplicas)
+			assert.Len(t, obj.Spec.Metrics, 1)
+			assert.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			assert.Equal(t, autoscalingv2.ContainerResourceMetricSourceType, obj.Spec.Metrics[0].Type)
+			assert.Equal(t, "engine", obj.Spec.Metrics[0].ContainerResource.Container)
+			assert.Equal(t, corev1.ResourceName("cpu"), obj.Spec.Metrics[0].ContainerResource.Name)
+			assert.Equal(t, autoscalingv2.UtilizationMetricType, obj.Spec.Metrics[0].ContainerResource.Target.Type)
+			assert.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			assert.Equal(t, int32(80), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testCustomHPA", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled":                                       "true",
+				"database.te.autoscaling.minReplicas":                                       "2",
+				"database.te.autoscaling.maxReplicas":                                       "5",
+				"database.te.autoscaling.hpa.targetCpuUtilization":                          "85",
+				"database.te.autoscaling.hpa.behavior.scaleUp.stabilizationWindowSeconds":   "600",
+				"database.te.autoscaling.hpa.behavior.scaleDown.stabilizationWindowSeconds": "600",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			assert.NotNil(t, obj.Spec.Behavior)
+			assert.NotNil(t, obj.Spec.Behavior.ScaleUp)
+			assert.NotNil(t, obj.Spec.Behavior.ScaleUp.StabilizationWindowSeconds)
+			assert.Equal(t, int32(600), *obj.Spec.Behavior.ScaleUp.StabilizationWindowSeconds)
+			assert.NotNil(t, obj.Spec.Behavior.ScaleDown)
+			assert.NotNil(t, obj.Spec.Behavior.ScaleDown.StabilizationWindowSeconds)
+			assert.Equal(t, int32(600), *obj.Spec.Behavior.ScaleDown.StabilizationWindowSeconds)
+
+			assert.NotNil(t, obj.Spec.MinReplicas)
+			assert.Equal(t, int32(2), *obj.Spec.MinReplicas)
+			assert.Equal(t, int32(5), obj.Spec.MaxReplicas)
+			assert.Len(t, obj.Spec.Metrics, 1)
+			assert.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			assert.Equal(t, autoscalingv2.ContainerResourceMetricSourceType, obj.Spec.Metrics[0].Type)
+			assert.Equal(t, "engine", obj.Spec.Metrics[0].ContainerResource.Container)
+			assert.Equal(t, corev1.ResourceName("cpu"), obj.Spec.Metrics[0].ContainerResource.Name)
+			assert.Equal(t, autoscalingv2.UtilizationMetricType, obj.Spec.Metrics[0].ContainerResource.Target.Type)
+			assert.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			assert.Equal(t, int32(85), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testDefaultKEDA", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.resourceLabels.foo":          "bar",
+				"database.te.autoscaling.keda.enabled": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/keda.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[kedav1alpha1.ScaledObject](t, output, 1, "ScaledObject") {
+			assert.Equal(t, "demo", obj.Labels["database"])
+			assert.Equal(t, "bar", obj.Labels["foo"])
+			assert.NotNil(t, obj.Spec.ScaleTargetRef)
+			assert.Equal(t, "apps/v1", obj.Spec.ScaleTargetRef.APIVersion)
+			assert.Equal(t, "Deployment", obj.Spec.ScaleTargetRef.Kind)
+			assert.Equal(t, "te-release-name-nuodb-cluster0-demo-database", obj.Spec.ScaleTargetRef.Name)
+			assert.NotNil(t, obj.Spec.MinReplicaCount)
+			assert.Equal(t, int32(1), *obj.Spec.MinReplicaCount)
+			assert.NotNil(t, obj.Spec.MaxReplicaCount)
+			assert.Equal(t, int32(3), *obj.Spec.MaxReplicaCount)
+			assert.NotNil(t, obj.Spec.PollingInterval)
+			assert.Equal(t, int32(30), *obj.Spec.PollingInterval)
+			assert.NotNil(t, obj.Spec.CooldownPeriod)
+			assert.Equal(t, int32(300), *obj.Spec.CooldownPeriod)
+			assert.NotNil(t, obj.Spec.Advanced)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleUp)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleUp.StabilizationWindowSeconds)
+			assert.Equal(t, int32(300), *obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleUp.StabilizationWindowSeconds)
+			for _, trigger := range obj.Spec.Triggers {
+				assert.Equal(t, "cpu", trigger.Type)
+				assert.Equal(t, autoscalingv2.MetricTargetType("Utilization"), trigger.MetricType)
+				assert.Equal(t, "engine", trigger.Metadata["containerName"])
+				assert.Equal(t, "80", trigger.Metadata["value"])
+			}
+		}
+	})
+
+	t.Run("testCustomKEDA", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			ValuesFiles: []string{"../files/database-keda.yaml"},
+			SetValues: map[string]string{
+				"database.te.autoscaling.keda.enabled": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/keda.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[kedav1alpha1.ScaledObject](t, output, 1, "ScaledObject") {
+			assert.NotNil(t, obj.Spec.MinReplicaCount)
+			assert.Equal(t, int32(2), *obj.Spec.MinReplicaCount)
+			assert.NotNil(t, obj.Spec.MaxReplicaCount)
+			assert.Equal(t, int32(5), *obj.Spec.MaxReplicaCount)
+			assert.NotNil(t, obj.Spec.PollingInterval)
+			assert.Equal(t, int32(60), *obj.Spec.PollingInterval)
+			assert.NotNil(t, obj.Spec.CooldownPeriod)
+			assert.Equal(t, int32(600), *obj.Spec.CooldownPeriod)
+			assert.NotNil(t, obj.Spec.Fallback)
+			assert.Equal(t, int32(10), obj.Spec.Fallback.FailureThreshold)
+			assert.Equal(t, int32(3), obj.Spec.Fallback.Replicas)
+			assert.NotNil(t, obj.Spec.Advanced)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleUp)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleUp.StabilizationWindowSeconds)
+			assert.Equal(t, int32(600), *obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleUp.StabilizationWindowSeconds)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleDown)
+			assert.NotNil(t, obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleDown.StabilizationWindowSeconds)
+			assert.Equal(t, int32(600), *obj.Spec.Advanced.HorizontalPodAutoscalerConfig.Behavior.ScaleDown.StabilizationWindowSeconds)
+			for _, trigger := range obj.Spec.Triggers {
+				assert.Equal(t, "prometheus", trigger.Type)
+				assert.Equal(t, "http://prometheus:9090", trigger.Metadata["serverAddress"])
+				assert.Equal(t, "40", trigger.Metadata["threshold"])
+				expectedQuery := strings.TrimSpace(fmt.Sprintf(cpuThrottlePercentageFmt,
+					"default", "release-name-nuodb-cluster0-demo-database"))
+				assert.Equal(t, expectedQuery, trigger.Metadata["query"])
+			}
+		}
+	})
+
+	t.Run("testNegativeEnableBoth", func(t *testing.T) {
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			ValuesFiles: []string{"../files/database-keda.yaml"},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled":  "true",
+				"database.te.autoscaling.keda.enabled": "true",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/keda.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		require.NotNil(t, err)
+		require.Contains(t, err.Error(), "Can not enable both HPA and KEDA for TE autoscaling")
 	})
 }

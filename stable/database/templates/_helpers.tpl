@@ -1169,3 +1169,75 @@ Import user defined ENV vars for the backup hooks sidecar
 {{ toYaml .Values.database.backupHooks.env | trim }}
 {{- end }}
 {{- end -}}
+
+{{/*
+Returns true if HPA resource is enabled
+*/}}
+{{- define "database.hpa.enabled" -}}
+{{- if eq (include "defaultfalse" .Values.database.te.autoscaling.hpa.enabled) "true" -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}
+
+{{/*
+Returns true if KEDA ScaledObject resource is enabled
+*/}}
+{{- define "database.keda.enabled" -}}
+{{- if eq (include "defaultfalse" .Values.database.te.autoscaling.keda.enabled) "true" -}}
+{{- if eq (include "defaultfalse" .Values.database.te.autoscaling.hpa.enabled) "true" -}}
+{{- fail "Can not enable both HPA and KEDA for TE autoscaling" }}
+{{- end -}}
+true
+{{- else -}}
+false
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the API version of the HorizontalPodAutoscaler kind
+*/}}
+{{- define "database.hpa.apiVersion" -}}
+{{- if .Capabilities.APIVersions.Has "autoscaling/v2/HorizontalPodAutoscaler" -}}
+autoscaling/v2
+{{- else -}}
+autoscaling/v2beta1
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the minReplicas setting for HPA
+*/}}
+{{- define "database.hpa.minReplicas" -}}
+{{ .Values.database.te.autoscaling.minReplicas }}
+{{- end -}}
+
+{{/*
+Return the maxReplicas setting for HPA
+*/}}
+{{- define "database.hpa.maxReplicas" -}}
+{{ .Values.database.te.autoscaling.maxReplicas }}
+{{- end -}}
+
+{{/*
+Return the behaviors setting for HPA
+*/}}
+{{- define "database.hpa.behavior" -}}
+{{ toYaml .Values.database.te.autoscaling.hpa.behavior }}
+{{- end -}}
+
+{{/*
+Return the targetCpuUtilization setting
+*/}}
+{{- define "database.targetCpuUtilization" -}}
+{{ .Values.database.te.autoscaling.hpa.targetCpuUtilization }}
+{{- end -}}
+
+{{/*
+Return the KEDA triggers
+*/}}
+{{- define "database.keda.triggers" -}}
+{{- $triggers := toYaml .Values.database.te.autoscaling.keda.triggers -}}
+{{- tpl $triggers . }}
+{{- end -}}
