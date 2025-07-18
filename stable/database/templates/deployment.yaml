@@ -17,7 +17,9 @@ metadata:
     component: te
   name: te-{{ template "database.fullname" . }}
 spec:
+  {{- if eq (include "database.te.setReplicas" .) "true" }}
   replicas: {{ include "database.te.replicas" . }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "database.selectorLabels" . | nindent 6 }}

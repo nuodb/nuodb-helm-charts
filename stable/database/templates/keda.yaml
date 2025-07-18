@@ -3,6 +3,8 @@ apiVersion: keda.sh/v1alpha1
 kind: ScaledObject
 metadata:
   name: te-{{ template "database.fullname" . }}
+  annotations:
+    {{- toYaml .Values.database.te.autoscaling.keda.annotations | trim | nindent 4 }}
   labels:
     {{- include "database.resourceLabels" . | nindent 4 }}
 spec:
