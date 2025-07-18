@@ -1088,7 +1088,7 @@ Database name
 {{/*
 Returns true if TE replicas must be set on the Deployment. When TE autoscaling
 is enabled, it is recommended that the `spec.replicas` field is removed. The HPA
-will be implicitly deactivated if the decired replicas is set to 0 (zero). See
+will be implicitly deactivated if the desired replicas is set to 0 (zero). See
 https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/#migrating-deployments-and-statefulsets-to-horizontal-autoscaling
 */}}
 {{- define "database.te.setReplicas" -}}
