@@ -1255,3 +1255,26 @@ Return the KEDA triggers
 {{- $triggers := toYaml .Values.database.te.autoscaling.keda.triggers -}}
 {{- tpl $triggers . }}
 {{- end -}}
+
+{{/*
+Any additional annotations to add to services.
+*/}}
+{{- define "database.serviceAnnotations"}}
+{{/*
+Extension point that can be overriden by an embedding chart.
+*/}}
+{{- end }}
+
+{{/*
+Database root user
+*/}}
+{{- define "database.rootUser" -}}
+{{ .Values.database.rootUser }}
+{{- end -}}
+
+{{/*
+Database root password
+*/}}
+{{- define "database.rootPassword" -}}
+{{ .Values.database.rootPassword }}
+{{- end -}}

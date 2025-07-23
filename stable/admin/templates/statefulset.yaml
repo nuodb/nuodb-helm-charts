@@ -313,7 +313,7 @@ spec:
   - metadata:
       name: log-volume
       labels:
-        {{- include "admin.resourceLabels" . | nindent 8 }}
+        {{- include "admin.volumeLabels" . | nindent 8 }}
     spec:
     {{- if .Values.admin.logPersistence.storageClass }}
       {{- if (eq "-" .Values.admin.logPersistence.storageClass) }}

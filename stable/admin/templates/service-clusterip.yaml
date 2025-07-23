@@ -5,6 +5,7 @@ metadata:
   annotations:
     description: |
       Cluster IP service permitting us to load balance within the cluster.
+    {{- include "admin.serviceAnnotations" . | nindent 4 }}
   labels:
     {{- include "admin.resourceLabels" . | nindent 4 }}
   name: {{ include "admin.domainName" . }}-{{ .Values.admin.serviceSuffix.clusterip }}
