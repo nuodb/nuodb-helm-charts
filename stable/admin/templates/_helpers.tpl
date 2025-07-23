@@ -599,3 +599,12 @@ Resources requested and limited
 {{- define "admin.resources" -}}
 {{- toYaml .Values.admin.resources -}}
 {{- end -}}
+
+{{/*
+Any additional annotations to add to services.
+*/}}
+{{- define "admin.serviceAnnotations"}}
+{{/*
+Extension point that can be overriden by an embedding chart.
+*/}}
+{{- end }}
