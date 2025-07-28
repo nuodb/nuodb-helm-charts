@@ -6,6 +6,7 @@ metadata:
     description: |
       Headless service permitting us to retrieve DNS A records that point directly to the pods backing the service.
     "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true"
+    {{- include "admin.serviceAnnotations" . | nindent 4 }}
   labels:
     {{- include "admin.resourceLabels" . | nindent 4 }}
   name: {{ include "admin.domainName" . }}
