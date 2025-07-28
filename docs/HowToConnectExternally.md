@@ -28,6 +28,134 @@ This allows flexible configuration of each TE group including but not limited to
 SQL clients can be configured to target each TE group separately using NuoDB Admin load balancer rules.
 Specifying the type of the Helm `database` release is controlled by the  `database.primaryRelease` option (`true` by default).
 
+Here is an example.
+
+Deploy the first DB chart as normal, deploying 2 SMs and 1 TE, setting the label for this te to teconn=group1
+
+```bash
+helm install db1 stable/database -n nuodb --set admin.domain=nuodb --set database.name=testdb1  --set database.rootUser=dba  --set database.rootPassword=dba  --set database.sm.hotCopy.replicas=0  --set database.sm.noHotCopy.replicas=2  --set database.te.replicas=1 --set database.sm.hotCopy.enableBackups=false --set database.te.labels.teconn=group1
+```
+
+For additional TEs, add new database charts to this domain with primaryRelease set to false. Here I add only TE replicas in each chart deployment with the last one set to 2 replicas:, with each TE grouping getting it’s own label: `teconn=group2`, `teconn=group3` and `teconn=group4`.
+
+```bash
+helm install db2 stable/database -n nuodb --set admin.domain=nuodb --set database.name=testdb1  --set database.rootUser=dba  --set database.rootPassword=dba  --set database.sm.hotCopy.replicas=0  --set database.sm.noHotCopy.replicas=0  --set database.te.replicas=1 --set database.primaryRelease=false --set database.te.labels.teconn=group2
+
+helm install db3 stable/database -n nuodb --set admin.domain=nuodb --set database.name=testdb1  --set database.rootUser=dba  --set database.rootPassword=dba  --set database.sm.hotCopy.replicas=0  --set database.sm.noHotCopy.replicas=0  --set database.te.replicas=1 --set database.primaryRelease=false --set database.te.labels.teconn=group3
+
+helm install db4 stable/database -n nuodb --set admin.domain=nuodb --set database.name=testdb1  --set database.rootUser=dba  --set database.rootPassword=dba  --set database.sm.hotCopy.replicas=0  --set database.sm.noHotCopy.replicas=0  --set database.te.replicas=2 --set database.primaryRelease=false --set database.te.labels.teconn=group4
+```
+
+All charts deployed:
+
+```bash
+$ kubectl get pods -n bkelly
+NAME                                                      READY   STATUS    RESTARTS   AGE
+admin1-nuodb-cluster0-0                                   1/1     Running   0          10m
+admin1-nuodb-cluster0-1                                   1/1     Running   0          10m
+admin1-nuodb-cluster0-2                                   1/1     Running   0          10m
+sm-db1-nuodb-cluster0-testdb1-database-hotcopy-0          1/1     Running   0          9m37s
+sm-db1-nuodb-cluster0-testdb1-database-hotcopy-1          1/1     Running   0          9m37s
+te-db1-nuodb-cluster0-testdb1-database-cdf6f44b8-8fg6q    1/1     Running   0          7m18s
+te-db2-nuodb-cluster0-testdb1-database-985497b8b-b9zds    1/1     Running   0          6m52s
+te-db3-nuodb-cluster0-testdb1-database-689584dd84-tp2lm   1/1     Running   0          68s
+te-db4-nuodb-cluster0-testdb1-database-76564b57db-5mdlp   1/1     Running   0          39s
+te-db4-nuodb-cluster0-testdb1-database-76564b57db-wtqbm   1/1     Running   0          39s
+
+$ nuocmd show domain
+server version: 7.0.2-2-d1bbcbe145, server license: Enterprise
+server time: 2025-07-24T09:17:17.629, client token: 53ef8b5a9b9f7ee90af00556e92749b064ebf018
+Servers:
+  [admin1-nuodb-cluster0-0] admin1-nuodb-cluster0-0.nuodb.bkelly.svc.cluster.local:48005 [last_ack = 1.25] ACTIVE (LEADER, Leader=admin1-nuodb-cluster0-0, log=0/138/138) Connected *
+  [admin1-nuodb-cluster0-1] admin1-nuodb-cluster0-1.nuodb.bkelly.svc.cluster.local:48005 [last_ack = 1.24] ACTIVE (FOLLOWER, Leader=admin1-nuodb-cluster0-0, log=0/138/138) Connected
+  [admin1-nuodb-cluster0-2] admin1-nuodb-cluster0-2.nuodb.bkelly.svc.cluster.local:48005 [last_ack = 1.17] ACTIVE (FOLLOWER, Leader=admin1-nuodb-cluster0-0, log=0/138/138) Connected
+Databases:
+  testdb1 [state = RUNNING]
+    [SM] sm-db1-nuodb-cluster0-testdb1-database-hotcopy-1/10.0.149.5:48006 [start_id = 0] [server_id = admin1-nuodb-cluster0-1] [pid = 101] [node_id = 0] [last_ack =  3.02] MONITORED:RUNNING
+    [SM] sm-db1-nuodb-cluster0-testdb1-database-hotcopy-0/10.0.129.20:48006 [start_id = 1] [server_id = admin1-nuodb-cluster0-0] [pid = 109] [node_id = 1] [last_ack =  8.83] MONITORED:RUNNING
+    [TE] te-db1-nuodb-cluster0-testdb1-database-cdf6f44b8-8fg6q/10.0.148.30:48006 [start_id = 4] [server_id = admin1-nuodb-cluster0-1] [pid = 80] [node_id = 4] [last_ack =  5.08] MONITORED:RUNNING
+    [TE] te-db2-nuodb-cluster0-testdb1-database-985497b8b-b9zds/10.0.144.116:48006 [start_id = 5] [server_id = admin1-nuodb-cluster0-1] [pid = 80] [node_id = 5] [last_ack = 10.09] MONITORED:RUNNING
+    [TE] te-db3-nuodb-cluster0-testdb1-database-689584dd84-tp2lm/10.0.133.203:48006 [start_id = 6] [server_id = admin1-nuodb-cluster0-0] [pid = 80] [node_id = 6] [last_ack =  5.46] MONITORED:RUNNING
+    [TE] te-db4-nuodb-cluster0-testdb1-database-76564b57db-wtqbm/10.0.165.249:48006 [start_id = 7] [server_id = admin1-nuodb-cluster0-2] [pid = 80] [node_id = 7] [last_ack =  6.05] MONITORED:RUNNING
+    [TE] te-db4-nuodb-cluster0-testdb1-database-76564b57db-5mdlp/10.0.134.108:48006 [start_id = 8] [server_id = admin1-nuodb-cluster0-0] [pid = 81] [node_id = 8] [last_ack =  5.70] MONITORED:RUNNING
+```
+
+Now testing connections using the labels to target each TE:
+
+```bash
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group1))'
+
+ [GETNODEID]  
+ ------------ 
+      4       
+
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group1))'
+
+ [GETNODEID]  
+ ------------ 
+      4      
+```
+ 
+Second TE:
+
+```bash
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group2))'
+
+ [GETNODEID]  
+ ------------ 
+      5       
+
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group2))'
+
+ [GETNODEID]  
+ ------------ 
+      5    
+```
+   
+Third TE:
+
+```bash
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group3))'
+
+ [GETNODEID]  
+ ------------ 
+      6       
+
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group3))'
+
+ [GETNODEID]  
+ ------------ 
+      6    
+```
+   
+Forth TE “group”:
+
+```bash
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group4))'
+
+ [GETNODEID]  
+ ------------ 
+      8       
+
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group4))'
+
+ [GETNODEID]  
+ ------------ 
+      8       
+
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group4))'
+
+ [GETNODEID]  
+ ------------ 
+      7       
+
+bash-4.4$ echo 'SELECT GETNODEID() from dual;' | nuosql testdb1 --user dba --password dba --connection-property 'LBQuery=round_robin(label(teconn group4))'
+
+ [GETNODEID]  
+ ------------ 
+      7       
+```
+
 ## External Access for TE Groups
 
 External access for the NuoDB database is _not_ enabled by default.
