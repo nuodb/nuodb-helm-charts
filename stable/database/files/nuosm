@@ -424,7 +424,7 @@ function loadFromSnapshot() {
 
   if [ ! -f "$DB_DIR/info.json" ] && [ ! -f "$DB_DIR/restored.txt" ]; then
     local archives="$(find /var/opt/nuodb/archive -name info.json)"
-    if [ -z "$archives" ] || [ "$(echo "$archives" | wc -l)" != 1 ]; then
+    if [ -z "$archives" ] || [ "$(echo "$archives" | wc -l)" -ne 1 ]; then
       # Relax check for archive snapshot for SMs other than ordinal 0. It is
       # possible that a database that was restored from a backup with
       # pre-provisioned PVCs has been scaled up. In this case, the new SMs will
