@@ -275,9 +275,9 @@ spec:
         imagePullPolicy: {{ default "" .Values.database.backupHooks.image.pullPolicy }}
         args:
           - nuodb-operations
-          - --port=8000
+          - --port={{ .Values.database.backupHooks.port }}
         ports:
-        - containerPort: 8000
+        - containerPort: {{ .Values.database.backupHooks.port }}
           protocol: TCP
         env:
           - name: FREEZE_MODE

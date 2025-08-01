@@ -377,6 +377,9 @@ database:
     # Timeout in seconds until the SM is automatically unfrozen.
     timeout: 30
 
+    # The container port to expose the HTTP server on
+    port: 8080
+
     # Register scripts to be invoked on HTTP requests. Path parameters can
     # appear in the request path, which are exported as environment variables
     # available within the script. Query parameters are also made available as
