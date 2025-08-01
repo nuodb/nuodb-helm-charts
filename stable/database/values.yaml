@@ -378,7 +378,7 @@ database:
     timeout: 30
 
     # The container port to expose the HTTP server on
-    port: 8080
+    port: 8000
 
     # Register scripts to be invoked on HTTP requests. Path parameters can
     # appear in the request path, which are exported as environment variables

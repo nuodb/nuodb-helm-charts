@@ -280,6 +280,11 @@ spec:
         - containerPort: {{ .Values.database.backupHooks.port }}
           protocol: TCP
         env:
+          - name: DB_NAME
+            valueFrom:
+              secretKeyRef:
+                name: {{ template "database.secretName" . }}
+                key: database-name
           - name: FREEZE_MODE
             value: {{ include "backupHooks.freezeMode" . | quote }}
           {{- if .Values.database.backupHooks.timeout }}
