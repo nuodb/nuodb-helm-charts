@@ -227,6 +227,9 @@ spec:
             name: {{ template "database.fullname" . }}-readinessprobe
             defaultMode: 0777
         {{- include "database.tlsVolume" . | nindent 8 }}
+        {{- if eq (include "defaulttrue" .Values.nuocollector.watcher.enabled ) "false" }}
+        {{- include "nuocollector.volume" . | nindent 8 }}
+        {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler

@@ -440,6 +440,10 @@ nuocollector:
     tag: 2.0.0
     pullPolicy: IfNotPresent
   watcher:
+    # Whether to enable NuoDB Collector configuration watcher. If disabled,
+    # decired output plugins must be defined during the installation of the
+    # NuoDB Helm Charts release
+    enabled: true
     registry: ghcr.io
     repository: nuodb/nuodb-sidecar
     tag: latest

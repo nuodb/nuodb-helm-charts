@@ -144,3 +144,62 @@ func TestMetricsCollection(t *testing.T) {
 		})
 	})
 }
+
+func TestMetricsCollectionWithoutWatcher(t *testing.T) {
+	defer testlib.VerifyTeardown(t)
+
+	options := helm.Options{
+		SetValues: map[string]string{
+			"nuocollector.enabled":                  "true",
+			"nuocollector.watcher.enabled":          "false",
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			// Load custom user plugin for the admin
+			"nuocollector.plugins.admin.log": `
+[[inputs.tail]]
+  files = ["/var/log/nuodb/nuoadmin*.log"]
+  from_beginning = true
+  name_override= "logfile"
+  data_format = "grok"
+  grok_patterns= [ "%{CUSTOM_LOGLINE}" ]
+  grok_custom_patterns = '''
+  CUSTOM_LOGLINE %{TIMESTAMP_ISO8601:timestamp:ts-"2006-01-02T15:04:05.000-0700"}%{SPACE}(?:%{LOGLEVEL:loglevel:tag}%{SPACE}(?:%{NOTSPACE:logger:tag}%{SPACE})?)?%{GREEDYDATA:message}
+  '''
+  [inputs.tail.tags]
+    db_tag = "nuolog"`,
+			// Load admin file plugin manually
+			"nuocollector.plugins.admin.file": `
+[[outputs.file]]
+files = ["stdout"]
+data_format = "influx"`,
+			// Load database file plugin manually
+			"nuocollector.plugins.database.file": `
+[[outputs.file]]
+files = ["stdout"]
+data_format = "influx"`,
+		},
+	}
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	adminReleaseName, namespaceName := testlib.StartAdmin(t, &options, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
+
+	t.Run("startDatabaseStatefulSet", func(t *testing.T) {
+		defer testlib.Teardown(testlib.TEARDOWN_DATABASE) // ensure resources allocated in called functions are released when this function exits
+
+		databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &options)
+		defer testlib.Teardown(testlib.TEARDOWN_COLLECTOR)
+		defer testlib.Teardown(testlib.TEARDOWN_YCSB)
+		testlib.StartYCSBWorkload(t, namespaceName, &helm.Options{
+			SetValues: map[string]string{
+				"ycsb.replicas": "1",
+			},
+		})
+		t.Run("verifyMetricsCollection", func(t *testing.T) {
+			verifyCollectionForAdmin(t, namespaceName, fmt.Sprintf("%s-nuodb-cluster0", adminReleaseName))
+			verifyCollectionForDatabase(t, namespaceName, fmt.Sprintf("%s-nuodb-%s-%s", databaseReleaseName, "cluster0", "demo"), "demo")
+		})
+	})
+}
