@@ -252,7 +252,10 @@ function perform_restore() {
       log "removing $download_dir"
       rm -rf $download_dir
     fi
-
+  elif [ "$restore_type" == "snapshot" ]; then
+    # the archive content has been restored from a snapshot so load it and
+    # always recreate the archive metadata
+    loadFromSnapshot "true"
   else
     # log "Calling nuoarchive to restore $restore_source into $DB_DIR"
     log "Calling nuodocker to restore $restore_source into $DB_DIR"
@@ -420,7 +423,7 @@ function checkBackupId() {
 # function - Looks for a previous archive and journal and imports it
 #
 function loadFromSnapshot() {
-  local recreate_archives="false"
+  local recreate_archives=${1:="false"}
 
   if [ ! -f "$DB_DIR/info.json" ] && [ ! -f "$DB_DIR/restored.txt" ]; then
     local archives="$(find /var/opt/nuodb/archive -name info.json)"
@@ -576,12 +579,17 @@ if [ "$myArchive" -ne "-1" ]; then
       # restore chart doesn't have notion of stream|backupset
       # `nuodocker restore archive` works with both
       restore_type="backupset"
+      if [ "$restore_source" == ":snapshot" ]; then
+        # the archive content has been restored from a snapshot by an external
+        # backup manager (not by NuoDB Helm charts or NuoDB operator)
+        restore_type="snapshot"
+      fi
       [ -z "$restore_credentials_encoded" ] && restore_credentials_encoded="$(printf "%s" "${DATABASE_RESTORE_CREDENTIALS:-:}" | base64 -w 0)"
       [ -z "$strip_levels" ] && strip_levels=${DATABASE_RESTORE_STRIP_LEVELS:-1}
 
       log "Archive restore will be performed for archiveId=${myArchive}, source=${restore_source}, type=${restore_type}, strip=${strip_levels}"
       trace "performing restore for archiveId=${myArchive}"
-      if isRestoreSourceAvailable "$restore_source"; then
+      if isRestoreSourceAvailable "$restore_source" || [ "$restore_type" == "snapshot" ]; then
         perform_restore || die $? "$error"
       else
         error="Backupset $restore_source cannot be found in $NUODB_BACKUPDIR"
