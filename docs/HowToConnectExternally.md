@@ -25,7 +25,7 @@ NuoDB Helm Charts 3.4.0+ supports the deployment of one or more TE groups per da
 Multiple Helm releases of the `database` chart for the same NuoDB database can be installed in the same Kubernetes namespace where only one of them is _primary_.
 One or more _secondary_ Helm releases are used to deploy additional TE groups for the same database with different configuration options.
 This allows flexible configuration of each TE group including but not limited to the number of TEs in a group, their resource requirements, process labels, and scheduling rules.
-SQL clients can be configured to target each TE group separately using NuoDB Admin load balancer rules.
+SQL clients can be configured to target each TE group separately using [NuoDB Admin load balancer rules](https://doc.nuodb.com/nuodb/latest/client-development/load-balancer-policies/).
 Specifying the type of the Helm `database` release is controlled by the  `database.primaryRelease` option (`true` by default).
 
 ## External Access for TE Groups
