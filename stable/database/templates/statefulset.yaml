@@ -381,6 +381,9 @@ spec:
       {{- end }}
       {{- end }}
       {{- end }}
+      {{- if eq (include "defaulttrue" .Values.nuocollector.watcher.enabled ) "false" }}
+      {{- include "nuocollector.volume" . | nindent 6 }}
+      {{- end }}
       {{- include "database.sm.extraVolumes" . | nindent 6  }}
   volumeClaimTemplates:
   - metadata:
@@ -734,6 +737,9 @@ spec:
       {{- end }}
       {{- end }}
       {{- end }}
+      {{- end }}
+      {{- if eq (include "defaulttrue" .Values.nuocollector.watcher.enabled ) "false" }}
+      {{- include "nuocollector.volume" . | nindent 6 }}
       {{- end }}
       {{- include "database.sm.extraVolumes" . | nindent 6  }}
   volumeClaimTemplates:

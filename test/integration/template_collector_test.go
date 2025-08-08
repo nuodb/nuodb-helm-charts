@@ -31,6 +31,8 @@ func checkSidecarContainers(t *testing.T, containers []corev1.Container, options
 				options.SetValues["nuocollector.image.repository"],
 				options.SetValues["nuocollector.image.tag"]))
 		} else if container.Name == "nuocollector-config" {
+			assert.True(t, options.SetValues["nuocollector.watcher.enabled"] == "true" || options.SetValues["nuocollector.watcher.enabled"] == "",
+				"nuocollector-config container must be disabled ")
 			found++
 			assert.Equal(t, container.Image, fmt.Sprintf("%s/%s:%s",
 				options.SetValues["nuocollector.watcher.registry"],
@@ -64,11 +66,19 @@ func checkSidecarContainers(t *testing.T, containers []corev1.Container, options
 			// This is probably the main container
 			continue
 		}
-		assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{
-			Name:      "eph-volume",
-			MountPath: "/etc/telegraf/telegraf.d/dynamic/",
-			SubPath:   "telegraf",
-		})
+		if options.SetValues["nuocollector.watcher.enabled"] == "false" {
+			assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{
+				Name:      "nuocollector-config",
+				MountPath: "/etc/telegraf/telegraf.d/dynamic/",
+				ReadOnly:  true,
+			})
+		} else {
+			assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{
+				Name:      "eph-volume",
+				MountPath: "/etc/telegraf/telegraf.d/dynamic/",
+				SubPath:   "telegraf",
+			})
+		}
 		if logPersistenceEnabled {
 			assert.Contains(t, container.VolumeMounts, corev1.VolumeMount{
 				Name:      "log-volume",
@@ -94,22 +104,51 @@ func checkSidecarContainers(t *testing.T, containers []corev1.Container, options
 
 	expectedContainersCount := 0
 	if options.SetValues["nuocollector.enabled"] == "true" {
-		expectedContainersCount = 2
+		expectedContainersCount += 1
+		if options.SetValues["nuocollector.watcher.enabled"] != "false" {
+			expectedContainersCount += 1
+		}
 	}
 	assert.Equal(t, expectedContainersCount, found)
 }
 
-func checkSpecVolumes(t *testing.T, volumes []corev1.Volume, options *helm.Options, chartPath string) {
+func checkSpecVolumes(t *testing.T, volumes []corev1.Volume, options *helm.Options, chartPath string, configMaps []corev1.ConfigMap) {
 	if options.SetValues["nuocollector.enabled"] == "false" {
 		return
 	}
-	// Check that ephemeral volume is enabled. This is needed to share telegraf config.
+	// Check that configuration volume is enabled. This is needed to share
+	// telegraf config.
+	expectedName := "eph-volume"
+	if options.SetValues["nuocollector.watcher.enabled"] == "false" {
+		expectedName = "nuocollector-config"
+	}
+	var found *corev1.Volume
 	for _, volume := range volumes {
-		if volume.Name == "eph-volume" {
-			return
+		if volume.Name == expectedName {
+			found = &volume
 		}
 	}
-	assert.Fail(t, "eph-volume should be declared as volume")
+	require.NotNil(t, found, "%s should be declared as volume", expectedName)
+	if options.SetValues["nuocollector.watcher.enabled"] == "false" {
+		require.NotNil(t, found.Projected)
+		for _, cm := range configMaps {
+			if _, ok := cm.Labels["nuodb.com/nuocollector-plugin"]; ok {
+				parts := strings.Split(cm.Name, "-")
+				pluginFile := fmt.Sprintf("%s.conf", parts[len(parts)-1])
+				assert.Contains(t, found.Projected.Sources, corev1.VolumeProjection{ConfigMap: &corev1.ConfigMapProjection{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: cm.Name,
+					},
+					Items: []corev1.KeyToPath{
+						{
+							Key:  pluginFile,
+							Path: pluginFile,
+						},
+					},
+				}})
+			}
+		}
+	}
 }
 
 func checkPluginsRendered(t *testing.T, configMaps []corev1.ConfigMap, options *helm.Options, chartPath string, expectedNrPlugins int) {
@@ -142,46 +181,54 @@ func checkPluginsRendered(t *testing.T, configMaps []corev1.ConfigMap, options *
 	assert.Equal(t, expectedNrPlugins, found)
 }
 
-type assertFunction func(chartPath string, volumes []corev1.Volume, containers []corev1.Container)
+type assertFunction func(chartPath string, volumes []corev1.Volume, containers []corev1.Container, configMaps []corev1.ConfigMap)
 
-func executeSidecarTestsWithAsserts(t *testing.T, options *helm.Options, assertFn assertFunction) {
+func executeSidecarTestsWithAsserts(t *testing.T, options *helm.Options, assertFn assertFunction, extraTemplates ...string) {
+	stsTemplates := []string{"templates/statefulset.yaml"}
+	depTemplates := []string{"templates/deployment.yaml"}
+	stsTemplates = append(stsTemplates, extraTemplates...)
+	depTemplates = append(depTemplates, extraTemplates...)
+
 	t.Run("testAdminSidecars", func(t *testing.T) {
 		// Run RenderTemplate to render the template and inspect admin statefulset
 		helmChartPath := testlib.ADMIN_HELM_CHART_PATH
-		output := helm.RenderTemplate(t, options, testlib.ADMIN_HELM_CHART_PATH, "release-name", []string{"templates/statefulset.yaml"})
+		output := helm.RenderTemplate(t, options, testlib.ADMIN_HELM_CHART_PATH, "release-name", stsTemplates)
 
+		configMaps := testlib.SplitAndRenderConfigMap(t, output, 0)
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			t.Logf("Inspecting admin statefulset: %s", obj.Name)
-			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers)
+			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers, configMaps)
 		}
 	})
 
 	t.Run("testDatabaseStatefulsetSidecars", func(t *testing.T) {
 		// Run RenderTemplate to render the template and inspect database statefulset
 		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
-		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/statefulset.yaml"})
+		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", stsTemplates)
 
+		configMaps := testlib.SplitAndRenderConfigMap(t, output, 0)
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			t.Logf("Inspecting database statefulset: %s", obj.Name)
-			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers)
+			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers, configMaps)
 		}
 	})
 
 	t.Run("testDatabaseDeploymentSidecars", func(t *testing.T) {
 		// Run RenderTemplate to render the template and inspect database deployment
 		helmChartPath := testlib.DATABASE_HELM_CHART_PATH
-		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", []string{"templates/deployment.yaml"})
+		output := helm.RenderTemplate(t, options, testlib.DATABASE_HELM_CHART_PATH, "release-name", depTemplates)
 
+		configMaps := testlib.SplitAndRenderConfigMap(t, output, 0)
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			t.Logf("Inspecting database deployment: %s", obj.Name)
-			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers)
+			assertFn(helmChartPath, obj.Spec.Template.Spec.Volumes, obj.Spec.Template.Spec.Containers, configMaps)
 		}
 	})
 }
 
 func executeSidecarTests(t *testing.T, options *helm.Options) {
-	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container) {
-		checkSpecVolumes(t, volumes, options, chartPath)
+	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container, configMaps []corev1.ConfigMap) {
+		checkSpecVolumes(t, volumes, options, chartPath, configMaps)
 		checkSidecarContainers(t, containers, options, chartPath)
 	})
 }
@@ -322,7 +369,7 @@ func TestNuoDBCollectorEnv(t *testing.T) {
 			"nuocollector.env[1].valueFrom.secretKeyRef.key":  "password",
 		},
 	}
-	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container) {
+	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container, _ []corev1.ConfigMap) {
 		if chartPath != testlib.DATABASE_HELM_CHART_PATH {
 			// environment variables are supported only for the database chart
 			return
@@ -355,7 +402,7 @@ func TestNuoDBCollectorPorts(t *testing.T) {
 			"nuocollector.ports[0].protocol":      "TCP",
 		},
 	}
-	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container) {
+	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container, _ []corev1.ConfigMap) {
 		if chartPath != testlib.DATABASE_HELM_CHART_PATH {
 			// ports are supported only for the database chart
 			return
@@ -373,4 +420,43 @@ func TestNuoDBCollectorPorts(t *testing.T) {
 			Protocol:      corev1.ProtocolTCP,
 		})
 	})
+}
+
+func TestNuoDBCollectorWatcherSidecarDisabled(t *testing.T) {
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"nuocollector.enabled":            "true",
+			"nuocollector.image.registry":     "docker.io",
+			"nuocollector.image.repository":   "nuodb/nuocd",
+			"nuocollector.image.tag":          "1.0.0",
+			"nuocollector.watcher.enabled":    "false",
+			"nuocollector.watcher.registry":   "docker.io",
+			"nuocollector.watcher.repository": "kiwigrid/k8s-sidecar",
+			"nuocollector.watcher.tag":        "latest",
+		},
+	}
+	executeSidecarTests(t, options)
+}
+
+func TestNuoDBCollectorWatcherSidecarDisabledWithPlugins(t *testing.T) {
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"nuocollector.enabled":               "true",
+			"nuocollector.image.registry":        "docker.io",
+			"nuocollector.image.repository":      "nuodb/nuocd",
+			"nuocollector.image.tag":             "1.0.0",
+			"nuocollector.watcher.enabled":       "false",
+			"nuocollector.watcher.registry":      "docker.io",
+			"nuocollector.watcher.repository":    "kiwigrid/k8s-sidecar",
+			"nuocollector.watcher.tag":           "latest",
+			"nuocollector.plugins.admin.file":    "[[outputs.file]]\nfiles = [\"/var/log/nuodb/metrics.log\"]\ndata_format = \"json\"",
+			"nuocollector.plugins.database.file": "[[outputs.file]]\nfiles = [\"/var/log/nuodb/metrics.log\"]\ndata_format = \"json\"",
+		},
+	}
+
+	executeSidecarTestsWithAsserts(t, options, func(chartPath string, volumes []corev1.Volume, containers []corev1.Container, configMaps []corev1.ConfigMap) {
+		checkSpecVolumes(t, volumes, options, chartPath, configMaps)
+		checkSidecarContainers(t, containers, options, chartPath)
+		checkPluginsRendered(t, configMaps, options, chartPath, 1)
+	}, "templates/nuocollector-configmap.yaml")
 }

@@ -56,8 +56,13 @@ Also, we can't use a single if because lazy evaluation is not an option
   {{- include "admin.sc.containerSecurityContext" . | indent 2 }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
+    {{- if eq (include "defaulttrue" .Values.nuocollector.watcher.enabled ) "true" }}
     name: eph-volume
     subPath: telegraf
+    {{- else }}
+    name: nuocollector-config
+    readOnly: true
+    {{- end }}
   - mountPath: /var/log/nuodb
     {{- if eq (include "defaultfalse" .Values.admin.logPersistence.enabled) "true" }}
     name: log-volume
@@ -65,6 +70,7 @@ Also, we can't use a single if because lazy evaluation is not an option
     name: eph-volume
     subPath: log
     {{- end }}
+{{- if eq (include "defaulttrue" .Values.nuocollector.watcher.enabled ) "true" }}
 - name: nuocollector-config
   image: {{ template "nuocollector.watcher" . }}
   imagePullPolicy: {{ $.Values.nuocollector.watcher.pullPolicy }}
@@ -92,6 +98,7 @@ Also, we can't use a single if because lazy evaluation is not an option
     name: eph-volume
     subPath: log
     {{- end }}
+{{- end }}
 shareProcessNamespace: true
 {{- end }}
 {{- end }}

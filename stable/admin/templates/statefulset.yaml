@@ -275,6 +275,19 @@ spec:
             - key: {{ .Values.admin.license.key }}
               path: nuodb.lic
       {{- end }}
+      {{- if eq (include "defaulttrue" .Values.nuocollector.watcher.enabled ) "false" }}
+      - name: nuocollector-config
+        projected:
+          defaultMode: 0440
+          sources:
+          {{- range $pluginName, $content := .Values.nuocollector.plugins.admin }}
+          - configMap:
+              name: nuocollector-{{ template "admin.fullname" $ }}-{{ $pluginName }}
+              items:
+              - key: {{ $pluginName }}.conf
+                path: {{ $pluginName }}.conf
+          {{- end }}
+      {{- end }}
       - name: nuoadmin
         configMap:
           name: {{ template "admin.fullname" . }}-nuoadmin
