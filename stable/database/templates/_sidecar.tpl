@@ -20,8 +20,13 @@
   {{- end }}
   volumeMounts:
   - mountPath: /etc/telegraf/telegraf.d/dynamic/
+    {{- if eq (include "defaulttrue" $.Values.nuocollector.watcher.enabled ) "true" }}
     name: eph-volume
     subPath: telegraf
+    {{- else }}
+    name: nuocollector-config
+    readOnly: true
+    {{- end }}
   - mountPath: /var/log/nuodb
     {{- if eq (include "defaultfalse" $engine.logPersistence.enabled) "true" }}
     name: log-volume
@@ -29,6 +34,7 @@
     name: eph-volume
     subPath: log
     {{- end }}
+{{- if eq (include "defaulttrue" $.Values.nuocollector.watcher.enabled ) "true" }}
 - name: nuocollector-config
   image: {{ template "nuocollector.watcher" $ }}
   imagePullPolicy: {{ $.Values.nuocollector.watcher.pullPolicy }}
@@ -56,6 +62,7 @@
     name: eph-volume
     subPath: log
     {{- end }}
+{{- end }}
 {{- end }}
 {{- end }}
 {{- end -}}
@@ -104,4 +111,21 @@ Also, we can't use a single if because lazy evaluation is not an option
 {{- else -}}
     {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Renders the NuoDB Collector plugins as a volume.
+*/}}
+{{- define "nuocollector.volume" -}}
+- name: nuocollector-config
+  projected:
+    defaultMode: 0440
+    sources:
+    {{- range $pluginName, $content := .Values.nuocollector.plugins.database }}
+    - configMap:
+        name: nuocollector-{{ template "database.fullname" $ }}-{{ $pluginName }}
+        items:
+        - key: {{ $pluginName }}.conf
+          path: {{ $pluginName }}.conf
+    {{- end }}
 {{- end -}}
