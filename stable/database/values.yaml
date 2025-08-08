@@ -855,7 +855,7 @@ nuocollector:
     pullPolicy: IfNotPresent
   watcher:
     # Whether to enable NuoDB Collector configuration watcher. If disabled,
-    # decired output plugins must be defined during the installation of the
+    # desired output plugins must be defined during the installation of the
     # NuoDB Helm Charts release
     enabled: true
     registry: ghcr.io
