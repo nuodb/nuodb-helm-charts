@@ -232,6 +232,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `backupHooks.resources` | Kubernetes resource requests and limits set on the backup hook sidecar container | `{}` |
 | `backupHooks.freezeMode` | The freeze mode to be used when executing backup hooks. Supported modes are `hotsnap`, `fsfreeze` and `suspend`. Defaults to `hostsnap` if empty | `""` |
 | `backupHooks.timeout` | Timeout in seconds after which the archive will be automatically unfrozen | `30` |
+| `backupHooks.port` | The container port to expose the HTTP server on. | `8000` |
 | `backupHooks.customHandlers` | Custom handlers to register on HTTP server in sidecar | `[]` |
 | `backupHooks.customHandlers[*].method` | The HTTP request method to match on | |
 | `backupHooks.customHandlers[*].path` | The HTTP request path to match on, which may contain path parameters in the form `{param_name}` | |
