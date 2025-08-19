@@ -97,9 +97,9 @@ func TestDatabaseAdminAffinityLabels(t *testing.T) {
 		"database.sm.labels.host": "host2",
 		"database.sm.labels.zone": "us-east-1",
 
-		"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+		"database.sm.resources.requests.cpu":    "250m",
 		"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-		"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+		"database.te.resources.requests.cpu":    "250m",
 		"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 		"database.sm.noHotCopy.replicas":        "1",
 		"database.sm.hotCopy.replicas":          "1",
