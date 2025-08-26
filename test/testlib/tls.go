@@ -30,7 +30,7 @@ spec:
 `
 
 func createTLSGeneratorPod(t *testing.T, namespaceName string, timeout time.Duration) string {
-	image := "docker.io/nuodb/nuodb:5.0"
+	image := "docker.io/nuodb/nuodb:latest"
 
 	podName := "tls-generator-" + strings.ToLower(random.UniqueId())
 	podTemplateString := fmt.Sprintf(TLS_GENERATOR_POD_TEMPLATE,
