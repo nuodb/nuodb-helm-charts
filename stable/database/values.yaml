@@ -132,7 +132,7 @@ database:
 
   # rootPassword
   # Database password
-  rootPassword: secret
+  rootPassword: ""
 
   # archiveType
   # Archive Type (either "" or "lsa") - for NuoDB Version >= 6.0.0
