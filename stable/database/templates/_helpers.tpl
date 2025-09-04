@@ -1286,7 +1286,7 @@ Database root password
 {{- $existingValue := ( include "database.findInSecret" (list . ( include "database.secretName" . ) "database-password" )) -}}
 {{- if $existingValue -}}
 {{ $existingValue }}
-{{- else if .Values.database.rootPassword -}}
+{{- else if (and .Values.database.rootPassword (ne (include "defaultfalse" .Values.database.randomPassword) "true") ) -}}
 {{ .Values.database.rootPassword }}
 {{- else -}}
 {{ randAlphaNum 20 }}

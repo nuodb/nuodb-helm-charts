@@ -132,7 +132,11 @@ database:
 
   # rootPassword
   # Database password
-  rootPassword: ""
+  rootPassword: secret
+
+  # randomPassword
+  # Generate a random password for the Database user
+  randomPassword: false
 
   # archiveType
   # Archive Type (either "" or "lsa") - for NuoDB Version >= 6.0.0
