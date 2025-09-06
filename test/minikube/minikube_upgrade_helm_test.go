@@ -13,6 +13,7 @@ import (
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/gruntwork-io/terratest/modules/random"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
@@ -185,4 +186,67 @@ func TestUpgradeHelmFullDB(t *testing.T) {
 	t.Run("NuoDB_From390_ToLocal", func(t *testing.T) {
 		upgradeDatabaseTest(t, "3.9.0", true, &testlib.UpgradeOptions{})
 	})
+}
+
+func TestCredentialImport(t *testing.T) {
+	defer testlib.VerifyTeardown(t)
+
+	fromHelmVersion := "3.9.0"
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.readinessTimeoutSeconds":         "5",
+			"database.sm.resources.requests.cpu":    "250m",
+			"database.sm.resources.requests.memory": "250Mi",
+			"database.te.resources.requests.cpu":    "250m",
+			"database.te.resources.requests.memory": "250Mi",
+			"nuodb.image.pullPolicy":                "IfNotPresent",
+			"database.randomPassword":               "true",
+		},
+		Version: fromHelmVersion,
+	}
+	testlib.InferVersionFromTemplate(t, options)
+	opt := testlib.GetExtractedOptions(options)
+
+	randomSuffix := strings.ToLower(random.UniqueId())
+	namespaceName := fmt.Sprintf("%supgradedatabasetest-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
+	testlib.CreateNamespace(t, namespaceName)
+
+	// Enable TLS during upgrade because the older versions of helm charts have
+	// hardcoded instances of "https://" in LB policy job and NuoDB 4.2+ image
+	// doesn't contain pregenerated keys
+	testlib.GenerateAndSetTLSKeys(t, options, namespaceName)
+
+	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	helmChartReleaseName, _ := testlib.StartAdmin(t, options, 1, namespaceName)
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	// get the OLD log
+	go testlib.GetAppLog(t, namespaceName, admin0, "-previous", &corev1.PodLogOptions{Follow: true})
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, options)
+
+	oldUser, oldPass := testlib.GetDatabaseCredentials(t, namespaceName, opt.DomainName, opt.DbName)
+
+	// unset the version and use local
+	options.Version = ""
+	opts := k8s.NewKubectlOptions("", "", namespaceName)
+	options.KubectlOptions = opts
+
+	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
+
+	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
+
+	// make sure the environment is stable before proceeding
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+
+	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, &testlib.UpgradeOptions{})
+
+	newUser, newPass := testlib.GetDatabaseCredentials(t, namespaceName, opt.DomainName, opt.DbName)
+
+	require.Equal(t, oldUser, newUser)
+	require.Equal(t, oldPass, newPass)
 }

@@ -882,3 +882,17 @@ func SnapshotSm(t *testing.T, namespaceName, smPod, backupId, snapshotNameTempla
 	// Invoke post-backup hook
 	InvokeBackupHook(t, namespaceName, smPod, "post-backup/"+backupId)
 }
+
+// Read database credentials from its secret.
+// The return value tuple is (username, password).
+func GetDatabaseCredentials(t *testing.T, namespaceName string, domainName string, databaseName string) (string, string) {
+	secret := GetSecret(t, namespaceName, fmt.Sprintf("%s-%s", domainName, databaseName))
+
+	dbaUser, ok := secret.Data["database-username"]
+	require.True(t, ok)
+
+	dbaPassword, ok := secret.Data["database-password"]
+	require.True(t, ok)
+
+	return string(dbaUser), string(dbaPassword)
+}
