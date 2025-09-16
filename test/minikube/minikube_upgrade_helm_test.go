@@ -212,11 +212,6 @@ func TestCredentialImport(t *testing.T) {
 	namespaceName := fmt.Sprintf("%supgradedatabasetest-%s", testlib.NAMESPACE_NAME_PREFIX, randomSuffix)
 	testlib.CreateNamespace(t, namespaceName)
 
-	// Enable TLS during upgrade because the older versions of helm charts have
-	// hardcoded instances of "https://" in LB policy job and NuoDB 4.2+ image
-	// doesn't contain pregenerated keys
-	testlib.GenerateAndSetTLSKeys(t, options, namespaceName)
-
 	defer testlib.Teardown(testlib.TEARDOWN_SECRETS)
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 
@@ -249,4 +244,17 @@ func TestCredentialImport(t *testing.T) {
 
 	require.Equal(t, oldUser, newUser)
 	require.Equal(t, oldPass, newPass)
+
+	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
+
+	// explicitly change the password
+	rotatedPassword := "SomethingNew"
+	delete(options.SetValues, "database.randomPassword")
+	options.SetValues["database.rootPassword"] = rotatedPassword
+
+	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, &testlib.UpgradeOptions{})
+
+	newUser, newPass = testlib.GetDatabaseCredentials(t, namespaceName, opt.DomainName, opt.DbName)
+
+	require.Equal(t, rotatedPassword, newPass)
 }

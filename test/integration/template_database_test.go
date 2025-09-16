@@ -91,6 +91,19 @@ func TestDatabaseSecretsDefault(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderSecret(t, output, 1) {
 		assert.Contains(t, obj.StringData, "database-name")
+		assert.NotEmpty(t, obj.StringData["database-password"])
+		assert.NotEqual(t, expectedPassword, obj.StringData["database-password"])
+		assert.Contains(t, obj.StringData, "database-username")
+	}
+
+	delete(options.SetValues, "database.randomPassword")
+
+	options.SetValues["database.rootPassword"] = ""
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/secret.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderSecret(t, output, 1) {
+		assert.Contains(t, obj.StringData, "database-name")
+		assert.NotEmpty(t, obj.StringData["database-password"])
 		assert.NotEqual(t, expectedPassword, obj.StringData["database-password"])
 		assert.Contains(t, obj.StringData, "database-username")
 	}

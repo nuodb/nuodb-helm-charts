@@ -72,7 +72,7 @@ To clone the repository and run a test suite (e.g. `test/integration`), execute 
 ```bash
 git clone git@github.com:nuodb/nuodb-helm-charts
 cd nuodb-helm-charts
-go test -v -timeout 60s ./test/integration
+go test -v -timeout 60s ./test/integration -count=1
 ```
 
 Alternatively, `go get` can be used to clone the repository into the `GOPATH`:
@@ -80,7 +80,7 @@ Alternatively, `go get` can be used to clone the repository into the `GOPATH`:
 ```bash
 GO111MODULE=off go get github.com/nuodb/nuodb-helm-charts
 cd $(go env GOPATH)/src/github.com/nuodb/nuodb-helm-charts
-go test -v -timeout 60s ./test/integration
+go test -v -timeout 60s ./test/integration -count=1
 ```
 
 The tests in `test/minikube` require `kubectl` to be configured with access to a Kubernetes cluster, typically Minikube running on localhost, and can be run as follows:

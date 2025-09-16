@@ -1269,13 +1269,14 @@ Extension point that can be overriden by an embedding chart.
 Database root user
 */}}
 {{- define "database.rootUser" -}}
+{{- if .Values.database.rootUser -}}
+{{ .Values.database.rootUser }}
+{{- else -}}
 {{- $existingValue := ( include "database.findInSecret" (list . ( include "database.secretName" . ) "database-username" )) -}}
 {{- if $existingValue -}}
 {{ $existingValue }}
-{{- else if .Values.database.rootUser -}}
-{{ .Values.database.rootUser }}
-{{- else -}}
 dba
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
@@ -1283,13 +1284,15 @@ dba
 Database root password
 */}}
 {{- define "database.rootPassword" -}}
+{{- if (and .Values.database.rootPassword (ne (include "defaultfalse" .Values.database.randomPassword) "true") ) -}}
+{{ .Values.database.rootPassword }}
+{{- else -}}
 {{- $existingValue := ( include "database.findInSecret" (list . ( include "database.secretName" . ) "database-password" )) -}}
 {{- if $existingValue -}}
 {{ $existingValue }}
-{{- else if (and .Values.database.rootPassword (ne (include "defaultfalse" .Values.database.randomPassword) "true") ) -}}
-{{ .Values.database.rootPassword }}
 {{- else -}}
 {{ randAlphaNum 20 }}
+{{- end -}}
 {{- end -}}
 {{- end -}}
 
