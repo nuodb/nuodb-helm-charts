@@ -201,7 +201,8 @@ func TestCredentialImport(t *testing.T) {
 			"database.te.resources.requests.cpu":    "250m",
 			"database.te.resources.requests.memory": "250Mi",
 			"nuodb.image.pullPolicy":                "IfNotPresent",
-			"database.randomPassword":               "true",
+			"database.generatePassword.enabled":     "true",
+			"database.rootUser":                     "someUser",
 		},
 		Version: fromHelmVersion,
 	}
@@ -230,6 +231,7 @@ func TestCredentialImport(t *testing.T) {
 	options.Version = ""
 	opts := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = opts
+	options.SetValues["database.rootUser"] = ""
 
 	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
@@ -249,12 +251,15 @@ func TestCredentialImport(t *testing.T) {
 
 	// explicitly change the password
 	rotatedPassword := "SomethingNew"
-	delete(options.SetValues, "database.randomPassword")
+	rotatedUser := "NewUser"
+	delete(options.SetValues, "database.generatePassword.enabled")
 	options.SetValues["database.rootPassword"] = rotatedPassword
+	options.SetValues["database.rootUser"] = rotatedUser
 
 	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, &testlib.UpgradeOptions{})
 
 	newUser, newPass = testlib.GetDatabaseCredentials(t, namespaceName, opt.DomainName, opt.DbName)
 
 	require.Equal(t, rotatedPassword, newPass)
+	require.Equal(t, rotatedUser, newUser)
 }

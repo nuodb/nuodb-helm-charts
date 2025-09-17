@@ -191,6 +191,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `name` | Database name | `demo` |
 | `rootUser` | Database root user | `dba` |
 | `rootPassword` | Database root password | `secret` |
+| `generatePassword.enabled` | During an install, ignore the password set in `rootPassword` and generate a random one instead. | `false` |
 | `archiveType` | Archive Type (either `""` or `"lsa"`) | `""` |
 | `priorityClasses.sm` | The `priorityClassName` to specify SM pods | `""` |
 | `priorityClasses.te` | The `priorityClassName` to specify TE pods | `""` |

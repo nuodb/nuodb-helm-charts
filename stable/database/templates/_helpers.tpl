@@ -1275,6 +1275,7 @@ Database root user
 {{- $existingValue := ( include "database.findInSecret" (list . ( include "database.secretName" . ) "database-username" )) -}}
 {{- if $existingValue -}}
 {{ $existingValue }}
+{{- else -}}
 dba
 {{- end -}}
 {{- end -}}
@@ -1284,7 +1285,7 @@ dba
 Database root password
 */}}
 {{- define "database.rootPassword" -}}
-{{- if (and .Values.database.rootPassword (ne (include "defaultfalse" .Values.database.randomPassword) "true") ) -}}
+{{- if (and .Values.database.rootPassword (ne (include "defaultfalse" .Values.database.generatePassword.enabled) "true") ) -}}
 {{ .Values.database.rootPassword }}
 {{- else -}}
 {{- $existingValue := ( include "database.findInSecret" (list . ( include "database.secretName" . ) "database-password" )) -}}
