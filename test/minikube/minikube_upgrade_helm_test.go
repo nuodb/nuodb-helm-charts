@@ -161,30 +161,42 @@ func upgradeDatabaseTest(t *testing.T, fromHelmVersion string, enableCron bool, 
 func TestUpgradeHelm(t *testing.T) {
 
 	t.Run("NuoDB_From370_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.7.0", &testlib.UpgradeOptions{})
+		upgradeAdminTest(t, "3.7.0", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
+		})
 	})
 
 	t.Run("NuoDB_From382_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.8.2", &testlib.UpgradeOptions{})
+		upgradeAdminTest(t, "3.8.2", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
+		})
 	})
 
 	t.Run("NuoDB_From390_ToLocal", func(t *testing.T) {
-		upgradeAdminTest(t, "3.9.0", &testlib.UpgradeOptions{})
+		upgradeAdminTest(t, "3.9.0", &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
+		})
 	})
 }
 
 func TestUpgradeHelmFullDB(t *testing.T) {
 
 	t.Run("NuoDB_From370_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.7.0", false, &testlib.UpgradeOptions{})
+		upgradeDatabaseTest(t, "3.7.0", false, &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
+		})
 	})
 
 	t.Run("NuoDB_From382_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.8.2", true, &testlib.UpgradeOptions{})
+		upgradeDatabaseTest(t, "3.8.2", true, &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
+		})
 	})
 
 	t.Run("NuoDB_From390_ToLocal", func(t *testing.T) {
-		upgradeDatabaseTest(t, "3.9.0", true, &testlib.UpgradeOptions{})
+		upgradeDatabaseTest(t, "3.9.0", true, &testlib.UpgradeOptions{
+			AdminPodShouldGetRecreated: true,
+		})
 	})
 }
 
@@ -192,6 +204,9 @@ func TestCredentialImport(t *testing.T) {
 	defer testlib.VerifyTeardown(t)
 
 	fromHelmVersion := "3.9.0"
+	upgradeOptions := testlib.UpgradeOptions{
+		AdminPodShouldGetRecreated: true,
+	}
 
 	options := &helm.Options{
 		SetValues: map[string]string{
@@ -235,12 +250,16 @@ func TestCredentialImport(t *testing.T) {
 
 	helm.Upgrade(t, options, testlib.ADMIN_HELM_CHART_PATH, helmChartReleaseName)
 
+	adminPod := testlib.GetPod(t, namespaceName, admin0)
+	if upgradeOptions.AdminPodShouldGetRecreated {
+		testlib.AwaitPodObjectRecreated(t, namespaceName, adminPod, 30*time.Second)
+	}
 	testlib.AwaitPodUp(t, namespaceName, admin0, 300*time.Second)
 
 	// make sure the environment is stable before proceeding
 	testlib.AwaitDatabaseUp(t, namespaceName, admin0, opt.DbName, opt.NrSmPods+opt.NrTePods)
 
-	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, &testlib.UpgradeOptions{})
+	testlib.UpgradeDatabase(t, namespaceName, databaseReleaseName, admin0, options, &upgradeOptions)
 
 	newUser, newPass := testlib.GetDatabaseCredentials(t, namespaceName, opt.DomainName, opt.DbName)
 
