@@ -1269,12 +1269,52 @@ Extension point that can be overriden by an embedding chart.
 Database root user
 */}}
 {{- define "database.rootUser" -}}
+{{- if .Values.database.rootUser -}}
 {{ .Values.database.rootUser }}
+{{- else -}}
+{{- $existingValue := ( include "database.findInSecret" (list . ( include "database.secretName" . ) "database-username" )) -}}
+{{- if $existingValue -}}
+{{ $existingValue }}
+{{- else -}}
+dba
+{{- end -}}
+{{- end -}}
 {{- end -}}
 
 {{/*
 Database root password
 */}}
 {{- define "database.rootPassword" -}}
+{{- if (and .Values.database.rootPassword (ne (include "defaultfalse" .Values.database.generatePassword.enabled) "true") ) -}}
 {{ .Values.database.rootPassword }}
+{{- else -}}
+{{- $existingValue := ( include "database.findInSecret" (list . ( include "database.secretName" . ) "database-password" )) -}}
+{{- if $existingValue -}}
+{{ $existingValue }}
+{{- else -}}
+{{ randAlphaNum 20 }}
+{{- end -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Read a given key from a string data secret.
+Returns the value if found or an empty string if the secret is not found or does not have the given key.
+Arguments:
+  0: Object namespace root
+  1: The secret to look up
+  2: The key to extract from the secret
+*/}}
+{{- define "database.findInSecret" -}}
+{{- $root := index . 0 -}}
+{{- $secretName := index . 1 -}}
+{{- $secretField := index . 2 -}}
+{{- $secretValue := lookup "v1" "Secret" $root.Release.Namespace $secretName }}
+{{- if $secretValue -}}
+{{- if $secretValue.data -}}
+{{- if index $secretValue.data $secretField -}}
+{{- index $secretValue.data $secretField | b64dec -}}
+{{- end -}}
+{{- end -}}
+{{- end -}}
 {{- end -}}
