@@ -119,22 +119,26 @@ func verifyDBService(t *testing.T, namespaceName string, podName string, service
 	}
 }
 
-func verifyPodLabeling(t *testing.T, namespaceName string, adminPod string) {
+func verifyProcessOptionsAndLabels(t *testing.T, namespaceName string, adminPod string) {
 	objects, err := testlib.GetDatabaseProcessesE(t, namespaceName, adminPod, "demo")
 	require.NoError(t, err)
 
 	for _, obj := range objects {
-		val, ok := obj.Labels["cloud"]
+		val, ok := obj.Options["node-port"]
 		require.True(t, ok)
-		require.True(t, val == LABEL_CLOUD)
+		require.Equal(t, "48006,48006", val)
+
+		val, ok = obj.Labels["cloud"]
+		require.True(t, ok)
+		require.Equal(t, LABEL_CLOUD, val)
 
 		val, ok = obj.Labels["region"]
 		require.True(t, ok)
-		require.True(t, val == LABEL_REGION)
+		require.Equal(t, LABEL_REGION, val)
 
 		val, ok = obj.Labels["zone"]
 		require.True(t, ok)
-		require.True(t, val == LABEL_ZONE)
+		require.Equal(t, LABEL_ZONE, val)
 	}
 
 }
@@ -183,7 +187,7 @@ func TestKubernetesBasicDatabase(t *testing.T) {
 	t.Run("verifySecret", func(t *testing.T) { verifySecret(t, namespaceName) })
 	t.Run("verifyDBClusterService", func(t *testing.T) { verifyDBService(t, namespaceName, admin0, clusterServiceName, false) })
 	t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
-	t.Run("verifyPodLabeling", func(t *testing.T) { verifyPodLabeling(t, namespaceName, admin0) })
+	t.Run("verifyProcessOptionsAndLabels", func(t *testing.T) { verifyProcessOptionsAndLabels(t, namespaceName, admin0) })
 }
 
 func TestSmVolumePermissionChange(t *testing.T) {

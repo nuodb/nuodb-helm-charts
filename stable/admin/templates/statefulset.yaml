@@ -160,6 +160,7 @@ spec:
           {{- end }}
           {{- end }}
           - "--"
+          - "portRange=48006,48006"
           {{- if .Values.admin.tde }}
           {{- if and .Values.admin.tde.storagePasswordsDir (ne .Values.admin.tde.storagePasswordsDir "/etc/nuodb/tde") }}
           - "tdeMonitor.storagePasswordsDir={{ .Values.admin.tde.storagePasswordsDir }}"
