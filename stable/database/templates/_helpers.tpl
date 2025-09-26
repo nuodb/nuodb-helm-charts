@@ -1318,3 +1318,17 @@ Arguments:
 {{- end -}}
 {{- end -}}
 {{- end -}}
+
+{{/*
+Set tolerations for the database SM pods.
+*/}}
+{{- define "database.sm.tolerations"}}
+{{ toYaml .Values.database.sm.tolerations }}
+{{- end }}
+
+{{/*
+Set tolerations for the database TE pods.
+*/}}
+{{- define "database.te.tolerations"}}
+{{ toYaml .Values.database.te.tolerations }}
+{{- end }}

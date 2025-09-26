@@ -608,3 +608,10 @@ Any additional annotations to add to services.
 Extension point that can be overriden by an embedding chart.
 */}}
 {{- end }}
+
+{{/*
+Set tolerations for the service pods.
+*/}}
+{{- define "admin.tolerations"}}
+{{ toYaml .Values.admin.tolerations }}
+{{- end }}
