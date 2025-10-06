@@ -62,7 +62,7 @@ spec:
 {{- end }}
       {{- if .Values.database.sm.tolerations }}
       tolerations:
-{{ toYaml .Values.database.sm.tolerations | trim | indent 8 }}
+{{ include "database.sm.tolerations" . | trim | indent 8 }}
       {{- end }}
       {{- include "database.sm.shareProcessNamespace" . | indent 6 -}}
       {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDisk) "true" }}

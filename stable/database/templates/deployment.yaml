@@ -64,7 +64,7 @@ spec:
 {{- end }}
       {{- if .Values.database.te.tolerations }}
       tolerations:
-{{ toYaml .Values.database.te.tolerations | trim | indent 8 }}
+{{ include "database.te.tolerations" . | trim | indent 8 }}
       {{- end }}
       {{- if eq (include "defaulttrue" .Values.database.initContainers.runInitDisk) "true" }}
       initContainers:
