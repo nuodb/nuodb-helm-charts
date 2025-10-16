@@ -544,6 +544,10 @@ else
   log "Directory $DB_DIR exists"
 fi
 
+if [ -x "$PREPARE_ARCHIVE" ] && ! "$PREPARE_ARCHIVE"; then
+  die 1 "Archive preparation failed"
+fi
+
 if [ "$SEPARATE_JOURNAL" == "true" ]; then
   if [ ! -e "${JOURNAL_DIR}" ] ; then
     mkdir -p "${JOURNAL_DIR}"

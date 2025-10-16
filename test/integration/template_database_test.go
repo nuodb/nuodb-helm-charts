@@ -2795,6 +2795,139 @@ func TestDatabaseTLSConfig(t *testing.T) {
 
 }
 
+func TestDataMigration(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	var foundPrepareArchive, foundLoadCredentials, foundVolume bool
+	checkFn := func(output, expectedCmName string) *corev1.ConfigMap {
+		foundPrepareArchive = false
+		foundLoadCredentials = false
+		foundVolume = false
+		for _, sts := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, env := range sts.Spec.Template.Spec.Containers[0].Env {
+				if env.Name == "PREPARE_ARCHIVE" {
+					require.Equal(t, "/usr/local/bin/prepare-archive", env.Value)
+					foundPrepareArchive = true
+				}
+				if env.Name == "LOAD_CREDENTIALS" {
+					require.Equal(t, "/usr/local/bin/load-credentials", env.Value)
+					foundLoadCredentials = true
+				}
+			}
+			for _, vol := range sts.Spec.Template.Spec.Volumes {
+				if vol.Name == "data-migration" {
+					require.Equal(t, expectedCmName, vol.ConfigMap.Name)
+					foundVolume = true
+				}
+			}
+		}
+		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 0) {
+			if cm.Name == "test-db-data-migration" {
+				require.Contains(t, cm.Data, "prepare-archive")
+				require.NotEmpty(t, cm.Data["prepare-archive"])
+				require.Contains(t, cm.Data, "load-credentials")
+				require.NotEmpty(t, cm.Data["load-credentials"])
+				return &cm
+			}
+		}
+		return nil
+	}
+
+	t.Run("testDefault", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.fullnameOverride": "test-db",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
+		cm := checkFn(output, "")
+		require.True(t, foundPrepareArchive)
+		require.True(t, foundLoadCredentials)
+		require.False(t, foundVolume)
+		require.Nil(t, cm)
+	})
+
+	t.Run("testDisabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.fullnameOverride":      "test-db",
+				"database.dataMigration.enabled": "false",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
+		cm := checkFn(output, "")
+		require.True(t, foundPrepareArchive)
+		require.True(t, foundLoadCredentials)
+		require.False(t, foundVolume)
+		require.Nil(t, cm)
+	})
+
+	t.Run("testEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.fullnameOverride":      "test-db",
+				"database.dataMigration.enabled": "true",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
+		cm := checkFn(output, "test-db-data-migration")
+		require.True(t, foundPrepareArchive)
+		require.True(t, foundLoadCredentials)
+		require.True(t, foundVolume)
+		require.NotNil(t, cm)
+	})
+
+	t.Run("testCustomCm", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.fullnameOverride":            "test-db",
+				"database.dataMigration.enabled":       "true",
+				"database.dataMigration.configMapName": "custom-data-migration",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
+		cm := checkFn(output, "custom-data-migration")
+		require.True(t, foundPrepareArchive)
+		require.True(t, foundLoadCredentials)
+		require.True(t, foundVolume)
+		require.Nil(t, cm)
+	})
+
+	t.Run("testCustomScripts", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.fullnameOverride":                    "test-db",
+				"database.dataMigration.enabled":               "true",
+				"database.dataMigration.prepareArchiveScript":  "custom-prepare-archive",
+				"database.dataMigration.loadCredentialsScript": "custom-load-credentials",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
+		cm := checkFn(output, "test-db-data-migration")
+		require.True(t, foundPrepareArchive)
+		require.True(t, foundLoadCredentials)
+		require.True(t, foundVolume)
+		require.NotNil(t, cm)
+		require.Equal(t, strings.TrimSpace(cm.Data["prepare-archive"]), "custom-prepare-archive")
+		require.Equal(t, strings.TrimSpace(cm.Data["load-credentials"]), "custom-load-credentials")
+	})
+}
+
 func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
