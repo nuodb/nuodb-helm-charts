@@ -1137,13 +1137,17 @@ func DeletePod(t *testing.T, namespace string, podName string) {
 	k8s.RunKubectl(t, options, "delete", podName)
 }
 
-func RunSQL(t *testing.T, namespace string, podName string, databaseName string, sql string) (result string, err error) {
+func RunSQL(t *testing.T, namespace string, podName string, db string, sql string) (result string, err error) {
+	return RunSQLAsUser(t, namespace, podName, db, "dba", "secret", sql)
+}
+
+func RunSQLAsUser(t *testing.T, namespace string, podName string, db, user, password, sql string) (result string, err error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	return k8s.RunKubectlAndGetOutputE(t, options,
 		"exec", podName, "--",
 		"bash", "-c",
-		fmt.Sprintf("echo \"%s;\" | /opt/nuodb/bin/nuosql --user dba --password secret %s", sql, databaseName),
+		fmt.Sprintf("echo \"%s;\" | /opt/nuodb/bin/nuosql --user %s --password \"%s\" %s", sql, user, password, db),
 	)
 }
 

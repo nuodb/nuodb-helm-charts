@@ -1,0 +1,54 @@
+#!/bin/sh
+
+fail() {
+    echo "$1" 1>&2
+    exit 1
+}
+
+if [ "$SEPARATE_JOURNAL" = true ]; then
+    fail "Cannot migrate archive with separate journal"
+fi
+
+# Check whether data migration has already been performed
+db_dir="/var/opt/nuodb/archive/$NUODB_DOMAIN/$DB_NAME"
+if [ -f "$db_dir/migrated" ]; then
+    echo "No data migration to perform"
+    exit 0
+fi
+
+# Look for archive directories based on presence of info.json
+set -- $(find /var/opt/nuodb/archive -name info.json -exec dirname {} \;)
+if [ $# -eq 0 ]; then
+    echo "No archive to migrate"
+    touch "$db_dir/migrated"
+    exit 0
+fi
+[ $# -eq 1 ] || fail "Expected 1 archive, found $#: $*"
+source_archive="$1"
+
+# If source directory is different from target, move it
+if [ "$source_archive" != "$db_dir" ]; then
+    if [ -e "$db_dir" ] && ! rmdir "$db_dir"; then
+        fail "Unable to delete $db_dir"
+    fi
+    mv "$source_archive" "$db_dir"
+fi
+
+# Rename info.json so that archive object is created. The presence of the
+# `migrated` file accounts for the window between archive preparation and
+# creation of the archive object / info.json.
+mv "$db_dir/info.json" "$db_dir/migrated"
+
+# If `<archive_mount>/<source_db>-credentials` exists, assume that it contains DBA credentials and
+# move the file to `<target_archive>/credentials` so that DBA credentials can be updated without
+# knowing the source database name.
+source_db="$(basename "$source_archive")"
+source_credentials="/var/opt/nuodb/archive/$source_db-credentials"
+if [ -f "$source_credentials" ] ; then
+    # DBA credentials are updated in readiness probe for ordinal 0
+    if [ "${POD_NAME##*-}" = 0 ]; then
+        mv "$source_credentials" "$db_dir/credentials"
+    else
+        rm "$source_credentials"
+    fi
+fi
