@@ -722,9 +722,10 @@ func TestDataMigration(t *testing.T) {
 			dbaUser:     "dba",
 			dbaPassword: "dba",
 		}, databaseParams{
-			dbName:      "target",
-			dbaUser:     "dba",
-			dbaPassword: "target",
+			dbName:  "target",
+			dbaUser: "dba",
+			// Attempt to craft password to do SQL injection, which should be prevented
+			dbaPassword: "dba'; DROP TABLE testtbl; CREATE USER inj PASSWORD 'dba",
 		})
 }
 
@@ -736,7 +737,7 @@ func TestDataMigrationDifferentDba(t *testing.T) {
 			dbaPassword: "dba",
 		}, databaseParams{
 			dbName:      "target",
-			dbaUser:     "target",
+			dbaUser:     "newuser",
 			dbaPassword: "dba",
 		})
 }

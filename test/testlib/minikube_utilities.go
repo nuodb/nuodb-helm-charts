@@ -1147,7 +1147,7 @@ func RunSQLAsUser(t *testing.T, namespace string, podName string, db, user, pass
 	return k8s.RunKubectlAndGetOutputE(t, options,
 		"exec", podName, "--",
 		"bash", "-c",
-		fmt.Sprintf("echo \"%s;\" | /opt/nuodb/bin/nuosql --user %s --password %s %s", sql, user, password, db),
+		fmt.Sprintf("echo \"%s;\" | /opt/nuodb/bin/nuosql --user %s --password \"%s\" %s", sql, user, password, db),
 	)
 }
 
