@@ -32,6 +32,49 @@ parse_fields() {
     done
 }
 
+run_sql() {
+    local user="$1"; shift
+    local password="$1"; shift
+    echo "$*" | nuosql "$DB_NAME@$PEER_ADDRESS" \
+        --user "$user" --password "$password" \
+        --connection-property PreferInternalAddress=true
+}
+
+update_dba() {
+    # execute DBA credentials update on ordinal 0 if the load-credentials script exists
+    [ "${POD_NAME##*-}" = 0 ] || return 0
+    [ -x "$LOAD_CREDENTIALS" ] || return 0
+
+    # source load-credentials script and check expected variables
+    . "$LOAD_CREDENTIALS"
+    [ -n "$SOURCE_USER" -a -n "$SOURCE_PASSWORD" ] || return 0
+
+    # environment variables were set, so DBA credentials update is required;
+    # determine SQL statements to execute based on source and target DBA
+    # user names
+    local escaped_db_password="$(echo "$DB_PASSWORD" | sed "s/'/''/g")"
+    local update_dba_sql="ALTER USER $DB_USER PASSWORD '$escaped_db_password';"
+    [ "$DB_USER" = "$SOURCE_USER" ] || update_dba_sql="$(cat <<EOF
+START TRANSACTION;
+CREATE USER $DB_USER PASSWORD '$escaped_db_password';
+GRANT SYSTEM.ADMINISTRATOR TO $DB_USER WITH GRANT OPTION;
+GRANT SYSTEM.DBA TO $DB_USER WITH GRANT OPTION;
+DROP USER $SOURCE_USER;
+COMMIT;
+EOF
+)"
+
+    # update DBA credentials
+    run_sql "$SOURCE_USER" "$SOURCE_PASSWORD" "$update_dba_sql"
+
+    # check that DBA credentials have been updated
+    run_sql "$DB_USER" "$DB_PASSWORD" || die 1 "DBA credentials for imported database not updated"
+    echo "Updated DBA credentials for imported database"
+    if [ -n "$SOURCE_CREDENTIALS_FILE" ]; then
+        rm "$SOURCE_CREDENTIALS_FILE"
+    fi
+}
+
 # iterate over all local nuodb processes; in a Docker container we would only
 # expect one process, but make sure this also works if multiple nuodb processes
 # are in the same pidspace
@@ -66,4 +109,7 @@ pgrep -xa nuodb | (
 
     # make sure we found at least one local process
     [ "$n" != 0 ] || die 1 "No process found"
-)
+) || exit $?
+
+# update DBA credentials if necessary
+update_dba

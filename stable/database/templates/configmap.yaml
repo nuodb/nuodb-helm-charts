@@ -79,3 +79,27 @@ data:
 {{ $val | indent 4}}
 {{- end }}
 {{- end -}}
+{{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
+{{- if not .Values.database.dataMigration.configMapName }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
+  name: {{ template "database.fullname" . }}-data-migration
+data:
+  prepare-archive: |
+    {{- if .Values.database.dataMigration.prepareArchiveScript }}
+    {{- .Values.database.dataMigration.prepareArchiveScript | nindent 4 }}
+    {{- else }}
+    {{- .Files.Get "files/prepare-archive" | nindent 4 }}
+    {{- end }}
+  load-credentials: |
+    {{- if .Values.database.dataMigration.loadCredentialsScript }}
+    {{- .Values.database.dataMigration.loadCredentialsScript | nindent 4 }}
+    {{- else }}
+    {{- .Files.Get "files/load-credentials" | nindent 4 }}
+    {{- end }}
+{{- end }}
+{{- end }}

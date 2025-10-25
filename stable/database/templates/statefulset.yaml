@@ -184,6 +184,8 @@ spec:
         - { name: SEPARATE_JOURNAL,    value: "{{- include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled}}" }
         - { name: SNAPSHOT_RESTORED,   value: "{{- include "database.snapshotRestored" . }}" }
         - { name: BACKUP_ID,           value: "{{ .Values.database.snapshotRestore.backupId }}" }
+        - { name: PREPARE_ARCHIVE,     value: "/usr/local/bin/prepare-archive" }
+        - { name: LOAD_CREDENTIALS,    value: "/usr/local/bin/load-credentials" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -230,6 +232,14 @@ spec:
         - name: readinessprobe
           mountPath: /usr/local/bin/readinessprobe
           subPath: readinessprobe
+        {{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
+        - name: data-migration
+          mountPath: /usr/local/bin/prepare-archive
+          subPath: prepare-archive
+        - name: data-migration
+          mountPath: /usr/local/bin/load-credentials
+          subPath: load-credentials
+        {{- end }}
         - mountPath: /var/opt/nuodb/archive
           name: archive-volume
         {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true"}}
@@ -366,6 +376,12 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-backup-hooks
           defaultMode: 0666
+      {{- end }}
+      {{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
+      - name: data-migration
+        configMap:
+          name: {{ .Values.database.dataMigration.configMapName | default (printf "%s-data-migration" (include "database.fullname" .)) }}
+          defaultMode: 0777
       {{- end }}
       {{- include "database.tlsVolume" . | nindent 6 }}
       {{- if .Values.admin.tde }}
@@ -613,6 +629,8 @@ spec:
         - { name: SEPARATE_JOURNAL,  value: "{{- include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled }}" }
         - { name: SNAPSHOT_RESTORED, value: "{{- include "database.snapshotRestored" . }}" }
         - { name: BACKUP_ID,         value: "{{ .Values.database.snapshotRestore.backupId }}" }
+        - { name: PREPARE_ARCHIVE,   value: "/usr/local/bin/prepare-archive" }
+        - { name: LOAD_CREDENTIALS,  value: "/usr/local/bin/load-credentials" }
 {{- include "database.env" . | indent 8 }}
     {{- if .Values.admin.tlsKeyStore }}
       {{- if .Values.admin.tlsKeyStore.password }}
@@ -659,6 +677,14 @@ spec:
         - name: readinessprobe
           mountPath: /usr/local/bin/readinessprobe
           subPath: readinessprobe
+        {{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
+        - name: data-migration
+          mountPath: /usr/local/bin/prepare-archive
+          subPath: prepare-archive
+        - name: data-migration
+          mountPath: /usr/local/bin/load-credentials
+          subPath: load-credentials
+        {{- end }}
         - mountPath: /var/opt/nuodb/archive
           name: archive-volume
         {{- if eq (include "defaultfalse" .Values.database.sm.hotCopy.journalPath.enabled) "true"}}
@@ -724,6 +750,12 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
+      {{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
+      - name: data-migration
+        configMap:
+          name: {{ .Values.database.dataMigration.configMapName | default (printf "%s-data-migration" (include "database.fullname" .)) }}
+          defaultMode: 0777
+      {{- end }}
       {{- include "database.tlsVolume" . | nindent 6 }}
       {{- if .Values.admin.tde }}
       {{- if .Values.admin.tde.secrets }}

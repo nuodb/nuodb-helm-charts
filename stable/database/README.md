@@ -241,6 +241,10 @@ The following tables list the configurable parameters of the `database` chart an
 | `backupHooks.customHandlers[*].statusMappings` | Mapping of script exit codes to HTTP status codes | |
 | `snapshotRestore.backupId` | The backup ID being restored, which is set to enable restore from data sources | `""` |
 | `snapshotRestore.snapshotNameTemplate` | The template used to resolve the names of snapshots to use as data sources for the archive and journal PVCs. The template can reference `backupId` and `volumeType`, which is one of `archive`, `journal`. | `{{.backupId}}-{{.volumeType}}` |
+| `dataMigration.enabled` | Whether to enable invocation of custom scripts for performing data migration | `false` |
+| `dataMigration.configMapName` | The existing ConfigMap containing data migration scripts with keys `prepare-archive` and `load-credentials` | `false` |
+| `dataMigration.prepareArchiveScript` | The script to invoke to perform archive preparation | `false` |
+| `dataMigration.loadCredentialsScript` | The script to source in the readiness probe for the SM with ordinal 0 in order to obtain source DBA credentials, in order to update the DBA user | `false` |
 | `ephemeralVolume.enabled` | Whether to create a generic ephemeral volume rather than emptyDir for any storage that does not outlive the pod | `false` |
 | `ephemeralVolume.size` | The size of the generic ephemeral volume to create | `1Gi` |
 | `ephemeralVolume.sizeToMemory` | Whether to size the generic ephemeral volume based on the `resources.limits.memory` setting of the process so that at least one core file is retained for the lifetime of the pod | `false` |

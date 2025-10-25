@@ -414,6 +414,33 @@ database:
     #    "1": 400
     #    "*": 500
 
+  # Import archives from other databases that were possibly created using
+  # different deployment architectures or different file system conventions
+  # from the NuoDB Helm Charts.
+  dataMigration:
+    enabled: false
+
+    # Suppresses rendering of a new ConfigMap containing data migration scripts
+    # and instead uses the specified ConfigMap, which must exist and contain
+    # keys `prepare-archive` and `load-credentials`.
+    configMapName: ""
+
+    # Script to prepare the archive for each SM. If data migration is enabled
+    # and no value is supplied for `prepareArchiveScript`, the default script
+    # searches for any directory within the archive volume containing an
+    # archive metadata (`info.json`) file the first time that the SM is
+    # started and relocates it so that it is imported into the database.
+    prepareArchiveScript: ""
+
+    # Script that defines the environment variables `SOURCE_USER` and
+    # `SOURCE_PASSWORD` containing DBA credentials for the source database.
+    # This script is sourced by the readiness probe of the SM when invoked on
+    # ordinal 0 and is used to update the access credentials of the DBA user to
+    # those supplied for the target database. If the script also defines
+    # `SOURCE_CREDENTIALS_FILE`, then this file is deleted after the DBA
+    # credentials are updated.
+    loadCredentialsScript: ""
+
   podMonitor:
     # Whether to enable PodMonitor resource for database pods.
     enabled: false

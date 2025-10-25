@@ -582,6 +582,179 @@ spec:
 	require.Equal(t, "abc123", strings.TrimSpace(output))
 }
 
+type databaseParams struct {
+	dbName      string
+	dbaUser     string
+	dbaPassword string
+}
+
+func runTestDataMigration(t *testing.T, source, target databaseParams) {
+	defer testlib.VerifyTeardown(t)
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+
+	// Create admin release
+	adminRelease, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+	admin := fmt.Sprintf("%s-nuodb-cluster0", adminRelease)
+	admin0 := fmt.Sprintf("%s-0", admin)
+	testlib.ApplyLicense(t, namespaceName, admin0, testlib.ENTERPRISE)
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	// Create database release
+	fullnameOverride := "nuodb-" + source.dbName
+	databaseRelease := testlib.StartDatabase(t, namespaceName, admin0, &helm.Options{
+		SetValues: map[string]string{
+			"database.fullnameOverride":                   fullnameOverride,
+			"database.name":                               source.dbName,
+			"database.rootUser":                           source.dbaUser,
+			"database.rootPassword":                       source.dbaPassword,
+			"database.sm.resources.requests.cpu":          "250m",
+			"database.sm.resources.requests.memory":       "250Mi",
+			"database.te.resources.requests.cpu":          "250m",
+			"database.te.resources.requests.memory":       "250Mi",
+			"database.sm.noHotCopy.replicas":              "2",
+			"database.sm.hotCopy.replicas":                "0",
+			"database.securityContext.runAsNonRootGroup":  "true",
+			"database.securityContext.enabledOnContainer": "true",
+		},
+	})
+
+	// Write some data
+	output, err := testlib.RunSQLAsUser(
+		t, namespaceName, admin0, source.dbName, source.dbaUser, source.dbaPassword,
+		"CREATE TABLE testtbl (id INT); INSERT INTO testtbl (id) values (123)")
+	require.NoError(t, err, output)
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	sourceArchiveObjects := make(map[string]string, 2)
+	for i := range [2]struct{}{} {
+		// Save file containing DBA credentials as base64-encoded data
+		smPod := fmt.Sprintf("sm-%s-%d", fullnameOverride, i)
+		command := fmt.Sprintf(
+			"echo 'user=%s password=%s' | base64 > /var/opt/nuodb/archive/%s-credentials",
+			source.dbaUser, source.dbaPassword, source.dbName)
+		output, err = k8s.RunKubectlAndGetOutputE(
+			t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
+			"sh", "-c", command)
+		require.NoError(t, err, output)
+		// Read info.json for SM
+		output, err = k8s.RunKubectlAndGetOutputE(
+			t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
+			"cat", "/var/opt/nuodb/archive/nuodb/"+source.dbName+"/info.json")
+		require.NoError(t, err, output)
+		sourceArchiveObjects[smPod] = strings.TrimSpace(output)
+	}
+
+	// Delete database release
+	output, err = helm.RunHelmCommandAndGetOutputE(
+		t, &helm.Options{KubectlOptions: kubectlOptions},
+		"uninstall", databaseRelease, "--wait", "--timeout", "5m")
+	require.NoError(t, err, output)
+
+	// Clean up database object and all archive objects for database
+	output, err = k8s.RunKubectlAndGetOutputE(
+		t, kubectlOptions, "exec", admin0, "-c", "admin", "--",
+		"nuocmd", "delete", "database", "--db-name", source.dbName, "--purge")
+	require.NoError(t, err, output)
+
+	// Create database release with data migration enabled, which should
+	// cause database and archive objects to be recreated and DBA
+	// credentials to be updated
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.fullnameOverride":                   fullnameOverride,
+			"database.name":                               target.dbName,
+			"database.rootUser":                           target.dbaUser,
+			"database.rootPassword":                       target.dbaPassword,
+			"database.sm.resources.requests.cpu":          "250m",
+			"database.sm.resources.requests.memory":       "250Mi",
+			"database.te.resources.requests.cpu":          "250m",
+			"database.te.resources.requests.memory":       "250Mi",
+			"database.sm.noHotCopy.replicas":              "2",
+			"database.sm.hotCopy.replicas":                "0",
+			"database.dataMigration.enabled":              "true",
+			"database.securityContext.runAsNonRootGroup":  "true",
+			"database.securityContext.enabledOnContainer": "true",
+		},
+	}
+	databaseRelease = testlib.StartDatabase(t, namespaceName, admin0, options)
+
+	// Make sure data has been migrated
+	output, err = testlib.RunSQLAsUser(t, namespaceName, admin0, target.dbName, target.dbaUser, target.dbaPassword, "SELECT id FROM testtbl")
+	require.NoError(t, err, output)
+	require.True(t, strings.Contains(output, "123"))
+
+	for smPod, sourceArchiveObject := range sourceArchiveObjects {
+		// Make sure that source DBA credentials were deleted
+		output, err = k8s.RunKubectlAndGetOutputE(
+			t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
+			"find", "/var/opt/nuodb/archive", "-name", source.dbName+"-credentials")
+		require.NoError(t, err, output)
+		require.Empty(t, strings.TrimSpace(output))
+		// Make sure source info.json exists as migrated file
+		output, err = k8s.RunKubectlAndGetOutputE(
+			t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
+			"cat", "/var/opt/nuodb/archive/nuodb/"+target.dbName+"/migrated")
+		require.NoError(t, err, output)
+		require.Equal(t, sourceArchiveObject, strings.TrimSpace(output))
+	}
+
+	t.Run("restartDatabase", func(t *testing.T) {
+		// Write more data
+		output, err = testlib.RunSQLAsUser(t, namespaceName, admin0, target.dbName, target.dbaUser, target.dbaPassword, "INSERT INTO testtbl (id) values (456)")
+		require.NoError(t, err, output)
+
+		// Restart database
+		testlib.RestartDatabasePods(t, namespaceName, databaseRelease, options)
+		testlib.AwaitDatabaseUp(t, namespaceName, admin0, target.dbName, 3)
+
+		// Make sure all expected data is present
+		output, err = testlib.RunSQLAsUser(t, namespaceName, admin0, target.dbName, target.dbaUser, target.dbaPassword, "SELECT id FROM testtbl")
+		require.NoError(t, err, output)
+		require.True(t, strings.Contains(output, "123"))
+		require.True(t, strings.Contains(output, "456"))
+	})
+}
+
+func TestDataMigration(t *testing.T) {
+	runTestDataMigration(
+		t, databaseParams{
+			dbName:      "webapp",
+			dbaUser:     "dba",
+			dbaPassword: "dba",
+		}, databaseParams{
+			dbName:  "target",
+			dbaUser: "dba",
+			// Attempt to craft password to do SQL injection, which should be prevented
+			dbaPassword: "dba'; DROP TABLE testtbl; CREATE USER inj PASSWORD 'dba",
+		})
+}
+
+func TestDataMigrationDifferentDba(t *testing.T) {
+	runTestDataMigration(
+		t, databaseParams{
+			dbName:      "webapp",
+			dbaUser:     "dba",
+			dbaPassword: "dba",
+		}, databaseParams{
+			dbName:      "target",
+			dbaUser:     "newuser",
+			dbaPassword: "dba",
+		})
+}
+
+func TestDataMigrationSameDirectory(t *testing.T) {
+	runTestDataMigration(
+		t, databaseParams{
+			dbName:      "webapp",
+			dbaUser:     "dba",
+			dbaPassword: "dba",
+		}, databaseParams{
+			dbName:      "webapp",
+			dbaUser:     "dba",
+			dbaPassword: "dba",
+		})
+}
+
 // Test exercising backup hooks and volume snapshot restore
 func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, inPlaceRestore bool) {
 	defer testlib.VerifyTeardown(t)
@@ -629,7 +802,8 @@ func runTestKubernetesSnapshotRestore(t *testing.T, preprovisionVolumes bool, in
 	require.Contains(t, output, "Resuming nuodb process")
 
 	// Delete snapshotted database to ensure K8s cluster has capacity for cloned database
-	helm.DeleteE(t, &helm.Options{KubectlOptions: kubectlOptions}, sourceDatabaseRelease, true)
+	err = helm.DeleteE(t, &helm.Options{KubectlOptions: kubectlOptions}, sourceDatabaseRelease, true)
+	require.NoError(t, err)
 
 	// Create database release for cloned database from snapshots
 	restoredDb := "db-clone"

@@ -135,9 +135,17 @@ func EnsureDatabaseNotRunning(t *testing.T, adminPod string, opt ExtractedOption
 
 func RestartDatabasePods(t *testing.T, namespaceName string, helmChartReleaseName string, options *helm.Options) {
 	opt := GetExtractedOptions(options)
-	hcSmPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy", helmChartReleaseName, opt.ClusterName, opt.DbName)
-	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
-	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	var hcSmPodNameTemplate, tePodNameTemplate, smPodNameTemplate string
+	if fullnameOverride, ok := options.SetValues["database.fullnameOverride"]; ok {
+		helmChartReleaseName = fullnameOverride
+		tePodNameTemplate = "te-" + helmChartReleaseName
+		smPodNameTemplate = "sm-" + helmChartReleaseName
+		hcSmPodNameTemplate = "sm-" + helmChartReleaseName + "-hotcopy"
+	} else {
+		hcSmPodNameTemplate = fmt.Sprintf("sm-%s-nuodb-%s-%s-hotcopy", helmChartReleaseName, opt.ClusterName, opt.DbName)
+		smPodNameTemplate = fmt.Sprintf("sm-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+		tePodNameTemplate = fmt.Sprintf("te-%s-nuodb-%s-%s", helmChartReleaseName, opt.ClusterName, opt.DbName)
+	}
 	var toDelete []string
 	tes := GetPodNames(t, namespaceName, tePodNameTemplate)
 	require.Equal(t, opt.NrTePods, len(tes), "Unexpected number of TE Pods")
@@ -158,7 +166,7 @@ func RestartDatabasePods(t *testing.T, namespaceName string, helmChartReleaseNam
 type DatabaseInstallationStep func(t *testing.T, options *helm.Options, helmChartReleaseName string)
 
 func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, options *helm.Options, installationStep DatabaseInstallationStep, awaitDatabase bool) (helmChartReleaseName string) {
-	//Truncation done to reduce pod name length
+	// Truncation done to reduce pod name length
 	randomSuffix := strings.ToLower(random.UniqueId())[:5]
 
 	InjectTestValues(t, options)
@@ -174,9 +182,16 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		AwaitNrReplicasReady(t, namespaceName, THPReleaseName, 1)
 	}
 
-	helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
-	tePodNameTemplate := fmt.Sprintf("te-%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
-	smPodNameTemplate := fmt.Sprintf("sm-%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+	var tePodNameTemplate, smPodNameTemplate string
+	if fullnameOverride, ok := options.SetValues["database.fullnameOverride"]; ok {
+		helmChartReleaseName = fullnameOverride
+		tePodNameTemplate = "te-" + helmChartReleaseName
+		smPodNameTemplate = "sm-" + helmChartReleaseName
+	} else {
+		helmChartReleaseName = fmt.Sprintf("database-%s", randomSuffix)
+		tePodNameTemplate = fmt.Sprintf("te-%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+		smPodNameTemplate = fmt.Sprintf("sm-%s-%s-%s-%s", helmChartReleaseName, opt.DomainName, opt.ClusterName, opt.DbName)
+	}
 
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	options.KubectlOptions = kubectlOptions
