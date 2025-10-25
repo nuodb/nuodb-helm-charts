@@ -5,6 +5,10 @@ fail() {
     exit 1
 }
 
+if [ "$SEPARATE_JOURNAL" = true ]; then
+    fail "Cannot migrate archive with separate journal"
+fi
+
 # Check whether data migration has already been performed
 db_dir="/var/opt/nuodb/archive/$NUODB_DOMAIN/$DB_NAME"
 if [ -f "$db_dir/migrated" ]; then
@@ -16,7 +20,6 @@ fi
 set -- $(find /var/opt/nuodb/archive -name info.json -exec dirname {} \;)
 if [ $# -eq 0 ]; then
     echo "No archive to migrate"
-    mkdir -p "$db_dir"
     touch "$db_dir/migrated"
     exit 0
 fi

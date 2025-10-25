@@ -420,6 +420,11 @@ database:
   dataMigration:
     enabled: false
 
+    # Suppresses rendering of a new ConfigMap containing data migration scripts
+    # and instead uses the specified ConfigMap, which must exist and contain
+    # keys `prepare-archive` and `load-credentials`.
+    configMapName: ""
+
     # Script to prepare the archive for each SM. If data migration is enabled
     # and no value is supplied for `prepareArchiveScript`, the default script
     # searches for any directory within the archive volume containing an

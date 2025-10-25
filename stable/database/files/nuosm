@@ -544,10 +544,6 @@ else
   log "Directory $DB_DIR exists"
 fi
 
-if [ -x "$PREPARE_ARCHIVE" ] && ! "$PREPARE_ARCHIVE"; then
-  die 1 "Archive preparation failed"
-fi
-
 if [ "$SEPARATE_JOURNAL" == "true" ]; then
   if [ ! -e "${JOURNAL_DIR}" ] ; then
     mkdir -p "${JOURNAL_DIR}"
@@ -558,6 +554,10 @@ if [ "$SEPARATE_JOURNAL" == "true" ]; then
   journal_flags+=("--journal-dir")
   journal_flags+=("${JOURNAL_DIR}")
   log "journal-dir=${JOURNAL_DIR}"
+fi
+
+if [ -x "$PREPARE_ARCHIVE" ] && ! "$PREPARE_ARCHIVE"; then
+  die 1 "Archive preparation failed"
 fi
 
 if [ "$SNAPSHOT_RESTORED" == "true" ]; then

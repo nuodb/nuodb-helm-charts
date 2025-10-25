@@ -52,12 +52,15 @@ update_dba() {
     # environment variables were set, so DBA credentials update is required;
     # determine SQL statements to execute based on source and target DBA
     # user names
-    local update_dba_sql="ALTER USER $DB_USER PASSWORD '$DB_PASSWORD';"
+    local escaped_db_password="$(echo "$DB_PASSWORD" | sed "s/'/''/g")"
+    local update_dba_sql="ALTER USER $DB_USER PASSWORD '$escaped_db_password';"
     [ "$DB_USER" = "$SOURCE_USER" ] || update_dba_sql="$(cat <<EOF
-CREATE USER $DB_USER PASSWORD '$DB_PASSWORD';
+START TRANSACTION;
+CREATE USER $DB_USER PASSWORD '$escaped_db_password';
 GRANT SYSTEM.ADMINISTRATOR TO $DB_USER WITH GRANT OPTION;
 GRANT SYSTEM.DBA TO $DB_USER WITH GRANT OPTION;
 DROP USER $SOURCE_USER;
+COMMIT;
 EOF
 )"
 
