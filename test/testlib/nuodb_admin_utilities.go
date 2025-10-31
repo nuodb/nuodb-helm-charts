@@ -244,24 +244,22 @@ func ApplyLicense(t *testing.T, namespace string, adminPod string, licenseType L
 		licenseContent = os.Getenv("NUODB_LICENSE_CONTENT")
 	}
 
-	if licenseContent != "" {
-		licenseContentBytes, err := base64.StdEncoding.DecodeString(licenseContent)
-		require.NoError(t, err)
-		tmpfile, err := os.CreateTemp("", "license")
-		require.NoError(t, err)
-		defer os.Remove(tmpfile.Name())
-		_, err = tmpfile.Write(licenseContentBytes)
-		require.NoError(t, err)
-		tmpBaseName := filepath.Base(tmpfile.Name())
-		k8s.RunKubectl(t, options, "cp", tmpfile.Name(), adminPod+":/tmp/"+tmpBaseName)
-		k8s.RunKubectl(t, options, "exec", adminPod, "--",
-			"nuocmd", "set", "license", "--license-file", "/tmp/"+tmpBaseName)
-		k8s.RunKubectl(t, options, "exec", adminPod, "--",
-			"rm", "-f", "/tmp/"+tmpBaseName)
-		output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
-			"nuocmd", "--show-json-fields", "effectiveForDomain", "get", "effective-license")
-		require.True(t, strings.Contains(output, "true"), "NuoDB license key is not effective: %s", output)
-	}
+	licenseContentBytes, err := base64.StdEncoding.DecodeString(licenseContent)
+	require.NoError(t, err)
+	tmpfile, err := os.CreateTemp("", "license")
+	require.NoError(t, err)
+	defer os.Remove(tmpfile.Name())
+	_, err = tmpfile.Write(licenseContentBytes)
+	require.NoError(t, err)
+	tmpBaseName := filepath.Base(tmpfile.Name())
+	k8s.RunKubectl(t, options, "cp", tmpfile.Name(), adminPod+":/tmp/"+tmpBaseName)
+	k8s.RunKubectl(t, options, "exec", adminPod, "--",
+		"nuocmd", "set", "license", "--license-file", "/tmp/"+tmpBaseName)
+	k8s.RunKubectl(t, options, "exec", adminPod, "--",
+		"rm", "-f", "/tmp/"+tmpBaseName)
+	output, err := k8s.RunKubectlAndGetOutputE(t, options, "exec", adminPod, "--",
+		"nuocmd", "--show-json-fields", "effectiveForDomain", "get", "effective-license")
+	require.True(t, strings.Contains(output, "true"), "NuoDB license key is not effective: %s", output)
 }
 
 func GetDomainServersE(t *testing.T, namespace string, adminPod string) (map[string]NuoDBServer, error) {

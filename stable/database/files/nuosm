@@ -556,6 +556,10 @@ if [ "$SEPARATE_JOURNAL" == "true" ]; then
   log "journal-dir=${JOURNAL_DIR}"
 fi
 
+if [ -x "$PREPARE_ARCHIVE" ] && ! "$PREPARE_ARCHIVE"; then
+  die 1 "Archive preparation failed"
+fi
+
 if [ "$SNAPSHOT_RESTORED" == "true" ]; then
   loadFromSnapshot
 fi
