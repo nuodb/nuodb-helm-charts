@@ -1657,3 +1657,27 @@ func TestAdminStatefulSetAdminLabels(t *testing.T) {
 		assert.Contains(t, adminContainer.Args[2:], "adminLabels.labels/zone=us-east-1")
 	}
 }
+
+func TestAdminAdditionalEnv(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.env[0].name":  "VAR0",
+			"admin.env[0].value": "value0",
+			"admin.env[1].name":  "VAR1",
+			"admin.env[1].value": "value1",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env,
+			"VAR0", "value0"))
+		assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env,
+			"VAR1", "value1"))
+	}
+}
