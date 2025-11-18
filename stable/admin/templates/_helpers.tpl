@@ -221,6 +221,15 @@ envFrom: [{{- range $index, $map := .Values.admin.envFrom.configMapRef }}{{if gt
 {{- end -}}
 
 {{/*
+Import user defined ENV vars
+*/}}
+{{- define "admin.env" }}
+{{- if not (empty .Values.admin.env) }}
+{{ toYaml .Values.admin.env | trim }}
+{{- end }}
+{{- end -}}
+
+{{/*
 Define the cluster domains
 */}}
 {{- define "cluster.domain" -}}
