@@ -225,7 +225,7 @@ Import user defined ENV vars
 */}}
 {{- define "admin.env" }}
 {{- if not (empty .Values.admin.env) }}
-{{ toYaml .Values.admin.env | trim }}
+{{ toYaml .Values.admin.env }}
 {{- end }}
 {{- end -}}
 

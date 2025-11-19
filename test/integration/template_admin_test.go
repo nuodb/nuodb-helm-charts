@@ -1664,10 +1664,14 @@ func TestAdminAdditionalEnv(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"admin.env[0].name":  "VAR0",
-			"admin.env[0].value": "value0",
-			"admin.env[1].name":  "VAR1",
-			"admin.env[1].value": "value1",
+			"admin.env[0].name":                           "VAR0",
+			"admin.env[0].value":                          "value0",
+			"admin.env[1].name":                           "VAR1",
+			"admin.env[1].valueFrom.configMapKeyRef.name": "cm-name",
+			"admin.env[1].valueFrom.configMapKeyRef.key":  "cm-key",
+			"admin.env[2].name":                           "VAR2",
+			"admin.env[2].valueFrom.secretKeyRef.name":    "secret-name",
+			"admin.env[2].valueFrom.secretKeyRef.key":     "secret-key",
 		},
 	}
 
@@ -1676,8 +1680,20 @@ func TestAdminAdditionalEnv(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env,
-			"VAR0", "value0"))
-		assert.True(t, testlib.EnvContains(obj.Spec.Template.Spec.Containers[0].Env,
-			"VAR1", "value1"))
+			options.SetValues["admin.env[0].name"], options.SetValues["admin.env[0].value"]))
+		assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
+			options.SetValues["admin.env[1].name"], &corev1.EnvVarSource{
+				ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: options.SetValues["admin.env[1].valueFrom.configMapKeyRef.name"]},
+					Key:                  options.SetValues["admin.env[1].valueFrom.configMapKeyRef.key"],
+				},
+			}))
+		assert.True(t, testlib.EnvContainsValueFrom(obj.Spec.Template.Spec.Containers[0].Env,
+			options.SetValues["admin.env[2].name"], &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{Name: options.SetValues["admin.env[2].valueFrom.secretKeyRef.name"]},
+					Key:                  options.SetValues["admin.env[2].valueFrom.secretKeyRef.key"],
+				},
+			}))
 	}
 }
