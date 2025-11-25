@@ -231,6 +231,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `evicted.servers` | A list of evicted servers excluded from RAFT consensus. Used during disaster recovery. | `[]` |
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
 | `adminLabels` | Admin labels to apply to each Admin Process. Supported starting from NuoDB image version 6.0.3 | `{}`|
+| `env` | Additional environment variables to pass through to the Admin container | `[]`|
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 

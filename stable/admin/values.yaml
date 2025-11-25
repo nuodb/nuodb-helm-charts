@@ -428,6 +428,10 @@ admin:
   # https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
   resourceLabels: {}
 
+  # Additional environment variables to pass through to the Admin container
+  env: []
+    # - {name: VAR_NAME, value: "value" }
+
   legacy:
     loadBalancerJob:
       enabled: false
