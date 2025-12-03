@@ -357,6 +357,17 @@ database:
     # ref: http://kubernetes.io/docs/user-guide/compute-resources/
     resources: {}
 
+    # Environment Variables for backup-hooks container. See
+    # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core
+    #
+    env: []
+
+    # Extra volume mounts for backup-hooks container. See
+    # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core
+    volumeMounts: []
+    # - name: extras
+    #   mountPath: /mnt/extras
+
     # Deprecated: use freezeMode="suspend" instead.
     useSuspend: false
 
@@ -622,6 +633,13 @@ database:
       requests:
         cpu: 4
         memory: 8Gi
+
+    # Extra volumes for SM pods. See
+    # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volume-v1-core
+    volumes: []
+    # - name: configurations
+    #   configMap:
+    #     name: configuration
 
     ## Affinity, selector, and tolerations
     # They are expanded as YAML, and can include variable and template references
