@@ -345,6 +345,9 @@ spec:
           readOnly: true
         {{- end }}
         {{- end }}
+        {{- with .Values.database.backupHooks.volumeMounts }}
+        {{- toYaml . | trim | nindent 8 }}
+        {{- end }}
       {{- end }}
       {{- include "database.nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
       {{- include "database.sm.extraSidecars" . | nindent 6  }}

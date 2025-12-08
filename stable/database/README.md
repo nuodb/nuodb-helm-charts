@@ -231,6 +231,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
 | `backupHooks.enabled` | Whether to enable the backup hooks sidecar for non-hotcopy SMs | `false` |
 | `backupHooks.resources` | Kubernetes resource requests and limits set on the backup hook sidecar container | `{}` |
+| `backupHooks.volumeMounts` | Extra volume mounts for backup-hooks container. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core). | `[]` |
 | `backupHooks.freezeMode` | The freeze mode to be used when executing backup hooks. Supported modes are `hotsnap`, `fsfreeze` and `suspend`. Defaults to `hostsnap` if empty | `""` |
 | `backupHooks.timeout` | Timeout in seconds after which the archive will be automatically unfrozen | `30` |
 | `backupHooks.port` | The container port to expose the HTTP server on. | `8000` |
@@ -299,6 +300,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
 | `sm.topologySpreadConstraints` | Topology spread constraints for NuoDB SM | `[]` |
+| `sm.volumes` | Extra volumes for SM pods. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volume-v1-core). | `[]` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
 | `sm.readinessProbe.initialDelaySeconds` | The initial delay in seconds for the readiness probe. | `5` |
 | `sm.readinessProbe.periodSeconds` | The period in seconds for the readiness probe. | `5` |

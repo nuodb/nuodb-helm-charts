@@ -1138,9 +1138,9 @@ TE resources requested and limited
 Any additional volumes that need to go into the SM pod spec.
 */}}
 {{- define "database.sm.extraVolumes"}}
-{{/*
-Extension point that can be overriden by an embedding chart.
-*/}}
+{{- with .Values.database.sm.volumes }}
+{{- toYaml . | trim }}
+{{- end }}
 {{- end }}
 
 {{/*
