@@ -139,7 +139,7 @@ func StartAdminTemplate(t *testing.T, options *helm.Options, replicaCount int, n
 
 	// wait for all admin pods to become ready
 	for i := 0; i < replicaCount; i++ {
-		AwaitPodUp(t, namespaceName, adminNames[i], AdjustPodTimeout(adminNames[i], 300*time.Second))
+		AwaitPodUp(t, namespaceName, adminNames[i], AdjustPodTimeout(adminNames[i], 60*time.Second))
 	}
 
 	// Await num of admin servers only for single cluster deployment; in

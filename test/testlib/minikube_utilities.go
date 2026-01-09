@@ -680,7 +680,7 @@ func AwaitAdminFullyConnected(t *testing.T, namespace string, podName string, nu
 	k8s.RunKubectl(t, options, "exec", podName, "-c", "admin", "--", "nuocmd", "check", "servers",
 		"--check-active", "--check-connected", "--check-leader",
 		"--num-servers", strconv.Itoa(numServers),
-		"--timeout", "300")
+		"--timeout", "60")
 }
 
 func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseName string, numProcesses int) {
@@ -689,13 +689,13 @@ func AwaitDatabaseUp(t *testing.T, namespace string, podName string, databaseNam
 	err := k8s.RunKubectlE(t, options, "exec", podName, "--", "nuocmd", "check", "database",
 		"--db-name", databaseName, "--check-running", "--check-liveness", "20",
 		"--num-processes", strconv.Itoa(numProcesses),
-		"--timeout", "300")
+		"--timeout", "60")
 
 	if err != nil {
 		_ = k8s.RunKubectlE(t, options, "exec", podName, "--", "nuocmd", "show", "domain")
 	}
 
-	require.NoError(t, err, "Check database failed. DB not ready after 300s")
+	require.NoError(t, err, "Check database failed. DB not ready after 60s")
 }
 
 func GetDiagnoseOnTestFailure(t *testing.T, namespace string, podName string) {
@@ -755,7 +755,7 @@ func AwaitDatabaseRestart(t *testing.T, namespace string, podName string, databa
 
 	Await(t, func() bool {
 		return GetDatabaseIncarnation(t, namespace, podName, databaseName).Major > incarnation.Major
-	}, 300*time.Second)
+	}, 60*time.Second)
 
 	opts := GetExtractedOptions(databaseOptions)
 	AwaitDatabaseUp(t, namespace, podName, databaseName, opts.NrTePods+opts.NrSmPods)

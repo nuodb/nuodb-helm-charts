@@ -237,7 +237,7 @@ func StartDatabaseTemplate(t *testing.T, namespaceName string, adminPod string, 
 		})
 		// the TEs will become RUNNING after the SMs as they need an entry node
 		// so use the same ready timeout for both
-		readyTimeout := AdjustPodTimeout(tePodNameTemplate, 300*time.Second)
+		readyTimeout := AdjustPodTimeout(tePodNameTemplate, 60*time.Second)
 		if opt.NrTePods > 0 {
 			tePodName := GetPodName(t, namespaceName, tePodNameTemplate)
 			AwaitPodUp(t, namespaceName, tePodName, readyTimeout)
@@ -328,7 +328,7 @@ func UpgradeDatabase(t *testing.T, namespaceName string, helmChartReleaseName st
 	if upgradeOptions.SmPodShouldGetRecreated {
 		AwaitPodObjectRecreated(t, namespaceName, smPod0, 30*time.Second)
 	}
-	AwaitPodUp(t, namespaceName, smPodName0, 300*time.Second)
+	AwaitPodUp(t, namespaceName, smPodName0, 60*time.Second)
 
 	// Await num of database processes only for single cluster deployment;
 	// in multi-clusters the await logic should be called once all clusters
@@ -376,7 +376,7 @@ func RestoreDatabase(t *testing.T, namespaceName string, podName string, databas
 		AddTeardown(TEARDOWN_RESTORE, func() { helm.Delete(t, options, restName, true) })
 		// Using a bit longer timeout here as we might be performing restore using
 		// older image which needs to be pulled
-		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 300*time.Second)
+		AwaitPodPhase(t, namespaceName, "restore-demo-", corev1.PodSucceeded, 60*time.Second)
 	}
 
 	if options.SetValues["restore.autoRestart"] == "true" {

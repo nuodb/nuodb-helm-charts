@@ -39,7 +39,7 @@ func StartVault(t *testing.T, options *helm.Options, namespaceName string) strin
 
 	vaultName := fmt.Sprintf("%s-vault-0", helmChartReleaseName)
 
-	AwaitPodUp(t, namespaceName, vaultName, 300*time.Second)
+	AwaitPodUp(t, namespaceName, vaultName, 60*time.Second)
 
 	// enable audit logging
 	k8s.RunKubectl(t, kubectlOptions, "exec", vaultName, "--", "vault", "audit", "enable", "file", "file_path=stdout")

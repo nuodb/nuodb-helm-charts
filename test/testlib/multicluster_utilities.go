@@ -249,7 +249,7 @@ func AdjustPodTimeout(podName string, timeout time.Duration) time.Duration {
 	if strings.Contains(podName, MULTI_CLUSTER_1.Name) || strings.Contains(podName, MULTI_CLUSTER_2.Name) {
 		// in Azure sometimes it takes 3 to 5 min for the disks to be
 		// provisioned and attached to the nodes
-		return time.Duration(int64(1.5 * math.Max(float64(timeout), float64(300*time.Second))))
+		return time.Duration(int64(1.5 * math.Max(float64(timeout), float64(60*time.Second))))
 	}
 	return timeout
 }
