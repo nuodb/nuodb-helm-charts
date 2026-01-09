@@ -1,5 +1,5 @@
-//go:build short
-// +build short
+//go:build shortest
+// +build shortest
 
 package minikube
 
