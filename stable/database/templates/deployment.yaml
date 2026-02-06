@@ -105,7 +105,7 @@ spec:
           - "{{ .Values.admin.affinityLabels }}"
           {{- end }}
           - "--options"
-          - "mem $(MEMORY_REQUEST) {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
+          - "mem $(ENGINE_MEMORY) {{- range $opt, $val := .Values.database.te.engineOptions }} {{$opt}} {{$val}} {{- end}}"
           {{- include "database.teLabels" . | indent 10 }}
     {{- include "database.otherOptions" .Values.database.te.otherOptions | indent 10 }}
     {{- include "database.sc.containerSecurityContext" . | indent 8 }}
@@ -127,11 +127,11 @@ spec:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: MEMORY_REQUEST
+          - name: ENGINE_MEMORY
             valueFrom:
               resourceFieldRef:
                 containerName: engine
-                resource: requests.memory
+                resource: limits.memory
           - { name: DB_NAME,             value: {{ ( include "database.dbName" . ) | quote }} }
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
           - { name: PEER_ADDRESS,        value: "{{ template "admin.address" . }}" }

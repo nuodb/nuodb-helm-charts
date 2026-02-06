@@ -102,11 +102,11 @@ func TestResourcesDatabaseDefaults(t *testing.T) {
 		assert.EqualValues(t, 8, (*containers)[0].Resources.Limits.Cpu().ScaledValue(0))
 		assert.EqualValues(t, 16*1024*1024*1024, (*containers)[0].Resources.Limits.Memory().ScaledValue(0))
 
-		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem $(MEMORY_REQUEST)"))
-		assert.True(t, testlib.EnvContainsValueFrom((*containers)[0].Env, "MEMORY_REQUEST", &v1.EnvVarSource{
+		assert.True(t, testlib.ArgContains((*containers)[0].Args, "mem $(ENGINE_MEMORY)"))
+		assert.True(t, testlib.EnvContainsValueFrom((*containers)[0].Env, "ENGINE_MEMORY", &v1.EnvVarSource{
 			ResourceFieldRef: &v1.ResourceFieldSelector{
 				ContainerName: (*containers)[0].Name,
-				Resource:      "requests.memory",
+				Resource:      "limits.memory",
 			},
 		}))
 
