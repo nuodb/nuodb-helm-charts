@@ -619,8 +619,12 @@ Extension point that can be overriden by an embedding chart.
 {{- end }}
 
 {{/*
-Set tolerations for the service pods.
+Set tolerations for the AP pods.
 */}}
 {{- define "admin.tolerations"}}
+{{- if typeIs "string" .Values.admin.tolerations -}}
+{{ .Values.admin.tolerations }}
+{{- else -}}
 {{ toYaml .Values.admin.tolerations }}
+{{- end -}}
 {{- end }}
