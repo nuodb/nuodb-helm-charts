@@ -1697,3 +1697,87 @@ func TestAdminAdditionalEnv(t *testing.T) {
 			}))
 	}
 }
+
+func TestAdminTolerations(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.legacy.loadBalancerJob.enabled": "true",
+			"admin.tolerations[0].key":             "admin-tol-0",
+			"admin.tolerations[0].value":           "admin-tol-0-value",
+			"admin.tolerations[1].key":             "admin-tol-1",
+			"admin.tolerations[1].value":           "admin-tol-1-value",
+		},
+	}
+
+	t.Run("testJob", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/job.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderJob(t, output, 1) {
+			require.Len(t, obj.Spec.Template.Spec.Tolerations, 2)
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Key, "admin-tol-0")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Value, "admin-tol-0-value")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Key, "admin-tol-1")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Value, "admin-tol-1-value")
+		}
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.Len(t, obj.Spec.Template.Spec.Tolerations, 2)
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Key, "admin-tol-0")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Value, "admin-tol-0-value")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Key, "admin-tol-1")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Value, "admin-tol-1-value")
+		}
+	})
+}
+
+func TestAdminTolerationsAsString(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.legacy.loadBalancerJob.enabled": "true",
+			"admin.tolerations": `
+- key: admin-tol-0
+  value: admin-tol-0-value
+- key: admin-tol-1
+  value: admin-tol-1-value
+`,
+		},
+	}
+
+	t.Run("testJob", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/job.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderJob(t, output, 1) {
+			require.Len(t, obj.Spec.Template.Spec.Tolerations, 2)
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Key, "admin-tol-0")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Value, "admin-tol-0-value")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Key, "admin-tol-1")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Value, "admin-tol-1-value")
+		}
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.Len(t, obj.Spec.Template.Spec.Tolerations, 2)
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Key, "admin-tol-0")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Value, "admin-tol-0-value")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Key, "admin-tol-1")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Value, "admin-tol-1-value")
+		}
+	})
+}

@@ -26,7 +26,7 @@ spec:
 {{- end }}
       {{- if .Values.admin.tolerations }}
       tolerations:
-{{ toYaml .Values.admin.tolerations | trim | indent 8 }}
+{{ include "admin.tolerations" . | trim | indent 8 }}
       {{- end }}
       initContainers:
       - name: wait

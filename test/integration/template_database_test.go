@@ -4054,3 +4054,51 @@ func TestDatabaseTolerations(t *testing.T) {
 		}
 	})
 }
+
+func TestDatabaseTolerationsAsString(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.te.tolerations": `
+- key: te-tol-0
+  value: te-tol-0-value
+- key: te-tol-1
+  value: te-tol-1-value
+`,
+			"database.sm.tolerations": `
+- key: sm-tol-0
+  value: sm-tol-0-value
+- key: sm-tol-1
+  value: sm-tol-1-value
+`,
+		},
+	}
+
+	t.Run("testDeployment", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			require.Len(t, obj.Spec.Template.Spec.Tolerations, 2)
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Key, "te-tol-0")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Value, "te-tol-0-value")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Key, "te-tol-1")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Value, "te-tol-1-value")
+		}
+	})
+
+	t.Run("testStatefulSet", func(t *testing.T) {
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			require.Len(t, obj.Spec.Template.Spec.Tolerations, 2)
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Key, "sm-tol-0")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[0].Value, "sm-tol-0-value")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Key, "sm-tol-1")
+			assert.Equal(t, obj.Spec.Template.Spec.Tolerations[1].Value, "sm-tol-1-value")
+		}
+	})
+}
