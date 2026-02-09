@@ -1323,12 +1323,20 @@ Arguments:
 Set tolerations for the database SM pods.
 */}}
 {{- define "database.sm.tolerations"}}
+{{- if typeIs "string" .Values.database.sm.tolerations -}}
+{{ .Values.database.sm.tolerations }}
+{{- else -}}
 {{ toYaml .Values.database.sm.tolerations }}
+{{- end -}}
 {{- end }}
 
 {{/*
 Set tolerations for the database TE pods.
 */}}
 {{- define "database.te.tolerations"}}
+{{- if typeIs "string" .Values.database.te.tolerations -}}
+{{ .Values.database.te.tolerations }}
+{{- else -}}
 {{ toYaml .Values.database.te.tolerations }}
+{{- end -}}
 {{- end }}
