@@ -904,6 +904,11 @@ Set shareProcessNamespace=true if needed for a TE deployment.
     {{- $hasSidecars = true -}}
   {{- end -}}
 {{- end -}}
+{{- if .Values.database.backupHooks -}}
+  {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" -}}
+    {{- $hasSidecars = true -}}
+  {{- end -}}
+{{- end -}}
 {{- if $hasSidecars }}
 shareProcessNamespace: true
 {{- end }}
@@ -1339,4 +1344,101 @@ Set tolerations for the database TE pods.
 {{- else -}}
 {{ toYaml .Values.database.te.tolerations }}
 {{- end -}}
+{{- end }}
+
+{{/*
+Container definition for the backup hooks sidecar.
+Arguments:
+ 0: Top level of the object namespace
+ 1: Should the container mount the archive volume (true for an SM, false for a TE)
+*/}}
+{{- define "database.nuodb.sidecar.backupHooks" -}}
+{{- $root := index . 0 -}}
+{{- $mountArchive := index . 1 -}}
+{{- if eq (include "defaultfalse" $root.Values.database.backupHooks.enabled) "true" }}
+- name: backup-hooks
+  image: {{ include "backupHooks.image" $root}}
+  imagePullPolicy: {{ default "" $root.Values.database.backupHooks.image.pullPolicy }}
+  args:
+    - nuodb-operations
+    - --port={{ $root.Values.database.backupHooks.port }}
+  ports:
+  - containerPort: {{ $root.Values.database.backupHooks.port }}
+    protocol: TCP
+  env:
+    - name: DB_NAME
+      valueFrom:
+        secretKeyRef:
+          name: {{ template "database.secretName" $root }}
+          key: database-name
+    - name: FREEZE_MODE
+      value: {{ include "backupHooks.freezeMode" $root | quote }}
+    {{- if $root.Values.database.backupHooks.timeout }}
+    - name: FREEZE_TIMEOUT
+      value: {{ $root.Values.database.backupHooks.timeout | quote }}
+    {{- end }}
+    {{- if $mountArchive }}
+    - name: NUODB_ARCHIVE_DIR
+      value: {{ printf "/mnt/archive/%s/%s" ( include "admin.domainName" $root ) ( include "database.dbName" $root ) }}
+    {{- if eq (include "defaultfalse" $root.Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
+    - name: NUODB_JOURNAL_DIR
+      value: {{ printf "/mnt/journal/%s/%s" ( include "admin.domainName" $root ) ( include "database.dbName" $root ) }}
+    {{- end }}
+    {{- end }}
+    {{- if eq (include "backupHooks.freezeMode" $root ) "hotsnap" }}
+    - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" $root }}:8888" }
+    {{- end }}
+    {{- include "database.backupHooks.env" $root | indent 4 }}
+  resources:
+  {{- ( include "database.backupHooks.resources" $root ) | trim | nindent 4 }}
+  {{- if and
+      (eq (include "defaultfalse" $root.Values.database.sm.noHotCopy.journalPath.enabled) "true")
+      (eq (include "backupHooks.freezeMode" $root ) "fsfreeze") }}
+  securityContext:
+    privileged: true
+    runAsUser: 0
+    runAsGroup: 0
+  {{- else }}
+  {{- include "database.sc.containerSecurityContext" $root | indent 2 }}
+  {{- end }}
+  volumeMounts:
+  - name: backup-hooks
+    mountPath: /etc/nuodb/handlers.json
+    subPath: handlers.json
+  {{- if $mountArchive }}
+  - name: archive-volume
+    mountPath: /mnt/archive
+  {{- if eq (include "defaultfalse" $root.Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
+  - name: journal-volume
+    mountPath: /mnt/journal
+  {{- end }}
+  {{- end }}
+  {{- if eq (include "backupHooks.freezeMode" $root ) "hotsnap" }}
+  {{- if eq (include "database.enableEphemeralVolume" (list $root $root.Values.database.sm)) "true" }}
+  - name: eph-volume
+    mountPath: /tmp
+    subPath: tmp-hooks
+  {{- end }}
+  {{- if $root.Values.admin.tlsClientPEM }}
+  - name: tls
+    mountPath: /etc/nuodb/keys
+    readOnly: true
+  {{- end }}
+  {{- end }}
+  {{- with $root.Values.database.backupHooks.volumeMounts }}
+  {{- toYaml $root | trim | nindent 2 }}
+  {{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Additional volume needed for the backup hooks sidecar.
+*/}}
+{{- define "database.nuodb.sidecar.backupHooks.volume" -}}
+{{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
+- name: backup-hooks
+  configMap:
+    name: {{ template "database.fullname" . }}-backup-hooks
+    defaultMode: 0666
+{{- end }}
 {{- end }}

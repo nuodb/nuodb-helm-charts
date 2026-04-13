@@ -279,76 +279,7 @@ spec:
           {{- else }}
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
           {{- end }}
-      {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
-      - name: backup-hooks
-        image: {{ include "backupHooks.image" . }}
-        imagePullPolicy: {{ default "" .Values.database.backupHooks.image.pullPolicy }}
-        args:
-          - nuodb-operations
-          - --port={{ .Values.database.backupHooks.port }}
-        ports:
-        - containerPort: {{ .Values.database.backupHooks.port }}
-          protocol: TCP
-        env:
-          - name: DB_NAME
-            valueFrom:
-              secretKeyRef:
-                name: {{ template "database.secretName" . }}
-                key: database-name
-          - name: FREEZE_MODE
-            value: {{ include "backupHooks.freezeMode" . | quote }}
-          {{- if .Values.database.backupHooks.timeout }}
-          - name: FREEZE_TIMEOUT
-            value: {{ .Values.database.backupHooks.timeout | quote }}
-          {{- end }}
-          - name: NUODB_ARCHIVE_DIR
-            value: {{ printf "/mnt/archive/%s/%s" ( include "admin.domainName" . ) ( include "database.dbName" . ) }}
-          {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
-          - name: NUODB_JOURNAL_DIR
-            value: {{ printf "/mnt/journal/%s/%s" ( include "admin.domainName" . ) ( include "database.dbName" . ) }}
-          {{- end }}
-          {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
-          - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
-          {{- end }}
-          {{- include "database.backupHooks.env" . | indent 10 }}
-        resources:
-        {{- ( include "database.backupHooks.resources" . ) | trim | nindent 10 }}
-        {{- if and
-            (eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true")
-            (eq (include "backupHooks.freezeMode" .) "fsfreeze") }}
-        securityContext:
-          privileged: true
-          runAsUser: 0
-          runAsGroup: 0
-        {{- else }}
-        {{- include "database.sc.containerSecurityContext" . | indent 8 }}
-        {{- end }}
-        volumeMounts:
-        - name: backup-hooks
-          mountPath: /etc/nuodb/handlers.json
-          subPath: handlers.json
-        - name: archive-volume
-          mountPath: /mnt/archive
-        {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
-        - name: journal-volume
-          mountPath: /mnt/journal
-        {{- end }}
-        {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
-        {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
-        - name: eph-volume
-          mountPath: /tmp
-          subPath: tmp-hooks
-        {{- end }}
-        {{- if .Values.admin.tlsClientPEM }}
-        - name: tls
-          mountPath: /etc/nuodb/keys
-          readOnly: true
-        {{- end }}
-        {{- end }}
-        {{- with .Values.database.backupHooks.volumeMounts }}
-        {{- toYaml . | trim | nindent 8 }}
-        {{- end }}
-      {{- end }}
+      {{- include "database.nuodb.sidecar.backupHooks" (list . true ) | nindent 6 }}
       {{- include "database.nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
       {{- include "database.sm.extraSidecars" . | nindent 6  }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
@@ -374,12 +305,7 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
-      {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
-      - name: backup-hooks
-        configMap:
-          name: {{ template "database.fullname" . }}-backup-hooks
-          defaultMode: 0666
-      {{- end }}
+      {{- include "database.nuodb.sidecar.backupHooks.volume" . | nindent 6 }}
       {{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
       - name: data-migration
         configMap:

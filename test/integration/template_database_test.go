@@ -2947,6 +2947,11 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
 		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.method: database.backupHooks.customHandlers.0.method must be one of the following: "GET", "POST", "PUT", "PATCH", "DELETE"`)
+
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.method: database.backupHooks.customHandlers.0.method must be one of the following: "GET", "POST", "PUT", "PATCH", "DELETE"`)
 	})
 
 	t.Run("testBadPath", func(t *testing.T) {
@@ -2965,6 +2970,11 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
 		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.path: Does not match pattern '^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$'`)
+
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.path: Does not match pattern '^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$'`)
 	})
 
 	t.Run("testNoScript", func(t *testing.T) {
@@ -2979,6 +2989,11 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 			},
 		}
 		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0: script is required`)
+
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
 		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0: script is required`)
@@ -3001,6 +3016,11 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
 		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.0: Invalid type. Expected: integer, given: string`)
+
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.0: Invalid type. Expected: integer, given: string`)
 	})
 
 	t.Run("testStatusCodeTooLow", func(t *testing.T) {
@@ -3017,6 +3037,11 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 			},
 		}
 		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.0: Must be greater than or equal to 200`)
+
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
 		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.0: Must be greater than or equal to 200`)
@@ -3039,6 +3064,11 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
 		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.1: Must be less than or equal to 599`)
+
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.1: Must be less than or equal to 599`)
 	})
 }
 
@@ -3050,6 +3080,12 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 		options := &helm.Options{}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				assert.NotEqual(t, "backup-hooks", container.Name)
+			}
+		}
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			for _, container := range obj.Spec.Template.Spec.Containers {
 				assert.NotEqual(t, "backup-hooks", container.Name)
 			}
@@ -3075,6 +3111,46 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 				Namespace: "default",
 			},
 		}
+
+		checkSidecar := func(container *corev1.Container, isSm bool) {
+			// Make sure securityContext appears and does not have
+			// privileged=true, which is only required when the journal
+			// volume is separate and fsfreeze mode is enabled
+			assert.NotNil(t, container)
+			assert.NotNil(t, container.SecurityContext)
+			assert.NotNil(t, container.SecurityContext.Privileged)
+			assert.False(t, *container.SecurityContext.Privileged)
+			// runAsUser and runAsGroup should not be overridden
+			assert.Nil(t, container.SecurityContext.RunAsUser)
+			assert.Nil(t, container.SecurityContext.RunAsGroup)
+			if isSm {
+				testlib.AssertEnvContains(t, container.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
+			} else {
+				testlib.AssertEnvNotContains(t, container.Env, "NUODB_ARCHIVE_DIR")
+			}
+			testlib.AssertEnvContains(t, container.Env, "FREEZE_MODE", "hotsnap")
+			testlib.AssertEnvContains(t, container.Env, "FREEZE_TIMEOUT", "30")
+			testlib.AssertEnvContains(t, container.Env, "NUOCMD_API_SERVER", "nuodb.default.svc:8888")
+			testlib.AssertEnvNotContains(t, container.Env, "NUODB_JOURNAL_DIR")
+			// Check volume mounts
+			volumes := make([]string, len(container.VolumeMounts))
+			for i, v := range container.VolumeMounts {
+				volumes[i] = v.Name
+			}
+			if isSm {
+				assert.Contains(t, volumes, "archive-volume")
+			} else {
+				assert.NotContains(t, volumes, "archive-volume")
+			}
+			assert.Contains(t, volumes, "backup-hooks")
+			assert.NotContains(t, volumes, "journal-volume")
+			assert.Contains(t, volumes, "eph-volume")
+			assert.Contains(t, volumes, "tls")
+
+			// Check that ghcr.io/nuodb/nuodb-sidecar container image is used
+			assert.Contains(t, container.Image, "ghcr.io/nuodb/nuodb-sidecar")
+		}
+
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		var sidecar *corev1.Container
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
@@ -3088,34 +3164,21 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 				}
 			}
 		}
-		// Make sure securityContext appears and does not have
-		// privileged=true, which is only required when the journal
-		// volume is separate and fsfreeze mode is enabled
-		assert.NotNil(t, sidecar)
-		assert.NotNil(t, sidecar.SecurityContext)
-		assert.NotNil(t, sidecar.SecurityContext.Privileged)
-		assert.False(t, *sidecar.SecurityContext.Privileged)
-		// runAsUser and runAsGroup should not be overridden
-		assert.Nil(t, sidecar.SecurityContext.RunAsUser)
-		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
-		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
-		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_MODE", "hotsnap")
-		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_TIMEOUT", "30")
-		testlib.AssertEnvContains(t, sidecar.Env, "NUOCMD_API_SERVER", "nuodb.default.svc:8888")
-		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
-		// Check volume mounts
-		volumes := make([]string, len(sidecar.VolumeMounts))
-		for i, v := range sidecar.VolumeMounts {
-			volumes[i] = v.Name
-		}
-		assert.Contains(t, volumes, "archive-volume")
-		assert.Contains(t, volumes, "backup-hooks")
-		assert.NotContains(t, volumes, "journal-volume")
-		assert.Contains(t, volumes, "eph-volume")
-		assert.Contains(t, volumes, "tls")
+		checkSidecar(sidecar, true)
 
-		// Check that ghcr.io/nuodb/nuodb-sidecar container image is used
-		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar")
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				if container.Name == "backup-hooks" {
+					sidecar = &container
+					// Make sure shareProcessNamespace=true for pod
+					assert.NotNil(t, obj.Spec.Template.Spec.ShareProcessNamespace)
+					assert.True(t, *obj.Spec.Template.Spec.ShareProcessNamespace)
+				}
+			}
+		}
+
+		checkSidecar(sidecar, false)
 
 		// Check that configmap for backup hooks was rendered
 		var backupHooksCm *corev1.ConfigMap
