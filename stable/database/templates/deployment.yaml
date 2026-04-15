@@ -29,10 +29,8 @@ spec:
   template:
     metadata:
       annotations:
-      {{- if .Values.database.configFiles }}
-        {{- with .Values.database.configFiles }}
-        checksum/config: {{ toYaml . | sha256sum }}
-        {{- end }}
+      {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled) }}
+        checksum/config: {{ dict "configFiles" .Values.database.configFiles "customHandlers" .Values.database.backupHooks.customHandlers | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end }}
@@ -200,6 +198,7 @@ spec:
           {{- else }}
           timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
           {{- end }}
+      {{- include "database.nuodb.sidecar.backupHooks" (list . false ) | nindent 6 }}
       {{- include "database.nuodb.sidecar.collector" (list . .Values.database.te) | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       {{- include "database.te.shareProcessNamespace" . | indent 6 }}
@@ -230,6 +229,7 @@ spec:
         {{- if eq (include "defaulttrue" .Values.nuocollector.watcher.enabled ) "false" }}
         {{- include "nuocollector.volume" . | nindent 8 }}
         {{- end }}
+        {{- include "database.nuodb.sidecar.backupHooks.volume" . | nindent 8 }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
