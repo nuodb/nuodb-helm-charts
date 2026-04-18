@@ -42,6 +42,29 @@ spec:
     persistentVolumeClaimName: %s
 `
 
+const NGINX_DEPLOYMENT_CONTENT = `
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      labels:
+        app: nginx
+    spec:
+      containers:
+      - image: docker.io/nginx:latest
+        imagePullPolicy: IfNotPresent
+        name: nginx
+`
+
 type ExtractedOptions struct {
 	NrTePods              int
 	NrSmHotCopyPods       int
@@ -598,7 +621,7 @@ func CheckRestoreRequests(t *testing.T, namespaceName string, podName string, da
 
 func CreateNginxDeployment(t *testing.T, namespaceName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	k8s.RunKubectl(t, kubectlOptions, "create", "deployment", NGINX_DEPLOYMENT, "--image=docker.io/nginx:latest", "--image-pull-policy=IfNotPresent")
+	k8s.KubectlApplyFromString(t, kubectlOptions, NGINX_DEPLOYMENT_CONTENT)
 	k8s.RunKubectl(t, kubectlOptions, "create", "service", "clusterip", NGINX_DEPLOYMENT, "--tcp=80:80")
 	podName := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
 	AwaitPodUp(t, namespaceName, podName, 60*time.Second)
