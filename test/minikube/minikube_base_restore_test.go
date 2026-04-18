@@ -536,7 +536,8 @@ spec:
         claimName: partial-restore
   containers:
     - name: container
-      image: busybox
+      image: docker.io/busybox:latest
+      imagePullPolicy: IfNotPresent
       args:
         - sh
         - -c

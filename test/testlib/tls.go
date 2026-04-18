@@ -26,6 +26,7 @@ spec:
   containers:
   - name: generate-tls-certs
     image: %s
+    imagePullPolicy: IfNotPresent
     command: ['tail', '-f', '/dev/null']
 `
 
