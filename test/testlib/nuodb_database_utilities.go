@@ -598,7 +598,7 @@ func CheckRestoreRequests(t *testing.T, namespaceName string, podName string, da
 
 func CreateNginxDeployment(t *testing.T, namespaceName string) {
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	k8s.RunKubectl(t, kubectlOptions, "create", "deployment", NGINX_DEPLOYMENT, "--image=nginx")
+	k8s.RunKubectl(t, kubectlOptions, "create", "deployment", NGINX_DEPLOYMENT, "--image=docker.io/nginx:latest", "--image-pull-policy=IfNotPresent")
 	k8s.RunKubectl(t, kubectlOptions, "create", "service", "clusterip", NGINX_DEPLOYMENT, "--tcp=80:80")
 	podName := GetPodName(t, namespaceName, NGINX_DEPLOYMENT)
 	AwaitPodUp(t, namespaceName, podName, 60*time.Second)
