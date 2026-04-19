@@ -17,6 +17,14 @@ const YCSB_CONTROLLER_NAME = "ycsb-load"
 func StartYCSBWorkload(t *testing.T, namespaceName string, options *helm.Options) (helmChartReleaseName string) {
 	randomSuffix := strings.ToLower(random.UniqueId())
 
+	// Specify IfNotPresent as pull policy if not set
+	if _, ok := options.SetValues["image.pullPolicy"]; !ok {
+		if options.SetValues == nil {
+			options.SetValues = make(map[string]string)
+		}
+		options.SetValues["image.pullPolicy"] = "IfNotPresent"
+	}
+
 	InjectTestValues(t, options)
 
 	helmChartReleaseName = fmt.Sprintf("ycsb-%s", randomSuffix)
