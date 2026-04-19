@@ -19,6 +19,9 @@ func StartYCSBWorkload(t *testing.T, namespaceName string, options *helm.Options
 
 	// Specify IfNotPresent as pull policy if not set
 	if _, ok := options.SetValues["image.pullPolicy"]; !ok {
+		if options.SetValues == nil {
+			options.SetValues = make(map[string]string)
+		}
 		options.SetValues["image.pullPolicy"] = "IfNotPresent"
 	}
 
