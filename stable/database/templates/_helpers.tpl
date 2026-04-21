@@ -66,9 +66,32 @@ Also, we can't use a single if because lazy evaluation is not an option
 Return the backup hooks sidecar image
 */}}
 {{- define "backupHooks.image" -}}
-{{- $registryName := .Values.database.backupHooks.image.registry -}}
-{{- $repositoryName := .Values.database.backupHooks.image.repository -}}
-{{- $tag := .Values.database.backupHooks.image.tag | toString -}}
+{{- $registryName := .Values.AsMap | dig "database" "backupHooks" "image" "registry" .Values.database.sm.operationsSidecar.image.registry -}}
+{{- $repositoryName := .Values.AsMap | dig "database" "backupHooks" "image" "repository" .Values.database.sm.operationsSidecar.image.repository -}}
+{{- $tag := .Values.AsMap | dig "database" "backupHooks" "image" "tag" .Values.database.sm.operationsSidecar.image.tag | toString -}}
+{{/*
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
+Also, we can't use a single if because lazy evaluation is not an option
+*/}}
+{{- if .Values.global }}
+    {{- if .Values.global.imageRegistry }}
+        {{- printf "%s/%s:%s" .Values.global.imageRegistry $repositoryName $tag -}}
+    {{- else -}}
+        {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+    {{- end -}}
+{{- else -}}
+    {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the operations sidecar image for the TE
+*/}}
+{{- define "te.operationsSidecar.image" -}}
+{{- $registryName := .Values.database.te.operationsSidecar.image.registry -}}
+{{- $repositoryName := .Values.database.te.operationsSidecar.image.repository -}}
+{{- $tag := .Values.database.te.operationsSidecar.image.tag | toString -}}
 {{/*
 Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
 but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
@@ -884,10 +907,8 @@ Set shareProcessNamespace=true if needed for an SM statefulset.
     {{- $hasSidecars = true -}}
   {{- end -}}
 {{- end -}}
-{{- if .Values.database.backupHooks -}}
-  {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" -}}
-    {{- $hasSidecars = true -}}
-  {{- end -}}
+{{- if eq (include "database.nuodb.sm.operationsSidecar.enabled" . ) "true" -}}
+  {{- $hasSidecars = true -}}
 {{- end -}}
 {{- if $hasSidecars }}
 shareProcessNamespace: true
@@ -905,7 +926,7 @@ Set shareProcessNamespace=true if needed for a TE deployment.
   {{- end -}}
 {{- end -}}
 {{- if .Values.database.backupHooks -}}
-  {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" -}}
+  {{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" -}}
     {{- $hasSidecars = true -}}
   {{- end -}}
 {{- end -}}
@@ -1170,7 +1191,14 @@ Extension point that can be overriden by an embedding chart.
 Backup hooks sidecar container resources requested and limited
 */}}
 {{- define "database.backupHooks.resources" -}}
-{{- toYaml .Values.database.backupHooks.resources  -}}
+{{- toYaml (.Values.AsMap | dig "database" "backupHooks" "resources" .Values.database.sm.operationsSidecar.resources) -}}
+{{- end -}}
+
+{{/*
+TE operations sidecar container resources requested and limited
+*/}}
+{{- define "database.te.operationsSidecar.resources" -}}
+{{- toYaml .Values.database.te.operationsSidecar.resources  -}}
 {{- end -}}
 
 {{/*
@@ -1186,6 +1214,18 @@ Import user defined ENV vars for the backup hooks sidecar
 {{- define "database.backupHooks.env" }}
 {{- if not (empty .Values.database.backupHooks.env) }}
 {{ toYaml .Values.database.backupHooks.env | trim }}
+{{- end }}
+{{- if not (empty .Values.database.sm.operationsSidecar.env) }}
+{{ toYaml .Values.database.sm.operationsSidecar.env | trim }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Import user defined ENV vars for the TE operations sidecar
+*/}}
+{{- define "database.te.operationsSidecar.env" }}
+{{- if not (empty .Values.database.te.operationsSidecar.env) }}
+{{ toYaml .Values.database.te.operationsSidecar.env | trim }}
 {{- end }}
 {{- end -}}
 
@@ -1347,98 +1387,11 @@ Set tolerations for the database TE pods.
 {{- end }}
 
 {{/*
-Container definition for the backup hooks sidecar.
-Arguments:
- 0: Top level of the object namespace
- 1: Should the container mount the archive volume (true for an SM, false for a TE)
+Is there an operations sidecar enabled for the SM?
 */}}
-{{- define "database.nuodb.sidecar.backupHooks" -}}
-{{- $root := index . 0 -}}
-{{- $mountArchive := index . 1 -}}
-{{- if eq (include "defaultfalse" $root.Values.database.backupHooks.enabled) "true" }}
-- name: backup-hooks
-  image: {{ include "backupHooks.image" $root}}
-  imagePullPolicy: {{ default "" $root.Values.database.backupHooks.image.pullPolicy }}
-  args:
-    - nuodb-operations
-    - --port={{ $root.Values.database.backupHooks.port }}
-  ports:
-  - containerPort: {{ $root.Values.database.backupHooks.port }}
-    protocol: TCP
-  env:
-    - name: DB_NAME
-      valueFrom:
-        secretKeyRef:
-          name: {{ template "database.secretName" $root }}
-          key: database-name
-    - name: FREEZE_MODE
-      value: {{ include "backupHooks.freezeMode" $root | quote }}
-    {{- if $root.Values.database.backupHooks.timeout }}
-    - name: FREEZE_TIMEOUT
-      value: {{ $root.Values.database.backupHooks.timeout | quote }}
-    {{- end }}
-    {{- if $mountArchive }}
-    - name: NUODB_ARCHIVE_DIR
-      value: {{ printf "/mnt/archive/%s/%s" ( include "admin.domainName" $root ) ( include "database.dbName" $root ) }}
-    {{- if eq (include "defaultfalse" $root.Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
-    - name: NUODB_JOURNAL_DIR
-      value: {{ printf "/mnt/journal/%s/%s" ( include "admin.domainName" $root ) ( include "database.dbName" $root ) }}
-    {{- end }}
-    {{- end }}
-    {{- if eq (include "backupHooks.freezeMode" $root ) "hotsnap" }}
-    - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" $root }}:8888" }
-    {{- end }}
-    {{- include "database.backupHooks.env" $root | indent 4 }}
-  resources:
-  {{- ( include "database.backupHooks.resources" $root ) | trim | nindent 4 }}
-  {{- if and
-      (eq (include "defaultfalse" $root.Values.database.sm.noHotCopy.journalPath.enabled) "true")
-      (eq (include "backupHooks.freezeMode" $root ) "fsfreeze") }}
-  securityContext:
-    privileged: true
-    runAsUser: 0
-    runAsGroup: 0
-  {{- else }}
-  {{- include "database.sc.containerSecurityContext" $root | indent 2 }}
-  {{- end }}
-  volumeMounts:
-  - name: backup-hooks
-    mountPath: /etc/nuodb/handlers.json
-    subPath: handlers.json
-  {{- if $mountArchive }}
-  - name: archive-volume
-    mountPath: /mnt/archive
-  {{- if eq (include "defaultfalse" $root.Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
-  - name: journal-volume
-    mountPath: /mnt/journal
-  {{- end }}
-  {{- end }}
-  {{- if eq (include "backupHooks.freezeMode" $root ) "hotsnap" }}
-  {{- if eq (include "database.enableEphemeralVolume" (list $root $root.Values.database.sm)) "true" }}
-  - name: eph-volume
-    mountPath: /tmp
-    subPath: tmp-hooks
-  {{- end }}
-  {{- if $root.Values.admin.tlsClientPEM }}
-  - name: tls
-    mountPath: /etc/nuodb/keys
-    readOnly: true
-  {{- end }}
-  {{- end }}
-  {{- with $root.Values.database.backupHooks.volumeMounts }}
-  {{- toYaml $root | trim | nindent 2 }}
-  {{- end }}
-{{- end }}
-{{- end }}
-
-{{/*
-Additional volume needed for the backup hooks sidecar.
-*/}}
-{{- define "database.nuodb.sidecar.backupHooks.volume" -}}
-{{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
-- name: backup-hooks
-  configMap:
-    name: {{ template "database.fullname" . }}-backup-hooks
-    defaultMode: 0666
-{{- end }}
+{{- define "database.nuodb.sm.operationsSidecar.enabled" -}}
+{{- or
+  ( eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" )
+  ( eq (include "defaultfalse" .Values.database.sm.operationsSidecar.enabled) "true" )
+-}}
 {{- end }}

@@ -198,7 +198,34 @@ spec:
           {{- else }}
           timeoutSeconds: {{ default 5 .Values.database.te.readinessTimeoutSeconds }}
           {{- end }}
-      {{- include "database.nuodb.sidecar.backupHooks" (list . false ) | nindent 6 }}
+      {{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" }}
+      - name: operations
+        image: {{ include "te.operationsSidecar.image" .}}
+        imagePullPolicy: {{ .Values.database.te.operationsSidecar.image.pullPolicy | default "" }}
+        args:
+          - nuodb-operations
+          - --port={{ .Values.database.te.operationsSidecar.port }}
+        ports:
+        - containerPort: {{ .Values.database.te.operationsSidecar.port }}
+          protocol: TCP
+        env:
+          - name: DB_NAME
+            valueFrom:
+              secretKeyRef:
+                name: {{ template "database.secretName" . }}
+                key: database-name
+          {{- include "database.te.operationsSidecar.env" . | indent 10 }}
+        resources:
+        {{- ( include "database.te.operationsSidecar.resources" . ) | trim | nindent 10 }}
+        {{- include "database.sc.containerSecurityContext" . | indent 8 }}
+        volumeMounts:
+        - name: operations
+          mountPath: /etc/nuodb/handlers.json
+          subPath: handlers.json
+        {{- with .Values.database.te.operationsSidecar.volumeMounts }}
+        {{- toYaml . | trim | nindent 8 }}
+        {{- end }}
+      {{- end }}
       {{- include "database.nuodb.sidecar.collector" (list . .Values.database.te) | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       {{- include "database.te.shareProcessNamespace" . | indent 6 }}
@@ -229,7 +256,12 @@ spec:
         {{- if eq (include "defaulttrue" .Values.nuocollector.watcher.enabled ) "false" }}
         {{- include "nuocollector.volume" . | nindent 8 }}
         {{- end }}
-        {{- include "database.nuodb.sidecar.backupHooks.volume" . | nindent 8 }}
+        {{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" }}
+        - name: operations
+          configMap:
+            name: {{ template "database.fullname" . }}-te-operations
+            defaultMode: 0666
+        {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
       schedulerName: default-scheduler
