@@ -925,10 +925,8 @@ Set shareProcessNamespace=true if needed for a TE deployment.
     {{- $hasSidecars = true -}}
   {{- end -}}
 {{- end -}}
-{{- if .Values.database.backupHooks -}}
-  {{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" -}}
-    {{- $hasSidecars = true -}}
-  {{- end -}}
+{{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" -}}
+  {{- $hasSidecars = true -}}
 {{- end -}}
 {{- if $hasSidecars }}
 shareProcessNamespace: true

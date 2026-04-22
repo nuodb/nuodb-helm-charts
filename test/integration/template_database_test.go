@@ -3041,7 +3041,7 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.1: Must be less than or equal to 599`)
 	})
 
-	t.Run("testOperations", func(t *testing.T) {
+	t.Run("testNegativeOperations", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
 				"database.sm.operationsSidecar.enabled":                  "true",
@@ -3483,8 +3483,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 			}
 		}
 		// Make sure securityContext appears and does not have
-		// privileged=true, which is only required when the journal
-		// volume is separate and fsfreeze mode is enabled
+		// privileged=true
 		assert.NotNil(t, sidecar)
 		assert.NotNil(t, sidecar.SecurityContext)
 		assert.NotNil(t, sidecar.SecurityContext.Privileged)

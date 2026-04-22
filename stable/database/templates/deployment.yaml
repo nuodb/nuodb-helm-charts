@@ -29,8 +29,8 @@ spec:
   template:
     metadata:
       annotations:
-      {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled) }}
-        checksum/config: {{ dict "configFiles" .Values.database.configFiles "customHandlers" .Values.database.backupHooks.customHandlers | toYaml | sha256sum }}
+      {{- if (or .Values.database.configFiles .Values.database.te.operationsSidecar.enabled) }}
+        checksum/config: {{ dict "configFiles" .Values.database.configFiles "customHandlers" .Values.database.te.operationsSidecar.customHandlers | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end }}

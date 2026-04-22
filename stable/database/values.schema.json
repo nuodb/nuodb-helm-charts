@@ -77,49 +77,9 @@
                 "sm": {
                   "type": "object",
                   "properties": {
-                    "operationsSidecar": {
-                      "type": "object",
-                      "properties": {
-                          "customHandlers": {
-                              "type": "array",
-                              "items": {
-                                  "properties": {
-                                      "method": {
-                                          "type": "string",
-                                          "enum": [
-                                              "GET",
-                                              "POST",
-                                              "PUT",
-                                              "PATCH",
-                                              "DELETE"
-                                          ]
-                                      },
-                                      "path": {
-                                          "type": "string",
-                                          "pattern": "^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$"
-                                      },
-                                      "script": {
-                                          "type": "string"
-                                      },
-                                      "statusMappings": {
-                                          "type": "object",
-                                          "pattern": "^([0-9]+|[*])$",
-                                          "additionalProperties": {
-                                              "type": "integer",
-                                              "minimum": 200,
-                                              "maximum": 599
-                                          }
-                                      }
-                                  },
-                                  "required": [
-                                      "method",
-                                      "path",
-                                      "script"
-                                  ]
-                              }
-                          }
+                      "operationsSidecar": {
+                          "$ref": "#/$defs/operationsSidecar"
                       }
-                    }
                   }
                 },
                 "te": {
@@ -149,48 +109,54 @@
                             }
                         },
                         "operationsSidecar": {
-                        "type": "object",
+                            "$ref": "#/$defs/operationsSidecar"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    
+    "$defs": {
+        "operationsSidecar": {
+            "type": "object",
+            "properties": {
+                "customHandlers": {
+                    "type": "array",
+                    "items": {
                         "properties": {
-                            "customHandlers": {
-                                "type": "array",
-                                "items": {
-                                    "properties": {
-                                        "method": {
-                                            "type": "string",
-                                            "enum": [
-                                                "GET",
-                                                "POST",
-                                                "PUT",
-                                                "PATCH",
-                                                "DELETE"
-                                            ]
-                                        },
-                                        "path": {
-                                            "type": "string",
-                                            "pattern": "^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$"
-                                        },
-                                        "script": {
-                                            "type": "string"
-                                        },
-                                        "statusMappings": {
-                                            "type": "object",
-                                            "pattern": "^([0-9]+|[*])$",
-                                            "additionalProperties": {
-                                                "type": "integer",
-                                                "minimum": 200,
-                                                "maximum": 599
-                                            }
-                                        }
-                                    },
-                                    "required": [
-                                        "method",
-                                        "path",
-                                        "script"
-                                    ]
+                            "method": {
+                                "type": "string",
+                                "enum": [
+                                    "GET",
+                                    "POST",
+                                    "PUT",
+                                    "PATCH",
+                                    "DELETE"
+                                ]
+                            },
+                            "path": {
+                                "type": "string",
+                                "pattern": "^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$"
+                            },
+                            "script": {
+                                "type": "string"
+                            },
+                            "statusMappings": {
+                                "type": "object",
+                                "pattern": "^([0-9]+|[*])$",
+                                "additionalProperties": {
+                                    "type": "integer",
+                                    "minimum": 200,
+                                    "maximum": 599
                                 }
                             }
-                        }
-                      }
+                        },
+                        "required": [
+                            "method",
+                            "path",
+                            "script"
+                        ]
                     }
                 }
             }
