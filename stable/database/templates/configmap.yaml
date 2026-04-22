@@ -34,7 +34,7 @@ metadata:
   name: {{ template "database.fullname" . }}-readinessprobe
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}
-{{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
+{{- if eq (include "database.nuodb.sm.operationsSidecar.enabled" . ) "true" }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -45,7 +45,24 @@ metadata:
 data:
   handlers.json: |
     {
-      "handlers": {{ .Values.database.backupHooks.customHandlers | toJson }}
+      "handlers": {{ concat 
+        ( default (list) .Values.database.backupHooks.customHandlers )
+        .Values.database.sm.operationsSidecar.customHandlers 
+      | toJson }}
+    }
+{{- end }}
+{{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "database.resourceLabels" . | nindent 4 }}
+  name: {{ template "database.fullname" . }}-te-operations
+data:
+  handlers.json: |
+    {
+      "handlers": {{ .Values.database.te.operationsSidecar.customHandlers | toJson }}
     }
 {{- end }}
 ---

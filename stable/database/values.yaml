@@ -346,27 +346,6 @@ database:
     # perform synchronization necessary to obtain snapshots of the archive and
     # journal directories.
     enabled: false
-    image:
-      registry: ghcr.io
-      repository: nuodb/nuodb-sidecar
-      tag: 1.0.3
-      pullPolicy: IfNotPresent
-
-    # Kubernetes resource requests and limits used for the backup hooks sidecar
-    # container
-    # ref: http://kubernetes.io/docs/user-guide/compute-resources/
-    resources: {}
-
-    # Environment Variables for backup-hooks container. See
-    # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core
-    #
-    env: []
-
-    # Extra volume mounts for backup-hooks container. See
-    # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core
-    volumeMounts: []
-    # - name: extras
-    #   mountPath: /mnt/extras
 
     # Deprecated: use freezeMode="suspend" instead.
     useSuspend: false
@@ -392,38 +371,6 @@ database:
 
     # Timeout in seconds until the SM is automatically unfrozen.
     timeout: 30
-
-    # The container port to expose the HTTP server on
-    port: 8000
-
-    # Register scripts to be invoked on HTTP requests. Path parameters can
-    # appear in the request path, which are exported as environment variables
-    # available within the script. Query parameters are also made available as
-    # environment variables. If a request payload is supplied, it can be
-    # referenced using the `${payload}` variable. A mapping can also be defined
-    # from process exit codes to HTTP status codes. See the examples below.
-    customHandlers: []
-
-    #customHandlers:
-    #- method: GET
-    #  path: /backup-id
-    #  script: |
-    #    [ -e "$NUODB_ARCHIVE_DIR/backup.txt" ] || exit 1
-    #    cat "$NUODB_ARCHIVE_DIR/backup.txt"
-    #- method: GET
-    #  path: /pid/{command}
-    #  script: |
-    #    pgrep -x "$command"
-    #  statusMappings:
-    #    "1": 404
-    #- method: POST
-    #  path: /operation/{script}/execute
-    #  script: |
-    #    "$script" $payload
-    #  statusMappings:
-    #    "0": 200
-    #    "1": 400
-    #    "*": 500
 
   # Import archives from other databases that were possibly created using
   # different deployment architectures or different file system conventions
@@ -693,6 +640,64 @@ database:
       # characters are allowed. By default the Helm release name is used.
       name: ""
 
+    operationsSidecar:
+      # If enabled=true, sidecar containers are created for non-hotcopy SMs to
+      # perform various operations
+      enabled: false
+      image:
+        registry: ghcr.io
+        repository: nuodb/nuodb-sidecar
+        tag: 1.0.3
+        pullPolicy: IfNotPresent
+
+      # Kubernetes resource requests and limits used for the backup hooks sidecar
+      # container
+      # ref: http://kubernetes.io/docs/user-guide/compute-resources/
+      resources: {}
+
+      # Environment Variables for backup-hooks container. See
+      # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core
+      #
+      env: []
+
+      # Extra volume mounts for backup-hooks container. See
+      # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core
+      volumeMounts: []
+      # - name: extras
+      #   mountPath: /mnt/extras
+
+      # The container port to expose the HTTP server on
+      port: 8000
+
+      # Register scripts to be invoked on HTTP requests. Path parameters can
+      # appear in the request path, which are exported as environment variables
+      # available within the script. Query parameters are also made available as
+      # environment variables. If a request payload is supplied, it can be
+      # referenced using the `${payload}` variable. A mapping can also be defined
+      # from process exit codes to HTTP status codes. See the examples below.
+      customHandlers: []
+
+      #customHandlers:
+      #- method: GET
+      #  path: /backup-id
+      #  script: |
+      #    [ -e "$NUODB_ARCHIVE_DIR/backup.txt" ] || exit 1
+      #    cat "$NUODB_ARCHIVE_DIR/backup.txt"
+      #- method: GET
+      #  path: /pid/{command}
+      #  script: |
+      #    pgrep -x "$command"
+      #  statusMappings:
+      #    "1": 404
+      #- method: POST
+      #  path: /operation/{script}/execute
+      #  script: |
+      #    "$script" $payload
+      #  statusMappings:
+      #    "0": 200
+      #    "1": 400
+      #    "*": 500
+
   te:
     # Provision Transaction Engine (TE) Deployment. By default, the TE
     # Deployment is disabled if TP/SG is enabled and this is a "secondary"
@@ -853,6 +858,64 @@ database:
 
         # Custom annotations set on the ScaledObject resource
         annotations: {}
+
+    operationsSidecar:
+      # If enabled=true, sidecar containers are created for TEs to
+      # perform various operations
+      enabled: false
+      image:
+        registry: ghcr.io
+        repository: nuodb/nuodb-sidecar
+        tag: 1.0.3
+        pullPolicy: IfNotPresent
+
+      # Kubernetes resource requests and limits used for the backup hooks sidecar
+      # container
+      # ref: http://kubernetes.io/docs/user-guide/compute-resources/
+      resources: {}
+
+      # Environment Variables for backup-hooks container. See
+      # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#envvar-v1-core
+      #
+      env: []
+
+      # Extra volume mounts for backup-hooks container. See
+      # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core
+      volumeMounts: []
+      # - name: extras
+      #   mountPath: /mnt/extras
+
+      # The container port to expose the HTTP server on
+      port: 8000
+
+      # Register scripts to be invoked on HTTP requests. Path parameters can
+      # appear in the request path, which are exported as environment variables
+      # available within the script. Query parameters are also made available as
+      # environment variables. If a request payload is supplied, it can be
+      # referenced using the `${payload}` variable. A mapping can also be defined
+      # from process exit codes to HTTP status codes. See the examples below.
+      customHandlers: []
+
+      #customHandlers:
+      #- method: GET
+      #  path: /backup-id
+      #  script: |
+      #    [ -e "$NUODB_ARCHIVE_DIR/backup.txt" ] || exit 1
+      #    cat "$NUODB_ARCHIVE_DIR/backup.txt"
+      #- method: GET
+      #  path: /pid/{command}
+      #  script: |
+      #    pgrep -x "$command"
+      #  statusMappings:
+      #    "1": 404
+      #- method: POST
+      #  path: /operation/{script}/execute
+      #  script: |
+      #    "$script" $payload
+      #  statusMappings:
+      #    "0": 200
+      #    "1": 400
+      #    "*": 500
 
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}

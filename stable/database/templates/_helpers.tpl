@@ -66,9 +66,32 @@ Also, we can't use a single if because lazy evaluation is not an option
 Return the backup hooks sidecar image
 */}}
 {{- define "backupHooks.image" -}}
-{{- $registryName := .Values.database.backupHooks.image.registry -}}
-{{- $repositoryName := .Values.database.backupHooks.image.repository -}}
-{{- $tag := .Values.database.backupHooks.image.tag | toString -}}
+{{- $registryName := .Values.AsMap | dig "database" "backupHooks" "image" "registry" .Values.database.sm.operationsSidecar.image.registry -}}
+{{- $repositoryName := .Values.AsMap | dig "database" "backupHooks" "image" "repository" .Values.database.sm.operationsSidecar.image.repository -}}
+{{- $tag := .Values.AsMap | dig "database" "backupHooks" "image" "tag" .Values.database.sm.operationsSidecar.image.tag | toString -}}
+{{/*
+Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
+but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
+Also, we can't use a single if because lazy evaluation is not an option
+*/}}
+{{- if .Values.global }}
+    {{- if .Values.global.imageRegistry }}
+        {{- printf "%s/%s:%s" .Values.global.imageRegistry $repositoryName $tag -}}
+    {{- else -}}
+        {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+    {{- end -}}
+{{- else -}}
+    {{- printf "%s/%s:%s" $registryName $repositoryName $tag -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the operations sidecar image for the TE
+*/}}
+{{- define "te.operationsSidecar.image" -}}
+{{- $registryName := .Values.database.te.operationsSidecar.image.registry -}}
+{{- $repositoryName := .Values.database.te.operationsSidecar.image.repository -}}
+{{- $tag := .Values.database.te.operationsSidecar.image.tag | toString -}}
 {{/*
 Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
 but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
@@ -884,10 +907,8 @@ Set shareProcessNamespace=true if needed for an SM statefulset.
     {{- $hasSidecars = true -}}
   {{- end -}}
 {{- end -}}
-{{- if .Values.database.backupHooks -}}
-  {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" -}}
-    {{- $hasSidecars = true -}}
-  {{- end -}}
+{{- if eq (include "database.nuodb.sm.operationsSidecar.enabled" . ) "true" -}}
+  {{- $hasSidecars = true -}}
 {{- end -}}
 {{- if $hasSidecars }}
 shareProcessNamespace: true
@@ -903,6 +924,9 @@ Set shareProcessNamespace=true if needed for a TE deployment.
   {{- if eq (include "defaultfalse" .Values.nuocollector.enabled) "true" -}}
     {{- $hasSidecars = true -}}
   {{- end -}}
+{{- end -}}
+{{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" -}}
+  {{- $hasSidecars = true -}}
 {{- end -}}
 {{- if $hasSidecars }}
 shareProcessNamespace: true
@@ -1165,7 +1189,14 @@ Extension point that can be overriden by an embedding chart.
 Backup hooks sidecar container resources requested and limited
 */}}
 {{- define "database.backupHooks.resources" -}}
-{{- toYaml .Values.database.backupHooks.resources  -}}
+{{- toYaml (.Values.AsMap | dig "database" "backupHooks" "resources" .Values.database.sm.operationsSidecar.resources) -}}
+{{- end -}}
+
+{{/*
+TE operations sidecar container resources requested and limited
+*/}}
+{{- define "database.te.operationsSidecar.resources" -}}
+{{- toYaml .Values.database.te.operationsSidecar.resources  -}}
 {{- end -}}
 
 {{/*
@@ -1181,6 +1212,18 @@ Import user defined ENV vars for the backup hooks sidecar
 {{- define "database.backupHooks.env" }}
 {{- if not (empty .Values.database.backupHooks.env) }}
 {{ toYaml .Values.database.backupHooks.env | trim }}
+{{- end }}
+{{- if not (empty .Values.database.sm.operationsSidecar.env) }}
+{{ toYaml .Values.database.sm.operationsSidecar.env | trim }}
+{{- end }}
+{{- end -}}
+
+{{/*
+Import user defined ENV vars for the TE operations sidecar
+*/}}
+{{- define "database.te.operationsSidecar.env" }}
+{{- if not (empty .Values.database.te.operationsSidecar.env) }}
+{{ toYaml .Values.database.te.operationsSidecar.env | trim }}
 {{- end }}
 {{- end -}}
 
@@ -1339,4 +1382,14 @@ Set tolerations for the database TE pods.
 {{- else -}}
 {{ toYaml .Values.database.te.tolerations }}
 {{- end -}}
+{{- end }}
+
+{{/*
+Is there an operations sidecar enabled for the SM?
+*/}}
+{{- define "database.nuodb.sm.operationsSidecar.enabled" -}}
+{{- or
+  ( eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" )
+  ( eq (include "defaultfalse" .Values.database.sm.operationsSidecar.enabled) "true" )
+-}}
 {{- end }}
