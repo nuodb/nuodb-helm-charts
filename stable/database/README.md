@@ -366,6 +366,16 @@ The following tables list the configurable parameters of the `database` chart an
 | `automaticProtocolUpgrade.tePreferenceQuery` | LBQuery expression to select the TE that will be restarted after a successful database protocol upgrade. Defaults to random Transaction Engine (TE) in MONITORED state | `""` |
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
 
+##### Note:
+
+Most of the values under `database.backupHooks.*` have been moved to `database.sm.operationsSidecar` to better match recent features.
+To preserve backward compatibility, both value keys are supported and checked based on the values of `database.backupHooks.enabled` and `database.sm.operationsSidecar.enabled`.
+For values such as `customHandlers`, that take a list of values, if both values are enabled, the lists are concatenated.
+Otherwise only the enabled one is used.
+For values such as `port`, that can only have one value, to reduce the risk of breaking existing code, explicitly set `backupHooks` value are be given preference.
+If `backupHooks.enabled` is `true` and there is an explicit value set, that value is used.
+Otherwise the `sm.operationsSidecar` value is used.
+
 #### database.configFiles.*
 
 The purpose of this section is to detail how to provide alternate configuration files for NuoDB. NuoDB has several configuration files that may be modified to suit.
