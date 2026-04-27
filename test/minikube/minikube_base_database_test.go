@@ -432,6 +432,7 @@ func TestHooksCustomHandlers(t *testing.T) {
 			"database.backupHooks.customHandlers[0].path":                      "/pid/{command}",
 			"database.backupHooks.customHandlers[0].script":                    `pgrep -x "${command}"`,
 			"database.backupHooks.customHandlers[0].statusMappings.1":          "404",
+			"database.sm.operationsSidecar.enabled":                            "true",
 			"database.sm.operationsSidecar.customHandlers[0].method":           "POST",
 			"database.sm.operationsSidecar.customHandlers[0].path":             "operation/{command}/execute",
 			"database.sm.operationsSidecar.customHandlers[0].script":           `"${command}" ${payload}`,

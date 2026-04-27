@@ -3373,6 +3373,9 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 	t.Run("testSmOperationsEnabled", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
+				"admin.tlsClientPEM.secret": "nuodb-client-pem",
+				"admin.tlsClientPEM.key":    "nuocmd.pem",
+
 				"database.sm.operationsSidecar.enabled":                   "true",
 				"database.sm.operationsSidecar.resources.limits.memory":   "5Gi",
 				"database.securityContext.enabledOnContainer":             "true",
@@ -3381,6 +3384,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 				"database.sm.operationsSidecar.volumeMounts[0].name":      "volume0",
 				"database.sm.operationsSidecar.volumeMounts[0].mountPath": "path0",
 
+				"database.backupHooks.enabled":                   "true",
 				"database.backupHooks.env[0].name":               "var1",
 				"database.backupHooks.env[0].value":              "val1",
 				"database.backupHooks.volumeMounts[0].name":      "volume1",
@@ -3413,10 +3417,10 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 		// runAsUser and runAsGroup should not be overridden
 		assert.Nil(t, sidecar.SecurityContext.RunAsUser)
 		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
-		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR")
-		testlib.AssertEnvNotContains(t, sidecar.Env, "FREEZE_MODE")
-		testlib.AssertEnvNotContains(t, sidecar.Env, "FREEZE_TIMEOUT")
-		testlib.AssertEnvNotContains(t, sidecar.Env, "NUOCMD_API_SERVER")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_MODE", "hotsnap")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_TIMEOUT", "30")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUOCMD_API_SERVER", "nuodb.default.svc:8888")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
 		testlib.AssertEnvContains(t, sidecar.Env, "var0", "val0")
 		testlib.AssertEnvContains(t, sidecar.Env, "var1", "val1")
@@ -3425,11 +3429,11 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 		for i, v := range sidecar.VolumeMounts {
 			volumes[i] = v.Name
 		}
-		assert.NotContains(t, volumes, "archive-volume")
+		assert.Contains(t, volumes, "archive-volume")
 		assert.Contains(t, volumes, "backup-hooks")
 		assert.NotContains(t, volumes, "journal-volume")
-		assert.NotContains(t, volumes, "eph-volume")
-		assert.NotContains(t, volumes, "tls")
+		assert.Contains(t, volumes, "eph-volume")
+		assert.Contains(t, volumes, "tls")
 		assert.Contains(t, volumes, "volume0")
 		assert.Contains(t, volumes, "volume1")
 

@@ -66,9 +66,9 @@ Also, we can't use a single if because lazy evaluation is not an option
 Return the backup hooks sidecar image
 */}}
 {{- define "backupHooks.image" -}}
-{{- $registryName := .Values.AsMap | dig "database" "backupHooks" "image" "registry" .Values.database.sm.operationsSidecar.image.registry -}}
-{{- $repositoryName := .Values.AsMap | dig "database" "backupHooks" "image" "repository" .Values.database.sm.operationsSidecar.image.repository -}}
-{{- $tag := .Values.AsMap | dig "database" "backupHooks" "image" "tag" .Values.database.sm.operationsSidecar.image.tag | toString -}}
+{{- $registryName := include "database.sm.operationsSidecar.value" (list . (list "image" "registry" ) "" ) -}}
+{{- $repositoryName := include "database.sm.operationsSidecar.value" (list . (list "image" "repository" ) "" ) -}}
+{{- $tag := include "database.sm.operationsSidecar.value" (list . (list "image" "tag" ) "" ) | toString -}}
 {{/*
 Helm 2.11 supports the assignment of a value to a variable defined in a different scope,
 but Helm 2.9 and 2.10 doesn't support it, so we need to implement this if-else logic.
@@ -907,7 +907,7 @@ Set shareProcessNamespace=true if needed for an SM statefulset.
     {{- $hasSidecars = true -}}
   {{- end -}}
 {{- end -}}
-{{- if eq (include "database.nuodb.sm.operationsSidecar.enabled" . ) "true" -}}
+{{- if eq (include "database.sm.operationsSidecar.enabled" . ) "true" -}}
   {{- $hasSidecars = true -}}
 {{- end -}}
 {{- if $hasSidecars }}
@@ -1210,10 +1210,14 @@ nuosm
 Import user defined ENV vars for the backup hooks sidecar
 */}}
 {{- define "database.backupHooks.env" }}
-{{- if not (empty .Values.database.backupHooks.env) }}
+{{- if (and
+  (eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true")
+  (not (empty .Values.database.backupHooks.env )) )}}
 {{ toYaml .Values.database.backupHooks.env | trim }}
 {{- end }}
-{{- if not (empty .Values.database.sm.operationsSidecar.env) }}
+{{- if (and
+  (eq (include "defaultfalse" .Values.database.sm.operationsSidecar.enabled) "true")
+  (not (empty .Values.database.sm.operationsSidecar.env)) )}}
 {{ toYaml .Values.database.sm.operationsSidecar.env | trim }}
 {{- end }}
 {{- end -}}
@@ -1387,9 +1391,50 @@ Set tolerations for the database TE pods.
 {{/*
 Is there an operations sidecar enabled for the SM?
 */}}
-{{- define "database.nuodb.sm.operationsSidecar.enabled" -}}
+{{- define "database.sm.operationsSidecar.enabled" -}}
 {{- or
   ( eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" )
   ( eq (include "defaultfalse" .Values.database.sm.operationsSidecar.enabled) "true" )
 -}}
+{{- end }}
+
+{{/*
+Drill down into a series of nested dicts by following a list of keys.
+Reimplements the built in dig template function, accepting key path as a list.
+Arguments:
+ 0: A list of keys to look for
+ 1: A default value to return if a key is ever not present in a dictionary
+ 2: The dictionary to travese
+*/}}
+{{- define "digList" -}}
+{{- $keys := index . 0 -}}
+{{- $default := index . 1 -}}
+{{- $map := index . 2 -}}
+{{- if eq (len $keys) 0 -}}
+{{ $map }}
+{{- else -}}
+{{- $key := first $keys -}}
+{{- if not (hasKey $map $key) -}}
+{{ $default }}
+{{- else -}}
+{{- include "digList" (list (rest $keys) $default (get $map $key) ) }}
+{{- end }}
+{{- end }}
+{{- end }}
+
+{{/*
+Get value from either database.sm.operationsSidecar or database.backupHooks.
+backupHooks values are used if there is an explicit value and database.backupHooks.enabled=true
+*/}}
+{{- define "database.sm.operationsSidecar.value" -}}
+{{- $root := index . 0 -}}
+{{- $valuePath := index . 1 -}}
+{{- $default := index . 2 -}}
+
+{{- $operationsValue := include "digList" (list $valuePath $default $root.Values.database.sm.operationsSidecar) -}}
+{{- if ( eq (include "defaultfalse" $root.Values.database.backupHooks.enabled) "true" ) -}}
+{{ include "digList" (list $valuePath $operationsValue $root.Values.database.backupHooks) }}
+{{- else -}}
+{{ $operationsValue }}
+{{- end }}
 {{- end }}

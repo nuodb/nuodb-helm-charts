@@ -201,7 +201,7 @@ spec:
       {{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" }}
       - name: operations
         image: {{ include "te.operationsSidecar.image" .}}
-        imagePullPolicy: {{ .Values.database.te.operationsSidecar.image.pullPolicy | default "" }}
+        imagePullPolicy: {{ .Values.database.te.operationsSidecar.image.pullPolicy | default "IfNotPresent" }}
         args:
           - nuodb-operations
           - --port={{ .Values.database.te.operationsSidecar.port }}
