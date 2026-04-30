@@ -279,15 +279,15 @@ spec:
           {{- else }}
           timeoutSeconds: {{ default 5 .Values.database.sm.readinessTimeoutSeconds }}
           {{- end }}
-      {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
+      {{- if eq (include "database.sm.operationsSidecar.enabled" . ) "true" }}
       - name: backup-hooks
-        image: {{ include "backupHooks.image" . }}
-        imagePullPolicy: {{ default "" .Values.database.backupHooks.image.pullPolicy }}
+        image: {{ include "backupHooks.image" .}}
+        imagePullPolicy: {{ include "database.sm.operationsSidecar.value" (list . (list "image" "pullPolicy" ) "IfNotPresent" ) }}
         args:
           - nuodb-operations
-          - --port={{ .Values.database.backupHooks.port }}
+          - --port={{ include "database.sm.operationsSidecar.value" (list . (list "port" ) 8000 ) }}
         ports:
-        - containerPort: {{ .Values.database.backupHooks.port }}
+        - containerPort: {{ include "database.sm.operationsSidecar.value" (list . (list "port" ) 8000 ) }}
           protocol: TCP
         env:
           - name: DB_NAME
@@ -307,7 +307,7 @@ spec:
           - name: NUODB_JOURNAL_DIR
             value: {{ printf "/mnt/journal/%s/%s" ( include "admin.domainName" . ) ( include "database.dbName" . ) }}
           {{- end }}
-          {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
+          {{- if eq (include "backupHooks.freezeMode" . ) "hotsnap" }}
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
           {{- end }}
           {{- include "database.backupHooks.env" . | indent 10 }}
@@ -315,7 +315,7 @@ spec:
         {{- ( include "database.backupHooks.resources" . ) | trim | nindent 10 }}
         {{- if and
             (eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true")
-            (eq (include "backupHooks.freezeMode" .) "fsfreeze") }}
+            (eq (include "backupHooks.freezeMode" . ) "fsfreeze")}}
         securityContext:
           privileged: true
           runAsUser: 0
@@ -333,7 +333,7 @@ spec:
         - name: journal-volume
           mountPath: /mnt/journal
         {{- end }}
-        {{- if eq (include "backupHooks.freezeMode" .) "hotsnap" }}
+        {{- if eq (include "backupHooks.freezeMode" . ) "hotsnap" }}
         {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
         - name: eph-volume
           mountPath: /tmp
@@ -345,8 +345,15 @@ spec:
           readOnly: true
         {{- end }}
         {{- end }}
+        {{- if ( eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" ) -}}
         {{- with .Values.database.backupHooks.volumeMounts }}
         {{- toYaml . | trim | nindent 8 }}
+        {{- end }}
+        {{- end }}
+        {{- if ( eq (include "defaultfalse" .Values.database.sm.operationsSidecar.enabled) "true" ) -}}
+        {{- with .Values.database.sm.operationsSidecar.volumeMounts }}
+        {{- toYaml . | trim | nindent 8 }}
+        {{- end }}
         {{- end }}
       {{- end }}
       {{- include "database.nuodb.sidecar.collector" (list . .Values.database.sm) | nindent 6 }}
@@ -374,7 +381,7 @@ spec:
         configMap:
           name: {{ template "database.fullname" . }}-readinessprobe
           defaultMode: 0777
-      {{- if eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true" }}
+      {{- if eq (include "database.sm.operationsSidecar.enabled" . ) "true" }}
       - name: backup-hooks
         configMap:
           name: {{ template "database.fullname" . }}-backup-hooks

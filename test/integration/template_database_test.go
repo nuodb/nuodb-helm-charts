@@ -3040,9 +3040,37 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
 		require.Contains(t, err.Error(), `- database.backupHooks.customHandlers.0.statusMappings.1: Must be less than or equal to 599`)
 	})
+
+	t.Run("testNegativeOperations", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.operationsSidecar.enabled":                  "true",
+				"database.sm.operationsSidecar.customHandlers[0].method": "POST",
+				"database.sm.operationsSidecar.customHandlers[0].path":   "/operation-{param}",
+				"database.sm.operationsSidecar.customHandlers[0].script": "command",
+
+				"database.te.operationsSidecar.enabled":                  "true",
+				"database.te.operationsSidecar.customHandlers[0].method": "POST",
+				"database.te.operationsSidecar.customHandlers[0].path":   "/operation-{param}",
+				"database.te.operationsSidecar.customHandlers[0].script": "command",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.customHandlers.0.path: Does not match pattern '^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$'`)
+
+		_, err = helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.te.operationsSidecar.customHandlers.0.path: Does not match pattern '^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$'`)
+	})
 }
 
-func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
+func TestDatabaseBackupHooksSidecar(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	// Make sure backup hooks are disabled by default
@@ -3054,10 +3082,17 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 				assert.NotEqual(t, "backup-hooks", container.Name)
 			}
 		}
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				assert.NotEqual(t, "operations", container.Name)
+			}
+		}
 		// Check that configmap for backup hooks was not rendered
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
 		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 5) {
 			assert.NotContains(t, cm.Name, "backup-hooks")
+			assert.NotContains(t, cm.Name, "te-operations")
 		}
 	})
 
@@ -3332,6 +3367,171 @@ func TestDatabaseStatefulSetBackupHooksSidecar(t *testing.T) {
 
 		// Check that Python container image is used
 		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar")
+	})
+
+	// Make sure sidecar is rendered if sm.operationsSidecar is enabled
+	t.Run("testSmOperationsEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.tlsClientPEM.secret": "nuodb-client-pem",
+				"admin.tlsClientPEM.key":    "nuocmd.pem",
+
+				"database.sm.operationsSidecar.enabled":                   "true",
+				"database.sm.operationsSidecar.resources.limits.memory":   "5Gi",
+				"database.securityContext.enabledOnContainer":             "true",
+				"database.sm.operationsSidecar.env[0].name":               "var0",
+				"database.sm.operationsSidecar.env[0].value":              "val0",
+				"database.sm.operationsSidecar.volumeMounts[0].name":      "volume0",
+				"database.sm.operationsSidecar.volumeMounts[0].mountPath": "path0",
+
+				"database.backupHooks.enabled":                   "true",
+				"database.backupHooks.env[0].name":               "var1",
+				"database.backupHooks.env[0].value":              "val1",
+				"database.backupHooks.volumeMounts[0].name":      "volume1",
+				"database.backupHooks.volumeMounts[0].mountPath": "path1",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		var sidecar *corev1.Container
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				if container.Name == "backup-hooks" {
+					sidecar = &container
+					assert.NotContains(t, obj.Name, "hotcopy", "Backup hooks should not be enabled for HCSM statefulset")
+					// Make sure shareProcessNamespace=true for pod
+					assert.NotNil(t, obj.Spec.Template.Spec.ShareProcessNamespace)
+					assert.True(t, *obj.Spec.Template.Spec.ShareProcessNamespace)
+				}
+			}
+		}
+		// Make sure securityContext appears and does not have
+		// privileged=true, which is only required when the journal
+		// volume is separate and fsfreeze mode is enabled
+		assert.NotNil(t, sidecar)
+		assert.NotNil(t, sidecar.SecurityContext)
+		assert.NotNil(t, sidecar.SecurityContext.Privileged)
+		assert.False(t, *sidecar.SecurityContext.Privileged)
+		// runAsUser and runAsGroup should not be overridden
+		assert.Nil(t, sidecar.SecurityContext.RunAsUser)
+		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR", "/mnt/archive/nuodb/demo")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_MODE", "hotsnap")
+		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_TIMEOUT", "30")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUOCMD_API_SERVER", "nuodb.default.svc:8888")
+		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
+		testlib.AssertEnvContains(t, sidecar.Env, "var0", "val0")
+		testlib.AssertEnvContains(t, sidecar.Env, "var1", "val1")
+		// Check volume mounts
+		volumes := make([]string, len(sidecar.VolumeMounts))
+		for i, v := range sidecar.VolumeMounts {
+			volumes[i] = v.Name
+		}
+		assert.Contains(t, volumes, "archive-volume")
+		assert.Contains(t, volumes, "backup-hooks")
+		assert.NotContains(t, volumes, "journal-volume")
+		assert.Contains(t, volumes, "eph-volume")
+		assert.Contains(t, volumes, "tls")
+		assert.Contains(t, volumes, "volume0")
+		assert.Contains(t, volumes, "volume1")
+
+		// Check resource limit
+		assert.NotNil(t, sidecar.Resources.Limits.Memory())
+		assert.Equal(t, resource.MustParse("5Gi"), *sidecar.Resources.Limits.Memory())
+
+		// Check that ghcr.io/nuodb/nuodb-sidecar container image is used
+		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar")
+
+		// Check that configmap for backup hooks was rendered
+		var backupHooksCm *corev1.ConfigMap
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
+		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
+			if strings.HasSuffix(cm.Name, "backup-hooks") {
+				backupHooksCm = &cm
+				break
+			}
+		}
+		assert.NotNil(t, backupHooksCm)
+		// Assert that configmap has handlers.json
+		assert.Contains(t, backupHooksCm.Data, "handlers.json")
+	})
+
+	// Make sure sidecar is rendered if te.operationsSidecar is enabled
+	t.Run("testTeOperationsEnabled", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.te.operationsSidecar.enabled":                   "true",
+				"database.te.operationsSidecar.resources.limits.memory":   "5Gi",
+				"database.securityContext.enabledOnContainer":             "true",
+				"database.te.operationsSidecar.env[0].name":               "var0",
+				"database.te.operationsSidecar.env[0].value":              "val0",
+				"database.te.operationsSidecar.volumeMounts[0].name":      "volume0",
+				"database.te.operationsSidecar.volumeMounts[0].mountPath": "path0",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+		var sidecar *corev1.Container
+		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+			for _, container := range obj.Spec.Template.Spec.Containers {
+				if container.Name == "operations" {
+					sidecar = &container
+					// Make sure shareProcessNamespace=true for pod
+					assert.NotNil(t, obj.Spec.Template.Spec.ShareProcessNamespace)
+					assert.True(t, *obj.Spec.Template.Spec.ShareProcessNamespace)
+				}
+			}
+		}
+		// Make sure securityContext appears and does not have
+		// privileged=true
+		assert.NotNil(t, sidecar)
+		assert.NotNil(t, sidecar.SecurityContext)
+		assert.NotNil(t, sidecar.SecurityContext.Privileged)
+		assert.False(t, *sidecar.SecurityContext.Privileged)
+		// runAsUser and runAsGroup should not be overridden
+		assert.Nil(t, sidecar.SecurityContext.RunAsUser)
+		assert.Nil(t, sidecar.SecurityContext.RunAsGroup)
+		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_ARCHIVE_DIR")
+		testlib.AssertEnvNotContains(t, sidecar.Env, "FREEZE_MODE")
+		testlib.AssertEnvNotContains(t, sidecar.Env, "FREEZE_TIMEOUT")
+		testlib.AssertEnvNotContains(t, sidecar.Env, "NUOCMD_API_SERVER")
+		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
+		testlib.AssertEnvContains(t, sidecar.Env, "var0", "val0")
+		// Check volume mounts
+		volumes := make([]string, len(sidecar.VolumeMounts))
+		for i, v := range sidecar.VolumeMounts {
+			volumes[i] = v.Name
+		}
+		assert.NotContains(t, volumes, "archive-volume")
+		assert.Contains(t, volumes, "operations")
+		assert.NotContains(t, volumes, "journal-volume")
+		assert.NotContains(t, volumes, "eph-volume")
+		assert.NotContains(t, volumes, "tls")
+		assert.Contains(t, volumes, "volume0")
+
+		// Check resource limit
+		assert.NotNil(t, sidecar.Resources.Limits.Memory())
+		assert.Equal(t, resource.MustParse("5Gi"), *sidecar.Resources.Limits.Memory())
+
+		// Check that ghcr.io/nuodb/nuodb-sidecar container image is used
+		assert.Contains(t, sidecar.Image, "ghcr.io/nuodb/nuodb-sidecar")
+
+		// Check that configmap for backup hooks was rendered
+		var backupHooksCm *corev1.ConfigMap
+		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/configmap.yaml"})
+		for _, cm := range testlib.SplitAndRenderConfigMap(t, output, 6) {
+			if strings.HasSuffix(cm.Name, "te-operations") {
+				backupHooksCm = &cm
+				break
+			}
+		}
+		assert.NotNil(t, backupHooksCm)
+		// Assert that configmap has handlers.json
+		assert.Contains(t, backupHooksCm.Data, "handlers.json")
 	})
 }
 

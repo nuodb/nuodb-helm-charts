@@ -230,16 +230,8 @@ The following tables list the configurable parameters of the `database` chart an
 | `autoImport.type` | Type of content in `source`. One of `stream` -> exact copy of an archive; or `backupset` -> a NuoDB hotcopy backupset | `backupset` |
 | `autoRestore.*` | Enable and configure the automatic re-initialization of a single archive in a running database - see the options in `autoImport` | `disabled` |
 | `backupHooks.enabled` | Whether to enable the backup hooks sidecar for non-hotcopy SMs | `false` |
-| `backupHooks.resources` | Kubernetes resource requests and limits set on the backup hook sidecar container | `{}` |
-| `backupHooks.volumeMounts` | Extra volume mounts for backup-hooks container. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core). | `[]` |
 | `backupHooks.freezeMode` | The freeze mode to be used when executing backup hooks. Supported modes are `hotsnap`, `fsfreeze` and `suspend`. Defaults to `hostsnap` if empty | `""` |
 | `backupHooks.timeout` | Timeout in seconds after which the archive will be automatically unfrozen | `30` |
-| `backupHooks.port` | The container port to expose the HTTP server on. | `8000` |
-| `backupHooks.customHandlers` | Custom handlers to register on HTTP server in sidecar | `[]` |
-| `backupHooks.customHandlers[*].method` | The HTTP request method to match on | |
-| `backupHooks.customHandlers[*].path` | The HTTP request path to match on, which may contain path parameters in the form `{param_name}` | |
-| `backupHooks.customHandlers[*].script` | The script to invoke when handling the matched request, which may reference path parameters, query parameters, or the request payload (as `$payload`). If the same variable name appears as a query and path parameter, or a path parameter appears named `$payload`, the path parameter takes precedence. | |
-| `backupHooks.customHandlers[*].statusMappings` | Mapping of script exit codes to HTTP status codes | |
 | `snapshotRestore.backupId` | The backup ID being restored, which is set to enable restore from data sources | `""` |
 | `snapshotRestore.snapshotNameTemplate` | The template used to resolve the names of snapshots to use as data sources for the archive and journal PVCs. The template can reference `backupId` and `volumeType`, which is one of `archive`, `journal`. | `{{.backupId}}-{{.volumeType}}` |
 | `dataMigration.enabled` | Whether to enable invocation of custom scripts for performing data migration | `false` |
@@ -309,6 +301,15 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.readinessProbe.timeoutSeconds` | The timeout in seconds for an invocation of the readiness probe. | `5` |
 | `sm.storageGroup.enabled` | Enable Table Partitions and Storage Groups (TPSG) for all SMs in this database Helm release | `false` |
 | `sm.storageGroup.name` | The name of the storage group. Only alphanumeric and underscore (`_`) characters are allowed. By default the Helm release name is used | `{{ .Release.Name }}` |
+| `sm.operationsSidecar.enabled` | Whether to enable the operations sidecar for non-hotcopy SMs | `false` |
+| `sm.operationsSidecar.resources` | Kubernetes resource requests and limits set on the sidecar container | `{}` |
+| `sm.operationsSidecar.volumeMounts` | Extra volume mounts for sidecar container. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core). | `[]` |
+| `sm.operationsSidecar.port` | The container port to expose the HTTP server on. | `8000` |
+| `sm.operationsSidecar.customHandlers` | Custom handlers to register on HTTP server in sidecar | `[]` |
+| `sm.operationsSidecar.customHandlers[*].method` | The HTTP request method to match on | |
+| `sm.operationsSidecar.customHandlers[*].path` | The HTTP request path to match on, which may contain path parameters in the form `{param_name}` | |
+| `sm.operationsSidecar.customHandlers[*].script` | The script to invoke when handling the matched request, which may reference path parameters, query parameters, or the request payload (as `$payload`). If the same variable name appears as a query and path parameter, or a path parameter appears named `$payload`, the path parameter takes precedence. | |
+| `sm.operationsSidecar.customHandlers[*].statusMappings` | Mapping of script exit codes to HTTP status codes | |
 | `te.enablePod` | Create deployment for TEs. By default, the TE Deployment is disabled if TP/SG is enabled and this is a "secondary" release. | `nil` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
@@ -339,6 +340,15 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.readinessProbe.failureThreshold` | The number of times that the readiness probe must fail before the container is marked as unready. | `3` |
 | `te.readinessProbe.successThreshold` | The number of times that the readiness probe must success before the container is marked as ready. | `1` |
 | `te.readinessProbe.timeoutSeconds` | The timeout in seconds for an invocation of the readiness probe. | `5` |
+| `te.operationsSidecar.enabled` | Whether to enable the operations sidecar for TEs | `false` |
+| `te.operationsSidecar.resources` | Kubernetes resource requests and limits set on the sidecar container | `{}` |
+| `te.operationsSidecar.volumeMounts` | Extra volume mounts for sidecar container. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core). | `[]` |
+| `te.operationsSidecar.port` | The container port to expose the HTTP server on. | `8000` |
+| `te.operationsSidecar.customHandlers` | Custom handlers to register on HTTP server in sidecar | `[]` |
+| `te.operationsSidecar.customHandlers[*].method` | The HTTP request method to match on | |
+| `te.operationsSidecar.customHandlers[*].path` | The HTTP request path to match on, which may contain path parameters in the form `{param_name}` | |
+| `te.operationsSidecar.customHandlers[*].script` | The script to invoke when handling the matched request, which may reference path parameters, query parameters, or the request payload (as `$payload`). If the same variable name appears as a query and path parameter, or a path parameter appears named `$payload`, the path parameter takes precedence. | |
+| `te.operationsSidecar.customHandlers[*].statusMappings` | Mapping of script exit codes to HTTP status codes | |
 | `te.autoscaling.minReplicas` | The lower limit for the number of TE replicas to which the autoscaler can scale down. | `1` |
 | `te.autoscaling.maxReplicas` | The upper limit for the number of TE replicas to which the autoscaler can scale up. It cannot be less than the minReplicas. | `3` |
 | `te.autoscaling.hpa.enabled` | Whether to enable auto-scaling for TE deployment by using HPA resource. | `false` |
@@ -355,6 +365,16 @@ The following tables list the configurable parameters of the `database` chart an
 | `automaticProtocolUpgrade.enabled` | Enable automatic database protocol upgrade and a Transaction Engine (TE) restart as an upgrade finalization step done by Kubernetes Aware Admin (KAA). Applicable for NuoDB major versions upgrade only. Requires NuoDB 4.2.3+ | `false` |
 | `automaticProtocolUpgrade.tePreferenceQuery` | LBQuery expression to select the TE that will be restarted after a successful database protocol upgrade. Defaults to random Transaction Engine (TE) in MONITORED state | `""` |
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
+
+##### Note:
+
+Most of the values under `database.backupHooks.*` have been moved to `database.sm.operationsSidecar` to better match recent features.
+To preserve backward compatibility, both value keys are supported and checked based on the values of `database.backupHooks.enabled` and `database.sm.operationsSidecar.enabled`.
+For values such as `customHandlers`, that take a list of values, if both values are enabled, the lists are concatenated.
+Otherwise only the enabled one is used.
+For values such as `port`, that can only have one value, to reduce the risk of breaking existing code, explicitly set `backupHooks` value are be given preference.
+If `backupHooks.enabled` is `true` and there is an explicit value set, that value is used.
+Otherwise the `sm.operationsSidecar` value is used.
 
 #### database.configFiles.*
 

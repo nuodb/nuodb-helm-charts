@@ -365,6 +365,54 @@ func TestArchivePvcRecreated(t *testing.T) {
 }
 
 func TestHooksCustomHandlers(t *testing.T) {
+	testPod := func(podName string, kubectlOptions *k8s.KubectlOptions) {
+		pidFromHook, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"curl", "-s", "http://localhost:8000/pid/nuodb")
+		require.NoError(t, err)
+		// Get pid for nuodb process and make sure it matches pid from hook
+		pid, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"pgrep", "-x", "nuodb")
+		require.NoError(t, err)
+		require.Equal(t, pid, pidFromHook)
+
+		// Check HTTP code from hook response on success
+		httpCode, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"curl", "-s", "-w", "%{http_code}", "http://localhost:8000/pid/nuodb", "-o", "/dev/null")
+		require.NoError(t, err)
+		require.Equal(t, "200", strings.TrimSpace(httpCode))
+
+		// Check HTTP code from hook response on failure and content-type
+		out, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"curl", "-s", "-w", "--- %{http_code} %{content_type} ---", "http://localhost:8000/pid/not_found")
+		require.NoError(t, err)
+		require.Contains(t, out, "--- 404 text/plain ---")
+
+		// Execute arbitrary command using 'POST operation/{command}/execute'
+		jsonData := `{"one": 1}`
+		out, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"curl", "-s", "http://localhost:8000/operation/echo/execute", "-d", jsonData)
+		require.NoError(t, err)
+		require.Equal(t, jsonData, strings.TrimSpace(out))
+
+		// Check content-type for JSON data
+		contentType, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"curl", "-s", "-w", "%{content_type}", "http://localhost:8000/operation/echo/execute", "-d", jsonData, "-o", "/dev/null")
+		require.NoError(t, err)
+		require.Equal(t, "application/json", strings.TrimSpace(contentType))
+
+		// Check HTTP code from hook response on exit code 1
+		httpCode, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"curl", "-s", "-w", "%{http_code}", "http://localhost:8000/operation/exit/execute", "-d", "1")
+		require.NoError(t, err)
+		require.Equal(t, "400", strings.TrimSpace(httpCode))
+
+		// Check HTTP code from hook response on arbitrary non-0 exit code
+		httpCode, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", podName, "-c", "engine", "--",
+			"curl", "-s", "-w", "%{http_code}", "http://localhost:8000/operation/exit/execute", "-d", "123")
+		require.NoError(t, err)
+		require.Equal(t, "500", strings.TrimSpace(httpCode))
+	}
+
 	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
 	adminReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
 	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
@@ -373,22 +421,34 @@ func TestHooksCustomHandlers(t *testing.T) {
 	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
 	databaseOptions := helm.Options{
 		SetValues: map[string]string{
-			"database.sm.resources.requests.cpu":                      testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.sm.resources.requests.memory":                   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.te.resources.requests.cpu":                      testlib.MINIMAL_VIABLE_ENGINE_CPU,
-			"database.te.resources.requests.memory":                   testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
-			"database.sm.hotCopy.enablePod":                           "false",
-			"database.sm.noHotCopy.replicas":                          "1",
-			"database.backupHooks.enabled":                            "true",
-			"database.backupHooks.customHandlers[0].method":           "GET",
-			"database.backupHooks.customHandlers[0].path":             "/pid/{command}",
-			"database.backupHooks.customHandlers[0].script":           `pgrep -x "${command}"`,
-			"database.backupHooks.customHandlers[0].statusMappings.1": "404",
-			"database.backupHooks.customHandlers[1].method":           "POST",
-			"database.backupHooks.customHandlers[1].path":             "operation/{command}/execute",
-			"database.backupHooks.customHandlers[1].script":           `"${command}" ${payload}`,
-			"database.backupHooks.customHandlers[1].statusMappings.1": "400",
-			"database.backupHooks.customHandlers[1].statusMappings.*": "500",
+			"database.sm.resources.requests.cpu":                               testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":                            testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":                               testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":                            testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.hotCopy.enablePod":                                    "false",
+			"database.sm.noHotCopy.replicas":                                   "1",
+			"database.backupHooks.enabled":                                     "true",
+			"database.backupHooks.customHandlers[0].method":                    "GET",
+			"database.backupHooks.customHandlers[0].path":                      "/pid/{command}",
+			"database.backupHooks.customHandlers[0].script":                    `pgrep -x "${command}"`,
+			"database.backupHooks.customHandlers[0].statusMappings.1":          "404",
+			"database.sm.operationsSidecar.enabled":                            "true",
+			"database.sm.operationsSidecar.customHandlers[0].method":           "POST",
+			"database.sm.operationsSidecar.customHandlers[0].path":             "operation/{command}/execute",
+			"database.sm.operationsSidecar.customHandlers[0].script":           `"${command}" ${payload}`,
+			"database.sm.operationsSidecar.customHandlers[0].statusMappings.1": "400",
+			"database.sm.operationsSidecar.customHandlers[0].statusMappings.*": "500",
+
+			"database.te.operationsSidecar.enabled":                            "true",
+			"database.te.operationsSidecar.customHandlers[0].method":           "GET",
+			"database.te.operationsSidecar.customHandlers[0].path":             "/pid/{command}",
+			"database.te.operationsSidecar.customHandlers[0].script":           `pgrep -x "${command}"`,
+			"database.te.operationsSidecar.customHandlers[0].statusMappings.1": "404",
+			"database.te.operationsSidecar.customHandlers[1].method":           "POST",
+			"database.te.operationsSidecar.customHandlers[1].path":             "operation/{command}/execute",
+			"database.te.operationsSidecar.customHandlers[1].script":           `"${command}" ${payload}`,
+			"database.te.operationsSidecar.customHandlers[1].statusMappings.1": "400",
+			"database.te.operationsSidecar.customHandlers[1].statusMappings.*": "500",
 		},
 	}
 	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
@@ -397,53 +457,14 @@ func TestHooksCustomHandlers(t *testing.T) {
 	opt := testlib.GetExtractedOptions(&databaseOptions)
 	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
 	smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
-	pidFromHook, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
-		"curl", "-s", "http://localhost:8000/pid/nuodb")
-	require.NoError(t, err)
 
-	// Get pid for nuodb process and make sure it matches pid from hook
-	pid, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
-		"pgrep", "-x", "nuodb")
-	require.NoError(t, err)
-	require.Equal(t, pid, pidFromHook)
-
-	// Check HTTP code from hook response on success
-	httpCode, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
-		"curl", "-s", "-w", "%{http_code}", "http://localhost:8000/pid/nuodb", "-o", "/dev/null")
-	require.NoError(t, err)
-	require.Equal(t, "200", strings.TrimSpace(httpCode))
-
-	// Check HTTP code from hook response on failure and content-type
-	out, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
-		"curl", "-s", "-w", "--- %{http_code} %{content_type} ---", "http://localhost:8000/pid/not_found")
-	require.NoError(t, err)
-	require.Contains(t, out, "--- 404 text/plain ---")
-
-	// Execute arbitrary command using 'POST operation/{command}/execute'
-	jsonData := `{"one": 1}`
-	out, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
-		"curl", "-s", "http://localhost:8000/operation/echo/execute", "-d", jsonData)
-	require.NoError(t, err)
-	require.Equal(t, jsonData, strings.TrimSpace(out))
-
-	// Check content-type for JSON data
-	contentType, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
-		"curl", "-s", "-w", "%{content_type}", "http://localhost:8000/operation/echo/execute", "-d", jsonData, "-o", "/dev/null")
-	require.NoError(t, err)
-	require.Equal(t, "application/json", strings.TrimSpace(contentType))
-
-	// Check HTTP code from hook response on exit code 1
-	httpCode, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
-		"curl", "-s", "-w", "%{http_code}", "http://localhost:8000/operation/exit/execute", "-d", "1")
-	require.NoError(t, err)
-	require.Equal(t, "400", strings.TrimSpace(httpCode))
-
-	// Check HTTP code from hook response on arbitrary non-0 exit code
-	httpCode, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
-		"curl", "-s", "-w", "%{http_code}", "http://localhost:8000/operation/exit/execute", "-d", "123")
-	require.NoError(t, err)
-	require.Equal(t, "500", strings.TrimSpace(httpCode))
+	testPod(smPodName, kubectlOptions)
+	testPod(tePodName, kubectlOptions)
 }
 
 func TestKubernetesAltAddress(t *testing.T) {
