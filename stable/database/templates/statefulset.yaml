@@ -307,6 +307,8 @@ spec:
           - name: NUODB_JOURNAL_DIR
             value: {{ printf "/mnt/journal/%s/%s" ( include "admin.domainName" . ) ( include "database.dbName" . ) }}
           {{- end }}
+          - name: NUODB_CORES_DIR
+            value: "/mnt/log"
           {{- if eq (include "backupHooks.freezeMode" . ) "hotsnap" }}
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }
           {{- end }}
@@ -333,6 +335,13 @@ spec:
         - name: journal-volume
           mountPath: /mnt/journal
         {{- end }}
+        - mountPath: /mnt/log
+          {{- if eq (include "defaultfalse" .Values.database.sm.logPersistence.enabled) "true" }}
+          name: log-volume
+          {{- else }}
+          name: eph-volume
+          subPath: log
+          {{- end }}
         {{- if eq (include "backupHooks.freezeMode" . ) "hotsnap" }}
         {{- if eq (include "database.enableEphemeralVolume" (list . .Values.database.sm)) "true" }}
         - name: eph-volume
