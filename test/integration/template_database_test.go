@@ -3423,7 +3423,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_TIMEOUT", "30")
 		testlib.AssertEnvContains(t, sidecar.Env, "NUOCMD_API_SERVER", "nuodb.default.svc:8888")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
-		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_CORES_DIR", "/mnt/log")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_LOGDIR", "/mnt/log")
 		testlib.AssertEnvContains(t, sidecar.Env, "var0", "val0")
 		testlib.AssertEnvContains(t, sidecar.Env, "var1", "val1")
 		// Check volume mounts
@@ -3504,7 +3504,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 		testlib.AssertEnvNotContains(t, sidecar.Env, "FREEZE_TIMEOUT")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUOCMD_API_SERVER")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
-		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_CORES_DIR", "/mnt/log")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_LOGDIR", "/mnt/log")
 		testlib.AssertEnvContains(t, sidecar.Env, "var0", "val0")
 		// Check volume mounts
 		volumes := make([]string, len(sidecar.VolumeMounts))

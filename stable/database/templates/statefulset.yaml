@@ -307,7 +307,7 @@ spec:
           - name: NUODB_JOURNAL_DIR
             value: {{ printf "/mnt/journal/%s/%s" ( include "admin.domainName" . ) ( include "database.dbName" . ) }}
           {{- end }}
-          - name: NUODB_CORES_DIR
+          - name: NUODB_LOGDIR
             value: "/mnt/log"
           {{- if eq (include "backupHooks.freezeMode" . ) "hotsnap" }}
           - { name: NUOCMD_API_SERVER,   value: "{{ template "admin.address" . }}:8888" }

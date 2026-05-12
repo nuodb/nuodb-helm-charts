@@ -214,7 +214,7 @@ spec:
               secretKeyRef:
                 name: {{ template "database.secretName" . }}
                 key: database-name
-          - name: NUODB_CORES_DIR
+          - name: NUODB_LOGDIR
             value: "/mnt/log"
           {{- include "database.te.operationsSidecar.env" . | indent 10 }}
         resources:
