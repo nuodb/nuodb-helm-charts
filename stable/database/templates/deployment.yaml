@@ -214,6 +214,8 @@ spec:
               secretKeyRef:
                 name: {{ template "database.secretName" . }}
                 key: database-name
+          - name: NUODB_LOGDIR
+            value: "/mnt/log"
           {{- include "database.te.operationsSidecar.env" . | indent 10 }}
         resources:
         {{- ( include "database.te.operationsSidecar.resources" . ) | trim | nindent 10 }}
@@ -222,6 +224,13 @@ spec:
         - name: operations
           mountPath: /etc/nuodb/handlers.json
           subPath: handlers.json
+        - mountPath: /mnt/log
+          {{- if eq (include "defaultfalse" .Values.database.te.logPersistence.enabled) "true" }}
+          name: log-volume
+          {{- else }}
+          name: eph-volume
+          subPath: log
+          {{- end }}
         {{- with .Values.database.te.operationsSidecar.volumeMounts }}
         {{- toYaml . | trim | nindent 8 }}
         {{- end }}

@@ -3379,6 +3379,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 				"database.sm.operationsSidecar.enabled":                   "true",
 				"database.sm.operationsSidecar.resources.limits.memory":   "5Gi",
 				"database.securityContext.enabledOnContainer":             "true",
+				"database.sm.logPersistence.enabled":                      "true",
 				"database.sm.operationsSidecar.env[0].name":               "var0",
 				"database.sm.operationsSidecar.env[0].value":              "val0",
 				"database.sm.operationsSidecar.volumeMounts[0].name":      "volume0",
@@ -3422,6 +3423,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 		testlib.AssertEnvContains(t, sidecar.Env, "FREEZE_TIMEOUT", "30")
 		testlib.AssertEnvContains(t, sidecar.Env, "NUOCMD_API_SERVER", "nuodb.default.svc:8888")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_LOGDIR", "/mnt/log")
 		testlib.AssertEnvContains(t, sidecar.Env, "var0", "val0")
 		testlib.AssertEnvContains(t, sidecar.Env, "var1", "val1")
 		// Check volume mounts
@@ -3432,8 +3434,9 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 		assert.Contains(t, volumes, "archive-volume")
 		assert.Contains(t, volumes, "backup-hooks")
 		assert.NotContains(t, volumes, "journal-volume")
-		assert.Contains(t, volumes, "eph-volume")
+		assert.NotContains(t, volumes, "eph-volume")
 		assert.Contains(t, volumes, "tls")
+		assert.Contains(t, volumes, "log-volume")
 		assert.Contains(t, volumes, "volume0")
 		assert.Contains(t, volumes, "volume1")
 
@@ -3464,6 +3467,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 			SetValues: map[string]string{
 				"database.te.operationsSidecar.enabled":                   "true",
 				"database.te.operationsSidecar.resources.limits.memory":   "5Gi",
+				"database.te.logPersistence.enabled":                      "true",
 				"database.securityContext.enabledOnContainer":             "true",
 				"database.te.operationsSidecar.env[0].name":               "var0",
 				"database.te.operationsSidecar.env[0].value":              "val0",
@@ -3500,6 +3504,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 		testlib.AssertEnvNotContains(t, sidecar.Env, "FREEZE_TIMEOUT")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUOCMD_API_SERVER")
 		testlib.AssertEnvNotContains(t, sidecar.Env, "NUODB_JOURNAL_DIR")
+		testlib.AssertEnvContains(t, sidecar.Env, "NUODB_LOGDIR", "/mnt/log")
 		testlib.AssertEnvContains(t, sidecar.Env, "var0", "val0")
 		// Check volume mounts
 		volumes := make([]string, len(sidecar.VolumeMounts))
@@ -3511,6 +3516,7 @@ func TestDatabaseBackupHooksSidecar(t *testing.T) {
 		assert.NotContains(t, volumes, "journal-volume")
 		assert.NotContains(t, volumes, "eph-volume")
 		assert.NotContains(t, volumes, "tls")
+		assert.Contains(t, volumes, "log-volume")
 		assert.Contains(t, volumes, "volume0")
 
 		// Check resource limit
