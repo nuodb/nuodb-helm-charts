@@ -104,6 +104,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `image.pullSecrets` | Specify docker-registry secret names as an array | `[]` (does not add image pull secrets to deployed pods) |
 | `serviceAccount` | The name of the service account used by NuoDB Pods | `nuodb` |
 | `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
+| `cmd.plugins` | Any `nuocmd` plugins to install in the container, as a map of filename to ConfigMap | `{}` |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
 

@@ -628,3 +628,33 @@ Set tolerations for the AP pods.
 {{ toYaml .Values.admin.tolerations }}
 {{- end -}}
 {{- end }}
+
+{{/*
+Convert a nuocmd plugin filename into a valid kubernetes volume name.
+
+Argument: Plugin file name
+*/}}
+{{- define "nuodb.cmd.pluginNameToKey" -}}
+cmd-plugin-{{ . | replace "." "-" | replace "_" "-" }}
+{{- end -}}
+
+{{/*
+Get the file system path where a nuocmd plugin should be mounted.
+
+Argument: Plugin file name
+*/}}
+{{- define "nuodb.cmd.pluginNameToPath" -}}
+/opt/nuodb/etc/nuocmd-plugins/{{ . }}
+{{- end -}}
+
+{{/*
+Generate the NUOCMD_PLUGINS value, including any configured plugins.
+*/}}
+{{- define "nuodb.cmd.joinPluginNames" -}}
+{{- $plugins := keys .Values.nuodb.cmd.plugins -}}
+{{- $path := "/opt/nuodb/etc/nuodocker.py" -}}
+{{- range  $plugins -}}
+{{- $path = (printf "%s:%s" $path (include "nuodb.cmd.pluginNameToPath" . )) -}}
+{{- end -}}
+{{ $path }}
+{{- end -}}

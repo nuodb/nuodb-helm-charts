@@ -109,6 +109,7 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `addServiceAccount` | Whether to create a new service account for NuoDB containers | `true` |
 | `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
 | `addClusterRoleBinding` | If `addRoleBinding` is enabled, also add cluster role and cluster role-binding giving `serviceAccount` access to Cluster wide Kubernetes APIs (read access to Nodes) | `true` |
+| `cmd.plugins` | Any `nuocmd` plugins to install in the container, as a map of filename to ConfigMap | `{}` |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
 

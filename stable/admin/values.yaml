@@ -72,6 +72,12 @@ nuodb:
   # StatefulSets is added to nuodb.serviceAccount
   addRoleBinding: true
 
+  # nuocmd plugins to install
+  cmd:
+    # map of ConfigMap key to ConfigMap name
+    plugins: {}
+      # nuocmd_plugin.py: myplugin-cm
+
 admin:
   # nameOverride: east
   # fullnameOverride: admin-east

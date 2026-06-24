@@ -198,6 +198,10 @@ spec:
               key: {{ .Values.admin.tlsKeyStore.passwordKey | default "password" }}
       {{- end }}
     {{- end }}
+        {{- if .Values.nuodb.cmd.plugins }}
+        - name: NUOCMD_PLUGINS
+          value: {{include "nuodb.cmd.joinPluginNames" . | quote}}
+        {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -265,6 +269,11 @@ spec:
         {{- end }}
         {{- end }}
         {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
+        {{- range $name, $cm := .Values.nuodb.cmd.plugins }}
+        - name: {{ include "nuodb.cmd.pluginNameToKey" $name }}
+          mountPath: {{ include "nuodb.cmd.pluginNameToPath" $name }}
+          subPath: {{ $name }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
@@ -420,6 +429,11 @@ spec:
       {{- include "nuocollector.volume" . | nindent 6 }}
       {{- end }}
       {{- include "database.sm.extraVolumes" . | nindent 6  }}
+      {{- range $name, $cm := .Values.nuodb.cmd.plugins }}
+      - name: {{ include "nuodb.cmd.pluginNameToKey" $name }}
+        configMap:
+          name: {{ $cm }}
+      {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: archive-volume
@@ -662,6 +676,10 @@ spec:
               key: {{ .Values.admin.tlsKeyStore.passwordKey | default "password" }}
       {{- end }}
     {{- end }}
+        {{- if .Values.nuodb.cmd.plugins }}
+        - name: NUOCMD_PLUGINS
+          value: {{include "nuodb.cmd.joinPluginNames" . | quote}}
+        {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -731,6 +749,11 @@ spec:
         {{- end }}
         {{- end }}
         {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
+        {{- range $name, $cm := .Values.nuodb.cmd.plugins }}
+        - name: {{ include "nuodb.cmd.pluginNameToKey" $name }}
+          mountPath: {{ include "nuodb.cmd.pluginNameToPath" $name }}
+          subPath: {{ $name }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
@@ -793,6 +816,11 @@ spec:
       {{- include "nuocollector.volume" . | nindent 6 }}
       {{- end }}
       {{- include "database.sm.extraVolumes" . | nindent 6  }}
+      {{- range $name, $cm := .Values.nuodb.cmd.plugins }}
+      - name: {{ include "nuodb.cmd.pluginNameToKey" $name }}
+        configMap:
+          name: {{ $cm }}
+      {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: archive-volume

@@ -66,6 +66,12 @@ nuodb:
   # the name of the ServiceAccount to use for all NuoDB Pods
   serviceAccount: nuodb
 
+  # nuocmd plugins to install
+  cmd:
+    # map of ConfigMap key to ConfigMap name
+    plugins: {}
+      # nuocmd_plugin.py: myplugin-cm
+
 admin:
   # domain is the name of the NuoDB administration domain (e.g. the cluster name)
   domain: nuodb

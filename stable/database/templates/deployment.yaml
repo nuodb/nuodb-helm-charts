@@ -148,6 +148,10 @@ spec:
                 key: {{ .Values.admin.tlsKeyStore.passwordKey | default "password" }}
         {{- end }}
       {{- end }}
+          {{- if .Values.nuodb.cmd.plugins }}
+          - name: NUOCMD_PLUGINS
+            value: {{include "nuodb.cmd.joinPluginNames" . | quote}}
+          {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -185,6 +189,11 @@ spec:
         - name: tls
           mountPath: /etc/nuodb/keys
           readOnly: true
+        {{- end }}
+        {{- range $name, $cm := .Values.nuodb.cmd.plugins }}
+        - name: {{ include "nuodb.cmd.pluginNameToKey" $name }}
+          mountPath: {{ include "nuodb.cmd.pluginNameToPath" $name }}
+          subPath: {{ $name }}
         {{- end }}
         readinessProbe:
           initialDelaySeconds: {{ default 5 .Values.database.te.readinessProbe.initialDelaySeconds }}
@@ -270,6 +279,11 @@ spec:
           configMap:
             name: {{ template "database.fullname" . }}-te-operations
             defaultMode: 0666
+        {{- end }}
+        {{- range $name, $cm := .Values.nuodb.cmd.plugins }}
+        - name: {{ include "nuodb.cmd.pluginNameToKey" $name }}
+          configMap:
+            name: {{ $cm }}
         {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always
