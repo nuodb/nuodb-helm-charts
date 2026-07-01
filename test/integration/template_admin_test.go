@@ -1787,8 +1787,8 @@ func TestAdminNuoCmdPlugins(t *testing.T) {
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
 
 	options := &helm.Options{
-		SetValues: map[string]string{
-			"nuodb.cmd.plugins.nuocmd_plugin\\.py": "myplugin-cm",
+		SetJsonValues: map[string]string{
+			"admin.nuocmdPlugins.myplugin-cm": "{}",
 		},
 	}
 
@@ -1797,16 +1797,18 @@ func TestAdminNuoCmdPlugins(t *testing.T) {
 
 	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 		testlib.AssertEnvContains(t, obj.Spec.Template.Spec.Containers[0].Env, "NUOCMD_PLUGINS",
-			"/opt/nuodb/etc/nuodocker.py:/opt/nuodb/etc/nuocmd-plugins/nuocmd_plugin.py")
+			"/opt/nuodb/etc/nuodocker.py")
 
-		pluginVolumeMount, found := testlib.GetMount(obj.Spec.Template.Spec.Containers[0].VolumeMounts, "cmd-plugin-nuocmd-plugin-py")
-		require.True(t, found, "Expected to find a volume mount for nuocmd_plugin.py")
-		assert.Equal(t, "/opt/nuodb/etc/nuocmd-plugins/nuocmd_plugin.py", pluginVolumeMount.MountPath)
-		assert.Equal(t, "nuocmd_plugin.py", pluginVolumeMount.SubPath)
+		pluginVolumeMount, found := testlib.GetMount(obj.Spec.Template.Spec.Containers[0].VolumeMounts, "nuocmd-plugins")
+		require.True(t, found, "Expected to find a volume mount for nuocmd-plugins")
+		assert.Equal(t, "/opt/nuodb/etc/nuocmd-plugins/", pluginVolumeMount.MountPath)
 
-		pluginVolume, found := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "cmd-plugin-nuocmd-plugin-py")
-		require.True(t, found, "Expected to find a volume mount for nuocmd_plugin.py")
-		assert.NotNil(t, pluginVolume.ConfigMap)
-		assert.Equal(t, "myplugin-cm", pluginVolume.ConfigMap.Name)
+		pluginVolume, found := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "nuocmd-plugins")
+		require.True(t, found, "Expected to find a volume for nuocmd-plugins")
+		require.NotNil(t, pluginVolume.Projected)
+		require.NotNil(t, pluginVolume.Projected.Sources)
+		require.Equal(t, 1, len(pluginVolume.Projected.Sources))
+		require.NotNil(t, pluginVolume.Projected.Sources[0].ConfigMap)
+		assert.Equal(t, "myplugin-cm", pluginVolume.Projected.Sources[0].ConfigMap.Name)
 	}
 }

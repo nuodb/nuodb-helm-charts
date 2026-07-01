@@ -1440,31 +1440,62 @@ backupHooks values are used if there is an explicit value and database.backupHoo
 {{- end }}
 
 {{/*
-Convert a nuocmd plugin filename into a valid kubernetes volume name.
-
-Argument: Plugin file name
-*/}}
-{{- define "nuodb.cmd.pluginNameToKey" -}}
-cmd-plugin-{{ . | replace "." "-" | replace "_" "-" }}
-{{- end -}}
-
-{{/*
 Get the file system path where a nuocmd plugin should be mounted.
 
 Argument: Plugin file name
 */}}
-{{- define "nuodb.cmd.pluginNameToPath" -}}
+{{- define "database.cmd.pluginNameToPath" -}}
 /opt/nuodb/etc/nuocmd-plugins/{{ . }}
 {{- end -}}
 
 {{/*
 Generate the NUOCMD_PLUGINS value, including any configured plugins.
+
+Arguments:
+0: root context
+1: nuocmdPlugins map from values
 */}}
-{{- define "nuodb.cmd.joinPluginNames" -}}
-{{- $plugins := keys .Values.nuodb.cmd.plugins -}}
+{{- define "database.cmd.joinPluginNames" -}}
+{{- $root := index . 0 -}}
+{{- $plugins := index . 1 -}}
 {{- $path := "/opt/nuodb/etc/nuodocker.py" -}}
-{{- range  $plugins -}}
-{{- $path = (printf "%s:%s" $path (include "nuodb.cmd.pluginNameToPath" . )) -}}
+{{- range $cmName, $keys := include "database.getCmdPlugins" (list $root $plugins) | fromYaml }}
+  {{- range $key := $keys | fromYamlArray }}
+    {{- $path = (printf "%s:%s" $path (include "database.cmd.pluginNameToPath" (printf "%s/%s" $cmName $key) )) -}}
+  {{- end }}
 {{- end -}}
 {{ $path }}
+{{- end -}}
+
+{{/*
+Get the keys from a ConfigMap.
+
+Arguments:
+0: root context
+1: ConfigMap name
+*/}}
+{{- define "database.cmKeys" -}}
+{{- $root := index . 0 -}}
+{{- $cmName := index . 1 -}}
+{{- $namespace := default $root.Release.Namespace $root.Values.admin.namespace -}}
+{{- $cmBody := (lookup "v1" "ConfigMap" $namespace $cmName ) -}}
+{{ keys (dig "data" (dict) $cmBody) | toYaml }}
+{{- end -}}
+
+{{/*
+Get configured nuocmd plugins as a map of ConfigMap name to a list of key names.
+The return value is formatted as a YAML string.
+
+Arguments:
+0: root context
+1: nuocmdPlugins map from values
+*/}}
+{{- define "database.getCmdPlugins" -}}
+{{- $root := index . 0 -}}
+{{- $plugins := index . 1 -}}
+{{- $pluginsByCm := dict -}}
+{{- range $cmName, $ignored := $plugins }}
+{{- $_ := set $pluginsByCm $cmName (include "database.cmKeys" (list $root $cmName)) -}}
+{{- end }}
+{{ $pluginsByCm | toYaml }}
 {{- end -}}

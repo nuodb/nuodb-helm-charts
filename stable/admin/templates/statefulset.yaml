@@ -28,10 +28,9 @@ spec:
     metadata:
       name: {{ template "admin.fullname" . }}
       annotations:
-      {{- if .Values.admin.configFiles }}
-        {{- with .Values.admin.configFiles }}
-        checksum/config: {{ toYaml . | sha256sum }}
-        {{- end }}
+      {{- if (or .Values.admin.configFiles .Values.admin.nuocmdPlugins) }}
+        checksum/config: {{ dict "configFiles" .Values.admin.configFiles
+          "nuocmdPlugins" (include "admin.cmd.joinPluginNames" (list . .Values.admin.nuocmdPlugins) | quote) | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end }}
@@ -152,9 +151,9 @@ spec:
         - { name: NUODOCKER_CONF_DIR, value: "/tmp"}
         {{- end }}
         {{- end }}
-        {{- if .Values.nuodb.cmd.plugins }}
+        {{- if .Values.admin.nuocmdPlugins }}
         - name: NUOCMD_PLUGINS
-          value: {{include "nuodb.cmd.joinPluginNames" . | quote}}
+          value: {{include "admin.cmd.joinPluginNames" (list . .Values.admin.nuocmdPlugins) | quote}}
         {{- end }}
         args:
           - "nuoadmin"
@@ -250,10 +249,9 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
-        {{- range $name, $cm := .Values.nuodb.cmd.plugins }}
-        - name: {{ include "nuodb.cmd.pluginNameToKey" $name }}
-          mountPath: {{ include "nuodb.cmd.pluginNameToPath" $name }}
-          subPath: {{ $name }}
+        {{- if .Values.admin.nuocmdPlugins  }}
+        - name: nuocmd-plugins
+          mountPath: {{ include "admin.cmd.pluginNameToPath" "" }}
         {{- end }}
       {{- include "admin.nuodb.sidecar.collector" . | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
@@ -313,10 +311,19 @@ spec:
           name: {{ template "admin.fullname" . }}-livenessprobe
           defaultMode: 0755
       {{- end }}
-      {{- range $name, $cm := .Values.nuodb.cmd.plugins }}
-      - name: {{ include "nuodb.cmd.pluginNameToKey" $name }}
-        configMap:
-          name: {{ $cm }}
+      {{- if .Values.admin.nuocmdPlugins }}
+      - name: nuocmd-plugins
+        projected:
+          sources:
+          {{- range $cmName, $keys := include "admin.getCmdPlugins" (list . .Values.admin.nuocmdPlugins) | fromYaml }}
+          - configMap:
+              name: {{ $cmName }}
+              items:
+              {{- range $key := $keys | fromYamlArray }}
+              - key: {{ $key }}
+                path: {{ printf "%s/%s" $cmName $key }}
+              {{- end }}
+          {{- end }}
       {{- end }}
   volumeClaimTemplates:
   - metadata:

@@ -72,12 +72,6 @@ nuodb:
   # StatefulSets is added to nuodb.serviceAccount
   addRoleBinding: true
 
-  # nuocmd plugins to install
-  cmd:
-    # map of ConfigMap key to ConfigMap name
-    plugins: {}
-      # nuocmd_plugin.py: myplugin-cm
-
 admin:
   # nameOverride: east
   # fullnameOverride: admin-east
@@ -441,6 +435,12 @@ admin:
   legacy:
     loadBalancerJob:
       enabled: false
+
+  # nuocmd plugins to install
+  # The format is a dictionary with ConfigMap names as keys. The value should be an
+  # empty dictionary and may be used in the future.
+  nuocmdPlugins: {}
+  #  myplugin-cm: {}
 
 nuocollector:
   enabled: false

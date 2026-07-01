@@ -109,7 +109,6 @@ The following tables list the configurable parameters for the `nuodb` option:
 | `addServiceAccount` | Whether to create a new service account for NuoDB containers | `true` |
 | `addRoleBinding` | Whether to add role and role-binding giving `serviceAccount` access to Kubernetes APIs (Pods, PersistentVolumes, PersistentVolumeClaims, StatefulSets) | `true` |
 | `addClusterRoleBinding` | If `addRoleBinding` is enabled, also add cluster role and cluster role-binding giving `serviceAccount` access to Cluster wide Kubernetes APIs (read access to Nodes) | `true` |
-| `cmd.plugins` | Any `nuocmd` plugins to install in the container, as a map of filename to ConfigMap | `{}` |
 
 The `registry` option can be used to connect to private image repositories, such as Artifactory.
 
@@ -233,6 +232,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
 | `adminLabels` | Admin labels to apply to each Admin Process. Supported starting from NuoDB image version 6.0.3 | `{}`|
 | `env` | Additional environment variables to pass through to the Admin container | `[]`|
+| `nuocmdPlugins` | Any `nuocmd` plugins to install in the container, as a map with ConfigMap names as keys | `{}` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 
