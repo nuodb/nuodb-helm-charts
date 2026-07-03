@@ -554,6 +554,12 @@ database:
         # the requested hotcopy operation to complete
         timeout: 0
 
+      # Extra volume mounts for backup-hooks container. See
+      # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core
+      volumeMounts: []
+      # - name: extras
+      #   mountPath: /mnt/extras
+
     # Number of storage manager (SM) nodes that do not have hotcopy backup enabled.
     # SM Limit is 1 in CE version of NuoDB
     # These SMs do not have hotcopy enabled, to start SMs with hotcopy use
@@ -569,6 +575,12 @@ database:
           accessModes:
             - ReadWriteOnce
           # storageClass: "-"
+
+      # Extra volume mounts for backup-hooks container. See
+      # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core
+      volumeMounts: []
+      # - name: extras
+      #   mountPath: /mnt/extras
 
     ## resources
     # k8s resource min (request) and max (limit)
@@ -647,7 +659,7 @@ database:
       image:
         registry: ghcr.io
         repository: nuodb/nuodb-sidecar
-        tag: 1.0.3
+        tag: 1.2.0
         pullPolicy: IfNotPresent
 
       # Kubernetes resource requests and limits used for the backup hooks sidecar
@@ -697,6 +709,22 @@ database:
       #    "0": 200
       #    "1": 400
       #    "*": 500
+
+      cancelBackupRules: []
+
+      #cancelBackupRules:
+      #- type: journalUtilization
+      #  op: ">"
+      #  threshold: 80
+      #  duration: 60
+      #- type: script
+      #  name: Memory throttling
+      #  op: ">"
+      #  threshold: 0
+      #  duration: 60
+      #  script: |
+      #    curl -s http://localhost:9001/metrics | grep -E '^nuodb_MemoryThrottleTime_raw' | cut -d' ' -f2
+
 
   te:
     # Provision Transaction Engine (TE) Deployment. By default, the TE
@@ -866,7 +894,7 @@ database:
       image:
         registry: ghcr.io
         repository: nuodb/nuodb-sidecar
-        tag: 1.0.3
+        tag: 1.2.0
         pullPolicy: IfNotPresent
 
       # Kubernetes resource requests and limits used for the backup hooks sidecar
@@ -976,7 +1004,7 @@ nuocollector:
     enabled: true
     registry: ghcr.io
     repository: nuodb/nuodb-sidecar
-    tag: 1.0.3
+    tag: 1.2.0
     pullPolicy: IfNotPresent
 
   # Kubernetes resource requests and limits used for the nuocollector sidecar

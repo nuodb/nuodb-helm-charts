@@ -158,6 +158,63 @@
                             "script"
                         ]
                     }
+                },
+                "cancelBackupRules": {
+                    "type": "array",
+                    "items": {
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "journalUtilization",
+                                    "script"
+                                ]
+                            },
+                            "op": {
+                                "type": "string",
+                                "enum": [
+                                    ">",
+                                    ">=",
+                                    "<",
+                                    "<=",
+                                    "==",
+                                    "!="
+                                ]
+                            },
+                            "threshold": {
+                                "type": "number"
+                            },
+                            "duration": {
+                                "type": "number",
+                                "minimum": 0
+                            },
+                            "script": {
+                                "type": "string"
+                            }
+                        },
+                        "if": {
+                            "properties": {
+                                "type": {
+                                    "const": "script"
+                                }
+                            }
+                        },
+                        "then": {
+                            "required": [
+                                "name",
+                                "script"
+                            ]
+                        },
+                        "required": [
+                            "type",
+                            "op",
+                            "threshold",
+                            "duration"
+                        ]
+                    }
                 }
             }
         }

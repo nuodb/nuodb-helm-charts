@@ -27,7 +27,7 @@ spec:
     metadata:
       annotations:
       {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled) }}
-        checksum/config: {{ dict "configFiles" .Values.database.configFiles "customHandlers" .Values.database.backupHooks.customHandlers | toYaml | sha256sum }}
+        checksum/config: {{ (dict "configFiles" .Values.database.configFiles "customHandlers" (include "database.sm.operationsSidecar.handlersJson" . | fromJson) "cancelBackupRules" .Values.database.sm.operationsSidecar.cancelBackupRules) | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end -}}
@@ -264,6 +264,9 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- with .Values.database.sm.noHotCopy.volumeMounts }}
+        {{- toYaml . | trim | nindent 8 }}
+        {{- end }}
         {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
@@ -329,6 +332,9 @@ spec:
         - name: backup-hooks
           mountPath: /etc/nuodb/handlers.json
           subPath: handlers.json
+        - name: backup-hooks
+          mountPath: /etc/nuodb/cancel-policy.json
+          subPath: cancel-policy.json
         - name: archive-volume
           mountPath: /mnt/archive
         {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
@@ -729,6 +735,9 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- end }}
+        {{- with .Values.database.sm.hotCopy.volumeMounts }}
+        {{- toYaml . | trim | nindent 8 }}
         {{- end }}
         {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
         terminationMessagePath: /dev/termination-log

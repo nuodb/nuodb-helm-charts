@@ -279,12 +279,14 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.hotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.hotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
 | `sm.hotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
+| `sm.hotCopy.volumeMounts` | Extra volume mounts for the `engine` container. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core). | `[]` |
 | `sm.noHotCopy.replicas` | SM replicas with hot-copy disabled | `0` |
 | `sm.noHotCopy.enablePod` | Create StatefulSet for non-hot-copy SMs | `true` |
 | `sm.noHotCopy.journalPath.enabled` | Whether to enable separate SM journal directory. For more info, read the [Journal HowTo](../../docs/HowToArchiveJournal.md) | `false` |
 | `sm.noHotCopy.journalPath.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
 | `sm.noHotCopy.journalPath.size` | Amount of disk space allocated for SM journal | `20Gi` |
 | `sm.noHotCopy.journalPath.storageClass` | Storage class for SM journal.  This storage class must be pre-configured in the cluster | `-` |
+| `sm.noHotCopy.volumeMounts` | Extra volume mounts for the `engine` container. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core). | `[]` |
 | `sm.labels` | Labels given to the SMs started | `{}` |
 | `sm.engineOptions` | Additional NuoDB engine options | `{}` |
 | `sm.resources` | Labels to apply to all resources | `{}` |
@@ -310,6 +312,13 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.operationsSidecar.customHandlers[*].path` | The HTTP request path to match on, which may contain path parameters in the form `{param_name}` | |
 | `sm.operationsSidecar.customHandlers[*].script` | The script to invoke when handling the matched request, which may reference path parameters, query parameters, or the request payload (as `$payload`). If the same variable name appears as a query and path parameter, or a path parameter appears named `$payload`, the path parameter takes precedence. | |
 | `sm.operationsSidecar.customHandlers[*].statusMappings` | Mapping of script exit codes to HTTP status codes | |
+| `sm.operationsSidecar.cancelBackupRules` | Backup cancelation policy rules | `[]` |
+| `sm.operationsSidecar.cancelBackupRules[*].name` | Rule name | |
+| `sm.operationsSidecar.cancelBackupRules[*].type` | Rule type. Supported values are `journalUtilization` and `script` | |
+| `sm.operationsSidecar.cancelBackupRules[*].op` | The operator for comparing rule's value with rule's threshold. Supported values are `>`, `<`, `>=`, `<=`, `==` and `!=` | |
+| `sm.operationsSidecar.cancelBackupRules[*].threshold` | The threshold for comparing the current value against | |
+| `sm.operationsSidecar.cancelBackupRules[*].duration` | The duration in seconds for which the rule's criteria must be met constantly so that the backup operation is canceled | |
+| `sm.operationsSidecar.cancelBackupRules[*].script` | The script to invoke when obtaining the rule's current value. Only supported for cancelation rules of type `script` | |
 | `te.enablePod` | Create deployment for TEs. By default, the TE Deployment is disabled if TP/SG is enabled and this is a "secondary" release. | `nil` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
