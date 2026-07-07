@@ -285,7 +285,7 @@ spec:
         - name: nuocmd-plugins
           projected:
             sources:
-            {{- range $cmName, $keys := include "database.getCmdPlugins" (list . .Values.database.sm.nuocmdPlugins) | fromYaml }}
+            {{- range $cmName, $keys := include "database.getCmdPlugins" (list . .Values.database.te.nuocmdPlugins) | fromYaml }}
             - configMap:
                 name: {{ $cmName }}
                 items:
