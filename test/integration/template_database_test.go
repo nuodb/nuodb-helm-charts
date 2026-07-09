@@ -3158,7 +3158,7 @@ func TestBackupHooksCancelRulesNegative(t *testing.T) {
 		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
-		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.duration: Invalid type. Expected: number, given: string`)
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.duration: Does not match pattern '^\d+(\.\d+)?$'`)
 	})
 
 	t.Run("testLowDuration", func(t *testing.T) {
@@ -3196,7 +3196,7 @@ func TestBackupHooksCancelRulesNegative(t *testing.T) {
 		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
-		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.threshold: Invalid type. Expected: number, given: string`)
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.threshold: Does not match pattern '^-?\d+(\.\d+)?$'`)
 	})
 
 	t.Run("testMissingDuration", func(t *testing.T) {

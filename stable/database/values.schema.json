@@ -185,11 +185,27 @@
                                 ]
                             },
                             "threshold": {
-                                "type": "number"
+                                "anyOf": [
+                                    {
+                                        "type": "number"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+(\\.\\d+)?$"
+                                    }
+                                ]
                             },
                             "duration": {
-                                "type": "number",
-                                "minimum": 0
+                                "anyOf": [
+                                    {
+                                        "type": "number",
+                                        "minimum": 0
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^\\d+(\\.\\d+)?$"
+                                    }
+                                ]
                             },
                             "script": {
                                 "type": "string"
