@@ -1781,3 +1781,37 @@ func TestAdminTolerationsAsString(t *testing.T) {
 		}
 	})
 }
+
+func TestAdminEnableServiceLinks(t *testing.T) {
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{},
+	}
+
+	t.Run("testDefault", func(t *testing.T) {
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)
+			require.False(t, *obj.Spec.Template.Spec.EnableServiceLinks)
+		}
+	})
+
+	t.Run("testDisabled", func(t *testing.T) {
+		options.SetValues["admin.enableServiceLinks"] = "false"
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)
+			require.False(t, *obj.Spec.Template.Spec.EnableServiceLinks)
+		}
+	})
+
+	t.Run("testEnabled", func(t *testing.T) {
+		options.SetValues["admin.enableServiceLinks"] = "true"
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)
+			require.True(t, *obj.Spec.Template.Spec.EnableServiceLinks)
+		}
+	})
+}
