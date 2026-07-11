@@ -42,7 +42,7 @@ spec:
         {{- include "database.te.podLabels" . | nindent 8 }}
         component: te
     spec:
-      enableServiceLinks: {{ default false .Values.database.enableServiceLinks }}
+      enableServiceLinks: {{ default false .Values.database.internal.enableServiceLinks }}
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- if .Values.database.priorityClasses }}
       priorityClassName: {{ default "" .Values.database.priorityClasses.te }}

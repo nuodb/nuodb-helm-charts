@@ -1798,7 +1798,7 @@ func TestAdminEnableServiceLinks(t *testing.T) {
 	})
 
 	t.Run("testDisabled", func(t *testing.T) {
-		options.SetValues["admin.enableServiceLinks"] = "false"
+		options.SetValues["admin.internal.enableServiceLinks"] = "false"
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)
@@ -1807,7 +1807,7 @@ func TestAdminEnableServiceLinks(t *testing.T) {
 	})
 
 	t.Run("testEnabled", func(t *testing.T) {
-		options.SetValues["admin.enableServiceLinks"] = "true"
+		options.SetValues["admin.internal.enableServiceLinks"] = "true"
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
 			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)

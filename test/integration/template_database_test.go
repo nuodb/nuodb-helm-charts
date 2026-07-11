@@ -4325,7 +4325,7 @@ func TestSmEnableServiceLinks(t *testing.T) {
 	})
 
 	t.Run("testDisabled", func(t *testing.T) {
-		options.SetValues["database.enableServiceLinks"] = "false"
+		options.SetValues["database.internal.enableServiceLinks"] = "false"
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)
@@ -4334,7 +4334,7 @@ func TestSmEnableServiceLinks(t *testing.T) {
 	})
 
 	t.Run("testEnabled", func(t *testing.T) {
-		options.SetValues["database.enableServiceLinks"] = "true"
+		options.SetValues["database.internal.enableServiceLinks"] = "true"
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
 		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
 			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)
@@ -4359,7 +4359,7 @@ func TestTeEnableServiceLinks(t *testing.T) {
 	})
 
 	t.Run("testDisabled", func(t *testing.T) {
-		options.SetValues["database.enableServiceLinks"] = "false"
+		options.SetValues["database.internal.enableServiceLinks"] = "false"
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)
@@ -4368,7 +4368,7 @@ func TestTeEnableServiceLinks(t *testing.T) {
 	})
 
 	t.Run("testEnabled", func(t *testing.T) {
-		options.SetValues["database.enableServiceLinks"] = "true"
+		options.SetValues["database.internal.enableServiceLinks"] = "true"
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
 		for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
 			require.NotNil(t, obj.Spec.Template.Spec.EnableServiceLinks)
