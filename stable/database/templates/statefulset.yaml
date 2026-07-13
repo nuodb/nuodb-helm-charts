@@ -41,6 +41,7 @@ spec:
         component: sm
         role: nohotcopy
     spec:
+      enableServiceLinks: {{ default false .Values.database.internal.enableServiceLinks }}
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
       {{- if .Values.database.priorityClasses }}
@@ -504,6 +505,7 @@ spec:
         component: sm
         role: hotcopy
     spec:
+      enableServiceLinks: {{ default false .Values.database.internal.enableServiceLinks }}
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       terminationGracePeriodSeconds: 15
       {{- if .Values.database.priorityClasses }}
