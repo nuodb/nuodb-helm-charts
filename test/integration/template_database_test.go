@@ -4316,7 +4316,7 @@ func TestDatabaseNuoCmdPlugins(t *testing.T) {
 
 		pluginVolumeMount, found := testlib.GetMount(pod.Spec.Containers[0].VolumeMounts, "nuocmd-plugins")
 		require.True(t, found, "Expected to find a volume mount for nuocmd-plugins")
-		assert.Equal(t, "/opt/nuodb/etc/nuocmd-plugins/", pluginVolumeMount.MountPath)
+		assert.Equal(t, "/etc/nuodb/nuocmd-plugins/", pluginVolumeMount.MountPath)
 
 		pluginVolume, found := testlib.GetVolume(pod.Spec.Volumes, "nuocmd-plugins")
 		require.True(t, found, "Expected to find a volume for nuocmd-plugins")

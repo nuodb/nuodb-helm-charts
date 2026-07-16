@@ -1440,12 +1440,12 @@ backupHooks values are used if there is an explicit value and database.backupHoo
 {{- end }}
 
 {{/*
-Get the file system path where a nuocmd plugin should be mounted.
+Get the file system path where a given nuocmd plugin should be.
 
-Argument: Plugin file name
+Argument: Plugin file path relative to the plugin directory.
 */}}
 {{- define "database.cmd.pluginNameToPath" -}}
-/opt/nuodb/etc/nuocmd-plugins/{{ . }}
+/etc/nuodb/nuocmd-plugins/{{ . }}
 {{- end -}}
 
 {{/*
