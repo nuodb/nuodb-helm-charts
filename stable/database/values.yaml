@@ -973,6 +973,16 @@ database:
     directService:
       enabled: false
 
+  # Internal configuration that is exposed only for testing purposes or expert usage.
+  # IMPORTANT: DO NOT change these values without advice from NuoDB support.
+  internal:
+    # Disable service links to avoid problematic behavior. The Kubernetes
+    # default value of enableServiceLinks=true causes environment variables for
+    # service addresses and ports to be injected into containers, which is a
+    # scalability problem as the number of services within a namespace grows
+    # and can cause exec probes to become slow and use up CPU quotas.
+    enableServiceLinks: false
+
 nuocollector:
   # Enable NuoDB Collector by setting nuocollector.enabled=true
   enabled: false
