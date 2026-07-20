@@ -732,6 +732,7 @@ database:
       # internalIP: true
       # type: LoadBalancer
       # annotations: {}
+      # trafficDistribution: PreferSameZone
 
     # Enable NuoDB external access via Ingress; the provisioned Ingress
     # controller should support SSL passthrough feature allowing it to send the
@@ -756,6 +757,8 @@ database:
     ## but can be optionally disabled here
     dbServices: {}
       # enabled: false
+      # annotations: {}
+      # trafficDistribution: PreferSameZone
 
     # Number of Transaction Engine (TE) replicas. A non-zero value is discarded
     # if TE autoscaling is enabled.

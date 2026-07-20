@@ -125,6 +125,7 @@ admin:
   #   internalIP: true
   #   type: LoadBalancer
   #   annotations: {}
+  #   trafficDistribution: PreferSameZone
 
   # Enable NuoDB external access via Ingress; the provisioned Ingress controller
   # should support SSL passthrough feature allowing it to send the TLS
@@ -451,6 +452,10 @@ admin:
     # scalability problem as the number of services within a namespace grows
     # and can cause exec probes to become slow and use up CPU quotas.
     enableServiceLinks: false
+
+  service: {}
+  #  annotations: {}
+  #  trafficDistribution: PreferSameZone
 
 nuocollector:
   enabled: false

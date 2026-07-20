@@ -43,6 +43,9 @@ spec:
     component: te
   sessionAffinity: None
   type: ClusterIP
+  {{- with .Values.database.te.dbServices.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
 status:
   loadBalancer: {}
 {{- end }}

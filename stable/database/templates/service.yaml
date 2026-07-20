@@ -16,6 +16,9 @@ spec:
     component: te
   sessionAffinity: None
   type: {{ default "LoadBalancer" .Values.database.te.externalAccess.type }}
+  {{- with .Values.database.te.externalAccess.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
 status:
   loadBalancer: {}
 {{- end}}

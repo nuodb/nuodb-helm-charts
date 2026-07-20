@@ -143,7 +143,10 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
 	options := &helm.Options{
-		SetValues: map[string]string{},
+		SetValues: map[string]string{
+			"database.te.dbServices.annotations.foo":     "fooValue",
+			"database.te.dbServices.trafficDistribution": "PreferSameZone",
+		},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
@@ -156,6 +159,9 @@ func TestDatabaseClusterServiceRenders(t *testing.T) {
 		assert.Empty(t, obj.Spec.ClusterIP)
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
+		assert.Equal(t, "fooValue", obj.Annotations["foo"])
+		assert.NotNil(t, obj.Spec.TrafficDistribution)
+		assert.Equal(t, "PreferSameZone", *obj.Spec.TrafficDistribution)
 	}
 }
 
@@ -212,9 +218,10 @@ func TestDatabaseServiceRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"cloud.provider":                        "amazon",
-			"database.te.externalAccess.enabled":    "true",
-			"database.te.externalAccess.internalIP": "true",
+			"cloud.provider":                                 "amazon",
+			"database.te.externalAccess.enabled":             "true",
+			"database.te.externalAccess.internalIP":          "true",
+			"database.te.externalAccess.trafficDistribution": "PreferSameZone",
 		},
 	}
 
@@ -227,6 +234,8 @@ func TestDatabaseServiceRenders(t *testing.T) {
 		assert.Equal(t, "release-name-nuodb-cluster0-demo-database", obj.Spec.Selector["app"])
 		assert.Equal(t, "te", obj.Spec.Selector["component"])
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
+		assert.NotNil(t, obj.Spec.TrafficDistribution)
+		assert.Equal(t, "PreferSameZone", *obj.Spec.TrafficDistribution)
 	}
 
 	// render external AWS NLB annotations

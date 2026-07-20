@@ -1307,9 +1307,9 @@ Return the KEDA triggers
 Any additional annotations to add to services.
 */}}
 {{- define "database.serviceAnnotations"}}
-{{/*
-Extension point that can be overriden by an embedding chart.
-*/}}
+{{- with .Values.database.te.dbServices.annotations }}
+{{ toYaml . }}
+{{- end }}
 {{- end }}
 
 {{/*
