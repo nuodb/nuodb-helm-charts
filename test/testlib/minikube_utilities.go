@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
+	"github.com/ghodss/yaml"
 	"github.com/gruntwork-io/terratest/modules/helm"
 	"github.com/gruntwork-io/terratest/modules/k8s"
 	"github.com/stretchr/testify/require"
@@ -1452,4 +1453,31 @@ func Retry(t *testing.T, fn func() error, attempts int, interval time.Duration) 
 		return err
 	}
 	return nil
+}
+
+const CONFIG_MAP_YAML_TEMPLATE = `---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: %s
+  namespace: %s
+apiVersion: v1
+data:
+  %s
+`
+
+func CreateConfigMap(t *testing.T, namespaceName string, cmName string, data map[string]string) {
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+
+	var dataItems []string
+	for k, v := range data {
+		encodedValue, err := yaml.Marshal(v)
+		require.NoError(t, err)
+		dataItems = append(dataItems, fmt.Sprintf("%s: %s", k, encodedValue))
+	}
+
+	text := fmt.Sprintf(CONFIG_MAP_YAML_TEMPLATE, cmName, namespaceName, strings.Join(dataItems, "\n  "))
+	k8s.KubectlApplyFromString(t, kubectlOptions, text)
+
+	AddTeardown(TEARDOWN_CONFIG_MAP, func() { k8s.KubectlDeleteFromStringE(t, kubectlOptions, text) })
 }

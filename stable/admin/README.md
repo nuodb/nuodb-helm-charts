@@ -232,6 +232,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |
 | `adminLabels` | Admin labels to apply to each Admin Process. Supported starting from NuoDB image version 6.0.3 | `{}`|
 | `env` | Additional environment variables to pass through to the Admin container | `[]`|
+| `nuocmdPlugins` | Any `nuocmd` plugins to install in the container, as a map with ConfigMap names as keys | `{}` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 

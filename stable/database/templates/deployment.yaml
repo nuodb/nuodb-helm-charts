@@ -29,8 +29,10 @@ spec:
   template:
     metadata:
       annotations:
-      {{- if (or .Values.database.configFiles .Values.database.te.operationsSidecar.enabled) }}
-        checksum/config: {{ dict "configFiles" .Values.database.configFiles "customHandlers" .Values.database.te.operationsSidecar.customHandlers | toYaml | sha256sum }}
+      {{- if (or .Values.database.configFiles .Values.database.te.operationsSidecar.enabled .Values.database.te.nuocmdPlugins) }}
+        checksum/config: {{ dict "configFiles" .Values.database.configFiles
+        "customHandlers" .Values.database.te.operationsSidecar.customHandlers
+        "nuocmdPlugins" (include "database.cmd.joinPluginNames" (list . .Values.database.te.nuocmdPlugins) | quote) | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end }}
@@ -149,6 +151,10 @@ spec:
                 key: {{ .Values.admin.tlsKeyStore.passwordKey | default "password" }}
         {{- end }}
       {{- end }}
+          {{- if .Values.database.te.nuocmdPlugins }}
+          - name: NUOCMD_PLUGINS
+            value: {{include "database.cmd.joinPluginNames" (list . .Values.database.te.nuocmdPlugins) | quote}}
+          {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -186,6 +192,10 @@ spec:
         - name: tls
           mountPath: /etc/nuodb/keys
           readOnly: true
+        {{- end }}
+        {{- if .Values.database.te.nuocmdPlugins  }}
+        - name: nuocmd-plugins
+          mountPath: {{ include "database.cmd.pluginNameToPath" "" }}
         {{- end }}
         readinessProbe:
           initialDelaySeconds: {{ default 5 .Values.database.te.readinessProbe.initialDelaySeconds }}
@@ -271,6 +281,20 @@ spec:
           configMap:
             name: {{ template "database.fullname" . }}-te-operations
             defaultMode: 0666
+        {{- end }}
+        {{- if .Values.database.te.nuocmdPlugins }}
+        - name: nuocmd-plugins
+          projected:
+            sources:
+            {{- range $cmName, $keys := include "database.getCmdPlugins" (list . .Values.database.te.nuocmdPlugins) | fromYaml }}
+            - configMap:
+                name: {{ $cmName }}
+                items:
+                {{- range $key := $keys | fromYamlArray }}
+                - key: {{ $key }}
+                  path: {{ printf "%s/%s" $cmName $key }}
+                {{- end }}
+            {{- end }}
         {{- end }}
       dnsPolicy: ClusterFirst
       restartPolicy: Always

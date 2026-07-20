@@ -4309,6 +4309,52 @@ func TestDatabaseTolerationsAsString(t *testing.T) {
 	})
 }
 
+func TestDatabaseNuoCmdPlugins(t *testing.T) {
+	testPod := func(t *testing.T, pod corev1.PodTemplateSpec) {
+		testlib.AssertEnvContains(t, pod.Spec.Containers[0].Env, "NUOCMD_PLUGINS",
+			"/opt/nuodb/etc/nuodocker.py")
+
+		pluginVolumeMount, found := testlib.GetMount(pod.Spec.Containers[0].VolumeMounts, "nuocmd-plugins")
+		require.True(t, found, "Expected to find a volume mount for nuocmd-plugins")
+		assert.Equal(t, "/etc/nuodb/nuocmd-plugins/", pluginVolumeMount.MountPath)
+
+		pluginVolume, found := testlib.GetVolume(pod.Spec.Volumes, "nuocmd-plugins")
+		require.True(t, found, "Expected to find a volume for nuocmd-plugins")
+		require.NotNil(t, pluginVolume.Projected)
+		require.NotNil(t, pluginVolume.Projected.Sources)
+		require.Equal(t, 1, len(pluginVolume.Projected.Sources))
+		require.NotNil(t, pluginVolume.Projected.Sources[0].ConfigMap)
+		assert.Equal(t, "myplugin-cm", pluginVolume.Projected.Sources[0].ConfigMap.Name)
+	}
+
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.nuocmdPlugins.myplugin-cm": "{}",
+			"database.te.nuocmdPlugins.myplugin-cm": "{}",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+		t.Run("testSm_"+obj.Name, func(t *testing.T) {
+			testPod(t, obj.Spec.Template)
+		})
+	}
+
+	output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderDeployment(t, output, 1) {
+		t.Run("testTe", func(t *testing.T) {
+			testPod(t, obj.Spec.Template)
+		})
+	}
+}
+
 func TestSmEnableServiceLinks(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
