@@ -43,6 +43,7 @@ spec:
         {{- include "admin.podLabels" . | nindent 8 }}
         component: admin
     spec:
+      enableServiceLinks: {{ default false .Values.admin.internal.enableServiceLinks }}
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       priorityClassName: {{ default "" .Values.admin.priorityClass }}
       {{- include "admin.securityContext" . | indent 6 }}
