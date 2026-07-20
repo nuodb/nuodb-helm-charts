@@ -27,7 +27,10 @@ spec:
     metadata:
       annotations:
       {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled) }}
-        checksum/config: {{ (dict "configFiles" .Values.database.configFiles "customHandlers" (include "database.sm.operationsSidecar.handlersJson" . | fromJson) "cancelBackupRules" .Values.database.sm.operationsSidecar.cancelBackupRules) | toYaml | sha256sum }}
+        {{- $config := dict "configFiles" .Values.database.configFiles }}
+        {{- $_ := set $config "customHandlers" (include "database.sm.operationsSidecar.handlersJson" . | fromJson) }}
+        {{- $_ := set $config "cancelBackupRules" .Values.database.sm.operationsSidecar.cancelBackupRules }}
+        checksum/config: {{ $config | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end -}}
