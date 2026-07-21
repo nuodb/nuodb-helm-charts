@@ -1782,6 +1782,37 @@ func TestAdminTolerationsAsString(t *testing.T) {
 	})
 }
 
+func TestAdminNuoCmdPlugins(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetJsonValues: map[string]string{
+			"admin.nuocmdPlugins.myplugin-cm": "{}",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+		testlib.AssertEnvContains(t, obj.Spec.Template.Spec.Containers[0].Env, "NUOCMD_PLUGINS",
+			"/opt/nuodb/etc/nuodocker.py")
+
+		pluginVolumeMount, found := testlib.GetMount(obj.Spec.Template.Spec.Containers[0].VolumeMounts, "nuocmd-plugins")
+		require.True(t, found, "Expected to find a volume mount for nuocmd-plugins")
+		assert.Equal(t, "/etc/nuodb/nuocmd-plugins/", pluginVolumeMount.MountPath)
+
+		pluginVolume, found := testlib.GetVolume(obj.Spec.Template.Spec.Volumes, "nuocmd-plugins")
+		require.True(t, found, "Expected to find a volume for nuocmd-plugins")
+		require.NotNil(t, pluginVolume.Projected)
+		require.NotNil(t, pluginVolume.Projected.Sources)
+		require.Equal(t, 1, len(pluginVolume.Projected.Sources))
+		require.NotNil(t, pluginVolume.Projected.Sources[0].ConfigMap)
+		assert.Equal(t, "myplugin-cm", pluginVolume.Projected.Sources[0].ConfigMap.Name)
+	}
+}
+
 func TestAdminEnableServiceLinks(t *testing.T) {
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
 

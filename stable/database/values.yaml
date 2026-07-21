@@ -725,6 +725,11 @@ database:
       #  script: |
       #    curl -s http://localhost:9001/metrics | grep -E '^nuodb_MemoryThrottleTime_raw' | cut -d' ' -f2
 
+    # nuocmd plugins to install
+    # The format is a dictionary with ConfigMap names as keys. The value should be an
+    # empty dictionary and may be used in the future.
+    nuocmdPlugins: {}
+    #  myplugin-cm: {}
 
   te:
     # Provision Transaction Engine (TE) Deployment. By default, the TE
@@ -944,6 +949,12 @@ database:
       #    "0": 200
       #    "1": 400
       #    "*": 500
+
+    # nuocmd plugins to install
+    # The format is a dictionary with ConfigMap names as keys. The value should be an
+    # empty dictionary and may be used in the future.
+    nuocmdPlugins: {}
+    #  myplugin-cm: {}
 
   # These annotations will pass through to the pod as supplied, useful for integrating 3rd party products such as Vault.
   podAnnotations: {}

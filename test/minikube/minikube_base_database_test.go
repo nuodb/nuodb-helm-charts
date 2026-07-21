@@ -635,3 +635,92 @@ func TestKubernetesRestrictedDatabase(t *testing.T) {
 
 	t.Run("verifyNuoSQL", func(t *testing.T) { verifyNuoSQL(t, namespaceName, admin0, "demo") })
 }
+
+func TestNuocmdPluginInjection(t *testing.T) {
+	defer testlib.VerifyTeardown(t)
+
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	randomSuffix := strings.ToLower(random.UniqueId())
+	callerName := "TestNuocmdPluginInjection"
+	namespaceName := fmt.Sprintf("%s-%s", strings.ToLower(callerName), randomSuffix)
+
+	testlib.CreateNamespace(t, namespaceName)
+
+	adminPlugin := `from pynuoadmin import nuodb_cli
+class AdminPlugin(nuodb_cli.AdminCommands):
+	@nuodb_cli.subcommand
+	def admin_command(self):
+		self._print("ADMIN COMMAND")
+`
+
+	defer testlib.Teardown(testlib.TEARDOWN_CONFIG_MAP)
+	testlib.CreateConfigMap(t, namespaceName, "admin-plugin", map[string]string{
+		"plugin.py": adminPlugin,
+	})
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"admin.nuocmdPlugins.admin-plugin": "",
+		},
+	}
+
+	helmChartReleaseName, namespaceName := testlib.StartAdmin(t, options, 1, namespaceName)
+
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", helmChartReleaseName)
+
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+	out, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", admin0, "-c", "admin", "--",
+		"nuocmd", "admin", "command")
+	require.NoError(t, err)
+	require.Contains(t, out, "ADMIN COMMAND")
+
+	smPlugin := `from pynuoadmin import nuodb_cli
+class SmPlugin(nuodb_cli.AdminCommands):
+	@nuodb_cli.subcommand
+	def sm_command(self):
+		self._print("SM COMMAND")
+`
+	testlib.CreateConfigMap(t, namespaceName, "sm-plugin", map[string]string{
+		"plugin.py": smPlugin,
+	})
+
+	tePlugin := `from pynuoadmin import nuodb_cli
+class TePlugin(nuodb_cli.AdminCommands):
+	@nuodb_cli.subcommand
+	def te_command(self):
+		self._print("TE COMMAND")
+`
+	testlib.CreateConfigMap(t, namespaceName, "te-plugin", map[string]string{
+		"plugin.py": tePlugin,
+	})
+
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":    testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory": testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.nuocmdPlugins.sm-plugin":   "",
+			"database.te.nuocmdPlugins.te-plugin":   "",
+		},
+	}
+	databaseChartName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	tePodNameTemplate := fmt.Sprintf("te-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseChartName, opt.ClusterName, opt.DbName)
+	tePodName := testlib.GetPodName(t, namespaceName, tePodNameTemplate)
+	smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+
+	out, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--",
+		"nuocmd", "sm", "command")
+	require.NoError(t, err)
+	require.Contains(t, out, "SM COMMAND")
+
+	out, err = k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", tePodName, "-c", "engine", "--",
+		"nuocmd", "te", "command")
+	require.NoError(t, err)
+	require.Contains(t, out, "TE COMMAND")
+}

@@ -28,10 +28,9 @@ spec:
     metadata:
       name: {{ template "admin.fullname" . }}
       annotations:
-      {{- if .Values.admin.configFiles }}
-        {{- with .Values.admin.configFiles }}
-        checksum/config: {{ toYaml . | sha256sum }}
-        {{- end }}
+      {{- if (or .Values.admin.configFiles .Values.admin.nuocmdPlugins) }}
+        checksum/config: {{ dict "configFiles" .Values.admin.configFiles
+          "nuocmdPlugins" (include "admin.cmd.joinPluginNames" (list . .Values.admin.nuocmdPlugins) | quote) | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end }}
@@ -153,6 +152,10 @@ spec:
         - { name: NUODOCKER_CONF_DIR, value: "/tmp"}
         {{- end }}
         {{- end }}
+        {{- if .Values.admin.nuocmdPlugins }}
+        - name: NUOCMD_PLUGINS
+          value: {{include "admin.cmd.joinPluginNames" (list . .Values.admin.nuocmdPlugins) | quote}}
+        {{- end }}
         args:
           - "nuoadmin"
           {{- if .Values.admin.evicted}}
@@ -247,6 +250,10 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- if .Values.admin.nuocmdPlugins  }}
+        - name: nuocmd-plugins
+          mountPath: {{ include "admin.cmd.pluginNameToPath" "" }}
+        {{- end }}
       {{- include "admin.nuodb.sidecar.collector" . | nindent 6 }}
       {{- include "nuodb.imagePullSecrets" . | indent 6 }}
       volumes:
@@ -304,6 +311,20 @@ spec:
         configMap:
           name: {{ template "admin.fullname" . }}-livenessprobe
           defaultMode: 0755
+      {{- end }}
+      {{- if .Values.admin.nuocmdPlugins }}
+      - name: nuocmd-plugins
+        projected:
+          sources:
+          {{- range $cmName, $keys := include "admin.getCmdPlugins" (list . .Values.admin.nuocmdPlugins) | fromYaml }}
+          - configMap:
+              name: {{ $cmName }}
+              items:
+              {{- range $key := $keys | fromYamlArray }}
+              - key: {{ $key }}
+                path: {{ printf "%s/%s" $cmName $key }}
+              {{- end }}
+          {{- end }}
       {{- end }}
   volumeClaimTemplates:
   - metadata:

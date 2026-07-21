@@ -319,6 +319,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.operationsSidecar.cancelBackupRules[*].threshold` | The threshold for comparing the current value against | |
 | `sm.operationsSidecar.cancelBackupRules[*].duration` | The duration in seconds for which the rule's criteria must be met constantly so that the backup operation is canceled | |
 | `sm.operationsSidecar.cancelBackupRules[*].script` | The script to invoke when obtaining the rule's current value. Only supported for cancelation rules of type `script` | |
+| `sm.nuocmdPlugins` | Any `nuocmd` plugins to install in the container, as a map with ConfigMap names as keys | `{}` |
 | `te.enablePod` | Create deployment for TEs. By default, the TE Deployment is disabled if TP/SG is enabled and this is a "secondary" release. | `nil` |
 | `te.externalAccess.enabled` | Whether to deploy a Layer 4 service for the database | `false` |
 | `te.externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer. Only applies to external access of type `LoadBalancer` | `nil` |
@@ -371,6 +372,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.autoscaling.keda.fallback` | The number of replicas to fall back to if a scaler is in an error state. See https://keda.sh/docs/latest/reference/scaledobject-spec/ | `{}` |
 | `te.autoscaling.keda.triggers` | List of triggers to activate scaling of the target resource. See https://keda.sh/docs/latest/scalers/ | `[]` |
 | `te.autoscaling.keda.annotations` | Custom annotations set on the ScaledObject resource | `{}` |
+| `te.nuocmdPlugins` | Any `nuocmd` plugins to install in the container, as a map with ConfigMap names as keys | `{}` |
 | `automaticProtocolUpgrade.enabled` | Enable automatic database protocol upgrade and a Transaction Engine (TE) restart as an upgrade finalization step done by Kubernetes Aware Admin (KAA). Applicable for NuoDB major versions upgrade only. Requires NuoDB 4.2.3+ | `false` |
 | `automaticProtocolUpgrade.tePreferenceQuery` | LBQuery expression to select the TE that will be restarted after a successful database protocol upgrade. Defaults to random Transaction Engine (TE) in MONITORED state | `""` |
 | `resourceLabels` | Custom labels attached to the Kubernetes resources installed by this Helm chart. The labels are immutable and can't be changed with Helm upgrade | `{}` |

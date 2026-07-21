@@ -26,10 +26,11 @@ spec:
   template:
     metadata:
       annotations:
-      {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled) }}
+      {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled .Values.database.sm.nuocmdPlugins) }}
         {{- $config := dict "configFiles" .Values.database.configFiles }}
         {{- $_ := set $config "customHandlers" (include "database.sm.operationsSidecar.handlersJson" . | fromJson) }}
         {{- $_ := set $config "cancelBackupRules" .Values.database.sm.operationsSidecar.cancelBackupRules }}
+        {{- $_ := set $config "nuocmdPlugins" (include "database.cmd.joinPluginNames" (list . .Values.database.sm.nuocmdPlugins) | quote) }}
         checksum/config: {{ $config | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
@@ -202,6 +203,10 @@ spec:
               key: {{ .Values.admin.tlsKeyStore.passwordKey | default "password" }}
       {{- end }}
     {{- end }}
+        {{- if .Values.database.sm.nuocmdPlugins }}
+        - name: NUOCMD_PLUGINS
+          value: {{include "database.cmd.joinPluginNames" (list . .Values.database.sm.nuocmdPlugins) | quote}}
+        {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -272,6 +277,10 @@ spec:
         {{- toYaml . | trim | nindent 8 }}
         {{- end }}
         {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
+        {{- if .Values.database.sm.nuocmdPlugins  }}
+        - name: nuocmd-plugins
+          mountPath: {{ include "database.cmd.pluginNameToPath" "" }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
@@ -430,6 +439,20 @@ spec:
       {{- include "nuocollector.volume" . | nindent 6 }}
       {{- end }}
       {{- include "database.sm.extraVolumes" . | nindent 6  }}
+      {{- if .Values.database.sm.nuocmdPlugins }}
+      - name: nuocmd-plugins
+        projected:
+          sources:
+          {{- range $cmName, $keys := include "database.getCmdPlugins" (list . .Values.database.sm.nuocmdPlugins) | fromYaml }}
+          - configMap:
+              name: {{ $cmName }}
+              items:
+              {{- range $key := $keys | fromYamlArray }}
+              - key: {{ $key }}
+                path: {{ printf "%s/%s" $cmName $key }}
+              {{- end }}
+          {{- end }}
+      {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: archive-volume
@@ -497,10 +520,11 @@ spec:
   template:
     metadata:
       annotations:
-      {{- if .Values.database.configFiles }}
-        {{- with .Values.database.configFiles }}
-        checksum/config: {{ toYaml . | sha256sum }}
-        {{- end }}
+      {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled .Values.database.sm.operationsSidecar.customHandlers .Values.database.sm.nuocmdPlugins) }}
+        checksum/config: {{ dict "configFiles" .Values.database.configFiles
+          "customHandlers" .Values.database.backupHooks.customHandlers
+          "operationsHandlers" .Values.database.sm.operationsSidecar.customHandlers
+          "nuocmdPlugins" (include "database.cmd.joinPluginNames" (list . .Values.database.sm.nuocmdPlugins) | quote) | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end }}
@@ -673,6 +697,10 @@ spec:
               key: {{ .Values.admin.tlsKeyStore.passwordKey | default "password" }}
       {{- end }}
     {{- end }}
+        {{- if .Values.database.sm.nuocmdPlugins }}
+        - name: NUOCMD_PLUGINS
+          value: {{include "database.cmd.joinPluginNames" (list . .Values.database.sm.nuocmdPlugins) | quote}}
+        {{- end }}
         ports:
         - containerPort: 48006
           protocol: TCP
@@ -745,6 +773,10 @@ spec:
         {{- toYaml . | trim | nindent 8 }}
         {{- end }}
         {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
+        {{- if .Values.database.sm.nuocmdPlugins  }}
+        - name: nuocmd-plugins
+          mountPath: {{ include "database.cmd.pluginNameToPath" "" }}
+        {{- end }}
         terminationMessagePath: /dev/termination-log
         terminationMessagePolicy: File
         readinessProbe:
@@ -807,6 +839,20 @@ spec:
       {{- include "nuocollector.volume" . | nindent 6 }}
       {{- end }}
       {{- include "database.sm.extraVolumes" . | nindent 6  }}
+      {{- if .Values.database.sm.nuocmdPlugins }}
+      - name: nuocmd-plugins
+        projected:
+          sources:
+          {{- range $cmName, $keys := include "database.getCmdPlugins" (list . .Values.database.sm.nuocmdPlugins) | fromYaml }}
+          - configMap:
+              name: {{ $cmName }}
+              items:
+              {{- range $key := $keys | fromYamlArray }}
+              - key: {{ $key }}
+                path: {{ printf "%s/%s" $cmName $key }}
+              {{- end }}
+          {{- end }}
+      {{- end }}
   volumeClaimTemplates:
   - metadata:
       name: archive-volume

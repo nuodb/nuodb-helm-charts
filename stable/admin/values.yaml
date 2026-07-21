@@ -436,6 +436,12 @@ admin:
     loadBalancerJob:
       enabled: false
 
+  # nuocmd plugins to install
+  # The format is a dictionary with ConfigMap names as keys. The value should be an
+  # empty dictionary and may be used in the future.
+  nuocmdPlugins: {}
+  
+  #  myplugin-cm: {}
   # Internal configuration that is exposed only for testing purposes or expert usage.
   # IMPORTANT: DO NOT change these values without advice from NuoDB support.
   internal:
