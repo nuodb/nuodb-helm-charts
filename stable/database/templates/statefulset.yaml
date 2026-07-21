@@ -26,11 +26,12 @@ spec:
   template:
     metadata:
       annotations:
-      {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled .Values.database.sm.operationsSidecar.customHandlers .Values.database.sm.nuocmdPlugins) }}
-        checksum/config: {{ dict "configFiles" .Values.database.configFiles
-          "customHandlers" .Values.database.backupHooks.customHandlers
-          "operationsHandlers" .Values.database.sm.operationsSidecar.customHandlers
-          "nuocmdPlugins" (include "database.cmd.joinPluginNames" (list . .Values.database.sm.nuocmdPlugins) | quote) | toYaml | sha256sum }}
+      {{- if (or .Values.database.configFiles .Values.database.backupHooks.enabled .Values.database.sm.nuocmdPlugins) }}
+        {{- $config := dict "configFiles" .Values.database.configFiles }}
+        {{- $_ := set $config "customHandlers" (include "database.sm.operationsSidecar.handlersJson" . | fromJson) }}
+        {{- $_ := set $config "cancelBackupRules" .Values.database.sm.operationsSidecar.cancelBackupRules }}
+        {{- $_ := set $config "nuocmdPlugins" (include "database.cmd.joinPluginNames" (list . .Values.database.sm.nuocmdPlugins) | quote) }}
+        checksum/config: {{ $config | toYaml | sha256sum }}
       {{- else }}
         checksum/config: "0"
       {{- end -}}
@@ -272,6 +273,9 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- with .Values.database.sm.noHotCopy.volumeMounts }}
+        {{- toYaml . | trim | nindent 8 }}
+        {{- end }}
         {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
         {{- if .Values.database.sm.nuocmdPlugins  }}
         - name: nuocmd-plugins
@@ -341,6 +345,9 @@ spec:
         - name: backup-hooks
           mountPath: /etc/nuodb/handlers.json
           subPath: handlers.json
+        - name: backup-hooks
+          mountPath: /etc/nuodb/cancel-policy.json
+          subPath: cancel-policy.json
         - name: archive-volume
           mountPath: /mnt/archive
         {{- if eq (include "defaultfalse" .Values.database.sm.noHotCopy.journalPath.enabled) "true" }}
@@ -761,6 +768,9 @@ spec:
         {{- end }}
         {{- end }}
         {{- end }}
+        {{- end }}
+        {{- with .Values.database.sm.hotCopy.volumeMounts }}
+        {{- toYaml . | trim | nindent 8 }}
         {{- end }}
         {{- ( include "database.sm.extraMounts" . ) | nindent 8 }}
         {{- if .Values.database.sm.nuocmdPlugins  }}

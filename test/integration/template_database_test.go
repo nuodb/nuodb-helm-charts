@@ -1144,6 +1144,37 @@ func TestReadinessProbeDefault(t *testing.T) {
 	})
 }
 
+func TestStorageManagersExtraMounts(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.hotCopy.volumeMounts[0].name":        "encryptionKeys",
+			"database.sm.hotCopy.volumeMounts[0].mountPath":   "/etc/nuodb/dpe",
+			"database.sm.hotCopy.volumeMounts[0].readOnly":    "true",
+			"database.sm.noHotCopy.volumeMounts[0].name":      "encryptionKeys",
+			"database.sm.noHotCopy.volumeMounts[0].mountPath": "/etc/nuodb/dpe",
+			"database.sm.noHotCopy.volumeMounts[0].readOnly":  "true",
+		},
+	}
+
+	// Run RenderTemplate to render the template and capture the output.
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+		require.NotEmpty(t, obj.Spec.Template.Spec.Containers)
+		container := obj.Spec.Template.Spec.Containers[0]
+		require.True(t, testlib.MountContains(container.VolumeMounts, "encryptionKeys"))
+		for _, vm := range container.VolumeMounts {
+			if vm.Name == "encryptionKeys" {
+				require.Equal(t, "/etc/nuodb/dpe", vm.MountPath)
+				require.True(t, vm.ReadOnly)
+			}
+		}
+	}
+}
+
 func TestDatabaseConfigDoesNotContainEmptyBlocks(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
@@ -3076,6 +3107,181 @@ func TestBackupHooksCustomHandlersNegative(t *testing.T) {
 		require.Error(t, err, &exec.ExitError{})
 		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
 		require.Contains(t, err.Error(), `- database.te.operationsSidecar.customHandlers.0.path: Does not match pattern '^/?(([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])/)*([a-zA-Z_0-9-]+|[{][a-zA-Z_][a-zA-Z_0-9]*[}])$'`)
+	})
+}
+
+func TestBackupHooksCancelRulesNegative(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	t.Run("testBadType", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                 "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":      "BOGUS",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":        ">",
+				"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "0",
+				"database.sm.operationsSidecar.cancelBackupRules[0].duration":  "60",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.type: database.sm.operationsSidecar.cancelBackupRules.0.type must be one of the following: "journalUtilization", "script"`)
+	})
+
+	t.Run("testBadOperator", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                 "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":      "journalUtilization",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":        "<>",
+				"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "100",
+				"database.sm.operationsSidecar.cancelBackupRules[0].duration":  "60",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.op: database.sm.operationsSidecar.cancelBackupRules.0.op must be one of the following: "\u003e", "\u003e=", "\u003c", "\u003c=", "==", "!="`)
+	})
+
+	t.Run("testBadDuration", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                 "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":      "journalUtilization",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":        ">",
+				"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "80",
+				"database.sm.operationsSidecar.cancelBackupRules[0].duration":  "BOGUS",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.duration: Does not match pattern '^\d+(\.\d+)?$'`)
+	})
+
+	t.Run("testLowDuration", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                 "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":      "journalUtilization",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":        ">",
+				"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "80",
+				"database.sm.operationsSidecar.cancelBackupRules[0].duration":  "-10",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.duration: Must be greater than or equal to 0`)
+	})
+
+	t.Run("testBadThreshold", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                 "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":      "journalUtilization",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":        ">",
+				"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "BOGUS",
+				"database.sm.operationsSidecar.cancelBackupRules[0].duration":  "60",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0.threshold: Does not match pattern '^-?\d+(\.\d+)?$'`)
+	})
+
+	t.Run("testMissingDuration", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                 "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":      "journalUtilization",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":        ">",
+				"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "80",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0: duration is required`)
+	})
+
+	t.Run("testMissingThreshold", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":     "journalUtilization",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":       ">",
+				"database.sm.operationsSidecar.cancelBackupRules[0].duration": "60",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0: threshold is required`)
+	})
+
+	t.Run("testMissingScript", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                 "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].name":      "Memory throttling",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":      "script",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":        ">",
+				"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "0",
+				"database.sm.operationsSidecar.cancelBackupRules[0].duration":  "60",
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `database.sm.operationsSidecar.cancelBackupRules.0: script is required`)
+	})
+
+	t.Run("testMissingName", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.backupHooks.enabled":                                 "true",
+				"database.sm.operationsSidecar.cancelBackupRules[0].type":      "script",
+				"database.sm.operationsSidecar.cancelBackupRules[0].op":        ">",
+				"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "0",
+				"database.sm.operationsSidecar.cancelBackupRules[0].duration":  "60",
+				"database.sm.operationsSidecar.cancelBackupRules[0].script":    `curl -s http://localhost:9001/metrics | grep -E "^nuodb_MemoryThrottleTime_raw" | cut -d' ' -f2`,
+			},
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+		}
+		_, err := helm.RenderTemplateE(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+		require.Error(t, err, &exec.ExitError{})
+		require.Contains(t, err.Error(), "Error: values don't meet the specifications of the schema(s) in the following chart(s):")
+		require.Contains(t, err.Error(), `- database.sm.operationsSidecar.cancelBackupRules.0: name is required`)
 	})
 }
 

@@ -1439,6 +1439,17 @@ backupHooks values are used if there is an explicit value and database.backupHoo
 {{- end }}
 {{- end }}
 
+{{- define "database.sm.operationsSidecar.handlersJson" -}}
+{{- $smHandlers := (list) -}}
+{{- if and ( eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true") .Values.database.backupHooks.customHandlers -}}
+{{- $smHandlers = concat $smHandlers .Values.database.backupHooks.customHandlers -}}
+{{- end -}}
+{{- if and ( eq (include "defaultfalse" .Values.database.sm.operationsSidecar.enabled) "true") .Values.database.sm.operationsSidecar.customHandlers -}}
+{{- $smHandlers = concat $smHandlers .Values.database.sm.operationsSidecar.customHandlers -}}
+{{- end -}}
+{{ $smHandlers | toJson }}
+{{- end -}}
+
 {{/*
 Get the file system path where a given nuocmd plugin should be.
 
