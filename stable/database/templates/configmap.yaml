@@ -35,15 +35,6 @@ metadata:
 data:
 {{ (.Files.Glob "files/readinessprobe").AsConfig | indent 2 }}
 {{- if eq (include "database.sm.operationsSidecar.enabled" . ) "true" }}
-{{- $smHandlers := (list) -}}
-{{- if and ( eq (include "defaultfalse" .Values.database.backupHooks.enabled) "true")
-    .Values.database.backupHooks.customHandlers -}}
-{{- $smHandlers = concat $smHandlers .Values.database.backupHooks.customHandlers -}}
-{{- end }}
-{{- if and ( eq (include "defaultfalse" .Values.database.sm.operationsSidecar.enabled) "true")
-    .Values.database.sm.operationsSidecar.customHandlers -}}
-{{- $smHandlers = concat $smHandlers .Values.database.sm.operationsSidecar.customHandlers -}}
-{{- end }}
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -54,7 +45,11 @@ metadata:
 data:
   handlers.json: |
     {
-      "handlers": {{ $smHandlers | toJson }}
+      "handlers": {{ include "database.sm.operationsSidecar.handlersJson" . }}
+    }
+  cancel-policy.json: |
+    {
+      "rules": {{ .Values.database.sm.operationsSidecar.cancelBackupRules | toJson }}
     }
 {{- end }}
 {{- if eq (include "defaultfalse" .Values.database.te.operationsSidecar.enabled) "true" }}

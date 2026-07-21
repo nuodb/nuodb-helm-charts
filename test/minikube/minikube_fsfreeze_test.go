@@ -332,7 +332,7 @@ func TestHotSnapBackupHook(t *testing.T) {
 		// Wait for the automatic backup canceling and metadata files removal
 		testlib.Await(t, func() bool {
 			return testlib.GetStringOccurrenceInLog(t, namespaceName, smPod,
-				fmt.Sprintf("Canceling backup with ID %s. Timeout after %ss", backupId, timeout),
+				fmt.Sprintf("Canceling backup with ID %s: Timeout after %ss", backupId, timeout),
 				&corev1.PodLogOptions{Container: "backup-hooks"}) > 0
 		}, 10*time.Second)
 		k8s.RunKubectl(t, kubectlOptions, "exec", smPod, "-c", "engine", "--",
@@ -384,5 +384,81 @@ func TestHotSnapBackupHook(t *testing.T) {
 			fmt.Sprintf("Unexpected start ID: .* SM process restarted while executing backup ID %s", backupId),
 			&corev1.PodLogOptions{Container: "backup-hooks"}),
 			"Expected to detect SM startId change")
+	})
+}
+
+func TestHooksCancelBackupRules(t *testing.T) {
+	defer testlib.Teardown(testlib.TEARDOWN_ADMIN)
+	adminReleaseName, namespaceName := testlib.StartAdmin(t, &helm.Options{}, 1, "")
+	admin0 := fmt.Sprintf("%s-nuodb-cluster0-0", adminReleaseName)
+
+	// Start database and wait for it to become running
+	defer testlib.Teardown(testlib.TEARDOWN_DATABASE)
+	databaseOptions := helm.Options{
+		SetValues: map[string]string{
+			"database.sm.resources.requests.cpu":        testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.sm.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.te.resources.requests.cpu":        testlib.MINIMAL_VIABLE_ENGINE_CPU,
+			"database.te.resources.requests.memory":     testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
+			"database.sm.hotCopy.enablePod":             "false",
+			"database.sm.noHotCopy.replicas":            "1",
+			"database.sm.noHotCopy.journalPath.enabled": "true",
+			"nuocollector.enabled":                      "true",
+			// Load database Prometheus plugin
+			"nuocollector.plugins.database.prometheus": `
+[[outputs.prometheus_client]]
+listen = ":9001"
+metric_version = 2
+path = "/metrics"`,
+			"database.backupHooks.enabled": "true",
+			"database.backupHooks.timeout": "120",
+
+			// Cancel backup if journal size is above 50MB for 5s
+			"database.sm.operationsSidecar.cancelBackupRules[0].name":      "Journal size",
+			"database.sm.operationsSidecar.cancelBackupRules[0].type":      "script",
+			"database.sm.operationsSidecar.cancelBackupRules[0].op":        ">",
+			"database.sm.operationsSidecar.cancelBackupRules[0].threshold": "50",
+			"database.sm.operationsSidecar.cancelBackupRules[0].duration":  "5",
+			"database.sm.operationsSidecar.cancelBackupRules[0].script":    `curl -s http://localhost:9001/metrics | grep -E '^JournalSize_raw' | cut -d' ' -f2`,
+		},
+	}
+	databaseReleaseName := testlib.StartDatabase(t, namespaceName, admin0, &databaseOptions)
+
+	// Get database pod names
+	opt := testlib.GetExtractedOptions(&databaseOptions)
+	smPodNameTemplate := fmt.Sprintf("sm-%s-nuodb-%s-%s", databaseReleaseName, opt.ClusterName, opt.DbName)
+	smPodName := testlib.GetPodName(t, namespaceName, smPodNameTemplate)
+	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
+
+	// Collect backup hooks logs on test failure
+	testlib.AddDiagnosticTeardown(testlib.TEARDOWN_DATABASE, t, func() {
+		testlib.GetAppLog(t, namespaceName, smPodName, "_hooks", &corev1.PodLogOptions{Container: "backup-hooks"})
+	})
+
+	awaitBackupCanceled := func(backupId string, reason string, timeout time.Duration) {
+		testlib.Await(t, func() bool {
+			output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "backup-hooks", "--",
+				"sh", "-c", "cat $NUODB_JOURNAL_DIR/backup.txt 2>/dev/null || exit 0")
+			require.NoError(t, err, output)
+			return strings.TrimSpace(output) != backupId
+		}, timeout)
+		require.GreaterOrEqual(t, testlib.GetStringOccurrenceInLog(t, namespaceName, smPodName,
+			fmt.Sprintf("Canceling backup with ID %s: %s", backupId, reason),
+			&corev1.PodLogOptions{Container: "backup-hooks"}), 1)
+	}
+
+	t.Run("testJournalSizeThreshold", func(t *testing.T) {
+		// Execute pre-backup hook
+		backupId := strings.ReplaceAll(t.Name(), "/", "")
+		testlib.InvokeBackupHook(t, namespaceName, smPodName, "pre-backup/"+backupId)
+
+		// Create table and insert 100MB data
+		statement := `
+		create table t1 (f1 string);
+		create table ten (f1 integer);
+		insert into ten values (1),(2),(3),(4),(5),(6),(7),(8),(9),(10);
+		insert into t1 select replicate('x', 1024) from ten as a1, ten as a2, ten as a3, ten as a4, ten as a5;`
+		testlib.RunSQL(t, namespaceName, admin0, "demo", statement)
+		awaitBackupCanceled(backupId, "Journal size", 120*time.Second)
 	})
 }

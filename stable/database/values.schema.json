@@ -158,6 +158,79 @@
                             "script"
                         ]
                     }
+                },
+                "cancelBackupRules": {
+                    "type": "array",
+                    "items": {
+                        "properties": {
+                            "name": {
+                                "type": "string"
+                            },
+                            "type": {
+                                "type": "string",
+                                "enum": [
+                                    "journalUtilization",
+                                    "script"
+                                ]
+                            },
+                            "op": {
+                                "type": "string",
+                                "enum": [
+                                    ">",
+                                    ">=",
+                                    "<",
+                                    "<=",
+                                    "==",
+                                    "!="
+                                ]
+                            },
+                            "threshold": {
+                                "anyOf": [
+                                    {
+                                        "type": "number"
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^-?\\d+(\\.\\d+)?$"
+                                    }
+                                ]
+                            },
+                            "duration": {
+                                "anyOf": [
+                                    {
+                                        "type": "number",
+                                        "minimum": 0
+                                    },
+                                    {
+                                        "type": "string",
+                                        "pattern": "^\\d+(\\.\\d+)?$"
+                                    }
+                                ]
+                            },
+                            "script": {
+                                "type": "string"
+                            }
+                        },
+                        "if": {
+                            "properties": {
+                                "type": {
+                                    "const": "script"
+                                }
+                            }
+                        },
+                        "then": {
+                            "required": [
+                                "name",
+                                "script"
+                            ]
+                        },
+                        "required": [
+                            "type",
+                            "op",
+                            "threshold",
+                            "duration"
+                        ]
+                    }
                 }
             }
         }
