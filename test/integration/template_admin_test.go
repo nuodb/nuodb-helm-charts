@@ -238,7 +238,10 @@ func TestAdminClusterServiceRenders(t *testing.T) {
 	helmChartPath := "../../stable/admin"
 
 	options := &helm.Options{
-		SetValues: map[string]string{},
+		SetValues: map[string]string{
+			"admin.service.annotations.foo":     "fooValue",
+			"admin.service.trafficDistribution": "PreferSameZone",
+		},
 	}
 
 	// Run RenderTemplate to render the template and capture the output.
@@ -248,6 +251,9 @@ func TestAdminClusterServiceRenders(t *testing.T) {
 		assert.Equal(t, "nuodb-clusterip", obj.Name)
 		assert.Equal(t, corev1.ServiceTypeClusterIP, obj.Spec.Type)
 		assert.Empty(t, obj.Spec.ClusterIP)
+		assert.Equal(t, "fooValue", obj.Annotations["foo"])
+		assert.NotNil(t, obj.Spec.TrafficDistribution)
+		assert.Equal(t, "PreferSameZone", *obj.Spec.TrafficDistribution)
 	}
 }
 
@@ -275,9 +281,10 @@ func TestAdminServiceRenders(t *testing.T) {
 
 	options := &helm.Options{
 		SetValues: map[string]string{
-			"cloud.provider":                  "amazon",
-			"admin.externalAccess.enabled":    "true",
-			"admin.externalAccess.internalIP": "true",
+			"cloud.provider":                           "amazon",
+			"admin.externalAccess.enabled":             "true",
+			"admin.externalAccess.internalIP":          "true",
+			"admin.externalAccess.trafficDistribution": "PreferSameZone",
 		},
 	}
 
@@ -290,6 +297,8 @@ func TestAdminServiceRenders(t *testing.T) {
 		assert.Empty(t, obj.Spec.ClusterIP)
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-internal")
 		assert.Contains(t, obj.Annotations, "service.beta.kubernetes.io/aws-load-balancer-scheme")
+		assert.NotNil(t, obj.Spec.TrafficDistribution)
+		assert.Equal(t, "PreferSameZone", *obj.Spec.TrafficDistribution)
 	}
 
 	// render external AWS NLB annotations
