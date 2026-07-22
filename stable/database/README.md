@@ -292,6 +292,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.nodeSelector` | Node selector rules for NuoDB SM | `{}` |
 | `sm.tolerations` | Tolerations for NuoDB SM | `[]` |
 | `sm.topologySpreadConstraints` | Topology spread constraints for NuoDB SM | `[]` |
+| `sm.volumeMounts` | Extra volume mounts for the SM container. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core). | `[]` |
 | `sm.volumes` | Extra volumes for SM pods. See [here](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volume-v1-core). | `[]` |
 | `sm.otherOptions` | Additional key/value Docker options | `{}` |
 | `sm.readinessProbe.initialDelaySeconds` | The initial delay in seconds for the readiness probe. | `5` |

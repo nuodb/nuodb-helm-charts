@@ -581,6 +581,12 @@ database:
         cpu: 4
         memory: 8Gi
 
+    # Extra volume mounts for the SM container. See
+    # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volumemount-v1-core
+    volumeMounts: []
+    # - name: config
+    #   mountPath: /path/to/config
+
     # Extra volumes for SM pods. See
     # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.32/#volume-v1-core
     volumes: []

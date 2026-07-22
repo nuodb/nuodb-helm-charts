@@ -4376,3 +4376,26 @@ func TestTeEnableServiceLinks(t *testing.T) {
 		}
 	})
 }
+
+func TestSmExtraMounts(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	options := &helm.Options{
+		SetValues: map[string]string{
+			"database.sm.volumeMounts[0].name":      "test",
+			"database.sm.volumeMounts[0].mountPath": "/path/to/test",
+		},
+	}
+
+	output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+	for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+		found := false
+		for _, mount := range obj.Spec.Template.Spec.Containers[0].VolumeMounts {
+			if mount.Name == "test" {
+				require.Equal(t, "/path/to/test", mount.MountPath)
+				found = true
+			}
+		}
+		require.True(t, found)
+	}
+}

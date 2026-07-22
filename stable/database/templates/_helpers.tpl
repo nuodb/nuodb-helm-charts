@@ -1161,29 +1161,29 @@ TE resources requested and limited
 {{/*
 Any additional volumes that need to go into the SM pod spec.
 */}}
-{{- define "database.sm.extraVolumes"}}
+{{- define "database.sm.extraVolumes" -}}
 {{- with .Values.database.sm.volumes }}
 {{- toYaml . | trim }}
 {{- end }}
-{{- end }}
+{{- end -}}
 
 {{/*
 Any additional volume mounts that need to go into the SM container.
 */}}
-{{- define "database.sm.extraMounts"}}
-{{/*
-Extension point that can be overriden by an embedding chart.
-*/}}
+{{- define "database.sm.extraMounts" -}}
+{{- with .Values.database.sm.volumeMounts }}
+{{- toYaml . | trim }}
 {{- end }}
+{{- end -}}
 
 {{/*
 Any additional sidecar containers that need to go into the SM pod.
 */}}
-{{- define "database.sm.extraSidecars"}}
+{{- define "database.sm.extraSidecars" -}}
 {{/*
 Extension point that can be overriden by an embedding chart.
 */}}
-{{- end }}
+{{- end -}}
 
 {{/*
 Backup hooks sidecar container resources requested and limited
