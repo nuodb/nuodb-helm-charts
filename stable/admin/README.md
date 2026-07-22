@@ -158,7 +158,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `externalAccess.internalIP` | Whether to use an internal (to the cloud) or external (public) IP address for the load balancer | `nil` |
 | `externalAccess.type` | The service type used to enable external access for NuoDB Admin. The supported types are `NodePort` and `LoadBalancer` (defaults to `LoadBalancer`) | `nil` |
 | `externalAccess.annotations` | Annotations to pass through to the Service of type `LoadBalancer` | `{}` |
-| `externalAccess.trafficDistribution` | Preference for traffic routing to Service endpoints. Supported values are `PreferSameZone`, `PreferSameNode` and `PreferClose` (deprecated). | `nil` |
+| `externalAccess.trafficDistribution` | Preference for traffic routing to Service endpoints. For more information see [Traffic distribution](https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution). | `nil` |
 | `ingress.enabled` | Whether to deploy an Ingress resources for the NuoDB Admin. Supported starting with Kubernetes v1.19.0 | `false` |
 | `ingress.api.hostname` | The fully qualified domain name (FQDN) of the network host for the NuoDB Admin REST API | `""` |
 | `ingress.api.className` | The associated IngressClass name defines which Ingress controller will implement the resource | `""` |
@@ -235,7 +235,7 @@ The following tables list the configurable parameters for the `admin` option of 
 | `env` | Additional environment variables to pass through to the Admin container | `[]`|
 | `nuocmdPlugins` | Any `nuocmd` plugins to install in the container, as a map with ConfigMap names as keys | `{}` |
 | `service.annotations` | Annotations to pass through to the Service of type `ClusterIP` | `nil` |
-| `service.trafficDistribution` | Preference for traffic routing to Service endpoints. Supported values are `PreferSameZone`, `PreferSameNode` and `PreferClose` (deprecated). | `nil` |
+| `service.trafficDistribution` | Preference for traffic routing to Service endpoints. For more information see [Traffic distribution](https://kubernetes.io/docs/concepts/services-networking/service/#traffic-distribution). | `nil` |
 
 For example, when using GlusterFS storage class, you would supply the following parameter:
 
