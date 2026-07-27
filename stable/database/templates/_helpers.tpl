@@ -750,7 +750,7 @@ ephemeral:
       resources:
         requests:
           {{- if eq (include "defaultfalse" $.Values.database.ephemeralVolume.sizeToMemory) "true" }}
-          storage: {{ $engine.resources.limits.memory }}
+          storage: {{ include "database.memorySize" $engine }}
           {{- else }}
           storage: {{ $.Values.database.ephemeralVolume.size }}
           {{- end }}
@@ -1509,4 +1509,17 @@ Arguments:
 {{- $_ := set $pluginsByCm $cmName (include "database.cmKeys" (list $root $cmName)) -}}
 {{- end }}
 {{ $pluginsByCm | toYaml }}
+{{- end -}}
+
+{{/*
+Get the memory size of an engine based on the resources values.
+
+Argument:
+The engine's value map (such as database.sm )
+*/}}
+{{- define "database.memorySize" -}}
+{{- $engine := . -}}
+{{- $limits := $engine | dig "resources" "limits" (dict) -}}
+{{- $requests := $engine | dig "resources" "requests" (dict) -}}
+{{ pluck "memory" $limits $requests | compact | first | default "" }}
 {{- end -}}

@@ -457,7 +457,7 @@ database:
         # Default will retain 3 copies within the last 120 minutes, after which copies will continue to be created.
         copies: 3
         windowMinutes: 120
-      size: 60Gi
+      # size: 60Gi
       accessModes:
         - ReadWriteOnce
       # storageClass: "-"
@@ -747,7 +747,7 @@ database:
         # Default will retain 3 copies within the last 120 minutes, after which copies will continue to be created.
         copies: 3
         windowMinutes: 120
-      size: 60Gi
+      # size: 60Gi
       accessModes:
         - ReadWriteMany
       # storageClass: "-"

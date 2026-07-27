@@ -246,7 +246,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `sm.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `sm.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
 | `sm.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class) | `ReadWriteOnce` |
-| `sm.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
+| `sm.logPersistence.size` | Amount of disk space allocated for log storage. If not set, a value will be generated based on the container resource limit. | `` |
 | `sm.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
 | `sm.hotCopy.replicas` | SM replicas with hot-copy enabled | `1` |
 | `sm.hotCopy.enablePod` | Create StatefulSet for hot-copy enabled SMs | `true` |
@@ -334,7 +334,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.logPersistence.overwriteBackoff.copies` | How many copies of the crash directory to keep within windowMinutes | `3` |
 | `te.logPersistence.overwriteBackoff.windowMinutes` | The window within which to keep the number of crash copies | `120` |
 | `te.logPersistence.accessModes` | Volume access modes enabled (must match capabilities of the storage class).  This is expected to be ReadWriteMany.  Not all storage providers support this mode. | `ReadWriteMany` |
-| `te.logPersistence.size` | Amount of disk space allocated for log storage | `60Gi` |
+| `te.logPersistence.size` | Amount of disk space allocated for log storage. If not set, a value will be generated based on the container resource limit. | `` |
 | `te.logPersistence.storageClass` | Storage class for volume backing log storage.  This storage class must be pre-configured in the cluster | `-` |
 | `te.replicas` | Number of Transaction Engine (TE) replicas. A non-zero value is discarded if TE autoscaling is enabled. | `1` |
 | `te.labels` | Labels given to the TEs started | `""` |

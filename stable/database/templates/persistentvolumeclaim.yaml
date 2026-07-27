@@ -53,5 +53,5 @@ spec:
   {{- end }}
   resources:
     requests:
-      storage: {{ .Values.database.te.logPersistence.size }}
+      storage: {{ .Values.database.te.logPersistence.size | default (include "database.memorySize" .Values.database.te) | default "60Gi" }}
 {{- end }}
