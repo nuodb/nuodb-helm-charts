@@ -97,7 +97,6 @@ data:
 {{ $val | indent 4}}
 {{- end }}
 {{- end -}}
-{{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
 {{- if not .Values.database.dataMigration.configMapName }}
 ---
 apiVersion: v1
@@ -119,5 +118,4 @@ data:
     {{- else }}
     {{- .Files.Get "files/load-credentials" | nindent 4 }}
     {{- end }}
-{{- end }}
 {{- end }}

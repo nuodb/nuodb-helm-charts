@@ -2839,26 +2839,31 @@ func TestDatabaseTLSConfig(t *testing.T) {
 func TestDataMigration(t *testing.T) {
 	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
 
-	var foundPrepareArchive, foundLoadCredentials, foundVolume bool
+	var foundPrepareArchive, foundLoadCredentials, foundVolume map[string]bool
 	checkFn := func(output, expectedCmName string) *corev1.ConfigMap {
-		foundPrepareArchive = false
-		foundLoadCredentials = false
-		foundVolume = false
+		foundPrepareArchive = make(map[string]bool)
+		foundLoadCredentials = make(map[string]bool)
+		foundVolume = make(map[string]bool)
 		for _, sts := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+			role := sts.GetLabels()["role"]
+			require.NotEmpty(t, role)
+			foundPrepareArchive[role] = false
+			foundLoadCredentials[role] = false
+			foundVolume[role] = false
 			for _, env := range sts.Spec.Template.Spec.Containers[0].Env {
 				if env.Name == "PREPARE_ARCHIVE" {
 					require.Equal(t, "/usr/local/bin/prepare-archive", env.Value)
-					foundPrepareArchive = true
+					foundPrepareArchive[role] = true
 				}
 				if env.Name == "LOAD_CREDENTIALS" {
 					require.Equal(t, "/usr/local/bin/load-credentials", env.Value)
-					foundLoadCredentials = true
+					foundLoadCredentials[role] = true
 				}
 			}
 			for _, vol := range sts.Spec.Template.Spec.Volumes {
 				if vol.Name == "data-migration" {
 					require.Equal(t, expectedCmName, vol.ConfigMap.Name)
-					foundVolume = true
+					foundVolume[role] = true
 				}
 			}
 		}
@@ -2884,11 +2889,14 @@ func TestDataMigration(t *testing.T) {
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
-		cm := checkFn(output, "")
-		require.True(t, foundPrepareArchive)
-		require.True(t, foundLoadCredentials)
-		require.False(t, foundVolume)
-		require.Nil(t, cm)
+		cm := checkFn(output, "test-db-data-migration")
+		require.True(t, foundPrepareArchive["nohotcopy"])
+		require.True(t, foundLoadCredentials["nohotcopy"])
+		require.True(t, foundVolume["nohotcopy"])
+		require.True(t, foundPrepareArchive["hotcopy"])
+		require.True(t, foundLoadCredentials["hotcopy"])
+		require.False(t, foundVolume["hotcopy"])
+		require.NotNil(t, cm)
 	})
 
 	t.Run("testDisabled", func(t *testing.T) {
@@ -2902,11 +2910,14 @@ func TestDataMigration(t *testing.T) {
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
-		cm := checkFn(output, "")
-		require.True(t, foundPrepareArchive)
-		require.True(t, foundLoadCredentials)
-		require.False(t, foundVolume)
-		require.Nil(t, cm)
+		cm := checkFn(output, "test-db-data-migration")
+		require.True(t, foundPrepareArchive["nohotcopy"])
+		require.True(t, foundLoadCredentials["nohotcopy"])
+		require.False(t, foundVolume["nohotcopy"])
+		require.True(t, foundPrepareArchive["hotcopy"])
+		require.True(t, foundLoadCredentials["hotcopy"])
+		require.False(t, foundVolume["hotcopy"])
+		require.NotNil(t, cm)
 	})
 
 	t.Run("testEnabled", func(t *testing.T) {
@@ -2921,9 +2932,12 @@ func TestDataMigration(t *testing.T) {
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
 		cm := checkFn(output, "test-db-data-migration")
-		require.True(t, foundPrepareArchive)
-		require.True(t, foundLoadCredentials)
-		require.True(t, foundVolume)
+		require.True(t, foundPrepareArchive["nohotcopy"])
+		require.True(t, foundLoadCredentials["nohotcopy"])
+		require.True(t, foundVolume["nohotcopy"])
+		require.True(t, foundPrepareArchive["hotcopy"])
+		require.True(t, foundLoadCredentials["hotcopy"])
+		require.True(t, foundVolume["hotcopy"])
 		require.NotNil(t, cm)
 	})
 
@@ -2940,9 +2954,12 @@ func TestDataMigration(t *testing.T) {
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
 		cm := checkFn(output, "custom-data-migration")
-		require.True(t, foundPrepareArchive)
-		require.True(t, foundLoadCredentials)
-		require.True(t, foundVolume)
+		require.True(t, foundPrepareArchive["nohotcopy"])
+		require.True(t, foundLoadCredentials["nohotcopy"])
+		require.True(t, foundVolume["nohotcopy"])
+		require.True(t, foundPrepareArchive["hotcopy"])
+		require.True(t, foundLoadCredentials["hotcopy"])
+		require.True(t, foundVolume["hotcopy"])
 		require.Nil(t, cm)
 	})
 
@@ -2960,9 +2977,12 @@ func TestDataMigration(t *testing.T) {
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml", "templates/configmap.yaml"})
 		cm := checkFn(output, "test-db-data-migration")
-		require.True(t, foundPrepareArchive)
-		require.True(t, foundLoadCredentials)
-		require.True(t, foundVolume)
+		require.True(t, foundPrepareArchive["nohotcopy"])
+		require.True(t, foundLoadCredentials["nohotcopy"])
+		require.True(t, foundVolume["nohotcopy"])
+		require.True(t, foundPrepareArchive["hotcopy"])
+		require.True(t, foundLoadCredentials["hotcopy"])
+		require.True(t, foundVolume["hotcopy"])
 		require.NotNil(t, cm)
 		require.Equal(t, strings.TrimSpace(cm.Data["prepare-archive"]), "custom-prepare-archive")
 		require.Equal(t, strings.TrimSpace(cm.Data["load-credentials"]), "custom-load-credentials")

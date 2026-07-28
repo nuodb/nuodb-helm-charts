@@ -988,7 +988,7 @@ func GetAppLog(t *testing.T, namespace string, podName string, fileNameSuffix st
 
 	writer := io.Writer(f)
 
-	reader, err := getAppLogStreamE(t, namespace, podName, podLogOptions)
+	reader, err := GetAppLogStreamE(t, namespace, podName, podLogOptions)
 	// avoid generating test failure just because container logs are not available
 	if _, ok := err.(*ContainersNotStarted); ok {
 		t.Logf("Skipping log collection for pod %s because no container has been started", podName)
@@ -1012,7 +1012,7 @@ func (e *ContainersNotStarted) Error() string {
 	return "No containers with logs"
 }
 
-func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) (reader io.ReadCloser, err error) {
+func GetAppLogStreamE(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) (reader io.ReadCloser, err error) {
 	options := k8s.NewKubectlOptions("", "", namespace)
 
 	client, err := k8s.GetKubernetesClientFromOptionsE(t, options)
@@ -1050,7 +1050,7 @@ func getAppLogStreamE(t *testing.T, namespace string, podName string, podLogOpti
 }
 
 func getAppLogStream(t *testing.T, namespace string, podName string, podLogOptions *corev1.PodLogOptions) io.ReadCloser {
-	reader, err := getAppLogStreamE(t, namespace, podName, podLogOptions)
+	reader, err := GetAppLogStreamE(t, namespace, podName, podLogOptions)
 	require.NoError(t, err)
 	return reader
 }
