@@ -16,6 +16,9 @@ spec:
     app: {{ template "admin.fullname" . }}
   sessionAffinity: None
   type: {{ default "LoadBalancer" .Values.admin.externalAccess.type }}
+  {{- with .Values.admin.externalAccess.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
 status:
   loadBalancer: {}
 {{- end}}

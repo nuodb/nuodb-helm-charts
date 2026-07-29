@@ -18,5 +18,8 @@ spec:
     app: {{ template "admin.fullname" . }}
   sessionAffinity: None
   type: ClusterIP
+  {{- with .Values.admin.service.trafficDistribution }}
+  trafficDistribution: {{ . }}
+  {{- end }}
 status:
   loadBalancer: {}
