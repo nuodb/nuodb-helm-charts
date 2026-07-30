@@ -490,7 +490,7 @@ spec:
     {{- end }}
       resources:
         requests:
-          storage: {{ .Values.database.sm.logPersistence.size  | default (include "database.memorySize" .Values.database.sm) | default "60Gi" }}
+          storage: {{ include "database.logPersistence.size" .Values.database.sm }}
   {{- end }}
 {{- end }}
 
@@ -947,6 +947,6 @@ spec:
     {{- end }}
       resources:
         requests:
-          storage: {{ .Values.database.sm.logPersistence.size  | default (include "database.memorySize" .Values.database.sm) | default "60Gi" }}
+          storage: {{ include "database.logPersistence.size" .Values.database.sm }}
   {{- end }}
 {{- end }}
