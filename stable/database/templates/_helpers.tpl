@@ -750,7 +750,7 @@ ephemeral:
       resources:
         requests:
           {{- if eq (include "defaultfalse" $.Values.database.ephemeralVolume.sizeToMemory) "true" }}
-          storage: {{ include "database.memorySize" $engine | default $.Values.database.ephemeralVolume.size }}
+          storage: {{ $engine.resources.limits.memory | default $.Values.database.ephemeralVolume.size }}
           {{- else }}
           storage: {{ $.Values.database.ephemeralVolume.size }}
           {{- end }}
@@ -1513,20 +1513,6 @@ Arguments:
 
 
 {{/*
-Get the memory size of an engine based on the resources values.
-
-Argument:
-The engine's value map (such as database.sm )
-*/}}
-{{- define "database.memorySize" -}}
-{{- $engine := . -}}
-{{- $limits := $engine | dig "resources" "limits" (dict) -}}
-{{- $requests := $engine | dig "resources" "requests" (dict) -}}
-{{ pluck "memory" $limits $requests | compact | first | default "" }}
-{{- end -}}
-
-
-{{/*
 Scale a Quantity and increase it if it is below a minimum value.
 
 Arguments:
@@ -1586,10 +1572,15 @@ The engine's value map (such as database.sm )
 */}}
 {{- define "database.logPersistence.size" -}}
 {{- $engine := . -}}
-{{- $memorySize := include "database.memorySize" $engine -}}
-{{- $scaledMemorySize := "60Gi" -}}
+{{- $defaultSize := "60Gi" -}}
+{{- $memorySize := dig "resources" "limits" "memory" "" $engine -}}
 {{- if $memorySize -}}
-{{- $scaledMemorySize = include "database.scaleQuantity" (list $memorySize 1.5 1) -}}
+{{- $memorySize = include "database.scaleQuantity" (list $memorySize 1.5 1) -}}
 {{- end -}}
-{{ $engine.logPersistence.size | default $scaledMemorySize }}
+{{- $explicitSize := $engine.logPersistence.size -}}
+{{- if (eq (include "defaultfalse" $engine.logPersistence.sizeToMemory) "true") -}}
+{{ $memorySize | default $explicitSize | default $defaultSize }}
+{{- else -}}
+{{ $explicitSize | default $memorySize | default $defaultSize }}
+{{- end -}}
 {{- end -}}

@@ -4656,14 +4656,12 @@ func TestLogVolumeSizing(t *testing.T) {
 	t.Run("fromExplicitValue", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.logPersistence.enabled":    "true",
-				"database.te.logPersistence.enabled":    "true",
-				"database.sm.logPersistence.size":       "1Gi",
-				"database.sm.resources.limits.memory":   "2Gi",
-				"database.sm.resources.requests.memory": "3Gi",
-				"database.te.logPersistence.size":       "4Gi",
-				"database.te.resources.limits.memory":   "5Gi",
-				"database.te.resources.requests.memory": "6Gi",
+				"database.sm.logPersistence.enabled":  "true",
+				"database.te.logPersistence.enabled":  "true",
+				"database.sm.logPersistence.size":     "1Gi",
+				"database.sm.resources.limits.memory": "2Gi",
+				"database.te.logPersistence.size":     "4Gi",
+				"database.te.resources.limits.memory": "5Gi",
 			},
 		}
 
@@ -4682,15 +4680,42 @@ func TestLogVolumeSizing(t *testing.T) {
 		})
 	})
 
+	t.Run("forceSizeToMemory", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"database.sm.logPersistence.enabled":      "true",
+				"database.te.logPersistence.enabled":      "true",
+				"database.sm.logPersistence.sizeToMemory": "true",
+				"database.te.logPersistence.sizeToMemory": "true",
+				"database.sm.logPersistence.size":         "1Gi",
+				"database.sm.resources.limits.memory":     "2Gi",
+				"database.te.logPersistence.size":         "4Gi",
+				"database.te.resources.limits.memory":     "5Gi",
+			},
+		}
+
+		t.Run("testSm", func(t *testing.T) {
+			output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+			for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
+				claims := obj.Spec.VolumeClaimTemplates
+
+				checkLogVolumeSize(t, claims, "3Gi")
+			}
+		})
+
+		t.Run("testTe", func(t *testing.T) {
+			output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/persistentvolumeclaim.yaml"})
+			checkLogVolumeSize(t, testlib.SplitAndRenderPersistentVolumeClaim(t, output, 1), "7.5Gi")
+		})
+	})
+
 	t.Run("fromLimit", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.logPersistence.enabled":    "true",
-				"database.te.logPersistence.enabled":    "true",
-				"database.sm.resources.limits.memory":   "1Gi",
-				"database.sm.resources.requests.memory": "2Gi",
-				"database.te.resources.limits.memory":   "3Gi",
-				"database.te.resources.requests.memory": "4Gi",
+				"database.sm.logPersistence.enabled":  "true",
+				"database.te.logPersistence.enabled":  "true",
+				"database.sm.resources.limits.memory": "1Gi",
+				"database.te.resources.limits.memory": "3Gi",
 			},
 		}
 
@@ -4706,33 +4731,6 @@ func TestLogVolumeSizing(t *testing.T) {
 		t.Run("testTe", func(t *testing.T) {
 			output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/persistentvolumeclaim.yaml"})
 			checkLogVolumeSize(t, testlib.SplitAndRenderPersistentVolumeClaim(t, output, 1), "4.5Gi")
-		})
-	})
-
-	t.Run("fromRequests", func(t *testing.T) {
-		options := &helm.Options{
-			SetValues: map[string]string{
-				"database.sm.logPersistence.enabled":    "true",
-				"database.te.logPersistence.enabled":    "true",
-				"database.sm.resources.limits.memory":   "null",
-				"database.sm.resources.requests.memory": "1024Mi", // 1 Gi
-				"database.te.resources.limits.memory":   "null",
-				"database.te.resources.requests.memory": "2G",
-			},
-		}
-
-		t.Run("testSm", func(t *testing.T) {
-			output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
-			for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 2) {
-				claims := obj.Spec.VolumeClaimTemplates
-
-				checkLogVolumeSize(t, claims, "1.5Gi")
-			}
-		})
-
-		t.Run("testTe", func(t *testing.T) {
-			output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/persistentvolumeclaim.yaml"})
-			checkLogVolumeSize(t, testlib.SplitAndRenderPersistentVolumeClaim(t, output, 1), "3G")
 		})
 	})
 
@@ -4764,12 +4762,10 @@ func TestLogVolumeSizing(t *testing.T) {
 	t.Run("testMinimun", func(t *testing.T) {
 		options := &helm.Options{
 			SetValues: map[string]string{
-				"database.sm.logPersistence.enabled":    "true",
-				"database.te.logPersistence.enabled":    "true",
-				"database.sm.resources.limits.memory":   "null",
-				"database.sm.resources.requests.memory": "50.0E7", // 500M
-				"database.te.resources.limits.memory":   "null",
-				"database.te.resources.requests.memory": "123Mi",
+				"database.sm.logPersistence.enabled":  "true",
+				"database.te.logPersistence.enabled":  "true",
+				"database.sm.resources.limits.memory": "50.0E7", // 500M
+				"database.te.resources.limits.memory": "123Mi",
 			},
 		}
 
