@@ -750,7 +750,7 @@ ephemeral:
       resources:
         requests:
           {{- if eq (include "defaultfalse" $.Values.database.ephemeralVolume.sizeToMemory) "true" }}
-          storage: {{ $engine.resources.limits.memory }}
+          storage: {{ $engine.resources.limits.memory | default $.Values.database.ephemeralVolume.size }}
           {{- else }}
           storage: {{ $.Values.database.ephemeralVolume.size }}
           {{- end }}
@@ -1509,4 +1509,78 @@ Arguments:
 {{- $_ := set $pluginsByCm $cmName (include "database.cmKeys" (list $root $cmName)) -}}
 {{- end }}
 {{ $pluginsByCm | toYaml }}
+{{- end -}}
+
+
+{{/*
+Scale a Quantity and increase it if it is below a minimum value.
+
+Arguments:
+0 (string): Quantity to scale
+1 (float): Scale factor to multiply the quanity by
+2 (float): Minimum value, as a number of Gi
+*/}}
+{{- define "database.scaleQuantity" -}}
+{{- $quantity := index . 0 -}}
+{{- $scale := index . 1 | float64 -}}
+{{- $min := index . 2 | float64 -}}
+
+{{/* Parse the quantity */}}
+{{- $numRegex := "[0-9+-.eE]*[0-9.]" -}}
+{{- $unitRegex := "[EPTGMK]i|[mkMGTPE]" -}}
+{{- if (not (regexMatch (printf "^%s+(?:%s)?$" $numRegex $unitRegex) $quantity )) -}}
+{{fail (print "Could not parse quanitity " $quantity )}}
+{{- end -}}
+{{- $num := regexFind (printf "^%s" $numRegex) $quantity | float64 -}}
+{{- $unit := regexFind (printf "(?:%s)?$" $unitRegex) $quantity -}}
+
+{{/* Scale the quantity */}}
+{{- $num = mulf $num $scale -}}
+
+{{/* Convert the quantity to Gi */}}
+{{- $numGigs := $num -}}
+{{- if eq $unit "Gi" -}}
+{{-   $numGigs = $num -}}
+{{- else if eq $unit "G" -}}
+{{-   $numGigs = divf $num (mulf 1.024 1.024 1.024) -}}
+{{- else if eq $unit "Mi" -}}
+{{-   $numGigs = divf $num  1024 -}}
+{{- else if eq $unit "M" -}}
+{{-   $numGigs = divf $num (mulf 1024 1.024 1.024) -}}
+{{- else if not $unit -}}
+{{-   $numGigs = divf $num  (mul 1024 1024 1024) -}}
+{{- else -}}
+{{/*
+      Would anyone provide a unit other than G/Gi/M/Mi? 
+      Ignore the minimum in that case
+*/}}
+{{-   $numGigs = float64 "1e100" -}}
+{{- end -}}
+
+{{- if (gt $min $numGigs ) -}}
+{{- printf "%fGi" $min -}}
+{{- else -}}
+{{- printf "%f%s" $num $unit -}}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Get the Log Persistance Volume size.
+
+Argument:
+The engine's value map (such as database.sm )
+*/}}
+{{- define "database.logPersistence.size" -}}
+{{- $engine := . -}}
+{{- $defaultSize := "60Gi" -}}
+{{- $memorySize := dig "resources" "limits" "memory" "" $engine -}}
+{{- if $memorySize -}}
+{{- $memorySize = include "database.scaleQuantity" (list $memorySize 1.5 1) -}}
+{{- end -}}
+{{- $explicitSize := $engine.logPersistence.size -}}
+{{- if (eq (include "defaultfalse" $engine.logPersistence.sizeToMemory) "true") -}}
+{{ $memorySize | default $explicitSize | default $defaultSize }}
+{{- else -}}
+{{ $explicitSize | default $memorySize | default $defaultSize }}
+{{- end -}}
 {{- end -}}

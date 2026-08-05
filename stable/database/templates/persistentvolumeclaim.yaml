@@ -53,5 +53,5 @@ spec:
   {{- end }}
   resources:
     requests:
-      storage: {{ .Values.database.te.logPersistence.size }}
+      storage: {{ include "database.logPersistence.size" .Values.database.te }}
 {{- end }}
