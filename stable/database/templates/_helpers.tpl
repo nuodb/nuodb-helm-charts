@@ -302,13 +302,19 @@ capabilities:
 
 {{/*
 Import ENV vars from configMaps
-**BEWARE!!**
-   The values for envFrom are formated into a single line because some parsers
-   - either in k8s or rancher - throw errors occasionally if the multi-line format is used.
-   You Have Been Warned.
 */}}
 {{- define "database.envFrom" }}
-envFrom: [ configMapRef: { name: {{ template "database.fullname" . }}-restore } {{- range $map := .Values.database.envFrom.configMapRef }}, configMapRef: { name: {{$map}} } {{- end }} ]
+envFrom:
+- configMapRef:
+    name: {{ template "database.fullname" . }}-restore
+{{- range $cm := .Values.database.envFrom.configMapRef }}
+- configMapRef:
+    name: {{ $cm }}
+{{- end }}
+{{- range $secret := .Values.database.envFrom.secretRef }}
+- secretRef:
+    name: {{ $secret }}
+{{- end }}
 {{- end -}}
 
 {{/*

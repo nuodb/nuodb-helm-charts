@@ -740,13 +740,21 @@ func runTestDataMigration(t *testing.T, source, target databaseParams) {
 			testlib.Await(t, func() bool {
 				reader, err := testlib.GetAppLogStreamE(t, namespaceName, smPod, &corev1.PodLogOptions{})
 				if err != nil {
+					t.Logf("Unable to read %s output: %s", smPod, err.Error())
 					return false
 				}
 				buf, err := io.ReadAll(reader)
 				if err != nil {
+					t.Logf("Unable to read %s output: %s", smPod, err.Error())
 					return false
 				}
-				return strings.Contains(string(buf), "No journal directory found for migrated archive")
+				message := "No journal directory found for migrated archive"
+				output := string(buf)
+				if !strings.Contains(output, message) {
+					t.Logf("%s output does not contain \"%s\":\n---\n%s\n---", smPod, message, output)
+					return false
+				}
+				return true
 			}, 60*time.Second)
 			// Check restart count
 			testlib.AwaitPodRestartCountGreaterThan(t, namespaceName, smPod, 1, 60*time.Second)
