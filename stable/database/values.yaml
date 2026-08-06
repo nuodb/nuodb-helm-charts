@@ -376,7 +376,7 @@ database:
   # different deployment architectures or different file system conventions
   # from the NuoDB Helm Charts.
   dataMigration:
-    enabled: false
+    enabled: ""
 
     # Suppresses rendering of a new ConfigMap containing data migration scripts
     # and instead uses the specified ConfigMap, which must exist and contain

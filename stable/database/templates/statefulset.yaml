@@ -241,7 +241,7 @@ spec:
         - name: readinessprobe
           mountPath: /usr/local/bin/readinessprobe
           subPath: readinessprobe
-        {{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
+        {{- if eq (include "defaulttrue" .Values.database.dataMigration.enabled) "true" }}
         - name: data-migration
           mountPath: /usr/local/bin/prepare-archive
           subPath: prepare-archive
@@ -415,7 +415,7 @@ spec:
           name: {{ template "database.fullname" . }}-backup-hooks
           defaultMode: 0666
       {{- end }}
-      {{- if eq (include "defaultfalse" .Values.database.dataMigration.enabled) "true" }}
+      {{- if eq (include "defaulttrue" .Values.database.dataMigration.enabled) "true" }}
       - name: data-migration
         configMap:
           name: {{ .Values.database.dataMigration.configMapName | default (printf "%s-data-migration" (include "database.fullname" .)) }}

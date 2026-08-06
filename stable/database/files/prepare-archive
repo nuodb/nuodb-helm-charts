@@ -5,50 +5,109 @@ fail() {
     exit 1
 }
 
-if [ "$SEPARATE_JOURNAL" = true ]; then
-    fail "Cannot migrate archive with separate journal"
-fi
+set -e
 
-# Check whether data migration has already been performed
-db_dir="/var/opt/nuodb/archive/$NUODB_DOMAIN/$DB_NAME"
-if [ -f "$db_dir/migrated" ]; then
-    echo "No data migration to perform"
-    exit 0
-fi
+archive_dir="/var/opt/nuodb/archive/$NUODB_DOMAIN/$DB_NAME"
+journal_dir="/var/opt/nuodb/journal/$NUODB_DOMAIN/$DB_NAME"
 
-# Look for archive directories based on presence of info.json
-set -- $(find /var/opt/nuodb/archive -name info.json -exec dirname {} \;)
+# Look for archive directories based on presence of state.dat
+set -- $(find /var/opt/nuodb/archive -name state.dat -exec dirname {} \;)
 if [ $# -eq 0 ]; then
     echo "No archive to migrate"
-    touch "$db_dir/migrated"
     exit 0
 fi
 [ $# -eq 1 ] || fail "Expected 1 archive, found $#: $*"
 source_archive="$1"
 
 # If source directory is different from target, move it
-if [ "$source_archive" != "$db_dir" ]; then
-    if [ -e "$db_dir" ] && ! rmdir "$db_dir"; then
-        fail "Unable to delete $db_dir"
+if [ "$source_archive" != "$archive_dir" ]; then
+    if [ -d "$archive_dir" ] && ! rmdir "$archive_dir"; then
+        fail "Unable to delete $archive_dir"
     fi
-    mv "$source_archive" "$db_dir"
+    # Save name of source database in case of failure
+    basename "$source_archive" > "$source_archive/source-db"
+    echo "Relocating archive directory from $source_archive to $archive_dir"
+    mv "$source_archive" "$archive_dir"
 fi
 
-# Rename info.json so that archive object is created. The presence of the
-# `migrated` file accounts for the window between archive preparation and
-# creation of the archive object / info.json.
-mv "$db_dir/info.json" "$db_dir/migrated"
-
-# If `<archive_mount>/<source_db>-credentials` exists, assume that it contains DBA credentials and
-# move the file to `<target_archive>/credentials` so that DBA credentials can be updated without
-# knowing the source database name.
-source_db="$(basename "$source_archive")"
-source_credentials="/var/opt/nuodb/archive/$source_db-credentials"
-if [ -f "$source_credentials" ] ; then
-    # DBA credentials are updated in readiness probe for ordinal 0
-    if [ "${POD_NAME##*-}" = 0 ]; then
-        mv "$source_credentials" "$db_dir/credentials"
+if [ -f "$archive_dir/info.json" ]; then
+    # If `<archive_mount>/<source_db>-credentials` exists, assume that it
+    # contains DBA credentials in the format used by ds-nuodb and move the file
+    # to `<target_archive>/credentials` so that DBA credentials can be updated
+    # without knowing the source database name.
+    if [ -f "$archive_dir/source-db" ]; then
+        source_db="$(cat "$archive_dir/source-db")"
     else
-        rm "$source_credentials"
+        source_db="$(basename "$source_archive")"
+    fi
+    source_credentials="/var/opt/nuodb/archive/$source_db-credentials"
+    if [ -f "$source_credentials" ] && [ ! -e "$archive_dir/migrated" ]; then
+        # DBA credentials are updated in readiness probe for ordinal 0
+        if [ "${POD_NAME##*-}" = 0 ]; then
+            mv "$source_credentials" "$archive_dir/credentials"
+        else
+            rm "$source_credentials"
+        fi
+
+        # Rename info.json so that archive object is created. The presence of
+        # the `migrated` file accounts for the window between archive
+        # preparation and creation of the archive object / info.json.
+        mv "$archive_dir/info.json" "$archive_dir/migrated"
+    fi
+elif [ -x "$PREPARE_ARCHIVE_ALT" ]; then
+    # Invoke user-supplied script that handles non-container-based archives
+    "$PREPARE_ARCHIVE_ALT" || fail "Exiting due to non-0 exit code for $PREPARE_ARCHIVE_ALT"
+fi
+
+# Relocate journal directory if necessary
+if [ -f "$archive_dir/migrated" ]; then
+    # Assume that subpath within volume is that same for archive and journal,
+    # unless the source archive is colocated
+    source_journal="/var/opt/nuodb/journal/${source_archive#/var/opt/nuodb/archive/}"
+    copy=false
+    if [ ! -d "$source_journal" ]; then
+        source_journal="$archive_dir/journal"
+        copy=true
+    fi
+    if [ ! -d "$source_journal" ]; then
+        fail "No journal directory found for migrated archive"
+    fi
+    if [ "$SEPARATE_JOURNAL" = true ] && [ "$source_journal" != "$journal_dir" ] && rmdir "$journal_dir" 2>/dev/null; then
+        # If moving journal from archive volume, copy and rename for atomicity
+        echo "Relocating journal directory from $source_journal to $journal_dir"
+        if $copy; then
+            rm -rf "${journal_dir}.tmp"
+            cp -R "$source_journal" "${journal_dir}.tmp"
+            mv "${journal_dir}.tmp" "$journal_dir"
+            mv "$source_journal" "${source_journal}.migrated"
+        else
+            mv "$source_journal" "$journal_dir"
+        fi
     fi
 fi
+
+# Ensure that master catalog is owned by NuoDB user, since this is explicitly
+# checked on SM start-up
+for file in 1.atm 1.cat; do
+    # Check ownership of file
+    path="$archive_dir/$file"
+    chown=false
+    if [ -e "$path" ]; then
+        owner="$(ls -ldn "$path" | awk '{print $3}')"
+        [ "$owner" = "$(id -u)" ] || chown=true
+    fi
+    # Change ownership by copying and replacing file or directory
+    if $chown; then
+        echo "Changing ownership of $path"
+        if [ -f "$path" ]; then
+            cp "$path" "${path}.tmp"
+            mv "${path}.tmp" "$path"
+        elif [ -d "$path" ]; then
+            # Move contents of directory and then rename back
+            mkdir "${path}.tmp"
+            mv "$path"/* "${path}.tmp/"
+            rmdir "$path"
+            mv "${path}.tmp" "$path"
+        fi
+    fi
+done
