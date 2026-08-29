@@ -368,6 +368,7 @@ The following tables list the configurable parameters of the `database` chart an
 | `te.autoscaling.maxReplicas` | The upper limit for the number of TE replicas to which the autoscaler can scale up. It cannot be less than the minReplicas. | `3` |
 | `te.autoscaling.hpa.enabled` | Whether to enable auto-scaling for TE deployment by using HPA resource. | `false` |
 | `te.autoscaling.hpa.targetCpuUtilization` | The target average CPU utilization value across all TE pods, represented as a percentage. | `80` |
+| `te.autoscaling.hpa.normalize` | Whether to scale the target CPU utilization by the ratio of `resources.limits.cpu` to `resources.requests.cpu` if the supplied value is less than 100. | `true` |
 | `te.autoscaling.hpa.behavior` | Configures the scaling behavior of the target in both Up and Down directions. | `...` |
 | `te.autoscaling.hpa.annotations` | Custom annotations set on the HPA resource | `{}` |
 | `te.autoscaling.hpa.behavior.scaleUp.stabilizationWindowSeconds` | The number of seconds for which past recommendations should be considered while scaling up. | `300` |

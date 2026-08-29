@@ -1295,10 +1295,33 @@ Return the behaviors setting for HPA
 {{- end -}}
 
 {{/*
-Return the targetCpuUtilization setting
+Convert quantity appearing in `resources.requests.cpu` or `resources.limits.cpu`
+so that it is expressed as a floating point number of CPUs, e.g. 250m is
+converted to 0.25.
+*/}}
+{{- define "normalizeCpu" -}}
+{{- $cpu := . | toString -}}
+{{- if hasSuffix "m" $cpu -}}
+{{ divf (trimSuffix "m" $cpu | float64) 1000 }}
+{{- else -}}
+{{ $cpu }}
+{{- end -}}
+{{- end -}}
+
+{{/*
+Return the targetCpuUtilization setting, which may be scaled by the ratio of
+`resources.limits.cpu` to `resources.requests.cpu` for the TE container if the
+value is less than 100 and `normalize=true`.
 */}}
 {{- define "database.targetCpuUtilization" -}}
+{{- $target := .Values.database.te.autoscaling.hpa.targetCpuUtilization | int -}}
+{{- $limit := dig "limits" "cpu" "0" .Values.database.te.resources | include "normalizeCpu" | float64 -}}
+{{- $request := dig "requests" "cpu" "0" .Values.database.te.resources | include "normalizeCpu" | float64 -}}
+{{- if and .Values.database.te.autoscaling.hpa.normalize $target (lt $target 100) $limit $request (lt $request $limit) -}}
+{{ divf $limit $request | mulf $target | int }}
+{{- else -}}
 {{ .Values.database.te.autoscaling.hpa.targetCpuUtilization }}
+{{- end -}}
 {{- end -}}
 
 {{/*

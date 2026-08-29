@@ -4248,7 +4248,7 @@ func TestDatabaseAutoscaling(t *testing.T) {
 			assert.Equal(t, corev1.ResourceName("cpu"), obj.Spec.Metrics[0].ContainerResource.Name)
 			assert.Equal(t, autoscalingv2.UtilizationMetricType, obj.Spec.Metrics[0].ContainerResource.Target.Type)
 			assert.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
-			assert.Equal(t, int32(80), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			assert.Equal(t, int32(160), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
 		}
 
 		output = helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/deployment.yaml"})
@@ -4270,6 +4270,8 @@ func TestDatabaseAutoscaling(t *testing.T) {
 				"database.te.autoscaling.hpa.behavior.scaleUp.stabilizationWindowSeconds":   "600",
 				"database.te.autoscaling.hpa.behavior.scaleDown.stabilizationWindowSeconds": "600",
 				"database.te.autoscaling.hpa.annotations.foo":                               "bar",
+				"database.te.resources.requests.cpu":                                        "500m",
+				"database.te.resources.limits.cpu":                                          "500m",
 			},
 		}
 		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
@@ -4335,7 +4337,7 @@ func TestDatabaseAutoscaling(t *testing.T) {
 				assert.Equal(t, "cpu", trigger.Type)
 				assert.Equal(t, autoscalingv2.MetricTargetType("Utilization"), trigger.MetricType)
 				assert.Equal(t, "engine", trigger.Metadata["containerName"])
-				assert.Equal(t, "80", trigger.Metadata["value"])
+				assert.Equal(t, "160", trigger.Metadata["value"])
 			}
 		}
 
@@ -4450,6 +4452,210 @@ func TestDatabaseAutoscaling(t *testing.T) {
 			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
 		require.NotNil(t, err)
 		require.Contains(t, err.Error(), "Can not enable both HPA and KEDA for TE autoscaling")
+	})
+}
+
+func TestHpaCpuThresholdNormalization(t *testing.T) {
+	helmChartPath := testlib.DATABASE_HELM_CHART_PATH
+
+	t.Run("testDefault", func(t *testing.T) {
+		// Specify default values for resources and HPA
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled": "true",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(160), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testMissingRequest", func(t *testing.T) {
+		// Specify empty request and check that normalization is suppressed
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled": "true",
+				"database.te.resources.requests.cpu":  "",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(80), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testMissingLimit", func(t *testing.T) {
+		// Specify empty limit and check that normalization is suppressed
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled": "true",
+				"database.te.resources.limits.cpu":    "",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(80), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testUnitsNormalization", func(t *testing.T) {
+		// Specify identical requests and limits values using different formats
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled": "true",
+				"database.te.resources.requests.cpu":  "1",
+				"database.te.resources.limits.cpu":    "1000m",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(80), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testTargetNormalization", func(t *testing.T) {
+		// Specify limits to be 4x requests and target CPU to be less than 100
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled":              "true",
+				"database.te.autoscaling.hpa.targetCpuUtilization": "99",
+				"database.te.resources.requests.cpu":               "500m",
+				"database.te.resources.limits.cpu":                 "2.0",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(4*99), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testNormalizationDisabled", func(t *testing.T) {
+		// Explicitly disable normalization
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled":              "true",
+				"database.te.autoscaling.hpa.normalize":            "false",
+				"database.te.autoscaling.hpa.targetCpuUtilization": "99",
+				"database.te.resources.requests.cpu":               "500m",
+				"database.te.resources.limits.cpu":                 "2.0",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(99), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testInvalidResources", func(t *testing.T) {
+		// Specify requests larger than limit and check that normalization is suppressed
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled":              "true",
+				"database.te.autoscaling.hpa.targetCpuUtilization": "99",
+				"database.te.resources.limits.cpu":                 "500m",
+				"database.te.resources.requests.cpu":               "2.0",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(99), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testTargetCpu100", func(t *testing.T) {
+		// Specify target CPU equal to 100
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled":              "true",
+				"database.te.autoscaling.hpa.targetCpuUtilization": "100",
+				"database.te.resources.requests.cpu":               "500m",
+				"database.te.resources.limits.cpu":                 "2.0",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(100), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
+	})
+
+	t.Run("testTargetCpuGreaterThan100", func(t *testing.T) {
+		// Specify target CPU greater than 100
+		options := &helm.Options{
+			KubectlOptions: &k8s.KubectlOptions{
+				Namespace: "default",
+			},
+			SetValues: map[string]string{
+				"database.te.autoscaling.hpa.enabled":              "true",
+				"database.te.autoscaling.hpa.targetCpuUtilization": "300",
+				"database.te.resources.requests.cpu":               "500m",
+				"database.te.resources.limits.cpu":                 "2.0",
+			},
+		}
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/hpa.yaml"},
+			"--api-versions", "autoscaling/v2/HorizontalPodAutoscaler")
+		for _, obj := range testlib.SplitAndRender[autoscalingv2.HorizontalPodAutoscaler](t, output, 1, "HorizontalPodAutoscaler") {
+			require.Len(t, obj.Spec.Metrics, 1)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource)
+			require.NotNil(t, obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+			require.Equal(t, int32(300), *obj.Spec.Metrics[0].ContainerResource.Target.AverageUtilization)
+		}
 	})
 }
 
