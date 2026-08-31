@@ -861,6 +861,11 @@ database:
         # represented as a percentage.
         targetCpuUtilization: 80
 
+        # Whether to normalize the target average CPU utilization by multiplying
+        # it by the ratio `resources.limits.cpu` / `resources.requests.cpu` if
+        # the supplied target value is lower than 100.
+        normalize: true
+
         # Configures the scaling behavior of the target in both Up and Down
         # directions. See:
         # https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling
