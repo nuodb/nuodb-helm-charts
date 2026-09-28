@@ -51,9 +51,9 @@ spec:
 {{ tpl .Values.admin.topologySpreadConstraints . | trim | indent 8 }}
       {{- end }}
       {{- include "admin.podSpecExtras" . | trim | nindent 6 }}
-      {{- with .Values.admin.nodeSelector }}
+      {{- if .Values.admin.nodeSelector }}
       nodeSelector:
-{{ toYaml . | trim | indent 8 }}
+{{ include "admin.nodeSelector" . | trim | indent 8 }}
       {{- end }}
 {{- if .Values.admin.affinity }}
       affinity:

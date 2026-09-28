@@ -16,9 +16,9 @@ spec:
     spec:
       serviceAccountName: {{ default "" .Values.nuodb.serviceAccount }}
       {{- include "admin.securityContext" . | indent 6 }}
-      {{- with .Values.admin.nodeSelector }}
+      {{- if .Values.admin.nodeSelector }}
       nodeSelector:
-{{ toYaml . | trim | indent 8 }}
+{{ include "admin.nodeSelector" . | trim | indent 8 }}
       {{- end }}
 {{- if .Values.admin.affinity }}
       affinity:

@@ -57,9 +57,9 @@ spec:
       topologySpreadConstraints:
 {{ tpl .Values.database.sm.topologySpreadConstraints . | trim | indent 8 }}
       {{- end }}
-      {{- with .Values.database.sm.nodeSelector }}
+      {{- if .Values.database.sm.nodeSelector }}
       nodeSelector:
-{{ toYaml . | trim | indent 8 }}
+{{ include "database.sm.nodeSelector" . | trim | indent 8 }}
       {{- end }}
 {{- if .Values.database.sm.affinity }}
       affinity:
@@ -550,9 +550,9 @@ spec:
       topologySpreadConstraints:
 {{ tpl .Values.database.sm.topologySpreadConstraints . | trim | indent 8 }}
       {{- end }}
-      {{- with .Values.database.sm.nodeSelector }}
+      {{- if .Values.database.sm.nodeSelector }}
       nodeSelector:
-{{ toYaml . | trim | indent 8 }}
+{{ include "database.sm.nodeSelector" . | trim | indent 8 }}
       {{- end }}
 {{- if .Values.database.sm.affinity }}
       affinity:

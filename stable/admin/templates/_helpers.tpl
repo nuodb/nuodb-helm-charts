@@ -621,12 +621,15 @@ Any additional annotations to add to services.
 {{/*
 Set tolerations for the AP pods.
 */}}
-{{- define "admin.tolerations"}}
-{{- if typeIs "string" .Values.admin.tolerations -}}
-{{ .Values.admin.tolerations }}
-{{- else -}}
-{{ toYaml .Values.admin.tolerations }}
-{{- end -}}
+{{- define "admin.tolerations" }}
+{{ include "admin.toYaml" (list . .Values.admin.tolerations) }}
+{{- end }}
+
+{{/*
+Set node selector for the AP pods.
+*/}}
+{{- define "admin.nodeSelector" }}
+{{ include "admin.toYaml" (list . .Values.admin.nodeSelector) }}
 {{- end }}
 
 {{/*
@@ -688,4 +691,18 @@ Arguments:
 {{- $_ := set $pluginsByCm $cmName (include "admin.cmKeys" (list $root $cmName)) -}}
 {{- end }}
 {{ $pluginsByCm | toYaml }}
+{{- end -}}
+
+{{/*
+Renders the supplied value as YAML. If the value is string, it is templated
+first. This allows late binding of Helm values.
+*/}}
+{{- define "admin.toYaml" -}}
+{{- $root := index . 0 -}}
+{{- $v := index . 1 -}}
+{{- if kindIs "string" $v -}}
+{{ tpl $v $root }}
+{{- else -}}
+{{ toYaml $v }}
+{{- end }}
 {{- end -}}

@@ -1791,6 +1791,44 @@ func TestAdminTolerationsAsString(t *testing.T) {
 	})
 }
 
+func TestAdminNodeSelector(t *testing.T) {
+	// Path to the helm chart we will test
+	helmChartPath := testlib.ADMIN_HELM_CHART_PATH
+
+	t.Run("testMapping", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.nodeSelector.cp\\.nuodb\\.com/organization": "org1",
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.Len(t, obj.Spec.Template.Spec.NodeSelector, 1)
+			assert.Equal(t, obj.Spec.Template.Spec.NodeSelector["cp.nuodb.com/organization"], "org1")
+		}
+	})
+
+	t.Run("testTemplate", func(t *testing.T) {
+		options := &helm.Options{
+			SetValues: map[string]string{
+				"admin.resourceLabels.cp\\.nuodb\\.com/organization": "org1",
+				"admin.nodeSelector": `\{\{ toYaml (dict "cp.nuodb.com/organization" (get .Values.admin.resourceLabels "cp.nuodb.com/organization")) \}\}`,
+			},
+		}
+
+		// Run RenderTemplate to render the template and capture the output.
+		output := helm.RenderTemplate(t, options, helmChartPath, "release-name", []string{"templates/statefulset.yaml"})
+
+		for _, obj := range testlib.SplitAndRenderStatefulSet(t, output, 1) {
+			require.Len(t, obj.Spec.Template.Spec.NodeSelector, 1)
+			assert.Equal(t, obj.Spec.Template.Spec.NodeSelector["cp.nuodb.com/organization"], "org1")
+		}
+	})
+}
+
 func TestAdminNuoCmdPlugins(t *testing.T) {
 	// Path to the helm chart we will test
 	helmChartPath := testlib.ADMIN_HELM_CHART_PATH

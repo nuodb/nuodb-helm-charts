@@ -1399,22 +1399,21 @@ Arguments:
 Set tolerations for the database SM pods.
 */}}
 {{- define "database.sm.tolerations"}}
-{{- if typeIs "string" .Values.database.sm.tolerations -}}
-{{ .Values.database.sm.tolerations }}
-{{- else -}}
-{{ toYaml .Values.database.sm.tolerations }}
-{{- end -}}
+{{ include "database.toYaml" (list . .Values.database.sm.tolerations) }}
 {{- end }}
 
 {{/*
 Set tolerations for the database TE pods.
 */}}
 {{- define "database.te.tolerations"}}
-{{- if typeIs "string" .Values.database.te.tolerations -}}
-{{ .Values.database.te.tolerations }}
-{{- else -}}
-{{ toYaml .Values.database.te.tolerations }}
-{{- end -}}
+{{ include "database.toYaml" (list . .Values.database.te.tolerations) }}
+{{- end }}
+
+{{/*
+Set node selector for the AP pods.
+*/}}
+{{- define "database.sm.nodeSelector" }}
+{{ include "database.toYaml" (list . .Values.database.sm.nodeSelector) }}
 {{- end }}
 
 {{/*
@@ -1612,4 +1611,18 @@ The engine's value map (such as database.sm )
 {{- else -}}
 {{ $explicitSize | default $memorySize | default $defaultSize }}
 {{- end -}}
+{{- end -}}
+
+{{/*
+Renders the supplied value as YAML. If the value is string, it is templated
+first. This allows late binding of Helm values.
+*/}}
+{{- define "database.toYaml" -}}
+{{- $root := index . 0 -}}
+{{- $v := index . 1 -}}
+{{- if kindIs "string" $v -}}
+{{ tpl $v $root }}
+{{- else -}}
+{{ toYaml $v }}
+{{- end }}
 {{- end -}}

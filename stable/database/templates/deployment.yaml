@@ -55,9 +55,9 @@ spec:
       topologySpreadConstraints:
 {{ tpl .Values.database.te.topologySpreadConstraints . | trim | indent 8 }}
       {{- end }}
-      {{- with .Values.database.te.nodeSelector }}
+      {{- if .Values.database.te.nodeSelector }}
       nodeSelector:
-{{ toYaml . | trim | indent 8 }}
+{{ include "database.te.nodeSelector" . | trim | indent 8 }}
       {{- end }}
 {{- if .Values.database.te.affinity }}
       affinity:
