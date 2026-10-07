@@ -10,7 +10,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/gruntwork-io/terratest v0.46.8
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51
-	github.com/kedacore/keda/v2 v2.17.2
+	github.com/kedacore/keda/v2 v2.17.3
 	github.com/otiai10/copy v1.14.0
 	github.com/prometheus-operator/prometheus-operator/pkg/apis/monitoring v0.79.2
 	github.com/stretchr/testify v1.10.0
