@@ -21,7 +21,7 @@ import (
 	"github.com/nuodb/nuodb-helm-charts/v3/test/testlib"
 )
 
-const OLD_RELEASE = "6.0"
+const OLD_RELEASE = "7.0"
 
 func verifyAllProcessesRunning(t *testing.T, namespaceName string, adminPod string, expectedNrProcesses int) {
 	testlib.Await(t, func() bool {
@@ -229,7 +229,7 @@ func TestKubernetesUpgradeFullDatabase(t *testing.T) {
 
 	// In order to have a protocol upgrade, there has to be a protocol change between
 	// OLD_RELEASE and the version under test.
-	testlib.RunOnNuoDBVersionCondition(t, ">6.0.0", func(version *semver.Version) {
+	testlib.RunOnNuoDBVersionCondition(t, ">7.0.0", func(version *semver.Version) {
 		// check that KAA will upgrade database protocol version and restart TE
 		// automatically
 		t.Run("verifyProtocolVersion", func(t *testing.T) {
