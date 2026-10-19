@@ -54,7 +54,7 @@ if [ -f "$archive_dir/info.json" ]; then
         # preparation and creation of the archive object / info.json.
         mv "$archive_dir/info.json" "$archive_dir/migrated"
     fi
-elif [ -x "$PREPARE_ARCHIVE_ALT" ]; then
+elif [ -x "$PREPARE_ARCHIVE_ALT" ] && [ ! -f "$archive_dir/migrated" ]; then
     # Invoke user-supplied script that handles non-container-based archives
     "$PREPARE_ARCHIVE_ALT" || fail "Exiting due to non-0 exit code for $PREPARE_ARCHIVE_ALT"
 fi
