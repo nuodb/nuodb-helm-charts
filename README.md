@@ -83,8 +83,6 @@ cd $(go env GOPATH)/src/github.com/nuodb/nuodb-helm-charts
 go test -v -timeout 60s ./test/integration -count=1
 ```
 
-Set the necessary environment variables, i.e.
-
 The tests in `test/minikube` require `kubectl` and the NuoDB license to be configured, for example:
 
 ```
