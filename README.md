@@ -83,7 +83,16 @@ cd $(go env GOPATH)/src/github.com/nuodb/nuodb-helm-charts
 go test -v -timeout 60s ./test/integration -count=1
 ```
 
-The tests in `test/minikube` require `kubectl` to be configured with access to a Kubernetes cluster, typically Minikube running on localhost, and can be run as follows:
+Set the necessary environment variables, i.e.
+
+The tests in `test/minikube` require `kubectl` and the NuoDB license to be configured, for example:
+
+```
+export NUODB_LICENSE_CONTENT="$(cat ../nuodb/build/test/admin2/enterprise.lic | base64 -w 0)"
+export KUBECONFIG="$HOME/.kube/config"
+```
+
+Run the tests as follows:
 
 ```bash
 go test -v -timeout 60m -tags=short ./test/minikube
