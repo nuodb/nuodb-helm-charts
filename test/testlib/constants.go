@@ -1,5 +1,7 @@
 package testlib
 
+import "os"
+
 const CA_CERT_FILE = "ca.cert"
 const CA_CERT_FILE_NEW = "ca_new.cert"
 const CA_CERT_SECRET = "nuodb-ca-cert"
@@ -53,8 +55,17 @@ const IMPORT_SG1_BACKUP_FILE = "../files/backup-sg1.bak.tz"
 const MINIMAL_VIABLE_ENGINE_CPU = "500m"
 const MINIMAL_VIABLE_ENGINE_MEMORY = "500Mi"
 
-const SNAPSHOTABLE_STORAGE_CLASS = "csi-hostpath-sc"
-const VOLUME_SNAPSHOT_CLASS = "csi-hostpath-snapclass"
+// Defaults match Minikube CI (csi-hostpath-driver addon). Override for other clusters, e.g.:
+//   NUODB_SNAPSHOTABLE_STORAGE_CLASS=longhorn NUODB_VOLUME_SNAPSHOT_CLASS=longhorn
+var SNAPSHOTABLE_STORAGE_CLASS = envOrDefault("NUODB_SNAPSHOTABLE_STORAGE_CLASS", "csi-hostpath-sc")
+var VOLUME_SNAPSHOT_CLASS = envOrDefault("NUODB_VOLUME_SNAPSHOT_CLASS", "csi-hostpath-snapclass")
+
+func envOrDefault(key, defaultValue string) string {
+	if v := os.Getenv(key); v != "" {
+		return v
+	}
+	return defaultValue
+}
 
 const K8S_EVENT_LOG_FILE = "kubernetes_event.log"
 
