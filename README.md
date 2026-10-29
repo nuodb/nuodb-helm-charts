@@ -1,4 +1,4 @@
-<img src="images/nuodb.svg" width="200" height="200" /> 
+<img src="images/nuodb.svg" width="200" height="200" />
 
 # NuoDB Helm Charts
 
@@ -9,22 +9,21 @@ This repository includes Helm Charts that can be used to deploy NuoDB in Kuberne
 
 ## NuoDB Helm Chart Version support
 
-For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above. 
+For a list of supported NuoDB Helm Chart releases and where to download, click the `Releases` tab above.
 To enable automated notification of new releases, click the `Watch` button above and subscribe to the `Releases Only` selection.
-
 
 ## Software Release requirements
 
-| Software   | Release Requirements                           | 
-|------------|------------------------------------------------|
-| Kubernetes |  The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.16 then 1.16 and 1.15 are officially supported. Charts may still work on previous versions of Kubernetes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one.|
-| Managed Kubernetes Distributions |  OpenShift 4.x, Google GKE, Amazon EKS, Azure AKS, or Rancher RKE. Charts may also work on other Kubernetes distributions. The distributions listed here are tested regularly. |
-| Helm       |  Version 3. Version 3.2 is the main development environment. |
-| NuoDB      |  Version [5.0](https://hub.docker.com/r/nuodb/nuodb/tags) and onwards. |
+| Software                         | Release Requirements                                                                                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Kubernetes                       | The latest and previous minor versions of Kubernetes. For example, if the latest minor release of Kubernetes is 1.16 then 1.16 and 1.15 are officially supported. Charts may still work on previous versions of Kubernetes even though they are outside the target support window. To provide that support the API versions of objects should be those that work for both the latest minor release and the previous one. |
+| Managed Kubernetes Distributions | OpenShift 4.x, Google GKE, Amazon EKS, Azure AKS, or Rancher RKE. Charts may also work on other Kubernetes distributions. The distributions listed here are tested regularly.                                                                                                                                                                                                                                            |
+| Helm                             | Version 3. Version 3.2 is the main development environment.                                                                                                                                                                                                                                                                                                                                                              |
+| NuoDB                            | Version [5.0](https://hub.docker.com/r/nuodb/nuodb/tags) and onwards.                                                                                                                                                                                                                                                                                                                                                    |
 
-**NOTE**: The helm commands used in this repository use Helm 3. 
+**NOTE**: The helm commands used in this repository use Helm 3.
 
-Helm 2 has reached it's end of life. The last Helm 2 security patch was released in November 2020. If you are using Helm 2, NuoDB recommends upgrading to Helm 3 before deploying NuoDB. If you must use Helm 2, NuoDB can only offer limited and best reasonable effort (BRE) support for Helm 2. 
+Helm 2 has reached it's end of life. The last Helm 2 security patch was released in November 2020. If you are using Helm 2, NuoDB recommends upgrading to Helm 3 before deploying NuoDB. If you must use Helm 2, NuoDB can only offer limited and best reasonable effort (BRE) support for Helm 2.
 
 ## NuoDB Helm Chart Installation
 
@@ -37,7 +36,6 @@ $ helm repo add nuodb https://nuodb.github.io/nuodb-helm-charts
 
 To list the NuoDB charts added to your repository, run `helm search repo nuodb/`
 
-
 ## NuoDB Helm Chart Incubator Repository Installation
 
 The Incubator repository contains enhancements not yet available in the supported releases. This repository includes a sample application load generator. If you would like to install this sample application, then add the Incubator charts to your local helm repository, run:
@@ -48,7 +46,6 @@ $ helm repo add nuodb-incubator https://nuodb.github.io/nuodb-helm-charts/incuba
 ```
 
 To list the NuoDB incubator charts added to your repository, run `helm search repo nuodb-incubator/`
-
 
 ## NuoDB Installation
 
@@ -83,7 +80,22 @@ cd $(go env GOPATH)/src/github.com/nuodb/nuodb-helm-charts
 go test -v -timeout 60s ./test/integration -count=1
 ```
 
-The tests in `test/minikube` require `kubectl` to be configured with access to a Kubernetes cluster, typically Minikube running on localhost, and can be run as follows:
+The tests in `test/minikube` require `kubectl` and the NuoDB license to be configured, for example:
+
+```
+export NUODB_LICENSE_CONTENT="$(cat nuodb.lic | base64 -w 0)"
+export KUBECONFIG="$HOME/.kube/config"
+
+# For Minikube
+export NUODB_SNAPSHOTABLE_STORAGE_CLASS="csi-hostpath-sc"
+export NUODB_VOLUME_SNAPSHOT_CLASS="csi-hostpath-snapclass"
+
+# For Longhorn
+# export NUODB_SNAPSHOTABLE_STORAGE_CLASS="longhorn"
+# export NUODB_VOLUME_SNAPSHOT_CLASS="longhorn"
+```
+
+Run the tests as follows:
 
 ```bash
 go test -v -timeout 60m -tags=short ./test/minikube

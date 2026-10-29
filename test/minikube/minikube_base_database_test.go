@@ -219,7 +219,7 @@ func TestSmVolumePermissionChange(t *testing.T) {
 	// permissions 700 (not group-writable)
 	kubectlOptions := k8s.NewKubectlOptions("", "", namespaceName)
 	for _, dir := range []string{"/var/opt/nuodb/archive", "/var/opt/nuodb/journal", "/var/opt/nuodb/backup"} {
-		k8s.RunKubectl(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--", "mkdir", dir+"/lost+found")
+		k8s.RunKubectl(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--", "mkdir", "-p", dir+"/lost+found")
 		k8s.RunKubectl(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--", "chmod", "700", dir+"/lost+found")
 
 		output, err := k8s.RunKubectlAndGetOutputE(t, kubectlOptions, "exec", smPodName, "-c", "engine", "--", "stat", "-c", "%a", dir+"/lost+found")
