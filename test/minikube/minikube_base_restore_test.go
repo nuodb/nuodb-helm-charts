@@ -568,6 +568,8 @@ spec:
 			"database.te.resources.requests.memory":                      testlib.MINIMAL_VIABLE_ENGINE_MEMORY,
 			"database.sm.noHotCopy.journalPath.persistence.storageClass": testlib.SNAPSHOTABLE_STORAGE_CLASS,
 			"database.persistence.storageClass":                          testlib.SNAPSHOTABLE_STORAGE_CLASS,
+			// Must match partial-restore PVC size; Longhorn rejects clone if sizes differ.
+			"database.persistence.size":                                  "1Gi",
 			"database.persistence.archiveDataSource.name":                "partial-restore",
 			"database.persistence.archiveDataSource.kind":                "PersistentVolumeClaim",
 			"database.persistence.archiveDataSource.apiGroup":            "",
